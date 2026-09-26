@@ -473,6 +473,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/lodging": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Lodging */
+        get: operations["list_lodging"];
+        put?: never;
+        /** Add Lodging */
+        post: operations["add_lodging"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lodging/{option_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Lodging */
+        delete: operations["delete_lodging"];
+        options?: never;
+        head?: never;
+        /** Update Lodging */
+        patch: operations["update_lodging"];
+        trace?: never;
+    };
+    "/api/v1/lodging/{option_id}/hearts/{person_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Heart Lodging
+         * @description Each traveler can heart the places they like.
+         */
+        put: operations["heart_lodging"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/lodging/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Link
+         * @description Dates and guests from a pasted link; with `fetch`, also the page's title and photo.
+         */
+        post: operations["preview_link"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/lodging/search-rentals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Search Rentals
+         * @description Priced vacation rentals for the dates (one SerpApi search; repeats within 12 hours are free).
+         */
+        post: operations["search_rentals"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/runs": {
         parameters: {
             query?: never;
@@ -907,7 +1003,7 @@ export interface components {
              * @default other
              * @enum {string}
              */
-            category: "sights" | "museum" | "food" | "nature" | "nightlife" | "shopping" | "travel" | "other";
+            category?: "sights" | "museum" | "food" | "nature" | "nightlife" | "shopping" | "travel" | "other";
             /** Status */
             status?: ("idea" | "planned" | "booked") | null;
             /** Location Name */
@@ -924,7 +1020,7 @@ export interface components {
              * Notes
              * @default
              */
-            notes: string;
+            notes?: string;
             place?: components["schemas"]["PlaceRef"] | null;
         };
         /** ActivityOut */
@@ -1301,6 +1397,11 @@ export interface components {
             database: "ok" | "unavailable";
             worker: components["schemas"]["WorkerStatus"];
         };
+        /** HeartIn */
+        HeartIn: {
+            /** Hearted */
+            hearted: boolean;
+        };
         /** HistoryPoint */
         HistoryPoint: {
             /**
@@ -1328,6 +1429,244 @@ export interface components {
             wikimedia: boolean;
             /** Agent Api */
             agent_api: boolean;
+        };
+        /** LinkPreview */
+        LinkPreview: {
+            /** Url */
+            url: string;
+            /** Site */
+            site: string | null;
+            /** Check In */
+            check_in: string | null;
+            /** Check Out */
+            check_out: string | null;
+            /** Guests */
+            guests: number | null;
+            /** Title */
+            title?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Photos */
+            photos?: string[];
+            /**
+             * Fetched
+             * @default false
+             */
+            fetched?: boolean;
+            /** Fetch Problem */
+            fetch_problem?: string | null;
+        };
+        /** LinkPreviewIn */
+        LinkPreviewIn: {
+            /** Url */
+            url: string;
+            /**
+             * Fetch
+             * @default false
+             */
+            fetch?: boolean;
+        };
+        /** LodgingIn */
+        LodgingIn: {
+            /** Title */
+            title: string;
+            /** Url */
+            url?: string | null;
+            /** Check In */
+            check_in?: string | null;
+            /** Check Out */
+            check_out?: string | null;
+            /** Guests */
+            guests?: number | null;
+            /** Price Total */
+            price_total?: number | string | null;
+            /** Price Per Night */
+            price_per_night?: number | string | null;
+            /** Currency */
+            currency?: string | null;
+            /** Photos */
+            photos?: string[];
+            /** Location Name */
+            location_name?: string | null;
+            /** Lat */
+            lat?: number | null;
+            /** Lon */
+            lon?: number | null;
+            /** Bedrooms */
+            bedrooms?: number | null;
+            /** Beds */
+            beds?: number | null;
+            /** Baths */
+            baths?: number | string | null;
+            /** Rating */
+            rating?: number | string | null;
+            /** Review Count */
+            review_count?: number | null;
+            /**
+             * Notes
+             * @default
+             */
+            notes?: string;
+            /**
+             * Pros
+             * @default
+             */
+            pros?: string;
+            /**
+             * Cons
+             * @default
+             */
+            cons?: string;
+            /**
+             * Status
+             * @default candidate
+             * @enum {string}
+             */
+            status?: "candidate" | "shortlisted" | "booked" | "rejected";
+            /**
+             * Favorite
+             * @default false
+             */
+            favorite?: boolean;
+            /**
+             * Added Via
+             * @default manual
+             * @enum {string}
+             */
+            added_via?: "bookmarklet" | "paste" | "serpapi" | "manual";
+            /** Raw */
+            raw?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** LodgingOut */
+        LodgingOut: {
+            /** Id */
+            id: number;
+            /** Trip Id */
+            trip_id: number;
+            /** Title */
+            title: string;
+            /** Url */
+            url: string | null;
+            /** Site */
+            site: string | null;
+            /** Check In */
+            check_in: string | null;
+            /** Check Out */
+            check_out: string | null;
+            /** Nights */
+            nights: number | null;
+            /** Guests */
+            guests: number | null;
+            /** Price Total */
+            price_total: string | null;
+            /** Price Per Night */
+            price_per_night: string | null;
+            /** Currency */
+            currency: string | null;
+            /** Price Home Total */
+            price_home_total: string | null;
+            /** Home Currency */
+            home_currency: string;
+            /** Photos */
+            photos: string[];
+            /** Location Name */
+            location_name: string | null;
+            /** Lat */
+            lat: number | null;
+            /** Lon */
+            lon: number | null;
+            /** Bedrooms */
+            bedrooms: number | null;
+            /** Beds */
+            beds: number | null;
+            /** Baths */
+            baths: string | null;
+            /** Rating */
+            rating: string | null;
+            /** Review Count */
+            review_count: number | null;
+            /** Notes */
+            notes: string;
+            /** Pros */
+            pros: string;
+            /** Cons */
+            cons: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "candidate" | "shortlisted" | "booked" | "rejected";
+            /** Favorite */
+            favorite: boolean;
+            /**
+             * Added Via
+             * @enum {string}
+             */
+            added_via: "bookmarklet" | "paste" | "serpapi" | "agent" | "manual";
+            /** Hearts */
+            hearts: number[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * LodgingUpdate
+         * @description Only the fields sent change; send null to clear one.
+         */
+        LodgingUpdate: {
+            /** Title */
+            title?: string | null;
+            /** Url */
+            url?: string | null;
+            /** Check In */
+            check_in?: string | null;
+            /** Check Out */
+            check_out?: string | null;
+            /** Guests */
+            guests?: number | null;
+            /** Price Total */
+            price_total?: number | string | null;
+            /** Price Per Night */
+            price_per_night?: number | string | null;
+            /** Currency */
+            currency?: string | null;
+            /** Photos */
+            photos?: string[] | null;
+            /** Location Name */
+            location_name?: string | null;
+            /** Lat */
+            lat?: number | null;
+            /** Lon */
+            lon?: number | null;
+            /** Bedrooms */
+            bedrooms?: number | null;
+            /** Beds */
+            beds?: number | null;
+            /** Baths */
+            baths?: number | string | null;
+            /** Rating */
+            rating?: number | string | null;
+            /** Review Count */
+            review_count?: number | null;
+            /** Notes */
+            notes?: string | null;
+            /** Pros */
+            pros?: string | null;
+            /** Cons */
+            cons?: string | null;
+            /** Status */
+            status?: ("candidate" | "shortlisted" | "booked" | "rejected") | null;
+            /** Favorite */
+            favorite?: boolean | null;
         };
         /** LoginIn */
         LoginIn: {
@@ -1443,7 +1782,7 @@ export interface components {
              * Has Details
              * @default false
              */
-            has_details: boolean;
+            has_details?: boolean;
         };
         /**
          * PlaceRef
@@ -1472,7 +1811,7 @@ export interface components {
              * Attribution
              * @default Powered by Geoapify · © OpenStreetMap contributors
              */
-            attribution: string;
+            attribution?: string;
         };
         /** QuoteBatchIn */
         QuoteBatchIn: {
@@ -1586,6 +1925,79 @@ export interface components {
              */
             created_at: string;
         };
+        /** RentalOffer */
+        RentalOffer: {
+            /** Title */
+            title: string;
+            /** Link */
+            link: string | null;
+            /** Site */
+            site: string | null;
+            /** Kind */
+            kind: string | null;
+            /** Photos */
+            photos: string[];
+            /** Price Total */
+            price_total: string | null;
+            /** Price Per Night */
+            price_per_night: string | null;
+            /** Currency */
+            currency: string;
+            /** Rating */
+            rating: string | null;
+            /** Review Count */
+            review_count: number | null;
+            /** Lat */
+            lat: number | null;
+            /** Lon */
+            lon: number | null;
+            /** Sleeps */
+            sleeps: number | null;
+            /** Bedrooms */
+            bedrooms: number | null;
+            /** Beds */
+            beds: number | null;
+            /** Baths */
+            baths: string | null;
+            /** Details */
+            details: string[];
+            /** Property Token */
+            property_token: string | null;
+        };
+        /** RentalSearchIn */
+        RentalSearchIn: {
+            /**
+             * Check In
+             * Format: date
+             */
+            check_in: string;
+            /**
+             * Check Out
+             * Format: date
+             */
+            check_out: string;
+            /**
+             * Adults
+             * @default 2
+             */
+            adults?: number;
+            /**
+             * Children
+             * @default 0
+             */
+            children?: number;
+            /** Place */
+            place?: string | null;
+        };
+        /** RentalSearchResult */
+        RentalSearchResult: {
+            /** Offers */
+            offers: components["schemas"]["RentalOffer"][];
+            /** Cached */
+            cached: boolean;
+            /** Google Hotels Url */
+            google_hotels_url: string | null;
+        };
         /** RouteHistory */
         RouteHistory: {
             /** Currency */
@@ -1614,7 +2026,7 @@ export interface components {
              * @default round_trip
              * @enum {string}
              */
-            trip_type: "round_trip" | "one_way";
+            trip_type?: "round_trip" | "one_way";
             /**
              * Depart From
              * Format: date
@@ -1637,18 +2049,18 @@ export interface components {
              * Adults
              * @default 1
              */
-            adults: number;
+            adults?: number;
             /**
              * Children
              * @default 0
              */
-            children: number;
+            children?: number;
             /**
              * Cabin
              * @default economy
              * @enum {string}
              */
-            cabin: "economy" | "premium_economy" | "business" | "first";
+            cabin?: "economy" | "premium_economy" | "business" | "first";
             /** Max Stops */
             max_stops?: number | null;
             /** Sources */
@@ -1659,7 +2071,7 @@ export interface components {
              * Active
              * @default true
              */
-            active: boolean;
+            active?: boolean;
         };
         /** RouteOut */
         RouteOut: {
@@ -1770,12 +2182,12 @@ export interface components {
              * Enabled
              * @default true
              */
-            enabled: boolean;
+            enabled?: boolean;
             /**
              * Catch Up
              * @default true
              */
-            catch_up: boolean;
+            catch_up?: boolean;
             config?: components["schemas"]["RoutineConfig"];
         };
         /** RoutineOut */
@@ -2065,14 +2477,14 @@ export interface components {
              * @default planning
              * @enum {string}
              */
-            status: "planning" | "booked" | "done" | "archived";
+            status?: "planning" | "booked" | "done" | "archived";
             /** Home Currency */
             home_currency: string;
             /**
              * Notes
              * @default
              */
-            notes: string;
+            notes?: string;
             /** Destinations */
             destinations?: components["schemas"]["DestinationIn"][];
             /** Traveler Ids */
@@ -3193,6 +3605,240 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlaceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_lodging: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LodgingOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_lodging: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LodgingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LodgingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_lodging: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                option_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_lodging: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                option_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LodgingUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LodgingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    heart_lodging: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                option_id: number;
+                person_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HeartIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LodgingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_link: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkPreviewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkPreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_rentals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RentalSearchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RentalSearchResult"];
                 };
             };
             /** @description Validation Error */
