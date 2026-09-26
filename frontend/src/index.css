@@ -29,6 +29,29 @@
   --tp-warning: #a86a12;
   --tp-danger: #b42318;
 
+  /*
+   * Chart colors, validated with the dataviz palette checks (lightness band, chroma floor,
+   * colour-blind separation >= 8, normal-vision >= 15, >= 3:1 on the card surface).
+   * Series follow the price source, never its rank.
+   */
+  --viz-live: #00909a; /* Google Flights (live) */
+  --viz-cached: #a86a12; /* Aviasales (cached) */
+  --viz-agent: #5b47b0; /* Claude agents */
+  --viz-google: #c24472; /* Google's own price history */
+  --viz-band: rgb(21 32 58 / 7%);
+  /* Price grid: one hue; the most prominent step is the cheapest. */
+  --heat-1: #ceeff1;
+  --heat-2: #93d9dc;
+  --heat-3: #4fbec4;
+  --heat-4: #009da3;
+  --heat-5: #007980;
+  /* Text on each step (>= 4.5:1). */
+  --heat-ink-1: var(--tp-ink);
+  --heat-ink-2: var(--tp-ink);
+  --heat-ink-3: var(--tp-ink);
+  --heat-ink-4: var(--tp-ink);
+  --heat-ink-5: #ffffff;
+
   /* Passport-cover navigation rail */
   --tp-cover: #16213d;
   --tp-cover-ink: #dde4ef;
@@ -55,10 +78,10 @@
   --border: var(--tp-rule);
   --input: var(--tp-rule);
   --ring: var(--tp-brand);
-  --chart-1: var(--tp-teal);
-  --chart-2: var(--tp-violet);
-  --chart-3: var(--tp-rose);
-  --chart-4: var(--tp-warning);
+  --chart-1: var(--viz-live);
+  --chart-2: var(--viz-cached);
+  --chart-3: var(--viz-agent);
+  --chart-4: var(--viz-google);
   --chart-5: var(--tp-ink-soft);
   --radius: 0.625rem;
   --sidebar: var(--tp-cover);
@@ -93,6 +116,22 @@
   --tp-cover-soft: #8f9bb3;
   --tp-cover-raised: #18233d;
   --tp-cover-rule: #1d2842;
+
+  --viz-live: #0f9aa2;
+  --viz-cached: #c2851f;
+  --viz-agent: #8a76e4;
+  --viz-google: #d9598a;
+  --viz-band: rgb(229 235 244 / 8%);
+  --heat-1: #083a3d;
+  --heat-2: #00565a;
+  --heat-3: #007378;
+  --heat-4: #00a0a6;
+  --heat-5: #5ac8cd;
+  --heat-ink-1: #e5ebf4;
+  --heat-ink-2: #e5ebf4;
+  --heat-ink-3: #e5ebf4;
+  --heat-ink-4: #0d1527;
+  --heat-ink-5: #0d1527;
 }
 
 @theme inline {

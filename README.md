@@ -55,6 +55,23 @@ then restart the app. The home page's **Setup** checklist shows which ones are a
 | `TRAVELPAYOUTS_TOKEN` | Cached Aviasales fare calendars (free) | https://www.travelpayouts.com → Profile → API token |
 | `WIKIMEDIA_CONTACT` | Destination summaries and photos from Wikipedia (free, no key) | Your email address or a website URL; Wikipedia requires apps to identify a contact |
 
+## How flight tracking works
+
+Add a route on a trip's **Flights** page: up to four airports on each side, a departure
+window, and either a trip length in nights or a return window. The first check starts right
+away; after that, checks run on the trip's schedule (twice a day by default, changeable on
+the same page). Every price found is kept, so the history chart and date grid show how fares
+move.
+
+- **Aviasales (Travelpayouts)** fares are free and cover whole months, but they're prices
+  other travelers found in the last few days, per adult, economy only.
+- **Google Flights (SerpApi)** prices are live. The free plan allows 250 searches a month;
+  Trip Planner uses at most 240 and spreads them evenly over the days left in the month, so
+  a search always goes where it's most useful: the current cheapest dates, then cheap cached
+  fares, then dates nobody has checked yet.
+- If the computer was off or asleep at a scheduled time, the missed check runs once when the
+  app is back.
+
 ## Use it from phones and other computers on your Wi‑Fi
 
 By default only this PC can open Trip Planner. To let other devices on your home network in:

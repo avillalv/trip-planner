@@ -494,6 +494,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/airports/nearby": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Airports Nearby
+         * @description Airports near a destination, for suggesting where to fly.
+         */
+        get: operations["airports_nearby"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/settings": {
         parameters: {
             query?: never;
@@ -736,6 +756,21 @@ export interface components {
         LoginIn: {
             /** Passcode */
             passcode: string;
+        };
+        /** NearbyAirport */
+        NearbyAirport: {
+            /** Iata */
+            iata: string;
+            /** Name */
+            name: string;
+            /** City */
+            city: string | null;
+            /** Country Code */
+            country_code: string;
+            /** Kind */
+            kind: string;
+            /** Distance Km */
+            distance_km: number;
         };
         /** PersonIn */
         PersonIn: {
@@ -2239,6 +2274,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AirportOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    airports_nearby: {
+        parameters: {
+            query: {
+                lat: number;
+                lon: number;
+                radius_km?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NearbyAirport"][];
                 };
             };
             /** @description Validation Error */
