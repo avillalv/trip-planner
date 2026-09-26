@@ -48,6 +48,9 @@ def _cmd_worker(args: argparse.Namespace) -> None:
 
     if args.test_db:
         _use_test_db()
+    if args.port:
+        # Agent tools call the web server's ingest API, so they need its port.
+        override_settings(get_settings().model_copy(update={"port": args.port}))
     run_worker()
 
 
@@ -109,6 +112,7 @@ def main(argv: list[str] | None = None) -> None:
 
     worker = sub.add_parser("worker", help="run the background worker")
     worker.add_argument("--test-db", action="store_true", help="use TEST_DATABASE_URL (development)")
+    worker.add_argument("--port", type=int, help="the web server's port, if not PORT from .env")
     worker.set_defaults(func=_cmd_worker)
     sub.add_parser("serve", help="run web server and worker together").set_defaults(func=_cmd_serve)
 

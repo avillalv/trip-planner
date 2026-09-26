@@ -24,7 +24,8 @@ log = logging.getLogger(__name__)
 
 # Slots missed by up to this long (e.g. the PC was asleep) still run once on wake.
 MISFIRE_GRACE_SECONDS = 6 * 3600
-API_KINDS = ["flight_api"]
+# Runs are dispatched in lanes so a long agent run never holds up the quick API price checks.
+LANES = {"api": ["flight_api"], "agent": ["flight_agent", "research_agent"]}
 
 
 class RoutineScheduler:
@@ -33,6 +34,7 @@ class RoutineScheduler:
         session_factory: Callable[[], Session] = new_session,
         execute: Callable[[UUID], None] | None = None,
         max_api_jobs: int = 2,
+        max_agent_jobs: int = 1,
     ) -> None:
         from tripplanner.worker.executor import execute_run
 
@@ -41,13 +43,23 @@ class RoutineScheduler:
         self._scheduler = BackgroundScheduler(
             job_defaults={"coalesce": True, "max_instances": 1, "misfire_grace_time": MISFIRE_GRACE_SECONDS}
         )
-        self._pool = ThreadPoolExecutor(max_workers=max_api_jobs, thread_name_prefix="run")
-        self._max_api_jobs = max_api_jobs
-        self._active: set[Future[None]] = set()
+        self._limits = {"api": max_api_jobs, "agent": max_agent_jobs}
+        self._pools = {
+            lane: ThreadPoolExecutor(max_workers=limit, thread_name_prefix=f"{lane}-run")
+            for lane, limit in self._limits.items()
+        }
+        self._active: dict[str, set[Future[None]]] = {lane: set() for lane in LANES}
         self._signatures: dict[int, tuple[str, str]] = {}
 
     def start(self) -> None:
+        from tripplanner.worker.agents.runner import kill_orphan, shutting_down
+
+        shutting_down.clear()
         with self._session() as db:
+            # Agent processes left by a worker that crashed would keep running without supervision.
+            for pid in db.scalars(select(Run.pid).where(Run.status == "running", Run.pid.is_not(None))):
+                if kill_orphan(pid):
+                    log.warning("Stopped Claude process %s left over from an earlier run.", pid)
             interrupted = recover_interrupted(db)
         if interrupted:
             log.warning("Marked %d unfinished run(s) as interrupted.", interrupted)
@@ -56,8 +68,15 @@ class RoutineScheduler:
         self.catch_up()
 
     def shutdown(self) -> None:
+        from tripplanner.worker.agents.runner import shutting_down
+
         self._scheduler.shutdown(wait=False)
-        self._pool.shutdown(wait=True)
+        shutting_down.set()
+        self.close()
+
+    def close(self) -> None:
+        for pool in self._pools.values():
+            pool.shutdown(wait=True)
 
     # --- Schedules -------------------------------------------------------------------------
 
@@ -130,15 +149,16 @@ class RoutineScheduler:
     # --- Dispatch --------------------------------------------------------------------------
 
     def dispatch(self) -> int:
-        """Start queued runs while there are free slots. Returns how many started."""
-        self._active = {f for f in self._active if not f.done()}
+        """Start queued runs while their lane has free slots. Returns how many started."""
         started = 0
-        while len(self._active) < self._max_api_jobs:
-            with self._session() as db:
-                run = claim_next(db, API_KINDS)
-                run_id = run.id if run else None
-            if run_id is None:
-                break
-            self._active.add(self._pool.submit(self._execute, run_id))
-            started += 1
+        for lane, kinds in LANES.items():
+            active = self._active[lane] = {f for f in self._active[lane] if not f.done()}
+            while len(active) < self._limits[lane]:
+                with self._session() as db:
+                    run = claim_next(db, kinds)
+                    run_id = run.id if run else None
+                if run_id is None:
+                    break
+                active.add(self._pools[lane].submit(self._execute, run_id))
+                started += 1
         return started

@@ -1,6 +1,7 @@
 """Application settings, loaded from environment variables and the repo-root .env file."""
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -43,6 +44,8 @@ class Settings(BaseSettings):
     home_currency: str = "USD"
     # Full path to the Claude Code CLI; leave unset to find `claude` on PATH.
     claude_path: str | None = None
+    # Scratch folders for agent runs. Kept outside the repo so agents don't see project files.
+    agent_runs_dir: Path | None = None
 
     @property
     def open_to_network(self) -> bool:

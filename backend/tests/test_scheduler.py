@@ -40,10 +40,13 @@ def executed() -> list[UUID]:
 @pytest.fixture
 def scheduler(db_session: Session, executed: list[UUID]):
     s = RoutineScheduler(
-        session_factory=lambda: nullcontext(db_session), execute=executed.append, max_api_jobs=1
+        session_factory=lambda: nullcontext(db_session),
+        execute=executed.append,
+        max_api_jobs=1,
+        max_agent_jobs=1,
     )
     yield s
-    s._pool.shutdown(wait=True)
+    s.close()
 
 
 def test_schedule_math() -> None:
@@ -95,7 +98,7 @@ def test_dispatch_claims_queued_runs(
     )
 
     assert scheduler.dispatch() == 1
-    scheduler._pool.shutdown(wait=True)
+    scheduler.close()
 
     assert executed == [run.id]
     assert run.status == "running" and run.started_at is not None
@@ -128,3 +131,24 @@ def test_runs_left_running_become_interrupted(db_session: Session) -> None:
     assert recover_interrupted(db_session) == 1
     db_session.refresh(run)
     assert run.status == "interrupted"
+
+
+def test_agent_runs_have_their_own_lane(
+    db_session: Session, scheduler: RoutineScheduler, executed: list[UUID]
+) -> None:
+    api = add_routine(db_session)
+    agent = add_routine(db_session, kind="flight_agent", name="Fare scout")
+    first, _ = enqueue(db_session, trip_id=api.trip_id, kind="flight_api", trigger="manual", routine=api)
+    second, _ = enqueue(
+        db_session, trip_id=api.trip_id, kind="flight_api", trigger="manual", routine=api, params={"n": 2}
+    )
+    agent_run, _ = enqueue(
+        db_session, trip_id=agent.trip_id, kind="flight_agent", trigger="manual", routine=agent
+    )
+
+    # One API slot and one agent slot: the agent run starts even though an API run is waiting.
+    assert scheduler.dispatch() == 2
+    scheduler.close()
+
+    assert set(executed) == {first.id, agent_run.id}
+    assert second.status == "queued"
