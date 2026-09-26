@@ -16,11 +16,11 @@ from tests.conftest import make_settings
 from tests.factories import add_route, add_run, add_trip
 from tripplanner.config import Settings
 from tripplanner.models import FlightRoute, Routine, Run, RunEvent
+from tripplanner.services.claude_cli import agent_env
 from tripplanner.services.runs import RunLog
 from tripplanner.worker.agents import runner
 from tripplanner.worker.agents.runner import (
     AgentOutcome,
-    agent_env,
     build_command,
     mcp_config,
     prepare_run_dir,
@@ -276,3 +276,11 @@ def test_flight_agents_need_a_route(agent, db_session: Session) -> None:
     outcome = agent("success")
 
     assert outcome.status == "failed" and "no active flight routes" in outcome.error
+
+
+def test_a_signed_out_claude_fails_before_starting(agent, db_session: Session) -> None:
+    outcome = agent("signed_out")
+
+    assert outcome.status == "failed"
+    assert "/login" in outcome.error
+    assert not agent.record.exists()  # Claude itself was never started

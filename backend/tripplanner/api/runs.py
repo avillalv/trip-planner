@@ -11,6 +11,7 @@ from tripplanner.schemas.agent import NoteOut, RejectionOut
 from tripplanner.schemas.automation import (
     RoutineConfig,
     RoutineCreate,
+    RoutineKind,
     RoutineOut,
     RoutineUpdate,
     RunDetailOut,
@@ -45,6 +46,7 @@ def list_runs(
     db: DbSession,
     trip_id: int | None = None,
     routine_id: int | None = None,
+    kind: RoutineKind | None = None,
     run_status: Annotated[RunStatus | None, Query(alias="status")] = None,
     limit: int = Query(30, ge=1, le=200),
 ) -> list[RunOut]:
@@ -53,6 +55,8 @@ def list_runs(
         stmt = stmt.where(Run.trip_id == trip_id)
     if routine_id is not None:
         stmt = stmt.where(Run.routine_id == routine_id)
+    if kind is not None:
+        stmt = stmt.where(Run.kind == kind)
     if run_status is not None:
         stmt = stmt.where(Run.status == run_status)
     return [RunOut.model_validate(r) for r in db.scalars(stmt)]

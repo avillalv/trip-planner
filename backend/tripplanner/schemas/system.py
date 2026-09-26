@@ -20,6 +20,9 @@ class ClaudeCliStatus(BaseModel):
     found: bool
     path: str | None = None
     version: str | None = None
+    # From `claude auth status`; None when the CLI couldn't say.
+    signed_in: bool | None = None
+    auth_method: str | None = None
 
 
 class IntegrationStatus(BaseModel):
@@ -29,6 +32,7 @@ class IntegrationStatus(BaseModel):
     serpapi: bool
     travelpayouts: bool
     wikimedia: bool
+    agent_api: bool
 
 
 class AccessInfo(BaseModel):

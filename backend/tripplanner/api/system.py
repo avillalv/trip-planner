@@ -31,8 +31,11 @@ def health(db: DbSession, response: Response) -> HealthResponse:
 
 
 @router.get("/api/v1/system/status", response_model=SystemStatus, tags=["system"])
-def system_status(db: DbSession) -> SystemStatus:
-    """Setup checklist data: database, worker, Claude CLI, API keys, and network access."""
+def system_status(db: DbSession, recheck: bool = False) -> SystemStatus:
+    """Setup checklist data: database, worker, Claude CLI, API keys, and network access.
+
+    Claude's version and sign-in are cached for a few minutes; `recheck=true` asks again now.
+    """
     settings = get_settings()
     db_ok = database_ok(db)
     open_to_network = settings.open_to_network
@@ -40,12 +43,13 @@ def system_status(db: DbSession) -> SystemStatus:
         version=__version__,
         database="ok" if db_ok else "unavailable",
         worker=worker_status(db) if db_ok else WorkerStatus(status="unknown"),
-        claude=claude_cli_status(settings),
+        claude=claude_cli_status(settings, fresh=recheck),
         integrations=IntegrationStatus(
             geoapify=settings.geoapify_api_key is not None,
             serpapi=settings.serpapi_api_key is not None,
             travelpayouts=settings.travelpayouts_token is not None,
             wikimedia=settings.wikimedia_contact is not None,
+            agent_api=settings.agent_ingest_api_key is not None,
         ),
         access=AccessInfo(
             other_devices=open_to_network,

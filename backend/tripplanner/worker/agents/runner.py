@@ -14,7 +14,7 @@ import sys
 import threading
 import time
 from collections import deque
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
@@ -29,6 +29,7 @@ from tripplanner.db import new_session
 from tripplanner.models import Routine, Run
 from tripplanner.paths import default_agent_runs_dir
 from tripplanner.services.agent_context import BLOCKED_DOMAINS, build_context, routine_config
+from tripplanner.services.claude_cli import NO_WINDOW, agent_env, auth_status, find_claude
 from tripplanner.services.runs import RunLog, cancel_requested
 from tripplanner.worker.agents.prompts import SYSTEM_PROMPT, task_prompt
 from tripplanner.worker.agents.stream import StreamParser, StreamState
@@ -44,36 +45,10 @@ WATCH_SECONDS = 2
 SECONDS_PER_MINUTE = 60  # tests shrink this to exercise timeouts quickly
 # A few popular Airbnb country sites, on top of the bare and www hosts of each blocked domain.
 AIRBNB_COUNTRY_TLDS = ("co.uk", "ca", "com.au", "fr", "de", "es", "it", "mx", "jp")
-
-# Variables that could move a run off the subscription or off Sonnet, plus the app's own secrets.
-STRIPPED_ENV = frozenset(
-    {
-        "ANTHROPIC_API_KEY",
-        "ANTHROPIC_AUTH_TOKEN",
-        "ANTHROPIC_BASE_URL",
-        "ANTHROPIC_MODEL",
-        "ANTHROPIC_DEFAULT_OPUS_MODEL",
-        "ANTHROPIC_DEFAULT_SONNET_MODEL",
-        "ANTHROPIC_DEFAULT_HAIKU_MODEL",
-        "ANTHROPIC_SMALL_FAST_MODEL",
-        "CLAUDE_CODE_SUBAGENT_MODEL",
-        "CLAUDE_CODE_USE_BEDROCK",
-        "CLAUDE_CODE_USE_VERTEX",
-        "CLAUDE_CODE_USE_FOUNDRY",
-        "CLAUDECODE",
-        "CLAUDE_CODE_ENTRYPOINT",
-        "DATABASE_URL",
-        "TEST_DATABASE_URL",
-        "SESSION_SECRET",
-        "AGENT_INGEST_API_KEY",
-        "APP_PASSCODE",
-        "GEOAPIFY_API_KEY",
-        "SERPAPI_API_KEY",
-        "TRAVELPAYOUTS_TOKEN",
-    }
+SIGN_IN_HELP = (
+    "Claude Code isn't signed in, or its sign-in expired. Open a terminal, run `claude`, type /login, "
+    "and then run the routine again."
 )
-
-NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 # Set when the worker stops; running agents are killed and their runs marked interrupted.
 shutting_down = threading.Event()
@@ -144,10 +119,6 @@ def mcp_config(run_id: UUID, api_url: str) -> dict[str, Any]:
     }
 
 
-def agent_env(base: Mapping[str, str]) -> dict[str, str]:
-    return {k: v for k, v in base.items() if k.upper() not in STRIPPED_ENV}
-
-
 def redact(argv: list[str], settings: Settings) -> list[str]:
     secrets = [
         s.get_secret_value()
@@ -160,11 +131,6 @@ def redact(argv: list[str], settings: Settings) -> list[str]:
             arg = arg.replace(secret, "***")
         out.append(arg)
     return out
-
-
-def find_claude(settings: Settings) -> list[str] | None:
-    path = shutil.which(settings.claude_path or "claude")
-    return [path] if path else None
 
 
 # --- Files and processes --------------------------------------------------------------------
@@ -284,10 +250,7 @@ def _db_cancel_check(run_id: UUID) -> Callable[[], bool]:
 def explain_failure(text: str) -> str:
     lower = text.lower()
     if any(k in lower for k in ("authenticat", "oauth", "/login", "not logged in", "log in")):
-        return (
-            "Claude Code isn't signed in, or its sign-in expired. Open a terminal, run `claude`, "
-            "type /login, and then run the routine again."
-        )
+        return SIGN_IN_HELP
     if "usage limit" in lower or "rate limit" in lower or "limit reached" in lower:
         return "Your Claude usage limit was reached. The routine will try again at its next scheduled time."
     if "overloaded" in lower:
@@ -363,6 +326,8 @@ def run_agent(
         )
     if not (settings.agent_ingest_api_key and settings.agent_ingest_api_key.get_secret_value()):
         return fail("AGENT_INGEST_API_KEY isn't set in .env, so the agent couldn't save anything.")
+    if auth_status(claude, os.environ).signed_in is False:
+        return fail(SIGN_IN_HELP)
 
     context = build_context(db, run)
     if run.kind == "flight_agent" and not context.routes:

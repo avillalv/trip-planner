@@ -1,13 +1,17 @@
+import sys
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, delete, select
 from sqlalchemy.orm import Session
 
+from tests.conftest import make_settings
 from tripplanner.api import system as system_api
 from tripplanner.models import WorkerHeartbeat
 from tripplanner.schemas.system import ClaudeCliStatus
+from tripplanner.services import claude_cli, system_status
 from tripplanner.services.system_status import worker_status
 from tripplanner.worker.main import beat
 
@@ -63,7 +67,7 @@ def test_system_status_reports_key_presence_without_values(
     monkeypatch.setattr(
         system_api,
         "claude_cli_status",
-        lambda _s: ClaudeCliStatus(found=True, path="claude", version="9.9.9"),
+        lambda _s, fresh=False: ClaudeCliStatus(found=True, path="claude", version="9.9.9"),
     )
 
     response = client.get("/api/v1/system/status")
@@ -75,6 +79,7 @@ def test_system_status_reports_key_presence_without_values(
         "serpapi": False,
         "travelpayouts": False,
         "wikimedia": True,
+        "agent_api": True,
     }
     assert body["claude"]["version"] == "9.9.9"
     assert body["access"] == {
@@ -91,7 +96,7 @@ def test_system_status_lists_phone_urls_when_open_to_the_network(
 ) -> None:
     use_settings(host="0.0.0.0", port=8123)
     monkeypatch.setattr(system_api, "lan_addresses", lambda: ["192.168.1.23"])
-    monkeypatch.setattr(system_api, "claude_cli_status", lambda _s: ClaudeCliStatus(found=False))
+    monkeypatch.setattr(system_api, "claude_cli_status", lambda _s, fresh=False: ClaudeCliStatus(found=False))
 
     access = client.get("/api/v1/system/status").json()["access"]
 
@@ -101,3 +106,19 @@ def test_system_status_lists_phone_urls_when_open_to_the_network(
         "port": 8123,
         "urls": ["http://192.168.1.23:8123"],
     }
+
+
+def test_claude_sign_in_is_read_from_the_cli(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(system_status, "_claude_cache", None)
+
+    fake = Path(__file__).parent / "fake_claude.py"
+    monkeypatch.setattr(system_status, "find_claude", lambda _s: [sys.executable, str(fake)])
+
+    monkeypatch.setenv("FAKE_CLAUDE_SCENARIO", "signed_out")
+    signed_out = system_status.claude_cli_status(make_settings(), fresh=True)
+    monkeypatch.setenv("FAKE_CLAUDE_SCENARIO", "success")
+    signed_in = system_status.claude_cli_status(make_settings(), fresh=True)
+
+    assert (signed_out.signed_in, signed_in.signed_in) == (False, True)
+    assert signed_in.auth_method == "claude.ai"
+    assert claude_cli.auth_status(["no-such-claude-binary"], {}).signed_in is None

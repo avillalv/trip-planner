@@ -1,6 +1,6 @@
 """Health probes shared by /api/health and /api/v1/system/status."""
 
-import shutil
+import os
 import subprocess
 import time
 from datetime import UTC, datetime, timedelta
@@ -12,10 +12,11 @@ from sqlalchemy.orm import Session
 from tripplanner.config import Settings
 from tripplanner.models import WorkerHeartbeat
 from tripplanner.schemas.system import ClaudeCliStatus, WorkerStatus
+from tripplanner.services.claude_cli import NO_WINDOW, auth_status, find_claude
 
 # The worker beats every 30 s; allow a few missed beats before calling it stale.
 WORKER_STALE_AFTER = timedelta(seconds=90)
-_CLAUDE_CACHE_SECONDS = 600
+_CLAUDE_CACHE_SECONDS = 180
 _claude_cache: tuple[float, ClaudeCliStatus] | None = None
 
 
@@ -41,22 +42,33 @@ def worker_status(db: Session, now: datetime | None = None) -> WorkerStatus:
     return WorkerStatus(status="ok" if fresh else "stale", last_seen=beat.last_seen)
 
 
-def claude_cli_status(settings: Settings) -> ClaudeCliStatus:
-    """Locate the Claude Code CLI and read its version (cached; `claude --version` is slow)."""
+def claude_cli_status(settings: Settings, fresh: bool = False) -> ClaudeCliStatus:
+    """Locate the Claude Code CLI, read its version, and check sign-in (cached; each call is slow)."""
     global _claude_cache
-    if _claude_cache and time.monotonic() - _claude_cache[0] < _CLAUDE_CACHE_SECONDS:
+    if not fresh and _claude_cache and time.monotonic() - _claude_cache[0] < _CLAUDE_CACHE_SECONDS:
         return _claude_cache[1]
 
-    path = shutil.which(settings.claude_path or "claude")
+    claude = find_claude(settings)
     status = ClaudeCliStatus(found=False)
-    if path:
+    if claude:
         version = None
         try:
-            out = subprocess.run([path, "--version"], capture_output=True, text=True, timeout=15, check=False)
+            out = subprocess.run(
+                [*claude, "--version"],
+                capture_output=True,
+                stdin=subprocess.DEVNULL,
+                text=True,
+                timeout=15,
+                check=False,
+                creationflags=NO_WINDOW,
+            )
             version = out.stdout.strip().split(" ")[0] or None
         except (OSError, subprocess.TimeoutExpired):
             pass
-        status = ClaudeCliStatus(found=True, path=path, version=version)
+        auth = auth_status(claude, os.environ)
+        status = ClaudeCliStatus(
+            found=True, path=claude[0], version=version, signed_in=auth.signed_in, auth_method=auth.method
+        )
 
     _claude_cache = (time.monotonic(), status)
     return status

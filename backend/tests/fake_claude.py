@@ -2,6 +2,7 @@
 
 FAKE_CLAUDE_SCENARIO picks what happens. If FAKE_CLAUDE_RECORD is set, the arguments, prompt,
 working directory, and whether an API key leaked into the environment are written there as JSON.
+`auth status` reports signed in, except in the "signed_out" scenario.
 """
 
 import json
@@ -60,6 +61,10 @@ def result(**overrides: object) -> None:
 
 def main() -> None:
     scenario = os.environ.get("FAKE_CLAUDE_SCENARIO", "success")
+    if sys.argv[1:3] == ["auth", "status"]:
+        signed_in = scenario != "signed_out"
+        print(json.dumps({"loggedIn": signed_in, "authMethod": "claude.ai" if signed_in else "none"}))
+        sys.exit(0 if signed_in else 1)
     prompt = sys.stdin.read()
     if record := os.environ.get("FAKE_CLAUDE_RECORD"):
         with open(record, "w", encoding="utf-8") as f:
