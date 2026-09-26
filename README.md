@@ -199,6 +199,31 @@ PowerShell opened as administrator.
 - Don't also run `npm start`; both use port 8000.
 - Routines that were due while the PC was off or asleep run once after it starts.
 - To undo: `npm run autostart:remove` (this also stops the running copy).
+- To stop it for now (to restore a backup, say): `Stop-ScheduledTask -TaskName 'Trip Planner'`
+
+## Backups
+
+While the app runs, it saves a copy of the whole database each night at 3:30. If the PC was off
+then, the copy is made the next time the app starts. Copies go to `data\backups` (set `BACKUP_DIR`
+in `.env` to use another folder, like one that syncs to the cloud), and the newest 14 are kept.
+**Settings → Backups** shows the last one and has **Back up now**; `npm run backup` does the same
+from a terminal.
+
+Backups use `pg_dump`, which comes with PostgreSQL. Trip Planner finds it in
+`C:\Program Files\PostgreSQL\<version>\bin`; if PostgreSQL is installed somewhere else, set
+`PG_BIN_DIR` in `.env` to its `bin` folder.
+
+To go back to a backup:
+
+1. Stop Trip Planner: press Ctrl+C in the `npm start` window, or run
+   `Stop-ScheduledTask -TaskName 'Trip Planner'` if it starts at sign-in.
+2. Run `npm run restore` and type `restore` to confirm. This replaces everything in the database
+   with the newest backup. To pick another, name it:
+   `npm run restore -- data\backups\tripplanner-20260926-033000.dump`
+3. Start Trip Planner again.
+
+To check that a backup restores without touching your data, restore it into the test database
+instead: `npm run restore -- --test-db`.
 
 ## Use it from phones and other computers on your Wi‑Fi
 
