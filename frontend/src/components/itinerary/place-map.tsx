@@ -24,34 +24,59 @@ type Props = {
   onSelect?: (id: string) => void
   /** Called after the person pans or zooms the map (not after the map moves itself). */
   onMoved?: (center: LatLon) => void
+  /** False for a picture of the map (the presentation): no panning, zooming, or clickable pins. */
+  interactive?: boolean
+  /** How far framing the pins may zoom in; lower keeps a single pin in its wider region. */
+  maxZoom?: number
+  /** Room kept around the pins when framing them, in pixels. */
+  padding?: number
   className?: string
 }
 
-export default function PlaceMap({ center, pins, selectedId = null, onSelect, onMoved, className }: Props) {
+export default function PlaceMap({
+  center,
+  pins,
+  selectedId = null,
+  onSelect,
+  onMoved,
+  interactive = true,
+  maxZoom = 15,
+  padding = 48,
+  className,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const markersRef = useRef(new Map<string, Marker>())
   const handlers = useRef({ onSelect, onMoved })
   handlers.current = { onSelect, onMoved }
   const dark = useIsDark()
-  const initial = useRef({ center, dark })
+  const initial = useRef({ center, dark, interactive, maxZoom, padding })
 
   useEffect(() => {
-    const { center: start, dark: startDark } = initial.current
+    const { center: start, dark: startDark, interactive: canMove, maxZoom: startZoom } = initial.current
     const map = new MapLibreMap({
       container: containerRef.current!,
       style: startDark ? STYLES.dark : STYLES.light,
       center: [start.lon, start.lat],
-      zoom: 13,
+      zoom: Math.min(13, startZoom),
+      interactive: canMove,
       attributionControl: { compact: true },
       cooperativeGestures: false,
     })
-    map.addControl(new NavigationControl({ showCompass: false }), 'top-right')
+    if (canMove) map.addControl(new NavigationControl({ showCompass: false }), 'top-right')
     map.on('moveend', (event) => {
       if (!event.originalEvent) return
       const c = map.getCenter()
       handlers.current.onMoved?.({ lat: c.lat, lon: c.lng })
     })
+    if (!canMove) {
+      map.once('load', () => {
+        if (map.getContainer().clientWidth >= 640) return
+        const credits = map.getContainer().querySelector('.maplibregl-ctrl-attrib')
+        credits?.classList.remove('maplibregl-compact-show')
+        credits?.removeAttribute('open')
+      })
+    }
     mapRef.current = map
     const markers = markersRef.current
     return () => {
@@ -82,6 +107,10 @@ export default function PlaceMap({ center, pins, selectedId = null, onSelect, on
         const el = document.createElement('button')
         el.type = 'button'
         el.className = 'tp-map-pin'
+        if (!initial.current.interactive) {
+          el.tabIndex = -1
+          el.style.pointerEvents = 'none'
+        }
         const shape = document.createElement('span')
         shape.appendChild(document.createElement('span'))
         el.appendChild(shape)
@@ -116,7 +145,10 @@ export default function PlaceMap({ center, pins, selectedId = null, onSelect, on
       }
       const bounds = new LngLatBounds()
       pins.forEach((p) => bounds.extend([p.lon, p.lat]))
-      map.fitBounds(bounds, { padding: 48, maxZoom: 15, duration: 0 })
+      // Pins stand above their point, so the top gets extra room; small maps get less of it.
+      const room = Math.min(initial.current.padding, container.clientWidth / 4, container.clientHeight / 4)
+      const inset = { top: room + 24, bottom: room, left: room, right: room }
+      map.fitBounds(bounds, { padding: inset, maxZoom: initial.current.maxZoom, duration: 0 })
     }
     frame()
     if (!map.loaded()) map.once('load', frame)
