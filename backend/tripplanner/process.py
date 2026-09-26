@@ -2,6 +2,7 @@
 
 import logging
 import os
+import re
 import threading
 import time
 
@@ -33,9 +34,28 @@ def start_parent_watchdog(poll_seconds: float = 3.0) -> None:
     threading.Thread(target=watch, name="parent-watchdog", daemon=True).start()
 
 
+_SECRET_PARAM = re.compile(r"(?i)\b(api_?key|apikey|token|access_token|key)=([^&\s\"']+)")
+
+
+class RedactSecrets(logging.Filter):
+    """Mask API keys that appear in URLs (SerpApi and Geoapify take them as query parameters)."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        redacted = _SECRET_PARAM.sub(lambda m: f"{m.group(1)}=***", message)
+        if redacted != message:
+            record.msg, record.args = redacted, None
+        return True
+
+
 def configure_logging(level: str) -> None:
     logging.basicConfig(
         level=level.upper(),
         format="%(asctime)s %(levelname)-7s %(name)s: %(message)s",
         datefmt="%H:%M:%S",
     )
+    # httpx logs every request URL at INFO, keys included; keep it to warnings.
+    for noisy in ("httpx", "httpcore"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
+    for handler in logging.getLogger().handlers:
+        handler.addFilter(RedactSecrets())
