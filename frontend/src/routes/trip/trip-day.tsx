@@ -2,6 +2,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, MapPin, Plus } from 'lucide-react
 import { lazy, Suspense, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
+import { ErrorBoundary, PartFailed } from '@/components/common/error-boundary'
 import { ActivityEditor } from '@/components/itinerary/activity-editor'
 import type { ActivityDraft } from '@/components/itinerary/activity-form'
 import { AddActivityDialog } from '@/components/itinerary/add-activity-dialog'
@@ -178,20 +179,22 @@ function DayView({ tripId, day, days, activities }: DayViewProps) {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="h-[70dvh] min-h-[28rem] overflow-hidden rounded-xl border bg-card">
-          <Suspense fallback={<Skeleton className="h-full w-full" />}>
-            <DayCalendar
-              day={day.day}
-              activities={onDay}
-              ideasEl={ideasEl}
-              onSelectRange={openAdd}
-              onOpen={setEditing}
-              onChange={change}
-              onDropIdea={(id, to) => {
-                const idea = ideas.find((a) => a.id === id)
-                if (idea) void change(idea, to)
-              }}
-            />
-          </Suspense>
+          <ErrorBoundary fallback={(error) => <PartFailed what="calendar" error={error} className="rounded-none border-0" />}>
+            <Suspense fallback={<Skeleton className="h-full w-full" />}>
+              <DayCalendar
+                day={day.day}
+                activities={onDay}
+                ideasEl={ideasEl}
+                onSelectRange={openAdd}
+                onOpen={setEditing}
+                onChange={change}
+                onDropIdea={(id, to) => {
+                  const idea = ideas.find((a) => a.id === id)
+                  if (idea) void change(idea, to)
+                }}
+              />
+            </Suspense>
+          </ErrorBoundary>
         </div>
         <IdeasPanel
           ideas={ideas}

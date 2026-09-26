@@ -1,5 +1,6 @@
 import { lazy, Suspense, useId, type ReactNode } from 'react'
 import { Guilloche } from '@/components/brand/guilloche'
+import { ErrorBoundary } from '@/components/common/error-boundary'
 import type { MapPin } from '@/components/itinerary/place-map'
 import type { Trip } from '@/lib/api/trips'
 import { parseDate, toISODate } from '@/lib/dates'
@@ -154,16 +155,19 @@ export function DeckMap({
       <RoutePlot pins={pins} route={route} names={names} className="absolute inset-0 h-full w-full" />
       {live && (
         <div className="deck-live-map absolute inset-0">
-          <Suspense fallback={null}>
-            <PlaceMap
-              center={pins[0]}
-              pins={pins}
-              interactive={false}
-              maxZoom={maxZoom}
-              padding={80}
-              className="h-full min-h-0 rounded-none border-0"
-            />
-          </Suspense>
+          {/* If the live map fails, the drawn plot underneath stays. */}
+          <ErrorBoundary fallback={() => null}>
+            <Suspense fallback={null}>
+              <PlaceMap
+                center={pins[0]}
+                pins={pins}
+                interactive={false}
+                maxZoom={maxZoom}
+                padding={80}
+                className="h-full min-h-0 rounded-none border-0"
+              />
+            </Suspense>
+          </ErrorBoundary>
         </div>
       )}
     </div>

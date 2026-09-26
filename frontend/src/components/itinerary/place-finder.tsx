@@ -3,6 +3,7 @@ import { lazy, Suspense, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ErrorBoundary, PartFailed } from '@/components/common/error-boundary'
 import { CATEGORY, SEARCH_KINDS } from '@/lib/activity-meta'
 import { usePlaceSearch, type Day, type Place, type PlaceQuery, type SearchKind } from '@/lib/api/itinerary'
 import { useDebouncedValue } from '@/lib/hooks'
@@ -163,16 +164,18 @@ export function PlaceFinder({ center, days, initial, saving, onAdd }: Props) {
       </div>
 
       <div className="relative order-first h-56 md:order-none md:h-full">
-        <Suspense fallback={<Skeleton className="h-full w-full rounded-xl" />}>
-          <PlaceMap
-            center={area}
-            pins={pins}
-            selectedId={selected?.id ?? null}
-            onSelect={choose}
-            onMoved={setMoved}
-            className="h-full"
-          />
-        </Suspense>
+        <ErrorBoundary fallback={(error) => <PartFailed what="map" error={error} />}>
+          <Suspense fallback={<Skeleton className="h-full w-full rounded-xl" />}>
+            <PlaceMap
+              center={area}
+              pins={pins}
+              selectedId={selected?.id ?? null}
+              onSelect={choose}
+              onMoved={setMoved}
+              className="h-full"
+            />
+          </Suspense>
+        </ErrorBoundary>
         {moved && (
           <Button
             size="sm"

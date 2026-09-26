@@ -1,5 +1,6 @@
 import { Star } from 'lucide-react'
 import { lazy, Suspense, useMemo, type ReactNode } from 'react'
+import { ErrorBoundary, PartFailed } from '@/components/common/error-boundary'
 import type { MapPin } from '@/components/itinerary/place-map'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -216,9 +217,11 @@ export function CompareDialog({ open, onOpenChange, options, activities, travele
 
         {center && (
           <div className="h-72">
-            <Suspense fallback={<Skeleton className="h-full w-full rounded-xl" />}>
-              <PlaceMap center={{ lat: center.lat, lon: center.lon }} pins={pins} className="h-full" />
-            </Suspense>
+            <ErrorBoundary fallback={(error) => <PartFailed what="map" error={error} />}>
+              <Suspense fallback={<Skeleton className="h-full w-full rounded-xl" />}>
+                <PlaceMap center={{ lat: center.lat, lon: center.lon }} pins={pins} className="h-full" />
+              </Suspense>
+            </ErrorBoundary>
           </div>
         )}
       </DialogContent>
