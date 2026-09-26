@@ -15,6 +15,12 @@ import { TripsHome } from '@/routes/trips-home'
 
 export const router = createBrowserRouter([
   {
+    // Full screen, outside the app's navigation; loaded on demand.
+    path: 'trips/:tripId/present',
+    errorElement: <RouteError />,
+    lazy: async () => ({ Component: (await import('@/routes/present-page')).PresentPage }),
+  },
+  {
     element: <AppShell />,
     errorElement: <RouteError />,
     children: [

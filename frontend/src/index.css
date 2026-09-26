@@ -170,6 +170,7 @@
   --color-cover: var(--tp-cover);
   --color-cover-ink: var(--tp-cover-ink);
   --color-cover-soft: var(--tp-cover-soft);
+  --color-cover-mark: var(--tp-cover-mark);
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -401,5 +402,126 @@
 @media (prefers-reduced-motion: reduce) {
   .tp-map-pin > span {
     transition: none;
+  }
+}
+
+/*
+ * Presentation deck. Every slide is a size container: type and spacing use cqmin, so a slide scales
+ * the same on a TV, a 4K monitor, a printed page, or a thumbnail. The max() floors keep text
+ * readable on phones, where tall slides stack their columns and scroll.
+ */
+.deck-slide,
+.deck-thumb {
+  container: deck-slide / size;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+@custom-variant slide-tall (@container deck-slide (orientation: portrait));
+
+/* Map pins grow with the slide too, so they still read on a TV or a 4K screen. */
+.deck-slide .tp-map-pin {
+  width: max(1.75rem, 3.4cqmin);
+  height: max(1.75rem, 3.4cqmin);
+}
+.deck-slide .tp-map-pin > span > span {
+  font-size: max(0.75rem, 1.5cqmin);
+}
+
+@utility deck-display {
+  font-family: var(--font-display);
+  font-stretch: 125%;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+  font-size: max(2.25rem, 8cqmin);
+}
+@utility deck-title {
+  font-family: var(--font-display);
+  font-stretch: 118%;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.05;
+  font-size: max(1.625rem, 5cqmin);
+}
+@utility deck-heading {
+  font-family: var(--font-display);
+  font-stretch: 110%;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  font-size: max(1.125rem, 2.8cqmin);
+}
+@utility deck-code {
+  /* Airport codes, like a bag tag */
+  font-family: var(--font-display);
+  font-stretch: 125%;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+  font-size: max(1.75rem, 6cqmin);
+}
+@utility deck-label {
+  font-family: var(--font-display);
+  font-stretch: 112%;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  line-height: 1.3;
+  text-transform: uppercase;
+  font-size: max(0.6875rem, 1.45cqmin);
+}
+@utility deck-figure {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-size: max(2.25rem, 8cqmin);
+}
+@utility deck-body {
+  line-height: 1.45;
+  font-size: max(1rem, 2.2cqmin);
+}
+@utility deck-small {
+  line-height: 1.4;
+  font-size: max(0.8125rem, 1.7cqmin);
+}
+
+/* Slides print one per 16:9 page, with the static route plot standing in for live maps. */
+@page deck {
+  size: 13.333in 7.5in;
+  margin: 0;
+}
+@media print {
+  .deck-chrome,
+  .deck-overview {
+    display: none !important;
+  }
+  .deck-root,
+  .deck-stage {
+    position: static !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  .deck-slide {
+    display: block !important;
+    position: relative !important;
+    inset: auto !important;
+    page: deck;
+    width: 13.333in;
+    height: 7.5in;
+    overflow: hidden;
+    break-after: page;
+    animation: none !important;
+  }
+  .deck-slide:last-child {
+    break-after: auto;
+  }
+  .deck-live-map {
+    display: none !important;
+  }
+  .deck-plot {
+    display: block !important;
   }
 }

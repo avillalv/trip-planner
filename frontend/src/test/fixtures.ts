@@ -1,4 +1,5 @@
 import type { Lodging } from '@/lib/api/lodging'
+import type { Presentation } from '@/lib/api/presentation'
 import type { SystemStatus } from '@/lib/api/system'
 import type { Trip } from '@/lib/api/trips'
 
@@ -85,6 +86,116 @@ export function lodging(overrides: Partial<Lodging> = {}): Lodging {
     hearts: [],
     created_at: '2026-09-26T12:00:00Z',
     updated_at: '2026-09-26T12:00:00Z',
+    ...overrides,
+  }
+}
+
+type DeckRoute = Presentation['routes'][number]
+type Fare = DeckRoute['options'][number]
+
+export function fare(overrides: Partial<Fare> = {}): Fare {
+  return {
+    id: 51,
+    route_id: 12,
+    source: 'serpapi',
+    confidence: 'live',
+    origin: 'LAX',
+    destination: 'HND',
+    depart_date: '2026-11-05',
+    return_date: '2026-11-12',
+    price_total: '1248.00',
+    currency: 'USD',
+    price_home: '1248.00',
+    home_currency: 'USD',
+    passengers: 2,
+    airlines: ['ANA'],
+    stops_out: 0,
+    stops_back: 0,
+    duration_out_min: null,
+    duration_back_min: null,
+    depart_at_local: null,
+    flight_numbers: null,
+    booking_url: null,
+    source_url: null,
+    observed_at: '2026-09-26T12:00:00Z',
+    suspect: false,
+    hidden: false,
+    ...overrides,
+  }
+}
+
+export function deckRoute(overrides: Partial<DeckRoute> = {}): DeckRoute {
+  return {
+    route: {
+      id: 12,
+      trip_id: 7,
+      label: null,
+      origin_codes: ['LAX'],
+      destination_codes: ['HND', 'NRT'],
+      trip_type: 'round_trip',
+      depart_from: '2026-11-04',
+      depart_to: '2026-11-06',
+      return_from: null,
+      return_to: null,
+      min_nights: 7,
+      max_nights: 8,
+      adults: 2,
+      children: 0,
+      cabin: 'economy',
+      max_stops: null,
+      sources: ['serpapi'],
+      alert_price: null,
+      active: true,
+      created_at: '2026-09-26T12:00:00Z',
+      updated_at: '2026-09-26T12:00:00Z',
+    },
+    options: [fare(), fare({ id: 52, price_total: '1302.00', price_home: '1302.00', airlines: ['Japan Airlines'] })],
+    trend: [
+      { day: '2026-09-24', price: '1400.00' },
+      { day: '2026-09-25', price: '1300.00' },
+      { day: '2026-09-26', price: '1248.00' },
+    ],
+    typical_low: '1300.00',
+    typical_high: '1650.00',
+    price_level: 'low',
+    ...overrides,
+  }
+}
+
+/** A deck with one of everything: a destination, a route, a place to stay, and a planned day. */
+export function presentation(overrides: Partial<Presentation> = {}): Presentation {
+  const base = trip({ travelers: [{ id: 1, name: 'Alex', color: '#c24472', home_airports: ['LAX'] }] })
+  return {
+    trip: base,
+    destinations: base.destinations.map((d) => ({ ...d, currency: 'JPY', rate: '150.00' })),
+    routes: [deckRoute()],
+    lodging: [lodging({ status: 'shortlisted' })],
+    days: [
+      {
+        day: '2026-11-06',
+        title: 'Temples',
+        notes: '',
+        destination_name: 'Kyoto',
+        timezone: 'Asia/Tokyo',
+        in_trip: true,
+        activities: [
+          {
+            id: 1,
+            start_time: '07:00:00',
+            end_time: '09:00:00',
+            title: 'Fushimi Inari',
+            category: 'sights',
+            status: 'planned',
+            location_name: null,
+            lat: null,
+            lon: null,
+            notes: '',
+          },
+        ],
+      },
+    ],
+    idea_count: 2,
+    generated_at: '2026-09-26T12:00:00Z',
     ...overrides,
   }
 }

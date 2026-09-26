@@ -1,8 +1,9 @@
-import { Pencil } from 'lucide-react'
+import { MonitorPlay, Pencil } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link, NavLink, Outlet, useParams } from 'react-router'
+import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router'
 import { Guilloche } from '@/components/brand/guilloche'
 import { CountryTag } from '@/components/common/country-tag'
+import { enterFullscreen } from '@/components/deck/deck-hooks'
 import { tripSections } from '@/components/layout/nav-config'
 import { AvatarStack } from '@/components/people/person-avatar'
 import { TripEditor } from '@/components/trips/trip-editor'
@@ -17,7 +18,14 @@ import { cn } from '@/lib/utils'
 import type { TripOutletContext } from './trip-context'
 
 function TripHeader({ trip, onEdit }: { trip: Trip; onEdit: () => void }) {
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
   const dated = trip.start_date && trip.end_date
+  const present = () => {
+    // Full screen has to start from the click itself.
+    enterFullscreen()
+    navigate(`/trips/${trip.id}/present`, { state: { from: pathname } })
+  }
   return (
     <header className="relative isolate overflow-hidden border-b bg-card">
       <Guilloche
@@ -55,10 +63,16 @@ function TripHeader({ trip, onEdit }: { trip: Trip; onEdit: () => void }) {
             <AvatarStack people={trip.travelers} size="md" />
           </div>
         </div>
-        <Button variant="outline" onClick={onEdit} className="bg-card">
-          <Pencil aria-hidden="true" />
-          Edit trip
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={present}>
+            <MonitorPlay aria-hidden="true" />
+            Present
+          </Button>
+          <Button variant="outline" onClick={onEdit} className="bg-card">
+            <Pencil aria-hidden="true" />
+            Edit trip
+          </Button>
+        </div>
       </div>
     </header>
   )
