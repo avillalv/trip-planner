@@ -14,7 +14,7 @@ import sys
 import threading
 import time
 from collections import deque
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
@@ -36,6 +36,10 @@ from tripplanner.worker.agents.stream import StreamParser, StreamState
 
 # Every agent run uses Sonnet. There is deliberately no --fallback-model.
 MODEL = "sonnet"
+# Claude Code runs some background work (e.g. reading pages that WebFetch opens) on its small
+# "haiku" model. Pointing that at Sonnet too keeps every model call in a run on Sonnet.
+# Update this when a newer Sonnet ships; the run log warns if any other model shows up.
+BACKGROUND_MODEL = "claude-sonnet-5"
 WEB_TOOLS = ("WebSearch", "WebFetch")
 MCP_SERVER = "trip"
 # (max turns, timeout in minutes) when the routine doesn't set them.
@@ -117,6 +121,11 @@ def mcp_config(run_id: UUID, api_url: str) -> dict[str, Any]:
             }
         }
     }
+
+
+def run_env(base: Mapping[str, str]) -> dict[str, str]:
+    """The environment Claude runs with: no API keys or model overrides, background work on Sonnet."""
+    return {**agent_env(base), "ANTHROPIC_DEFAULT_HAIKU_MODEL": BACKGROUND_MODEL}
 
 
 def redact(argv: list[str], settings: Settings) -> list[str]:
@@ -359,7 +368,7 @@ def run_agent(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=run_dir,
-            env=agent_env(os.environ),
+            env=run_env(os.environ),
             text=True,
             encoding="utf-8",
             errors="replace",

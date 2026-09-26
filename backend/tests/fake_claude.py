@@ -74,6 +74,7 @@ def main() -> None:
                     "prompt": prompt,
                     "cwd": os.getcwd(),
                     "api_key_leaked": "ANTHROPIC_API_KEY" in os.environ,
+                    "background_model": os.environ.get("ANTHROPIC_DEFAULT_HAIKU_MODEL"),
                 },
                 f,
             )

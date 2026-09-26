@@ -92,7 +92,8 @@ signed in, and runs stop right away with instructions if it isn't.
 
 How runs are kept safe and predictable:
 
-- Every run uses the Sonnet model (`claude -p --model sonnet`, with no fallback model). If Claude
+- Every run uses the Sonnet model (`claude -p --model sonnet`, with no fallback model), and Claude
+  Code's background work, like reading the pages it opens, is set to Sonnet too. If Claude
   reports a different model, the app stops the run.
 - Claude gets only web search, web page fetching, and five trip tools. There's no shell and no
   file access, your own Claude Code settings, hooks, and skills aren't used, and it never opens

@@ -72,6 +72,13 @@ def test_environment_keeps_runs_on_the_subscription_and_hides_app_secrets() -> N
     assert env == {"PATH": "C:/bin"}
 
 
+def test_background_work_is_pinned_to_sonnet_too() -> None:
+    env = runner.run_env({"PATH": "C:/bin", "ANTHROPIC_DEFAULT_HAIKU_MODEL": "claude-haiku-4-5"})
+
+    assert env["ANTHROPIC_DEFAULT_HAIKU_MODEL"] == runner.BACKGROUND_MODEL
+    assert "sonnet" in runner.BACKGROUND_MODEL
+
+
 def test_mcp_config_holds_no_secrets(test_settings: Settings) -> None:
     run_id = uuid4()
     text = json.dumps(mcp_config(run_id, "http://127.0.0.1:8000"))
@@ -166,6 +173,7 @@ def test_the_prompt_command_and_environment_reach_claude(agent, db_session: Sess
 
     assert arg_after(seen["argv"], "--model") == "sonnet"
     assert not seen["api_key_leaked"]
+    assert seen["background_model"] == runner.BACKGROUND_MODEL
     assert "Prefer nonstop flights." in seen["prompt"] and '"LAX"' in seen["prompt"]
     assert seen["prompt"] == run.prompt
     run_dir = Path(run.log_path)
