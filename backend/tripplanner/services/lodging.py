@@ -10,6 +10,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from tripplanner import __version__
 from tripplanner.models import ApiCall, LodgingOption, LodgingVote, Trip
 from tripplanner.providers import link_preview, serpapi_rentals
 from tripplanner.schemas.lodging import (
@@ -45,8 +46,20 @@ def nights(option: LodgingOption) -> int | None:
     return None
 
 
+def ensure_rates(db: Session, currency: str | None, home_currency: str) -> None:
+    """Fetch exchange rates if a foreign price needs them (free, and at most every 12 hours)."""
+    if not currency or currency.upper() == home_currency:
+        return
+    with httpx.Client(timeout=8, headers={"User-Agent": f"TripPlanner/{__version__}"}) as client:
+        fx.refresh_rates(db, client)
+
+
 def _fill_prices(db: Session, option: LodgingOption, home_currency: str) -> None:
     """Derive total or per-night from the other when dates are known, and convert the total."""
+    # Stored to the cent; round now so the saved option reads back the same.
+    for field in ("price_total", "price_per_night"):
+        if (value := getattr(option, field)) is not None:
+            setattr(option, field, Decimal(value).quantize(CENT, ROUND_HALF_UP))
     count = nights(option)
     if count:
         if option.price_total is None and option.price_per_night is not None:
@@ -89,6 +102,7 @@ def get_option(db: Session, option_id: int) -> LodgingOption:
 
 
 def create_option(db: Session, trip: Trip, body: LodgingIn) -> LodgingOption:
+    ensure_rates(db, body.currency, trip.home_currency)
     option = LodgingOption(trip_id=trip.id, **body.model_dump())
     if body.url:
         option.url_normalized = link_preview.normalize_url(body.url)
@@ -105,6 +119,11 @@ def create_option(db: Session, trip: Trip, body: LodgingIn) -> LodgingOption:
 
 def update_option(db: Session, option: LodgingOption, body: LodgingUpdate) -> LodgingOption:
     changes = body.model_dump(exclude_unset=True)
+    trip = db.get(Trip, option.trip_id)
+    assert trip is not None
+    # Only a new price, or one never converted, is worth waiting on the rates service for.
+    if changes.keys() & {"price_total", "price_per_night", "currency"} or option.price_home_total is None:
+        ensure_rates(db, changes.get("currency", option.currency), trip.home_currency)
     for field in ("title", "status", "favorite", "notes", "pros", "cons", "photos"):
         if field in changes and changes[field] is None:
             raise ValueError(f"{field.capitalize()} can't be empty.")
@@ -124,8 +143,6 @@ def update_option(db: Session, option: LodgingOption, body: LodgingUpdate) -> Lo
         raise ValueError("Give both latitude and longitude, or neither.")
     if (option.price_total or option.price_per_night) and not option.currency:
         raise ValueError("Say which currency the price is in.")
-    trip = db.get(Trip, option.trip_id)
-    assert trip is not None
     _fill_prices(db, option, trip.home_currency)
     try:
         db.commit()

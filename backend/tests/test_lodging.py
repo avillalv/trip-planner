@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from tests.factories import add_person, add_rates, add_trip
 from tripplanner.models import ApiCall, Trip, TripDestination
-from tripplanner.providers import link_preview, serpapi_rentals
+from tripplanner.providers import frankfurter, link_preview, serpapi_rentals
 from tripplanner.services import serpapi_budget
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -192,6 +192,41 @@ def test_editing_the_nightly_price_updates_the_total(client: TestClient, trip: T
 
     assert (updated["price_total"], updated["price_home_total"]) == ("75000.00", "500.00")
     assert (updated["status"], updated["favorite"]) == ("shortlisted", True)
+
+
+RATES = [
+    {"date": "2026-09-25", "base": "EUR", "quote": "USD", "rate": 1.1},
+    {"date": "2026-09-25", "base": "EUR", "quote": "JPY", "rate": 165},
+]
+
+
+def test_a_foreign_price_fetches_exchange_rates_once(
+    client: TestClient, db_session: Session, no_real_network: respx.MockRouter
+) -> None:
+    trip = add_trip(db_session)
+    rates = no_real_network.get(frankfurter.RATES_URL).mock(return_value=httpx.Response(200, json=RATES))
+
+    in_dollars = save(client, trip, url="https://example.com/cabin", price_total="500", currency="USD")
+    assert (in_dollars["price_home_total"], rates.call_count) == ("500.00", 0)
+
+    in_yen = save(client, trip)
+    more_yen = save(client, trip, url="https://example.com/ryokan")
+    assert (in_yen["price_home_total"], more_yen["price_home_total"]) == ("600.00", "600.00")
+    assert rates.call_count == 1
+
+
+def test_a_place_saves_without_exchange_rates_and_converts_later(
+    client: TestClient, db_session: Session, no_real_network: respx.MockRouter
+) -> None:
+    trip = add_trip(db_session)
+    rates = no_real_network.get(frankfurter.RATES_URL).mock(return_value=httpx.Response(503))
+
+    option = save(client, trip)
+    assert (option["price_total"], option["price_home_total"]) == ("90000.00", None)
+
+    rates.mock(return_value=httpx.Response(200, json=RATES))
+    edited = client.patch(f"/api/v1/lodging/{option['id']}", json={"notes": "Host speaks English."}).json()
+    assert edited["price_home_total"] == "600.00"
 
 
 def test_each_traveler_can_heart_an_option(client: TestClient, db_session: Session, trip: Trip) -> None:
