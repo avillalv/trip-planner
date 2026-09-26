@@ -58,7 +58,7 @@ def test_days_summarize_their_activities(client: TestClient, trip: Trip) -> None
 
     assert day["activity_count"] == 3
     assert day["first"] == {"title": "Tsukiji breakfast", "start_time": "07:30:00"}
-    assert day["last"] == {"title": "Buy a Suica card", "start_time": None}
+    assert day["last"] == {"title": "teamLab", "start_time": "19:00:00"}
 
 
 def test_a_day_can_move_to_another_city(client: TestClient, trip: Trip) -> None:

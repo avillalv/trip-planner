@@ -65,6 +65,8 @@ def list_days(db: Session, trip: Trip) -> list[DayOut]:
         row = overrides.get(day)
         destination = destinations.get(row.destination_id) if row and row.destination_id else fallback
         ordered = sorted(by_day.get(day, []), key=day_order)
+        # The day's span: earliest and latest timed plans (any-time ones only when nothing is timed).
+        timed = [a for a in ordered if a.start_time is not None] or ordered
         days.append(
             DayOut(
                 day=day,
@@ -75,8 +77,8 @@ def list_days(db: Session, trip: Trip) -> list[DayOut]:
                 timezone=destination.timezone if destination else None,
                 in_trip=day in in_trip,
                 activity_count=len(ordered),
-                first=_brief(ordered[0] if ordered else None),
-                last=_brief(ordered[-1] if len(ordered) > 1 else None),
+                first=_brief(timed[0] if timed else None),
+                last=_brief(timed[-1] if len(timed) > 1 else None),
             )
         )
     return days
