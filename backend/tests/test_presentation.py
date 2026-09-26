@@ -83,6 +83,8 @@ def test_fares_show_the_cheapest_trusted_options_and_their_daily_low(db_session:
     add_route(db_session, trip, destination_codes=["KIX"])  # no fares yet, so no slide
     add_quote(db_session, route, fare(1400, NOW - timedelta(days=2)), "USD")
     add_quote(db_session, route, fare(1300, NOW - timedelta(days=1)), "USD")  # same flight, cheaper now
+    cached = fare(1320, NOW - timedelta(days=1), source="travelpayouts", confidence="cached")
+    add_quote(db_session, route, cached, "USD")  # the same flight again, from another source
     add_quote(db_session, route, fare(1250, NOW, date(2026, 11, 6), airlines=["JAL"]), "USD")
     add_quote(db_session, route, fare(1350, NOW, airlines=["United"]), "USD")
     add_quote(db_session, route, fare(1500, NOW, airlines=["ZIPAIR"]), "USD")

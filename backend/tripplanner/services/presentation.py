@@ -54,7 +54,15 @@ def _routes(db: Session, trip: Trip, now: datetime) -> list[DeckRoute]:
     """Routes with current fares: the cheapest few, and how the lowest price has moved."""
     deck = []
     for route in route_service.list_routes(db, trip.id):
-        fares = [q for q in quotes.best_options(db, trip.id, route.id, limit=12, now=now) if not q.suspect]
+        fares = []
+        seen: set[tuple[object, ...]] = set()
+        # Cheapest first, so each flight keeps its lowest price when several sources list it.
+        for q in quotes.best_options(db, trip.id, route.id, limit=24, now=now):
+            flight = (q.origin, q.destination, q.depart_date, q.return_date, tuple(q.airlines), q.stops_out)
+            if q.suspect or flight in seen:
+                continue
+            seen.add(flight)
+            fares.append(q)
         if not fares:
             continue
         lows: dict[date, Decimal] = {}
