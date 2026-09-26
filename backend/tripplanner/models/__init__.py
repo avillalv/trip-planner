@@ -1,5 +1,6 @@
 """SQLAlchemy models. Import every model here so Alembic sees the full metadata."""
 
+from tripplanner.models.agents import AgentNote, IngestRejection
 from tripplanner.models.airport import Airport
 from tripplanner.models.automation import ApiCall, Routine, Run, RunEvent
 from tripplanner.models.base import Base
@@ -9,6 +10,7 @@ from tripplanner.models.system import AppSetting, WorkerHeartbeat
 from tripplanner.models.trip import Trip, TripDestination, trip_travelers
 
 __all__ = [
+    "AgentNote",
     "Airport",
     "ApiCall",
     "AppSetting",
@@ -16,6 +18,7 @@ __all__ = [
     "FlightQuote",
     "FlightRoute",
     "FxRate",
+    "IngestRejection",
     "Person",
     "RoutePriceInsight",
     "Routine",

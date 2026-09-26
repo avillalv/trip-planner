@@ -1,11 +1,12 @@
 """Small builders for test data and request payloads."""
 
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy.orm import Session
 
-from tripplanner.models import Airport, FlightRoute, Person, Trip
+from tripplanner.models import Airport, FlightRoute, FxRate, Person, Run, Trip
 
 
 def add_airport(
@@ -99,3 +100,27 @@ def route_payload(**overrides: Any) -> dict[str, Any]:
     }
     payload.update(overrides)
     return payload
+
+
+def add_run(db: Session, trip: Trip, kind: str = "flight_agent", **overrides: Any) -> Run:
+    values: dict[str, Any] = {
+        "trip_id": trip.id,
+        "kind": kind,
+        "trigger": "manual",
+        "status": "running",
+        "params": {},
+        "started_at": datetime.now(UTC) - timedelta(minutes=1),
+    }
+    values.update(overrides)
+    run = Run(**values)
+    db.add(run)
+    db.flush()
+    return run
+
+
+def add_rates(db: Session, **per_eur: str) -> None:
+    """Exchange rates as units per 1 EUR, e.g. add_rates(db, USD="1.10", JPY="165")."""
+    today = date.today()
+    for code, rate in {"EUR": "1", **per_eur}.items():
+        db.add(FxRate(currency=code, per_eur=Decimal(rate), rate_date=today, fetched_at=datetime.now(UTC)))
+    db.flush()
