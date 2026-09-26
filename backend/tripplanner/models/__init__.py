@@ -6,6 +6,7 @@ from tripplanner.models.automation import ApiCall, Routine, Run, RunEvent
 from tripplanner.models.base import Base
 from tripplanner.models.flights import FlightQuote, FlightRoute, FxRate, RoutePriceInsight
 from tripplanner.models.itinerary import Activity, ItineraryDay, PlaceCacheEntry
+from tripplanner.models.lodging import LodgingOption, LodgingVote
 from tripplanner.models.people import Person
 from tripplanner.models.system import AppSetting, WorkerHeartbeat
 from tripplanner.models.trip import Trip, TripDestination, trip_travelers
@@ -22,6 +23,8 @@ __all__ = [
     "FxRate",
     "IngestRejection",
     "ItineraryDay",
+    "LodgingOption",
+    "LodgingVote",
     "Person",
     "PlaceCacheEntry",
     "RoutePriceInsight",

@@ -41,9 +41,10 @@ def _month_start(today: date) -> datetime:
 
 
 def _count(db: Session, since: datetime) -> int:
+    # Every SerpApi search counts: flight checks and rental searches share the plan's allowance.
     stmt = select(func.coalesce(func.sum(ApiCall.units), 0)).where(
         ApiCall.provider == "serpapi",
-        ApiCall.endpoint == "google_flights",
+        ApiCall.endpoint != "account",
         ApiCall.ok.is_(True),
         ApiCall.cached.is_(False),
         ApiCall.created_at >= since,

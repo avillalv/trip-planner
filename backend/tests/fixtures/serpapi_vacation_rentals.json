@@ -1,0 +1,1016 @@
+{
+ "search_metadata": {
+  "status": "Success",
+  "google_hotels_url": "https://www.google.com/travel/search?q=Kyoto%2C+Japan&hl=en&gl=us"
+ },
+ "search_information": {
+  "total_results": 5651
+ },
+ "ads": [
+  {
+   "name": "DoubleTree by Hilton Kyoto Station",
+   "source": "Booking.com",
+   "source_icon": "https://www.gstatic.com/travel-hotels/branding/icon_184.png",
+   "link": "https://www.google.com/aclk?sa=l&ai=DChsSEwjKpvqQoI2XAxUwO0QIHR8GAhQYACICCAEQCxoCZHo&co=1&ase=2&gclid=EAIaIQobChMIyqb6kKCNlwMVMDtECB0fBgIUEA0YASABEgLNivD_BwE&cid=CAASugHkaNigyLDezhnh_HtrOqTnA1wALM2w2bE1r-DNUit6NGxgtDdHVpQdKAnuTyLRuGtOCiSg2yajb9sOmnhMaNVlmFkNQS1Xwg_W_9Tvj_4RBy7-J3h26osoYqEkK6-6mNK0ejSj1VE7nUWg_FnNritFnYNd6dpTDnLLSGC6SNLvX3vAFDhvm4l96-Hzgc3DWUu-EGD5tasjF6iBISAjwpq2tOSWcsHeZNH62ayfJUkeIDY41J8WpQkzIO0&category=acrcp_v1_48&sig=AOD64_2ytTtMki1q4s7GtcCFtSOdh71UmA&adurl=",
+   "property_token": "CgsIi_iopKeg_sS6ARAB",
+   "serpapi_property_details_link": "https://serpapi.com/search.json?adults=2&check_in_date=2026-11-09&check_out_date=2026-11-12&children=0&currency=USD&engine=google_hotels&gl=us&hl=en&property_token=CgsIi_iopKeg_sS6ARAB&q=Kyoto%2C+Japan&vacation_rentals=true",
+   "gps_coordinates": {
+    "latitude": 34.984055,
+    "longitude": 135.762833
+   },
+   "hotel_class": 4,
+   "thumbnail": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSEBD0zBcqr-yxRCaTfvfPYw-tRCYtNLSLQG3iuFytYhwLO0w&s=10",
+   "overall_rating": 4.3,
+   "reviews": 661,
+   "price": "$255",
+   "extracted_price": 255,
+   "amenities": [
+    "Parking",
+    "Fitness center",
+    "Wi-Fi"
+   ]
+  },
+  {
+   "name": "The Chapter Kyoto, a Tribute Portfolio Hotel",
+   "source": "The Chapter Kyoto, a Tribute Portfolio Hotel",
+   "source_icon": "https://www.gstatic.com/travel-hotels/branding/df3424c9-7799-4d27-aeb5-cdcabf8bf950.png",
+   "link": "https://www.google.com/aclk?sa=l&ai=DChsSEwjKpvqQoI2XAxUwO0QIHR8GAhQYACICCAEQDRoCZHo&co=1&ase=2&gclid=EAIaIQobChMIyqb6kKCNlwMVMDtECB0fBgIUEA0YAiABEgLE6_D_BwE&cid=CAASugHkaNigyLDezhnh_HtrOqTnA1wALM2w2bE1r-DNUit6NGxgtDdHVpQdKAnuTyLRuGtOCiSg2yajb9sOmnhMaNVlmFkNQS1Xwg_W_9Tvj_4RBy7-J3h26osoYqEkK6-6mNK0ejSj1VE7nUWg_FnNritFnYNd6dpTDnLLSGC6SNLvX3vAFDhvm4l96-Hzgc3DWUu-EGD5tasjF6iBISAjwpq2tOSWcsHeZNH62ayfJUkeIDY41J8WpQkzIO0&category=acrcp_v1_48&sig=AOD64_1yw2tQEdAYf-ZG79oULZJIS5xMTw&adurl=",
+   "property_token": "CgsIhPbijqfO8J6VARAB",
+   "serpapi_property_details_link": "https://serpapi.com/search.json?adults=2&check_in_date=2026-11-09&check_out_date=2026-11-12&children=0&currency=USD&engine=google_hotels&gl=us&hl=en&property_token=CgsIhPbijqfO8J6VARAB&q=Kyoto%2C+Japan&vacation_rentals=true",
+   "gps_coordinates": {
+    "latitude": 35.013991,
+    "longitude": 135.769207
+   },
+   "hotel_class": 4,
+   "thumbnail": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ0vsrbYVnfMPRfs5mDsvHiM56Ve8zUaSyBKPp_F-autVvMrg&s=10",
+   "overall_rating": 4.3,
+   "reviews": 735,
+   "price": "$378",
+   "extracted_price": 378,
+   "amenities": [
+    "Spa",
+    "Fitness center",
+    "Free Wi-Fi",
+    "Wi-Fi"
+   ]
+  },
+  {
+   "name": "THE HOTEL HIGASHIYAMA KYOTO TOKYU, A Pan Pacific Hotel",
+   "source": "THE HOTEL HIGASHIYAMA KYOTO TOKYU, A Pan Pacific Hotel",
+   "source_icon": "https://www.gstatic.com/travel-hotels/branding/15154745752652484190.png",
+   "link": "https://www.google.com/aclk?sa=l&ai=DChsSEwjKpvqQoI2XAxUwO0QIHR8GAhQYACICCAEQCRoCZHo&co=1&ase=2&gclid=EAIaIQobChMIyqb6kKCNlwMVMDtECB0fBgIUEA0YAyABEgKejvD_BwE&cid=CAASugHkaNigyLDezhnh_HtrOqTnA1wALM2w2bE1r-DNUit6NGxgtDdHVpQdKAnuTyLRuGtOCiSg2yajb9sOmnhMaNVlmFkNQS1Xwg_W_9Tvj_4RBy7-J3h26osoYqEkK6-6mNK0ejSj1VE7nUWg_FnNritFnYNd6dpTDnLLSGC6SNLvX3vAFDhvm4l96-Hzgc3DWUu-EGD5tasjF6iBISAjwpq2tOSWcsHeZNH62ayfJUkeIDY41J8WpQkzIO0&category=acrcp_v1_48&sig=AOD64_2Bc4qYBrjQktrJBjGIPSebgbM3KA&adurl=",
+   "property_token": "CgoIp6XBlPnQvLQIEAE",
+   "serpapi_property_details_link": "https://serpapi.com/search.json?adults=2&check_in_date=2026-11-09&check_out_date=2026-11-12&children=0&currency=USD&engine=google_hotels&gl=us&hl=en&property_token=CgoIp6XBlPnQvLQIEAE&q=Kyoto%2C+Japan&vacation_rentals=true",
+   "gps_coordinates": {
+    "latitude": 35.008978,
+    "longitude": 135.783484
+   },
+   "hotel_class": 5,
+   "thumbnail": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSywCW8ixbXK_g5yGpZ2c10v7kG4wVTbzqUF85al833TolItA&s=10",
+   "overall_rating": 4.5,
+   "reviews": 580,
+   "price": "$341",
+   "extracted_price": 341,
+   "amenities": [
+    "Hot tub",
+    "Spa",
+    "Fitness center",
+    "Free Wi-Fi",
+    "Wi-Fi"
+   ],
+   "free_cancellation": true
+  },
+  {
+   "name": "The Ritz-Carlton, Kyoto",
+   "source": "Trip.com",
+   "source_icon": "https://www.gstatic.com/travel-hotels/branding/b8089cb0-34b4-458c-8749-9bc4614baba4.png",
+   "link": "https://www.google.com/aclk?sa=l&ai=DChsSEwjKpvqQoI2XAxUwO0QIHR8GAhQYACICCAEQDxoCZHo&co=1&ase=2&gclid=EAIaIQobChMIyqb6kKCNlwMVMDtECB0fBgIUEA0YBCABEgJb3vD_BwE&cid=CAASugHkaNigyLDezhnh_HtrOqTnA1wALM2w2bE1r-DNUit6NGxgtDdHVpQdKAnuTyLRuGtOCiSg2yajb9sOmnhMaNVlmFkNQS1Xwg_W_9Tvj_4RBy7-J3h26osoYqEkK6-6mNK0ejSj1VE7nUWg_FnNritFnYNd6dpTDnLLSGC6SNLvX3vAFDhvm4l96-Hzgc3DWUu-EGD5tasjF6iBISAjwpq2tOSWcsHeZNH62ayfJUkeIDY41J8WpQkzIO0&category=acrcp_v1_48&sig=AOD64_1HdT4PEs8FNKU6s33RywHmZciW8w&adurl=",
+   "property_token": "CgsI5OTWouL8zOGtARAB",
+   "serpapi_property_details_link": "https://serpapi.com/search.json?adults=2&check_in_date=2026-11-09&check_out_date=2026-11-12&children=0&currency=USD&engine=google_hotels&gl=us&hl=en&property_token=CgsI5OTWouL8zOGtARAB&q=Kyoto%2C+Japan&vacation_rentals=true",
+   "gps_coordinates": {
+    "latitude": 35.013917,
+    "longitude": 135.77085599999998
+   },
+   "hotel_class": 5,
+   "thumbnail": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRBQR8DLjjXblEOqGjbpcGCYAfCLkLtlsm2-Cuts5hnBnA68w&s=10",
+   "overall_rating": 4.6,
+   "reviews": 2516,
+   "price": "$11,184",
+   "extracted_price": 11184,
+   "amenities": [
+    "Spa",
+    "Pool",
+    "Parking",
+    "Fitness center",
+    "Free Wi-Fi",
+    "Wi-Fi"
+   ],
+   "free_cancellation": true
+  },
+  {
+   "name": "Hyatt Place Kyoto",
+   "source": "Expedia.ca",
+   "source_icon": "https://www.gstatic.com/travel-hotels/branding/ac238c97-1652-4830-8da8-bb8d8883af88.png",
+   "link": "https://www.google.com/aclk?sa=l&ai=DChsSEwjKpvqQoI2XAxUwO0QIHR8GAhQYACICCAEQAxoCZHo&co=1&ase=2&gclid=EAIaIQobChMIyqb6kKCNlwMVMDtECB0fBgIUEA0YBSABEgITWPD_BwE&cid=CAASugHkaNigyLDezhnh_HtrOqTnA1wALM2w2bE1r-DNUit6NGxgtDdHVpQdKAnuTyLRuGtOCiSg2yajb9sOmnhMaNVlmFkNQS1Xwg_W_9Tvj_4RBy7-J3h26osoYqEkK6-6mNK0ejSj1VE7nUWg_FnNritFnYNd6dpTDnLLSGC6SNLvX3vAFDhvm4l96-Hzgc3DWUu-EGD5tasjF6iBISAjwpq2tOSWcsHeZNH62ayfJUkeIDY41J8WpQkzIO0&category=acrcp_v1_48&sig=AOD64_3_hlM_1ZaapmHT_4R2D8b0sGa6Dw&adurl=",
+   "property_token": "CgsI66GY9Kj2vofiARAB",
+   "serpapi_property_details_link": "https://serpapi.com/search.json?adults=2&check_in_date=2026-11-09&check_out_date=2026-11-12&children=0&currency=USD&engine=google_hotels&gl=us&hl=en&property_token=CgsI66GY9Kj2vofiARAB&q=Kyoto%2C+Japan&vacation_rentals=true",
+   "gps_coordinates": {
+    "latitude": 35.015416,
+    "longitude": 135.759257
+   },
+   "hotel_class": 3,
+   "thumbnail": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSOBmh2b81IQOSVv_o_JguANxNgCI6JX3WrtZ5SJ8Vr2XHnPg&s=10",
+   "overall_rating": 4.4,
+   "reviews": 711,
+   "price": "$273",
+   "extracted_price": 273,
+   "amenities": [
+    "Parking",
+    "Fitness center",
+    "Free Wi-Fi",
+    "Wi-Fi"
+   ],
+   "free_cancellation": true
+  },
+  {
+   "name": "Park Hyatt Kyoto",
+   "source": "Expedia.ca",
+   "source_icon": "https://www.gstatic.com/travel-hotels/branding/ac238c97-1652-4830-8da8-bb8d8883af88.png",
+   "link": "https://www.google.com/aclk?sa=l&ai=DChsSEwjKpvqQoI2XAxUwO0QIHR8GAhQYACICCAEQBRoCZHo&co=1&ase=2&gclid=EAIaIQobChMIyqb6kKCNlwMVMDtECB0fBgIUEA0YBiABEgIYoPD_BwE&cid=CAASugHkaNigyLDezhnh_HtrOqTnA1wALM2w2bE1r-DNUit6NGxgtDdHVpQdKAnuTyLRuGtOCiSg2yajb9sOmnhMaNVlmFkNQS1Xwg_W_9Tvj_4RBy7-J3h26osoYqEkK6-6mNK0ejSj1VE7nUWg_FnNritFnYNd6dpTDnLLSGC6SNLvX3vAFDhvm4l96-Hzgc3DWUu-EGD5tasjF6iBISAjwpq2tOSWcsHeZNH62ayfJUkeIDY41J8WpQkzIO0&category=acrcp_v1_48&sig=AOD64_1az5YfPSRiagbr6YRWyjI4ABLc0g&adurl=",
+   "property_token": "CgsIy4u9msfixufeARAB",
+   "serpapi_property_details_link": "https://serpapi.com/search.json?adults=2&check_in_date=2026-11-09&check_out_date=2026-11-12&children=0&currency=USD&engine=google_hotels&gl=us&hl=en&property_token=CgsIy4u9msfixufeARAB&q=Kyoto%2C+Japan&vacation_rentals=true",
+   "gps_coordinates": {
+    "latitude": 34.999112,
+    "longitude": 135.781127
+   },
+   "hotel_class": 5,
+   "thumbnail": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQFkGiAT5iZJOOyNOAyV3wyP8-nPa3dgTissT0zdnUVQZ1vhA&s=10",
+   "overall_rating": 4.6,
+   "reviews": 728,
+   "price": "$3,316",
+   "extracted_price": 3316,
+   "amenities": [
+    "Spa",
+    "Parking",
+    "Fitness center",
+    "Free Wi-Fi",
+    "Wi-Fi"
+   ]
+  },
+  {
+   "name": "Hyatt Regency Kyoto",
+   "source": "Agoda",
+   "source_icon": "https://www.gstatic.com/travel-hotels/branding/b13642de-d476-41bd-8254-3edc2e567aa6.png",
+   "link": "https://www.google.com/aclk?sa=l&ai=DChsSEwjKpvqQoI2XAxUwO0QIHR8GAhQYACICCAEQERoCZHo&co=1&ase=2&gclid=EAIaIQobChMIyqb6kKCNlwMVMDtECB0fBgIUEA0YByABEgIjv_D_BwE&cid=CAASugHkaNigyLDezhnh_HtrOqTnA1wALM2w2bE1r-DNUit6NGxgtDdHVpQdKAnuTyLRuGtOCiSg2yajb9sOmnhMaNVlmFkNQS1Xwg_W_9Tvj_4RBy7-J3h26osoYqEkK6-6mNK0ejSj1VE7nUWg_FnNritFnYNd6dpTDnLLSGC6SNLvX3vAFDhvm4l96-Hzgc3DWUu-EGD5tasjF6iBISAjwpq2tOSWcsHeZNH62ayfJUkeIDY41J8WpQkzIO0&category=acrcp_v1_48&sig=AOD64_0JRTDQBipcaoaEtm6ZIqm3oK95vA&adurl=",
+   "property_token": "CgoIu5TT-u_A2u9tEAE",
+   "serpapi_property_details_link": "https://serpapi.com/search.json?adults=2&check_in_date=2026-11-09&check_out_date=2026-11-12&children=0&currency=USD&engine=google_hotels&gl=us&hl=en&property_token=CgoIu5TT-u_A2u9tEAE&q=Kyoto%2C+Japan&vacation_rentals=true",
+   "gps_coordinates": {
+    "latitude": 34.988262999999996,
+    "longitude": 135.772834
+   },
+   "hotel_class": 5,
+   "thumbnail": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQumdUkbUR9zN4En8nFlFu0-HP0n174INJ3AfYyBwv6PYjOcQ&s=10",
+   "overall_rating": 4.3,
+   "reviews": 2293,
+   "price": "$433",
+   "extracted_price": 433,
+   "amenities": [
+    "Spa",
+    "Parking",
+    "Fitness center",
+    "Free Wi-Fi",
+    "Wi-Fi",
+    "Tennis"
+   ]
+  },
+  {
+   "name": "HOTEL KYOTOLOGY",
+   "source": "Expedia.ca",
+   "source_icon": "https://www.gstatic.com/travel-hotels/branding/ac238c97-1652-4830-8da8-bb8d8883af88.png",
+   "link": "https://www.google.com/aclk?sa=l&ai=DChsSEwjKpvqQoI2XAxUwO0QIHR8GAhQYACICCAEQBxoCZHo&co=1&ase=2&gclid=EAIaIQobChMIyqb6kKCNlwMVMDtECB0fBgIUEA0YCCABEgJ-XPD_BwE&cid=CAASugHkaNigyLDezhnh_HtrOqTnA1wALM2w2bE1r-DNUit6NGxgtDdHVpQdKAnuTyLRuGtOCiSg2yajb9sOmnhMaNVlmFkNQS1Xwg_W_9Tvj_4RBy7-J3h26osoYqEkK6-6mNK0ejSj1VE7nUWg_FnNritFnYNd6dpTDnLLSGC6SNLvX3vAFDhvm4l96-Hzgc3DWUu-EGD5tasjF6iBISAjwpq2tOSWcsHeZNH62ayfJUkeIDY41J8WpQkzIO0&category=acrcp_v1_48&sig=AOD64_2i1rn9rFAZdgPrxwWft_ASEpef4w&adurl=",
+   "property_token": "CgoIxvmaqJG4sMR2EAE",
+   "serpapi_property_details_link": "https://serpapi.com/search.json?adults=2&check_in_date=2026-11-09&check_out_date=2026-11-12&children=0&currency=USD&engine=google_hotels&gl=us&hl=en&property_token=CgoIxvmaqJG4sMR2EAE&q=Kyoto%2C+Japan&vacation_rentals=true",
+   "gps_coordinates": {
+    "latitude": 34.98672,
+    "longitude": 135.773296
+   },
+   "hotel_class": 4,
+   "thumbnail": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRQRvIkQjt7dc5ebSgB0t6t6sLB2GfiqiPvVdTdLdF2w_5EjQ&s=10",
+   "overall_rating": 4.3,
+   "reviews": 103,
+   "price": "$149",
+   "extracted_price": 149,
+   "amenities": [
+    "Free Wi-Fi"
+   ],
+   "free_cancellation": true
+  },
+  {
+   "name": "Imperial Hotel Kyoto",
+   "source": "Expedia.ca",
+   "source_icon": "https://www.gstatic.com/travel-hotels/branding/ac238c97-1652-4830-8da8-bb8d8883af88.png",
+   "link": "https://www.google.com/aclk?sa=l&ai=DChsSEwjKpvqQoI2XAxUwO0QIHR8GAhQYACICCAEQARoCZHo&co=1&ase=2&gclid=EAIaIQobChMIyqb6kKCNlwMVMDtECB0fBgIUEA0YCSABEgKAH_D_BwE&cid=CAASugHkaNigyLDezhnh_HtrOqTnA1wALM2w2bE1r-DNUit6NGxgtDdHVpQdKAnuTyLRuGtOCiSg2yajb9sOmnhMaNVlmFkNQS1Xwg_W_9Tvj_4RBy7-J3h26osoYqEkK6-6mNK0ejSj1VE7nUWg_FnNritFnYNd6dpTDnLLSGC6SNLvX3vAFDhvm4l96-Hzgc3DWUu-EGD5tasjF6iBISAjwpq2tOSWcsHeZNH62ayfJUkeIDY41J8WpQkzIO0&category=acrcp_v1_48&sig=AOD64_1ivAMcarWquTWRSPYlpha-0n6_eQ&adurl=",
+   "property_token": "CgoI7JmB8o7eqNd7EAE",
+   "serpapi_property_details_link": "https://serpapi.com/search.json?adults=2&check_in_date=2026-11-09&check_out_date=2026-11-12&children=0&currency=USD&engine=google_hotels&gl=us&hl=en&property_token=CgoI7JmB8o7eqNd7EAE&q=Kyoto%2C+Japan&vacation_rentals=true",
+   "gps_coordinates": {
+    "latitude": 35.001765999999996,
+    "longitude": 135.775466
+   },
+   "hotel_class": 5,
+   "thumbnail": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSTzNAH7eWXQWrXTN30r08XtqgU59Fb0eHLHTNstR9fTd7mAA&s=10",
+   "overall_rating": 4.6,
+   "reviews": 76,
+   "price": "$1,106",
+   "extracted_price": 1106,
+   "amenities": [
+    "Pool",
+    "Parking",
+    "Fitness center",
+    "Free Wi-Fi",
+    "Wi-Fi"
+   ],
+   "free_cancellation": true
+  }
+ ],
+ "properties": [
+  {
+   "type": "vacation rental",
+   "name": "Stay Inn KOTO",
+   "link": "https://voyabay.com/rentals/lpcf1e4",
+   "property_token": "ChkQ2-79j76104F1Gg0vZy8xMXprdmRzODJ4EAI",
+   "serpapi_property_details_link": "https://serpapi.com/search.json?adults=2&check_in_date=2026-11-09&check_out_date=2026-11-12&children=0&currency=USD&engine=google_hotels&gl=us&hl=en&property_token=ChkQ2-79j76104F1Gg0vZy8xMXprdmRzODJ4EAI&q=Kyoto%2C+Japan&vacation_rentals=true",
+   "gps_coordinates": {
+    "latitude": 34.969764709472656,
+    "longitude": 135.7684783935547
+   },
+   "rate_per_night": {
+    "lowest": "$92",
+    "extracted_lowest": 92,
+    "before_taxes_fees": "$81",
+    "extracted_before_taxes_fees": 81
+   },
+   "total_rate": {
+    "lowest": "$275",
+    "extracted_lowest": 275,
+    "before_taxes_fees": "$244",
+    "extracted_before_taxes_fees": 244
+   },
+   "prices": [
+    {
+     "source": "Voyabay",
+     "logo": "https://www.gstatic.com/travel-hotels/branding/9038337324511347345.png",
+     "num_guests": 2,
+     "rate_per_night": {
+      "lowest": "$92",
+      "extracted_lowest": 92,
+      "before_taxes_fees": "$81",
+      "extracted_before_taxes_fees": 81
+     }
+    }
+   ],
+   "nearby_places": [
+    {
+     "name": "Inari Taisha-mae (Inari-taisha Shrine)",
+     "transportations": [
+      {
+       "type": "Walking",
+       "duration": "5 min"
+      }
+     ]
+    },
+    {
+     "name": "Kansai International Airport",
+     "transportations": [
+      {
+       "type": "Taxi",
+       "duration": "1 hr 25 min"
+      },
+      {
+       "type": "Public transport",
+       "duration": "4 hr 35 min"
+      }
+     ]
+    }
+   ],
+   "images": [
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW0o7VzMO9TZHp5_E0l8184_iEMQeyRRgBEuviFJy7sy1i4uYn_D-TYcuGagn6wLpq2Rhpkx1vW5Q5JT8xRm72iJhYxGimJVrP82mNZXgRoMIapBsJLxJ9tDHmFLZPbuuBc6sqTylqrTY0Mm5NkoN85sQVXXBECMK-82vA7XlxwLavYg1nCGYDio=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://static.cupid.travel/hotels/484719951.jpg"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW17jpCrxTgKSAC0ygaI8pA2SpaHH5zsdXyyexU6S9vmbqGCDTM2it1vg_8g67sRlJyol_BvoU3yaOQzrcexjAdYc_DFi_nWg3uSANQ4dTUZazOxPXFol0wgRU7Sqr2zICtKVjTdrY3MqUq-0RrJL18RDnG8o8UKU_ZAYSo2iQhd4azxwgJtjOTJcg=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://static.cupid.travel/hotels/484719953.jpg"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW3VxjEfbylqoW1AcMdJRvD5bHYQ5CI3LmuFeR1m0tNQDfR3xexQfw6BMwnjxjpg8R3pcH20m5wU7bPNYMB79p6Csbp1wKLelIosQmMIiyhvEYQYPSmjuGE3s4N9s6L6uPZIXAlWZTe9dndwxyZwZEzgJXPm1TdgGTW3MKafSQ2n1_griDUHPFAd5A=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://static.cupid.travel/hotels/425854755.jpg"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW1vhlAMO_5-4I8jEN4YYbMm8MPb8UDGGZfVy3niU9tj0hjP-cljsMg_oqzs1yprbuWMVDE3ksh9ueL4meAe7MDXwUH90ZyUvsEOHOPPvOttXkLVxy4DReLjnB1f2zjRhGJFKZAhLYjGKhpRTM8uILwhTtOnSKFUOeSua-m5NR9_v2e7BZEKDYBN=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://static.cupid.travel/hotels/425854735.jpg"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW0MkcVPUrRnkQkbwkFdSPqsBLEOIdmISCd1EzzrOk5CUpH8o8hZu3bbRc_s94G4_PSs9Lf7ZZ0lp4XG9_S1Sa3OT9jeROfvVROm2YN3cSOMUO3A7mOvXWrAyfiiQjb33MtKeri6gEaor4S6UtENpKAOXyFFXFK_pmiEodyWeV8WYpqYTx8H1sD7iA=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://static.cupid.travel/hotels/425854807.jpg"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW1ZjL8VvhbUQPwh2W03ZpAPVd5oZJkGG_p0-SQD_6gwX82ZPsj6JGTaA7nP8CPKUj_lJMwN6ylw-SLuDtMwenwiG34TEqyxk1mMl6tOGlC6esr47UDa9sMu9LIBHxbgesLMY12O3eqQ7lcASRnwYuxncHJ7OR7xtks3tfx6lrN-uK-DWRvEZ8QoGw=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://static.cupid.travel/hotels/581263038.jpg"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW2xX0t_d1975JssnYfzO9oMDfJ9yK2HRtZhbxVRvmk1p4Yvdtx8XrlCrQNwKB93HbqXp_kVzLwakA8ewgu9-kEnYmrL_1wZEIYB0iEFBUgfE-I8uO1WcCavT27u11klc0dMCLr4j74A3_m4aW7dM1waq7ooR70EGsfPTYzOM36NxO4PK8pTTQw=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://static.cupid.travel/hotels/328057403.jpg"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW2GFRnXms1qRBt1FTOPWDU3dKgDy-Y28_OgMho0WVQfoUTJQk9fGR9s8dMStfprlzwD9Pq_mEdW9V2AfRlCjn0FFQurt76a1BdjH6ssI_Y6YbAa0Yzh0wIfm4vrelz3t4_hutvKr--aq74i9jdqbUxuyg677ZBJxJ9sGN6iV9CRPL_XdxE9et-Y=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://static.cupid.travel/hotels/597250158.jpg"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW0vMskgpZPHnDZ2SsO3Il8FMrvnVkJ7QP5AcjYaEC0I4mA5OQkRU2lk6iW4FY6M4OKghEWHD6cuVPrR3q-EV0n4pBgxykneahVPFww7uuEXuI1vp5qmdykU8qnuYUz9KSx1f6eu8WhDGYTdNfN4ozHsfk9qW6t8ld-Cfw-Kjy1isqBDlLOVg8I=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://static.cupid.travel/hotels/581263042.jpg"
+    }
+   ],
+   "overall_rating": 4.4,
+   "reviews": 245,
+   "location_rating": 3.4,
+   "amenities": [
+    "Free Wi-Fi"
+   ],
+   "essential_info": [
+    "Sleeps 3"
+   ],
+   "serpapi_google_hotels_reviews_link": "https://serpapi.com/search.json?engine=google_hotels_reviews&hl=en&property_token=ChkQ2-79j76104F1Gg0vZy8xMXprdmRzODJ4EAI",
+   "serpapi_google_hotels_photos_link": "https://serpapi.com/search.json?engine=google_hotels_photos&property_token=ChkQ2-79j76104F1Gg0vZy8xMXprdmRzODJ4EAI"
+  },
+  {
+   "type": "vacation rental",
+   "name": "Guest House CHALET SIELU - Up to 4 of SIELU & 5-6 of SAN-CASHEW or with dogs- Vacation STAY 68051v",
+   "link": "https://www.booking.com/hotel/jp/guest-house-chalet-sielu-vacation-stay-68051v.en-gb.html?aid=2068758&utm_source=seogooglelocal&utm_medium=description&utm_term=hotel-8659561&utm_campaign=en-gb&label=seogooglelocal-link-imagesaow-hotel-8659561_grp-1_gendate-20260923",
+   "property_token": "ChoQycaNxovCrNj9ARoNL2cvMTF6NWNoNTJ0NBAC",
+   "serpapi_property_details_link": "https://serpapi.com/search.json?adults=2&check_in_date=2026-11-09&check_out_date=2026-11-12&children=0&currency=USD&engine=google_hotels&gl=us&hl=en&property_token=ChoQycaNxovCrNj9ARoNL2cvMTF6NWNoNTJ0NBAC&q=Kyoto%2C+Japan&vacation_rentals=true",
+   "gps_coordinates": {
+    "latitude": 34.95096969604492,
+    "longitude": 135.91293334960938
+   },
+   "check_in_time": "4:00 PM",
+   "check_out_time": "10:00 AM",
+   "rate_per_night": {
+    "lowest": "$83",
+    "extracted_lowest": 83,
+    "before_taxes_fees": "$76",
+    "extracted_before_taxes_fees": 76
+   },
+   "total_rate": {
+    "lowest": "$250",
+    "extracted_lowest": 250,
+    "before_taxes_fees": "$229",
+    "extracted_before_taxes_fees": 229
+   },
+   "prices": [
+    {
+     "source": "Booking.com",
+     "logo": "https://www.gstatic.com/travel-hotels/branding/61aadbe1-e141-4d2e-a831-b6a18727e130.png",
+     "num_guests": 2,
+     "rate_per_night": {
+      "lowest": "$83",
+      "extracted_lowest": 83,
+      "before_taxes_fees": "$76",
+      "extracted_before_taxes_fees": 76
+     },
+     "free_cancellation": true,
+     "free_cancellation_until_date": "Jun 15",
+     "free_cancellation_until_time": "9:00 AM"
+    }
+   ],
+   "nearby_places": [
+    {
+     "name": "Inazu Kitaguchi",
+     "transportations": [
+      {
+       "type": "Walking",
+       "duration": "10 min"
+      }
+     ]
+    },
+    {
+     "name": "Kansai International Airport",
+     "transportations": [
+      {
+       "type": "Taxi",
+       "duration": "1 hr 35 min"
+      }
+     ]
+    },
+    {
+     "name": "Ikoi",
+     "transportations": [
+      {
+       "type": "Taxi",
+       "duration": "10 min"
+      }
+     ]
+    }
+   ],
+   "images": [
+    {
+     "thumbnail": "https://lh5.googleusercontent.com/proxy/-CbashfXqhMkSQ4ke6vP8GVpvr5s6yRvC2njrm0ys_Y1AqEo0CfFBmbP4nJGLHv4OYZ1ysekxU_FuJMBvbwL9K0HMCJ0RNEm9-r5Lk7ZzZtpPDSOG6ZGUPTS6HXTnflJnUU3dK21cd6MILym5ijADbsL3nRzxsw=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://xx.bstatic.com/xdata/w/hotel/840x460_watermarked_standard/UlYQ71XUYidBUxq0V2oLAFUVpxCNQ-hvfcdUFTRb7Ec34hvDm0H0KUR2DIC50xQmeY5S_u9nd1dBCKF_03QmS_d-NL_bb_LNYspnPnVOJJE_ihvVJHKWmg==.jpg"
+    },
+    {
+     "thumbnail": "https://lh4.googleusercontent.com/proxy/5iAjsw2T-48hiQ24xDu1S5Pi4Rif-xw8eEGdgNtxmSFbwtcG_3X4nyWoPN8jX37sbbvovfN__ZEgjdszuMv7ZUkaLiaJGiGLyHeqfzMURCajl2oefYCWsiDgTJ8HLxvilDrcp7P1KcZZWZEiM7tcxna37jOB2xs=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://xx.bstatic.com/xdata/w/hotel/840x460_watermarked_standard/UlYQ71XUYidBU9vkkhIJR5sLj1tmSjxCqP-BG_Aini1BDqJShPaci06tWNyKHEUlqRJQDc6Znq6I3qZMkoYxUCYlFSj6tMyKO4XeYtto3cAF_EIj-qQvZw==.jpg"
+    },
+    {
+     "thumbnail": "https://lh4.googleusercontent.com/proxy/jDF-Ghd2eorRyg1tOyaNYGnbaN2upNOOZiiMgn7P3pD27Pto5V9N_Pt9CTLOUO7tHeIbx3D7Itmb7TSMGwUfKDXmuelrNZ8Ml5NcWqYlacln3cE6BlZUc_Zn9KwtJaSNxVzJGZmppd6AOXbo6zp_hs3KmwK2GQ=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://xx.bstatic.com/xdata/w/hotel/840x460_watermarked_standard/UlYQ71XUYidBU12OpI95BlRg8pg4JT6qpq4-ujZkKJ_Y0eD_vKYCxm6xPO7fX1lvDrEivE_fCC5VZkXdgFb9rDI-kJ-Q9zll4M6NlryOdl8l9d4Me0sxJg==.jpg"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/proxy/gll96yH8r68l2xME9pjbsWJWEvZKvcKu4ErB6qfBp198Z6cmEwexe0jxPz877Vjfcn1huoi5zte4egzM2EbDB2DB6T1uTrfPo3Dbs4uH-rE75rg--iaUB3rUnwWgaxsQ6tPMXVRIL5m1jUIty_jCxxoD-jkdmRw=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://xx.bstatic.com/xdata/w/hotel/840x460_watermarked_standard/UlYG65CxyC0DxSvB0aW5HGc2vrMHly__VoFgMZipG4UyCw3cOF-snixTlCMahztnlR3BVb4YinSlEnoL9wM7uCeSAXYvcK8iYVwNPCOpzs4okaXcT7Ohog==.jpg"
+    },
+    {
+     "thumbnail": "https://lh6.googleusercontent.com/proxy/JSro66p0ElwqrKzgQfnIYMvVIW491grbOcRsspRYWaNByTq9UsKq4ZgpX3GqgcsJh9rur2RzjqC5ol9uP5HosjGDsaUys5x7PbIt-HqfJJAegZXg3lU7mZf7p_MEnDOhjTFjVcYKNxZAacxkkm-QZqAZUv5Xyg=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://xx.bstatic.com/xdata/w/hotel/840x460_watermarked_standard/UlYQ71XUYidBU0QfZrTZpPuD17KkZVt1NKyJvfLugt4Wr7Lzw5ojhehBgvo_EuGqj0u_IusnL_h02c-R83xcTgnnuDI8yFa9_xrrQp96dZKlH3F8-Fm58Q==.jpg"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/proxy/paoJWZfdi9ZQXLNdSRdN4RUtWo6qb_amYCDxFZ0I_aBCvLP0G1jD3KxrfboirbWMpl_7_REuwR_PMl14200bKdzn3BOUAlmmTNN9fBA9iPP9_GRUvP5a-VwNgxya8ekV6fCX_Gfs0JDRKVwGiCKnwXTDonZF2w=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://xx.bstatic.com/xdata/w/hotel/840x460_watermarked_standard/UlYG65CxyC0DxYjudjTz0aLAioDeVjolJupau_jb2Q-9Ixf2uZPcqmpeTrmKl3HAivAYuBiEBAIsr4LhzKFGXxJmCa4puOGu-r6TQ9vw55cMIg9veZ5i8w==.jpg"
+    },
+    {
+     "thumbnail": "https://lh4.googleusercontent.com/proxy/P6awiwAhWvFlinr_HVH2AyM2OGmAUfk6iohnnXwF4mJewkJwkIkod32F8VmgmjaHi-t6HgKRy5D_eDLnFWCSnW4-17shFv5AJs_RBNHDRY7bKo5A_kkytiD0Sh51BB7NcUiNGaJ9kpavQVEsOWRtPfS3d5roOQ=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://xx.bstatic.com/xdata/w/hotel/840x460_watermarked_standard/UlYQ71XUYidBUySkUv3S5OkonsKWDNIbRI2gZbWLlFYlglb1biIViHY9KnyxI3dIvA2P0FntPQYGQJZPwBljxu2jBgK99LaoRvfAxk5EbQD1S5e4IdtEBg==.jpg"
+    },
+    {
+     "thumbnail": "https://lh5.googleusercontent.com/proxy/z9ei-1_8A-pxWyyiiHR_-U8vsSxK0_Uk2qhtFmk-rn9K8U12O6W6Q_eF95-db2iQBWP2xy9hGSCiaEtf8VFHsX_Dv1lBKRxbDE3_X6E34wUD2IVqydZBHKliRa4Nb9k1ZXy4qZl1FU7wr557zw3OX6BrfsNtWw=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://xx.bstatic.com/xdata/w/hotel/840x460_watermarked_standard/UlYQ71XUYidBUxkiT5hMXEW4I0a0MBo-9w2bPbuy7Jl6cpYx_xGw0kwtSxn0UgnWGYXLc2Ci5yj1_z6urGNjymMitueydy7f3L5u9hCe-1jRehdupWimnA==.jpg"
+    },
+    {
+     "thumbnail": "https://lh4.googleusercontent.com/proxy/WhwO4LIq05nCfT3yicxfiUHaYWvCIcV8xNyl9usZKXsh50x3Q7RSE21EQ_OqEGJgnGthPlo5JGOG9Pe9IWBs2zOobwwAB_MI57_Iq-kSZB-LM2vXKXBX5yeIaod-Xps6iEVb63Wop78DoibZ1mNFymc7dCvFxA=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://xx.bstatic.com/xdata/w/hotel/840x460_watermarked_standard/UlYG65CxyC0DxSo6lyoschOaWwOW5NjVBhU335wBlOBWRXKcKnxalIwNQdHhWwmoyIH0Uv1_xUknRFg4El0RQFNRNJA8i9r4ADk4AlZyvfkzP204LxJKCg==.jpg"
+    }
+   ],
+   "overall_rating": 3.4,
+   "reviews": 31,
+   "location_rating": 2.6,
+   "amenities": [
+    "Air conditioning",
+    "Smoke-free"
+   ],
+   "excluded_amenities": [
+    "No crib",
+    "No elevator",
+    "No fitness center",
+    "No heating",
+    "No ironing board",
+    "No kitchen",
+    "No microwave",
+    "No outdoor grill",
+    "No oven stove",
+    "No patio",
+    "Not pet-friendly",
+    "No cable TV",
+    "No washer",
+    "Not wheelchair accessible"
+   ],
+   "essential_info": [
+    "Entire cottage",
+    "Sleeps 6",
+    "3 bedrooms",
+    "5 beds",
+    "161 sq ft"
+   ],
+   "serpapi_google_hotels_reviews_link": "https://serpapi.com/search.json?engine=google_hotels_reviews&hl=en&property_token=ChoQycaNxovCrNj9ARoNL2cvMTF6NWNoNTJ0NBAC",
+   "serpapi_google_hotels_photos_link": "https://serpapi.com/search.json?engine=google_hotels_photos&property_token=ChoQycaNxovCrNj9ARoNL2cvMTF6NWNoNTJ0NBAC"
+  },
+  {
+   "type": "vacation rental",
+   "name": "familie - Two-Bedroom Apartment",
+   "link": "https://www.bluepillow.com/search/5d27f37ae24da43a581bb82e?dest=bkng&cat=House&lat=35.10459&lng=135.87961&language=en",
+   "property_token": "ChkQuefl2Oml0adtGg0vZy8xMXpkajdjeHQ3EAI",
+   "serpapi_property_details_link": "https://serpapi.com/search.json?adults=2&check_in_date=2026-11-09&check_out_date=2026-11-12&children=0&currency=USD&engine=google_hotels&gl=us&hl=en&property_token=ChkQuefl2Oml0adtGg0vZy8xMXpkajdjeHQ3EAI&q=Kyoto%2C+Japan&vacation_rentals=true",
+   "gps_coordinates": {
+    "latitude": 35.104591369628906,
+    "longitude": 135.87960815429688
+   },
+   "check_in_time": "4:00 PM",
+   "check_out_time": "10:00 AM",
+   "rate_per_night": {
+    "lowest": "$82",
+    "extracted_lowest": 82,
+    "before_taxes_fees": "$75",
+    "extracted_before_taxes_fees": 75
+   },
+   "total_rate": {
+    "lowest": "$247",
+    "extracted_lowest": 247,
+    "before_taxes_fees": "$224",
+    "extracted_before_taxes_fees": 224
+   },
+   "prices": [
+    {
+     "source": "Bluepillow.ca",
+     "logo": "https://www.gstatic.com/travel-hotels/branding/190ff319-d0fd-4c45-bfc8-bad6f5f395f2.png",
+     "num_guests": 2,
+     "rate_per_night": {
+      "lowest": "$82",
+      "extracted_lowest": 82,
+      "before_taxes_fees": "$75",
+      "extracted_before_taxes_fees": 75
+     },
+     "free_cancellation": true,
+     "free_cancellation_until_date": "Jun 15",
+     "free_cancellation_until_time": "9:00 AM"
+    }
+   ],
+   "nearby_places": [
+    {
+     "name": "Kansai International Airport",
+     "transportations": [
+      {
+       "type": "Taxi",
+       "duration": "1 hr 44 min"
+      }
+     ]
+    },
+    {
+     "name": "Terrace Kitchen Anju"
+    }
+   ],
+   "images": [
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW10CndO4aPOfdTSX3Rr0gNyy3qTZewCx-_uBzL6vqS7WqxLI-kRIGTJX8zwY6UlYF29s5JwiZ5bUvECBBVNcxT_doiCKubhNDknfZmtRiHUnt7cGcEdgAQqbH34EZqnWcvi5yitbTLJB4q8IlDxN3YuDA5XMQGsMnv4QuCGgxx9doCrithTclMx=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://static.cupid.travel/hotels/578130156.jpg"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW1lZYoCa2rOTR8eOUwcNnv6eXBMCicKzYyNiTyghiKLL1c_bMNhW7v_cwmDvujR-yDJ-RDd7ZqFQUJvOuM95i_zW3Mvl_W4wwth0MCHP9Nf1C_jqjCYUzBGGqZY0ShJuhtK_olKZa-vO_xMI_jGwuTx5RbKgX9SnAaof6r_PJEdE94giU18v6k=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://static.cupid.travel/hotels/578130060.jpg"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW3H0XAFtU6kMVjoMEIrY9m9duFFVUZpAbOSjU2Hvt2bNa_9ISnU6eINC4F-pL_Z0FjKBpd8ul9J8nmVqv4hwCwatjgY_pG97VBL35dPtZ22C8268z_-59pO3KWjAe4NveVjGhE6aEvzcBD4ah1ETRtwUxtBXK4TflCyuSDT4QM-8tJ3PoUVEtKG=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://static.cupid.travel/hotels/578130201.jpg"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW1IpWhRJMUUWLpAhUjRdWrLUcdfyOspA86JVTTv6li6yL2JQI_nq85ilXOFhNYEljD8zjrVjCfgqR0pDS085Y2MxutBozZuzPp9wcYzI9j5mpDdLtTM_LnMBROhRUkp5stxYr0NtyxCOIMesB1ZEGKMhLqwJNtshdfc5PD_CnoJ9MbdPZG3bQU=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://q-xx.bstatic.com/xdata/images/hotel/max1024x683/578130213.jpg?k=dca52833665c264211f0f0f42357ca3fb76fdeedf20389b4df191acaa2516239&o=&a=1538557"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW29mdHIxjof1xDjxM--e1WU7KQtsb7s4RbbXsS_xAvSX-f2DDAj0gitfARGVooRXZnuitd1H1u7R8f9PVRs1bCabgelVfWclC3cZiy_OuTNcRga7XiKNj76bVd4duu5hiznDyZ2k2kN2JFkj6P9KODhcSpVGAWD9Da_8hoV9mm5dB6PFnCVB9I2oQ=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://static.cupid.travel/hotels/578130161.jpg"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW0unekCmtpmM16Hc78GtU8DFMFFV2G7cmMAfL1uEWyLAidI9ay9NWJUG--s5cRHErRG-ApYFvAto6ijmxjHif_4aRNH_YxA_6Qn1u0s3XgG_mWd0fTU46vvpVwu12V-NkdC36KiZyeriWrGdT514rCh-HjfQsbEoPF3x6wkRM2QvpB9HXGruKVYUQ=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://static.cupid.travel/hotels/591415658.jpg"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW0DFN3IfqjdD_VbWLmWdrSxjnlEIYB_LL5e0ED_ojMM8R9d48xDreZdUrcTo5ZS8571ot_awpTotDkVZqTf3HwbpOiclHDCjO7kK7_Yi8pDw0B9TRbVfYB1cn_WhA7DlbvmJQS36n9NNC4s4gaz08yUDJCvm0QDCw_Ipe6OC_86M8cyN_FQwcX8=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://q-xx.bstatic.com/xdata/images/hotel/max1024x683/578130118.jpg?k=983c56066900c080cb54b394bb86c8933f53ccd0e907243fb250b58f3d87cdff&o=&a=1538557"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW0LXYcsq8NbJ_XjN9_3ce5Ku8K3YtAr1DQubuGQvfMoBwImz423nhDEjGP702J8MvmJVUZcpJLBAJhYZL6zFHP9dY_WRaVOHnzWalS6eb8WnaosJeZ_lMEujS_dflIrtVpV1HmIcBP9jT2yr2bPgeRCAB3aW98CwUvxugPngdPq3ruWIPg_K9S6=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://static.cupid.travel/hotels/578130257.jpg"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW3P1ujdvYgIirE8nJR-qOGdZnrIZpFMytppbPjjbNGEpo_VEqocQWB6S_VDPm64OuT6lcCYEcwVp_fWNPGQgxyoQGnOWSyL0OMIboKe8RDvqtzYo5-WJW7YcZ6n59URyS1iWYS3wAXuYdHZRLVu7Ub1wx32PxRdz-zj4zmgPfPJgPUO3GyOWjHd=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://static.cupid.travel/hotels/578130164.jpg"
+    }
+   ],
+   "overall_rating": 5,
+   "reviews": 8,
+   "location_rating": 2.6,
+   "amenities": [
+    "Air conditioning",
+    "Crib",
+    "Elevator",
+    "Fitness center",
+    "Heating",
+    "Hot tub",
+    "Indoor pool",
+    "Kitchen",
+    "Microwave",
+    "Outdoor grill",
+    "Oven stove",
+    "Smoke-free",
+    "Cable TV",
+    "Washer",
+    "Wheelchair accessible",
+    "Free parking",
+    "Free Wi-Fi"
+   ],
+   "excluded_amenities": [
+    "No airport shuttle",
+    "No outdoor pool"
+   ],
+   "health_and_safety": {
+    "groups": [
+     {
+      "title": "Minimized contact",
+      "list": [
+       {
+        "title": "No-contact check-in and check-out",
+        "available": true
+       }
+      ]
+     }
+    ]
+   },
+   "essential_info": [
+    "Entire house",
+    "Sleeps 6",
+    "2 bedrooms",
+    "1 bathroom",
+    "6 beds"
+   ],
+   "serpapi_google_hotels_reviews_link": "https://serpapi.com/search.json?engine=google_hotels_reviews&hl=en&property_token=ChkQuefl2Oml0adtGg0vZy8xMXpkajdjeHQ3EAI",
+   "serpapi_google_hotels_photos_link": "https://serpapi.com/search.json?engine=google_hotels_photos&property_token=ChkQuefl2Oml0adtGg0vZy8xMXpkajdjeHQ3EAI"
+  },
+  {
+   "type": "vacation rental",
+   "name": "Kyoto Gion Tourist House",
+   "link": "https://www.agoda.com",
+   "property_token": "ChkQuPfejPW686cqGg0vZy8xMXl0cDg5ZzFxEAI",
+   "serpapi_property_details_link": "https://serpapi.com/search.json?adults=2&check_in_date=2026-11-09&check_out_date=2026-11-12&children=0&currency=USD&engine=google_hotels&gl=us&hl=en&property_token=ChkQuPfejPW686cqGg0vZy8xMXl0cDg5ZzFxEAI&q=Kyoto%2C+Japan&vacation_rentals=true",
+   "gps_coordinates": {
+    "latitude": 35.000457763671875,
+    "longitude": 135.77737426757812
+   },
+   "check_out_time": "10:00 AM",
+   "rate_per_night": {
+    "lowest": "$147",
+    "extracted_lowest": 147,
+    "before_taxes_fees": "$136",
+    "extracted_before_taxes_fees": 136
+   },
+   "total_rate": {
+    "lowest": "$442",
+    "extracted_lowest": 442,
+    "before_taxes_fees": "$408",
+    "extracted_before_taxes_fees": 408
+   },
+   "prices": [
+    {
+     "source": "Agoda",
+     "logo": "https://www.gstatic.com/travel-hotels/branding/e89db943-92ad-48bd-9bd7-da844fa32f2d.png",
+     "num_guests": 2,
+     "rate_per_night": {
+      "lowest": "$147",
+      "extracted_lowest": 147,
+      "before_taxes_fees": "$136",
+      "extracted_before_taxes_fees": 136
+     }
+    }
+   ],
+   "nearby_places": [
+    {
+     "name": "Higashiyama Yasui",
+     "transportations": [
+      {
+       "type": "Walking",
+       "duration": "5 min"
+      }
+     ]
+    },
+    {
+     "name": "Kansai International Airport",
+     "transportations": [
+      {
+       "type": "Taxi",
+       "duration": "1 hr 35 min"
+      },
+      {
+       "type": "Public transport",
+       "duration": "4 hr 30 min"
+      }
+     ]
+    }
+   ],
+   "images": [
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW3-r69Z9yyJrPeG1XNW4VVkeJEcx7RkqMEIfGI5mqFpuuA7uFpDP6b52aXnRYSu4VLGmIPQSLCzZ9II_8yxRW4tQ_GIyQ7StUttO6YZpmC4CyEdTlspgfOZd0KtdFaQrqprxd_g4VHS3JsOTyEgNrD8eY_NlwnzBkl_TiCij2e7d2k2orx-7ZiP2w=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://pix8.agoda.net/hotelImages/5761698/854942889/96e97970ea2c006532f360eabbdbc7c0.jpg?ce=0"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW2_-7K81dmk3mPKTtbZr_dy1ro5JvVC4vXwQUbFdVDzRS1RCCdDaceOXXhVfPHtsIADVveW8t-jhd8aZOYCnwuThb2n4rdScVzv16foy-gKGulKm5SipHxoZ_H-qVQa0Zeur9PPuOtRQTafTxwfztK023315dlmtsW_3Vi8BoMKLgLbWdAp4fE=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://pix8.agoda.net/hotelImages/5761698/0/e4bc8ff593c03f023d08279858ade18e.jpg?ce=0"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW2dsuw8RNxzp81F4aVLbxAbDFPKDVE-PpmqaLUvBbdILJPoM_UEs0UmVJ8qQ4IsvjQPD4gDV2jPEKGBcgSHZXpNIvmKSumj5MPTKMfQw35B-z28NIyBMGMFhHm6HbsC60vP5tVdNcmnc19sS2cbJCTKSyBxsXilLfaNIr_urQ2d7JfFYyL1BIC1=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://pix8.agoda.net/property/36709869/0/3d81d6cb1e519ccbf17a0a7db130dfaf.jpeg?ce=2"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW16y6pqsufTfOmBHhY_2khwAo0tOziPEG6W8oUc-xsvgRSMWXXALppUZ1aTja1gkQyMlhdsm3vT-igRAtNHCMAAnEUe1UkHRnEK6w6YHzVs7KQs2sNMJ5Xf6F9TPgAkxLuf2cpc9EtwGv6KsWwl92Gt_yuVSGngkOwWlnY8tyj0WsvcDhhePe4iDQ=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://q-xx.bstatic.com/xdata/images/hotel/max500/277875375.jpg?k=6824cf419a0c743f293ccb28c65baa8e52785679b317557bb791b16034e17bf7&o="
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW3AMiBCI6Ud01KAS29ZUq_86pbjgqy8mDFWDMHyxo0Ovte3hgpSMgkLdE3lMry-ZnprGUFIgE5fp5FEZd9zU9SY6DDIeGb8Zqo5VfzmAH15-NvmLl7ALNNWrbksCXMZnIg2SoT-SlhZdlnX3_dj3UGuhQ5Ir6WNFqx2nGw2tnyMhYKxBPFTpy1n0Q=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://pix8.agoda.net/property/46431506/0/94577a1204d0979a00c08328b5d054a7.jpeg?ce=0"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW0YqEPk0TlQGKEAMDezFqKh0LAxwwAOvbOHgrdfFs4lgxl78HSmNZTVZ_xa0CWeTe3ORdswgXc6yPZ3wS8qXt_Bs9s0TbRGzLjCOdHsjjK-RVU3RLow5-UWNLzt_WSOQ6iBMPAf4575PXT3fR7sHSZzVJVvwE7KAKW1rHMv6kq49ZJ3Jm2a1aiL=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://pix8.agoda.net/property/36709869/0/8bfa79bea2ff9f859617dcc3be73eadb.jpeg?ce=2"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW3Q1DttQ1UsA-v2fTIjH54LY-RKPeUriAWyUXPEFtrYev-SM_QtYBy9nk1ar5XI1XlRJfAoI4lWy2TBATR7Y2tCE3dc6cBV1AYnT3kqw9nVF4zHAcgJTtKlghrBCb_-ffL3y2hryVUE12da_BU7GCFmOJJIYlNpvfscqZmazCYwbzcWV_cIpkY=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://pix8.agoda.net/hotelImages/5761698/855147525/6e4ea72e49ee0579e8c8d413b8785e6d.jpg?ce=0"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW0WLS1f-9oO0xRi0DnY8HYEHpqG264nwCl3wrfHW7tPKgIfhkcgcL76H3eYW6COUCHbU7vxz5j60RxTBikVmFZtC2LqtfqX1QuAElzUOum7txL4pz1WxvgghsjcMMPI6Xj2MDPjBv2unHiQqaZQS46F337h5p9I78yD4fmxn8_5HDHvQuUE-WtT=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://pix8.agoda.net/hotelImages/5761698/0/11ec1dc6512c7d9a3da06958cb2aa44d.jpg?ce=0"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/grass-proxy/AIM7gW1NjcdBrBjHi38J67kyhQAR19VW1-99obNxkZpwMJXbQ63ASXXwhcGQT-9CfPKJ0zsLsf5k7z2EGAxkcFbxyoYFbSqyAkl9hFLLxn6a3P_NtX4464Hn4FGX-3qv6_uUbd8twM4ihIe0TgNgSRQE0n-o9g5BAS1YoIohsZgugbFMwIUWNZ10u6W0Vw=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://pix8.agoda.net/property/36709869/0/e77820eec563b981818ebbb2b7184d70.jpeg?ce=2"
+    }
+   ],
+   "overall_rating": 4,
+   "reviews": 32,
+   "location_rating": 4.6,
+   "amenities": [
+    "Kitchen",
+    "Microwave",
+    "Oven stove",
+    "Pet-friendly",
+    "Smoke-free",
+    "Free Wi-Fi"
+   ],
+   "essential_info": [
+    "Entire apartment",
+    "Sleeps 5",
+    "1 bathroom",
+    "700 sq ft"
+   ],
+   "serpapi_google_hotels_reviews_link": "https://serpapi.com/search.json?engine=google_hotels_reviews&hl=en&property_token=ChkQuPfejPW686cqGg0vZy8xMXl0cDg5ZzFxEAI",
+   "serpapi_google_hotels_photos_link": "https://serpapi.com/search.json?engine=google_hotels_photos&property_token=ChkQuPfejPW686cqGg0vZy8xMXl0cDg5ZzFxEAI"
+  },
+  {
+   "type": "vacation rental",
+   "name": "Stay Inn KOTO - Japanese-Style Room",
+   "property_token": "ChkQx9700dXK4YJpGg0vZy8xMXo0c2IweGxuEAI",
+   "serpapi_property_details_link": "https://serpapi.com/search.json?adults=2&check_in_date=2026-11-09&check_out_date=2026-11-12&children=0&currency=USD&engine=google_hotels&gl=us&hl=en&property_token=ChkQx9700dXK4YJpGg0vZy8xMXo0c2IweGxuEAI&q=Kyoto%2C+Japan&vacation_rentals=true",
+   "gps_coordinates": {
+    "latitude": 34.96976089477539,
+    "longitude": 135.76846313476562
+   },
+   "check_in_time": "3:00 PM",
+   "check_out_time": "11:00 AM",
+   "rate_per_night": {
+    "lowest": "$88",
+    "extracted_lowest": 88,
+    "before_taxes_fees": "$80",
+    "extracted_before_taxes_fees": 80
+   },
+   "total_rate": {
+    "lowest": "$265",
+    "extracted_lowest": 265,
+    "before_taxes_fees": "$241",
+    "extracted_before_taxes_fees": 241
+   },
+   "prices": [
+    {
+     "source": "Bluepillow.ca",
+     "logo": "https://www.gstatic.com/travel-hotels/branding/190ff319-d0fd-4c45-bfc8-bad6f5f395f2.png",
+     "num_guests": 2,
+     "rate_per_night": {
+      "lowest": "$88",
+      "extracted_lowest": 88,
+      "before_taxes_fees": "$80",
+      "extracted_before_taxes_fees": 80
+     },
+     "free_cancellation": true,
+     "free_cancellation_until_date": "Jun 15",
+     "free_cancellation_until_time": "9:00 AM"
+    }
+   ],
+   "nearby_places": [
+    {
+     "name": "Inari Taisha-mae (Inari-taisha Shrine)",
+     "transportations": [
+      {
+       "type": "Walking",
+       "duration": "2 min"
+      }
+     ]
+    },
+    {
+     "name": "Kansai International Airport",
+     "transportations": [
+      {
+       "type": "Taxi",
+       "duration": "1 hr 21 min"
+      },
+      {
+       "type": "Public transport",
+       "duration": "4 hr 28 min"
+      }
+     ]
+    },
+    {
+     "name": "Sourire Western Food Restaurant",
+     "transportations": [
+      {
+       "type": "Walking",
+       "duration": "4 min"
+      }
+     ]
+    }
+   ],
+   "images": [
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/proxy/o1AEjm67QSaCniiv10eodInFSQgELOu4kAV9VupjQd_L3wBRO_YIEkgrQdIP9SPIcGRMXApqmA6wCG_vcJkhOVl2Ry9yiWEBE05k02uxB1gQbnxVxoA5oHR-y8GOxfZMatc_wjMFxadIwZQNrrU3vg8Mel-js-U=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://freecancellationscdn-hsbgcwfragasdpfe.z01.azurefd.net/remote/static.cupid.travel/hotels/400381166.jpg?w=1024&h=683&mode=crop&scale=both&anchor=middlecenter&quality=80"
+    },
+    {
+     "thumbnail": "https://lh5.googleusercontent.com/proxy/I9hc-uNxvii1CVxAmiI1oP3T9W2A8x5RFlS349HqGSNN-bhSI5DbgpKdynZzsU4UPZ1jqODlM9RlFMM2uJ1jgAud4vfkoFPzTRv-mZ2exIk-8E7RELOU_ZAh-xuZ6AwBnmhMTmJN2jrqDEyuAx7cJWdVTVbkXw=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://static.cupid.travel/hotels/328057403.jpg"
+    },
+    {
+     "thumbnail": "https://lh6.googleusercontent.com/proxy/F692OUfrYj9zsBO9eM1wPSIhL5cj2iGm5hLHtIryLnT-FS-JX-8S66_FxsiMW_5dIT_hmiTiCtbO0s_N3Gb5u9RBLm4_Ns4SqNIxbUwmf9zPoug12rg1Vsl-d-MjcMpC-L-5mC5E_-x_2fscWKgk9Pm_qBuWng=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://freecancellationscdn-hsbgcwfragasdpfe.z01.azurefd.net/remote/static.cupid.travel/hotels/581263038.jpg?w=1024&h=683&mode=crop&scale=both&anchor=middlecenter&quality=80"
+    },
+    {
+     "thumbnail": "https://lh4.googleusercontent.com/proxy/44atoCr6DVxl2_bPIGFgQWZBsHkOiJDSQRiJUAmwUp5BAc8LhJJbVMc1B5xNiHD9pry-GKahs5S7VP3m2jTSNSLob3AeyfBhvAQGKox6udwZDnnnvV17byaplhqOlAN8nG4VbFSVz8bwoE1bTNb141Nv6wePEw=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://freecancellationscdn-hsbgcwfragasdpfe.z01.azurefd.net/remote/static.cupid.travel/hotels/425854755.jpg?w=1024&h=683&mode=crop&scale=both&anchor=middlecenter&quality=80"
+    },
+    {
+     "thumbnail": "https://lh5.googleusercontent.com/proxy/A6MD-qRH1ktmyhSA9GQTPh79AQU1urKzSyInNObKOR_qxh9gVOA7mJYI2WDxjpi1cUwyAQlt6w3vCelyzxawAFtUxmF4trCEUm06zGr6KrzCqQPPFP2AC26oLC18j4aHyuZk3WKKgWtsFzb56vEQDycpuCmarQ=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://freecancellationscdn-hsbgcwfragasdpfe.z01.azurefd.net/remote/static.cupid.travel/hotels/400277946.jpg?w=1024&h=683&mode=crop&scale=both&anchor=middlecenter&quality=80"
+    },
+    {
+     "thumbnail": "https://lh5.googleusercontent.com/proxy/b_6l0repwMbKKfhaMZdvg6Qa_VFv3JAgfIHXcnvZJdHdSfz-mc2vHes21F4m1IJ5g8j4iPHxOTSOUobQj_wgkamiFv3bregrBs9PPYTihoBE4WJV9rRIt5S1L0H1zfjQfCQQOstkMxypc-PG1h1Ey61LfREcMw=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://static.cupid.travel/hotels/581263042.jpg"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/proxy/KH_zfYxAk_oMpeKgN9oRoYMpFEGUKAnuAmJKniZpWPaS-sXQI7W3MvQJFmtHI6aqyYQrOySComxM96V2UodcPXti7PZVgYF8WkC8FUHru8fgqs99kQUGqj_tUG_SEqFJCbKQVJwH2XTtVTPrrQyD3t7CswLLHPE=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://q-xx.bstatic.com/xdata/images/hotel/max1024x683/328057407.jpg?k=198d3bb86570c791c03c82e2908ed7083f5e025d466464b8bd01a08f6a3ce424&o=&a=1538557"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/proxy/u_XpXbC3I9aeuKUjX_T3erIpGNlvylaXj-igUCbNtIMfVVB5EdcD9s-swmCuQyQUNPqxD743mY2brNviEWei9xXsFOEe8LTS7jZHXFayx1Gu6M28dYhUehBRTol0qCBC2Yll_kcoVMaBjEmhEZOAD_FGn5991Ok=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://q-xx.bstatic.com/xdata/images/hotel/max1024x683/399785898.jpg?k=dd582b6edc79c154674a2d62107ba0e54de075fa8237802a567147fe12e0996e&o=&a=1538557"
+    },
+    {
+     "thumbnail": "https://lh5.googleusercontent.com/proxy/tkG9gJafS715GudBnbwu8RlTbgoMmqnKjVc4BkBnEU_JmhSbbQU2kLY96SCcFjASezHuiCodlWm4-2ulHEKaIz1zDy7p3sr5ejvjeFvPQSl0yEzFUxSNcB1IutIiu2AhuRVx4Nah4f2Z4dDnVl2qsR8sxCi1fg=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://freecancellationscdn-hsbgcwfragasdpfe.z01.azurefd.net/remote/static.cupid.travel/hotels/400381178.jpg?w=1024&h=683&mode=crop&scale=both&anchor=middlecenter&quality=80"
+    }
+   ],
+   "overall_rating": 5,
+   "reviews": 16,
+   "location_rating": 3.4,
+   "amenities": [
+    "Air conditioning",
+    "Kid-friendly",
+    "Fitness center",
+    "Heating",
+    "Kitchen",
+    "Smoke-free",
+    "Cable TV",
+    "Wheelchair accessible",
+    "Free parking",
+    "Free Wi-Fi"
+   ],
+   "excluded_amenities": [
+    "No airport shuttle"
+   ],
+   "essential_info": [
+    "Entire house",
+    "Sleeps 3",
+    "1 bedroom",
+    "2 bathrooms",
+    "3 beds"
+   ],
+   "serpapi_google_hotels_reviews_link": "https://serpapi.com/search.json?engine=google_hotels_reviews&hl=en&property_token=ChkQx9700dXK4YJpGg0vZy8xMXo0c2IweGxuEAI",
+   "serpapi_google_hotels_photos_link": "https://serpapi.com/search.json?engine=google_hotels_photos&property_token=ChkQx9700dXK4YJpGg0vZy8xMXo0c2IweGxuEAI"
+  },
+  {
+   "type": "vacation rental",
+   "name": "Machiya Kaemon",
+   "link": "https://stays.dogfriendlyretreats.com/hotel/kyoto/machiya-kaemon",
+   "property_token": "ChoQyOiUgaWbg_erARoNL2cvMTF6ZmI2Y25qdhAC",
+   "serpapi_property_details_link": "https://serpapi.com/search.json?adults=2&check_in_date=2026-11-09&check_out_date=2026-11-12&children=0&currency=USD&engine=google_hotels&gl=us&hl=en&property_token=ChoQyOiUgaWbg_erARoNL2cvMTF6ZmI2Y25qdhAC&q=Kyoto%2C+Japan&vacation_rentals=true",
+   "gps_coordinates": {
+    "latitude": 34.98936462402344,
+    "longitude": 135.7574462890625
+   },
+   "check_in_time": "3:30 PM",
+   "check_out_time": "10:00 AM",
+   "rate_per_night": {
+    "lowest": "$360",
+    "extracted_lowest": 360,
+    "before_taxes_fees": "$327",
+    "extracted_before_taxes_fees": 327
+   },
+   "total_rate": {
+    "lowest": "$1,080",
+    "extracted_lowest": 1080,
+    "before_taxes_fees": "$982",
+    "extracted_before_taxes_fees": 982
+   },
+   "prices": [
+    {
+     "source": "Dog Friendly Retreats",
+     "logo": "https://www.gstatic.com/travel-hotels/branding/8968418144165289839.png",
+     "num_guests": 2,
+     "rate_per_night": {
+      "lowest": "$360",
+      "extracted_lowest": 360,
+      "before_taxes_fees": "$327",
+      "extracted_before_taxes_fees": 327
+     },
+     "free_cancellation": true,
+     "free_cancellation_until_date": "Nov 1",
+     "free_cancellation_until_time": "2:59 PM"
+    }
+   ],
+   "nearby_places": [
+    {
+     "name": "Nanajo Nishinotoin",
+     "transportations": [
+      {
+       "type": "Walking",
+       "duration": "5 min"
+      }
+     ]
+    },
+    {
+     "name": "Kansai International Airport",
+     "transportations": [
+      {
+       "type": "Taxi",
+       "duration": "1 hr 30 min"
+      },
+      {
+       "type": "Public transport",
+       "duration": "4 hr 5 min"
+      }
+     ]
+    },
+    {
+     "name": "Trattoria M Kyoto",
+     "transportations": [
+      {
+       "type": "Walking",
+       "duration": "10 min"
+      }
+     ]
+    }
+   ],
+   "images": [
+    {
+     "thumbnail": "https://lh6.googleusercontent.com/proxy/rvLnWwaJ2Etkv1UJ1x1sjkCSut3sPWlk753IKnB1jByQG8JtAa2WmmSBV5K2j7gEBInKvJDPTsA0-xLx-_Ki61bl1f5RjF7xg75WENNEwv9FSX9gW6vTXqtvqYLlQYUfHwlnLOBoTljClBX6zB-i6dEsetKVNQ=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://q-xx.bstatic.com/xdata/images/hotel/max1280/199174702.jpg?k=f61084b941fd68d7295cbaa7e855ff409b02ecee05cb9975a559a5b074563a0d&o=&a=328129"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/proxy/EcfiGj5DKFAf6w0AgMOCkjuO-nJgDn0YCkFGIWkLGP0fzdEV0gWp5gPsw_kCjUUsgJmR7HuYDC74s0GnkWPnz2qBvQL6UEYR_V7OPpH1L5G92JuPRPrOc6A02yoeZ1qicxsrme2Vr6QJlsPT1Gykx-_H_azcyRs=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://q-xx.bstatic.com/xdata/images/hotel/max1280/274868157.jpg?k=ab1c5f4e20df66e2217d7696c1b0e9c7be87dbb5b95ec31029c8445bb2f91959&o=&a=328129"
+    },
+    {
+     "thumbnail": "https://lh4.googleusercontent.com/proxy/k02PDLztIBqkUZuY7LWWQqyMGFl8jzHOGOh7RVInzxuTRw3uOl2XiVKm6WNe7x4GXrq4ocQ3hQYPtLxWc2DYfQquc7q8OEIt3U68vpk_V8y_XoXONv4TZPwRhEUg5XCP0s2BN56szfVTM39sdaustwPJgA0Yjw=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://q-xx.bstatic.com/xdata/images/hotel/max1280/148238317.jpg?k=79a0f35da3e6117d838b2d930e6e8d9ff954121e760cbd966321071fefe814cb&o=&a=328129"
+    },
+    {
+     "thumbnail": "https://lh4.googleusercontent.com/proxy/na9hkaKTjUSF3oaHVjt2FDKqmWeqYkTJfA241Bm1gVo81Href5c-E4S2VZPrn7uAUrW8zDU4u8KHdLY5fhjR8eUmhHPOSe92gHyLYN7FjePcQXPuYTrYG6VEAIYuvpV6XXNwv3BovuYF8FVfwDEW-n4bY47mig=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://q-xx.bstatic.com/xdata/images/hotel/max1280/274867818.jpg?k=29fe4ec59460fdda06cde68c73bf54f1052743bff07c192c4d0717867ead7598&o=&a=328129"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/proxy/S2E4VZFotXg9kn-f4deBuklUAWqcod4eRdTDsDwzdi4gGGlo4JBbSfptpOTgFrxbcFJ8GML-8yjPtdLLvNGkYmoLzv01yhBI-bjavKK1uf1Gc24g3Vyxx0vlGgJ3awjEhqlPtJhwhIQaBm5akqdYSvweranpoPI=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://q-xx.bstatic.com/xdata/images/hotel/max1280/619403132.jpg?k=110982a81f34b064a38a6b5b08bead283b98a0e996179f7380db0c620ed52b3f&o=&a=328129"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/proxy/5YBFOY9KNwWV9MRs_H3KafslNbWKs3EjxTzXR5dTRJVJ_tUDkKt6jsurohzlCsCloOMFazOJXBdTew2lzGta4mOxQtcsDiqkdDpsZ8EAsLUYoYdAoqSD9Hu3U8YaYnr9ts8RbhfoR5RQ3nWuJRv78WvCZHeU3C8=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://q-xx.bstatic.com/xdata/images/hotel/max1280/200717841.jpg?k=d2e5808ce9d9d546692a5329f2420455691e57f7708793af5f61d08c40191833&o=&a=328129"
+    },
+    {
+     "thumbnail": "https://lh4.googleusercontent.com/proxy/V1_HeaiyHDacmZeOBPR57hZ9O2_fGVmoo-7Ejh_vvdO-I1rve-zVCBnJjICFtznOMlLD8700ueMZiSQeBnG-HaTrFg9-Wr25_R6LvWhVu1LlmhdZdIoDnmZzEHOoT7eSgkOgL8zNJmx_MQmjpMAE1noEltGc4RI=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://q-xx.bstatic.com/xdata/images/hotel/max1280/199174490.jpg?k=c94c4c0626bc2e2528385970cf200903b0a54659249c39f1ee10f9ea4c29bfcc&o=&a=328129"
+    },
+    {
+     "thumbnail": "https://lh4.googleusercontent.com/proxy/ja4SRmaDTzrWxsgJYtCYAqitT-VbckVs6U6rk6vC4VtfnFIgCtoM4L9QJjQefCgeFOw5nS_N-JczHhKKnTBfr5wUiofz8OlERIDGVT5MDop2BTlom41mac_Jot60fbO1GFvcfFPWDx8WtWHX0Uq70v4-XngczA=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://q-xx.bstatic.com/xdata/images/hotel/max1280/148242594.jpg?k=6a88a3fa1f4c23634c3f9a34bb9eaaf4a6e7da3cede192bad298aa3aff3c5e87&o=&a=328129"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/proxy/LdS-6cDELcvAYn1S9X1OUcw8H6EBo1cA_zNfM4WiESCDbVnFW9vIu6NKRqC-nvlCvqbdSP8nCJ_uMg6BUNeMqXba1a2tokmACiIykFrU0ZDc6BzJJvEKitVQfobphJyOZbXX0H2X3qNWZ59ZYxHgo2oFxmNdnDc=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://q-xx.bstatic.com/xdata/images/hotel/max1280/274867727.jpg?k=10c5aa4c7d60bbae2eafb9fd88e61a21f216769b5cd9710ecf49b2edfce558e6&o=&a=328129"
+    }
+   ],
+   "overall_rating": 4.85,
+   "reviews": 21,
+   "location_rating": 4.3,
+   "amenities": [
+    "Air conditioning",
+    "Hot tub",
+    "Pet-friendly",
+    "Free parking",
+    "Free Wi-Fi"
+   ],
+   "essential_info": [
+    "Sleeps 5"
+   ],
+   "serpapi_google_hotels_reviews_link": "https://serpapi.com/search.json?engine=google_hotels_reviews&hl=en&property_token=ChoQyOiUgaWbg_erARoNL2cvMTF6ZmI2Y25qdhAC",
+   "serpapi_google_hotels_photos_link": "https://serpapi.com/search.json?engine=google_hotels_photos&property_token=ChoQyOiUgaWbg_erARoNL2cvMTF6ZmI2Y25qdhAC"
+  }
+ ],
+ "serpapi_pagination": {
+  "current_from": 1,
+  "current_to": 18,
+  "next_page_token": "CBI=",
+  "next": "https://serpapi.com/search.json?adults=2&check_in_date=2026-11-09&check_out_date=2026-11-12&children=0&currency=USD&engine=google_hotels&gl=us&hl=en&next_page_token=CBI%3D&q=Kyoto%2C+Japan&vacation_rentals=true"
+ }
+}
