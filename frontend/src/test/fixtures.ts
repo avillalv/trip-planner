@@ -1,3 +1,4 @@
+import type { Lodging } from '@/lib/api/lodging'
 import type { SystemStatus } from '@/lib/api/system'
 import type { Trip } from '@/lib/api/trips'
 
@@ -44,6 +45,44 @@ export function trip(overrides: Partial<Trip> = {}): Trip {
     ],
     travelers: [{ id: 1, name: 'Alex Rivera', color: '#c24472', home_airports: ['LAX'] }],
     cover: null,
+    created_at: '2026-09-26T12:00:00Z',
+    updated_at: '2026-09-26T12:00:00Z',
+    ...overrides,
+  }
+}
+
+export function lodging(overrides: Partial<Lodging> = {}): Lodging {
+  return {
+    id: 3,
+    trip_id: 7,
+    title: 'Machiya with a garden',
+    url: 'https://www.airbnb.com/rooms/53122',
+    site: 'Airbnb',
+    check_in: '2026-11-09',
+    check_out: '2026-11-12',
+    nights: 3,
+    guests: 2,
+    price_total: '96000.00',
+    price_per_night: '32000.00',
+    currency: 'JPY',
+    price_home_total: '640.00',
+    home_currency: 'USD',
+    photos: [],
+    location_name: null,
+    lat: null,
+    lon: null,
+    bedrooms: 2,
+    beds: 3,
+    baths: '1.0',
+    rating: '4.92',
+    review_count: 188,
+    notes: '',
+    pros: '',
+    cons: '',
+    status: 'candidate',
+    favorite: false,
+    added_via: 'paste',
+    hearts: [],
     created_at: '2026-09-26T12:00:00Z',
     updated_at: '2026-09-26T12:00:00Z',
     ...overrides,
