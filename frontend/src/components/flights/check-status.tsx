@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { CircleAlert, CircleCheck, Loader2 } from 'lucide-react'
 import { useEffect, useRef } from 'react'
+import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -15,13 +16,8 @@ import {
   type Routine,
 } from '@/lib/api/flights'
 import { timeAgo } from '@/lib/format'
+import { PRICE_CHECK_SCHEDULES as SCHEDULES } from '@/lib/schedules'
 
-const SCHEDULES = [
-  { cron: '0 8 * * *', label: 'Once a day (8:00)' },
-  { cron: '0 8,20 * * *', label: 'Twice a day (8:00 and 20:00)' },
-  { cron: '0 */6 * * *', label: 'Every 6 hours' },
-  { cron: '0 */3 * * *', label: 'Every 3 hours' },
-]
 const OFF = 'off'
 
 const clock = new Intl.DateTimeFormat(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' })
@@ -68,6 +64,7 @@ export function CheckStatus({ tripId }: { tripId: number }) {
   const routines = useRoutines(tripId)
   const usage = useSerpApiUsage()
   const flightRoutine = routines.data?.find((r) => r.kind === 'flight_api')
+  const hasAgent = routines.data?.some((r) => r.kind === 'flight_agent') ?? false
 
   // When a check finishes, reload prices, charts, and quota.
   const wasLive = useRef(live)
@@ -128,6 +125,12 @@ export function CheckStatus({ tripId }: { tripId: number }) {
           </p>
         )}
       </div>
+      <p className="text-sm text-ink-soft">
+        {hasAgent ? 'Claude agents also look for fares on this trip.' : 'The price APIs miss some airlines and sales.'}{' '}
+        <Link to={`/agents?trip=${tripId}`} className="font-semibold text-brand underline-offset-2 hover:underline">
+          {hasAgent ? 'See agents' : 'Have Claude look for fares'}
+        </Link>
+      </p>
     </section>
   )
 }

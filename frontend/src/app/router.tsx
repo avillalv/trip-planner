@@ -1,5 +1,7 @@
 import { createBrowserRouter } from 'react-router'
 import { AppShell } from '@/components/layout/app-shell'
+import { AgentsPage } from '@/routes/agents/agents-page'
+import { RunPage } from '@/routes/agents/run-page'
 import { NotFound, RouteError } from '@/routes/errors'
 import { SectionPlaceholder } from '@/routes/section-placeholder'
 import { SettingsPage } from '@/routes/settings-page'
@@ -32,15 +34,8 @@ export const router = createBrowserRouter([
           },
         ],
       },
-      {
-        path: 'agents',
-        element: (
-          <SectionPlaceholder
-            title="Agents"
-            description="Agent routines will be listed here: what each one searches for, when it runs, and what it found."
-          />
-        ),
-      },
+      { path: 'agents', element: <AgentsPage /> },
+      { path: 'agents/runs/:runId', element: <RunPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: '*', element: <NotFound /> },
     ],

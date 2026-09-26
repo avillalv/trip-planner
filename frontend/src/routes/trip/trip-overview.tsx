@@ -1,4 +1,5 @@
 import { Clock, ExternalLink, RefreshCw } from 'lucide-react'
+import { TripFindings } from '@/components/agents/trip-findings'
 import { CountryTag } from '@/components/common/country-tag'
 import { PersonAvatar } from '@/components/people/person-avatar'
 import { Button } from '@/components/ui/button'
@@ -194,6 +195,7 @@ export function TripOverview() {
             </ol>
           )}
         </section>
+        <TripFindings tripId={trip.id} />
       </div>
 
       <aside className="space-y-6">

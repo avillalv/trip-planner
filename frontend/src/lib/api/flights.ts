@@ -125,7 +125,7 @@ export function useLatestRun(tripId: number) {
   return useQuery({
     queryKey: [...runsKey(tripId), 'latest'],
     queryFn: async (): Promise<Run | null> => {
-      const runs = unwrap(await api.GET('/api/v1/runs', { params: { query: { trip_id: tripId, limit: 1 } } }))
+      const runs = unwrap(await api.GET('/api/v1/runs', { params: { query: { trip_id: tripId, kind: 'flight_api', limit: 1 } } }))
       return runs[0] ?? null
     },
     // Poll quickly while a check is in progress.

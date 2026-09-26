@@ -6,8 +6,8 @@ export function systemStatus(overrides: Partial<SystemStatus> = {}): SystemStatu
     version: '0.1.0',
     database: 'ok',
     worker: { status: 'ok', last_seen: new Date().toISOString() },
-    claude: { found: true, path: 'claude', version: '2.1.283' },
-    integrations: { geoapify: true, serpapi: false, travelpayouts: false, wikimedia: false },
+    claude: { found: true, path: 'claude', version: '2.1.283', signed_in: true, auth_method: 'claude.ai' },
+    integrations: { geoapify: true, serpapi: false, travelpayouts: false, wikimedia: false, agent_api: true },
     access: { other_devices: false, passcode_configured: true, port: 8000, urls: [] },
     ...overrides,
   }

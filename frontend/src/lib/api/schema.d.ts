@@ -34,6 +34,8 @@ export interface paths {
         /**
          * System Status
          * @description Setup checklist data: database, worker, Claude CLI, API keys, and network access.
+         *
+         *     Claude's version and sign-in are cached for a few minutes; `recheck=true` asks again now.
          */
         get: operations["system_status"];
         put?: never;
@@ -389,6 +391,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/runs/{run_id}/outputs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Run Outputs
+         * @description What the run saved (prices and notes) and what was rejected, with the reasons.
+         */
+        get: operations["run_outputs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/runs/{run_id}/cancel": {
         parameters: {
             query?: never;
@@ -400,6 +422,24 @@ export interface paths {
         put?: never;
         /** Cancel Run */
         post: operations["cancel_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/routines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Routines */
+        get: operations["list_routines"];
+        put?: never;
+        /** Add Routine */
+        post: operations["add_routine"];
         delete?: never;
         options?: never;
         head?: never;
@@ -430,14 +470,73 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Get Routine Detail */
+        get: operations["get_routine_detail"];
+        put?: never;
+        post?: never;
+        /** Remove Routine */
+        delete: operations["remove_routine"];
+        options?: never;
+        head?: never;
+        /** Update Routine */
+        patch: operations["update_routine"];
+        trace?: never;
+    };
+    "/api/v1/routines/{routine_id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         get?: never;
+        put?: never;
+        /**
+         * Run Routine Now
+         * @description Queue a run now. If one is already waiting to start, that run is returned instead.
+         */
+        post: operations["run_routine_now"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Trip Notes
+         * @description Findings saved by research agents, newest first.
+         */
+        get: operations["trip_notes"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** Update Routine */
-        patch: operations["update_routine"];
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notes/{note_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Note */
+        delete: operations["delete_note"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/usage/serpapi": {
@@ -532,10 +631,110 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agent/v1/runs/{run_id}/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Run Context
+         * @description The task: trip, routes with ids and date rules, cheapest known prices, and the rules.
+         */
+        get: operations["run_context"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/v1/airports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lookup Airports */
+        get: operations["lookup_airports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/v1/runs/{run_id}/flight-quotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Flight Quotes
+         * @description Up to 50 prices. Each is accepted, rejected with reasons, or reported as a duplicate.
+         */
+        post: operations["submit_flight_quotes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/v1/runs/{run_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Note */
+        post: operations["add_note"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/v1/runs/{run_id}/finish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Finish Run */
+        post: operations["finish_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AcceptedItem */
+        AcceptedItem: {
+            /** Index */
+            index: number;
+            /** Id */
+            id: number;
+            /** Flags */
+            flags: string[];
+        };
         /**
          * AccessInfo
          * @description Whether other devices on the home network can open the app, and at which addresses.
@@ -549,6 +748,13 @@ export interface components {
             port: number;
             /** Urls */
             urls: string[];
+        };
+        /** AgentAck */
+        AgentAck: {
+            /** Ok */
+            ok: boolean;
+            /** Message */
+            message: string;
         };
         /** AirportOut */
         AirportOut: {
@@ -581,6 +787,51 @@ export interface components {
             path?: string | null;
             /** Version */
             version?: string | null;
+            /** Signed In */
+            signed_in?: boolean | null;
+            /** Auth Method */
+            auth_method?: string | null;
+        };
+        /** ContextRoute */
+        ContextRoute: {
+            /** Id */
+            id: number;
+            /** Label */
+            label: string | null;
+            /** Origins */
+            origins: string[];
+            /** Destinations */
+            destinations: string[];
+            /** Trip Type */
+            trip_type: string;
+            /**
+             * Depart From
+             * Format: date
+             */
+            depart_from: string;
+            /**
+             * Depart To
+             * Format: date
+             */
+            depart_to: string;
+            /** Nights */
+            nights: number[] | null;
+            /** Return Window */
+            return_window: string[] | null;
+            /** Passengers */
+            passengers: number;
+            /** Adults */
+            adults: number;
+            /** Children */
+            children: number;
+            /** Cabin */
+            cabin: string;
+            /** Max Stops */
+            max_stops: number | null;
+            /** Cheapest Known */
+            cheapest_known: {
+                [key: string]: unknown;
+            } | null;
         };
         /** DateGridCell */
         DateGridCell: {
@@ -695,6 +946,27 @@ export interface components {
             /** Geoapify Place Id */
             geoapify_place_id: string | null;
         };
+        /** FieldError */
+        FieldError: {
+            /** Field */
+            field: string;
+            /** Msg */
+            msg: string;
+        };
+        /** FinishIn */
+        FinishIn: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "partial" | "failed";
+            /** Summary */
+            summary: string;
+            /** Sources Checked */
+            sources_checked?: string[];
+            /** Issues */
+            issues?: string[];
+        };
         /** GoogleHistoryPoint */
         GoogleHistoryPoint: {
             /**
@@ -751,6 +1023,8 @@ export interface components {
             travelpayouts: boolean;
             /** Wikimedia */
             wikimedia: boolean;
+            /** Agent Api */
+            agent_api: boolean;
         };
         /** LoginIn */
         LoginIn: {
@@ -772,6 +1046,35 @@ export interface components {
             /** Distance Km */
             distance_km: number;
         };
+        /** NoteIn */
+        NoteIn: {
+            /** Title */
+            title: string;
+            /** Body */
+            body: string;
+            /** Urls */
+            urls?: string[];
+        };
+        /** NoteOut */
+        NoteOut: {
+            /** Id */
+            id: number;
+            /** Trip Id */
+            trip_id: number;
+            /** Run Id */
+            run_id: string | null;
+            /** Title */
+            title: string;
+            /** Body */
+            body: string;
+            /** Urls */
+            urls: string[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** PersonIn */
         PersonIn: {
             /** Name */
@@ -791,6 +1094,22 @@ export interface components {
             color: string;
             /** Home Airports */
             home_airports: string[];
+        };
+        /** QuoteBatchIn */
+        QuoteBatchIn: {
+            /** Quotes */
+            quotes: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** QuoteBatchResult */
+        QuoteBatchResult: {
+            /** Accepted */
+            accepted: components["schemas"]["AcceptedItem"][];
+            /** Rejected */
+            rejected: components["schemas"]["RejectedItem"][];
+            /** Duplicates */
+            duplicates: number[];
         };
         /** QuoteOut */
         QuoteOut: {
@@ -862,6 +1181,31 @@ export interface components {
         RefreshRequest: {
             /** Route Ids */
             route_ids?: number[];
+        };
+        /** RejectedItem */
+        RejectedItem: {
+            /** Index */
+            index: number;
+            /** Errors */
+            errors: components["schemas"]["FieldError"][];
+        };
+        /** RejectionOut */
+        RejectionOut: {
+            /** Id */
+            id: number;
+            /** Entity */
+            entity: string;
+            /** Item */
+            item: {
+                [key: string]: unknown;
+            };
+            /** Errors */
+            errors: components["schemas"]["FieldError"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** RouteHistory */
         RouteHistory: {
@@ -1014,6 +1358,47 @@ export interface components {
             /** Quote Count */
             quote_count: number;
         };
+        /**
+         * RoutineConfig
+         * @description Options for agent routines. Price-check (API) routines use none of them.
+         */
+        RoutineConfig: {
+            /** Route Ids */
+            route_ids?: number[];
+            /** Topic */
+            topic?: string | null;
+            /** Instructions */
+            instructions?: string | null;
+            /** Max Turns */
+            max_turns?: number | null;
+            /** Timeout Min */
+            timeout_min?: number | null;
+        };
+        /** RoutineCreate */
+        RoutineCreate: {
+            /** Trip Id */
+            trip_id: number;
+            /** Name */
+            name: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "flight_agent" | "research_agent";
+            /** Schedule Cron */
+            schedule_cron: string;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Catch Up
+             * @default true
+             */
+            catch_up: boolean;
+            config?: components["schemas"]["RoutineConfig"];
+        };
         /** RoutineOut */
         RoutineOut: {
             /** Id */
@@ -1035,10 +1420,7 @@ export interface components {
             timezone: string;
             /** Catch Up */
             catch_up: boolean;
-            /** Config */
-            config: {
-                [key: string]: unknown;
-            };
+            config: components["schemas"]["RoutineConfig"];
             /** Next Run At */
             next_run_at: string | null;
             last_run: components["schemas"]["RunOut"] | null;
@@ -1053,6 +1435,104 @@ export interface components {
             schedule_cron?: string | null;
             /** Catch Up */
             catch_up?: boolean | null;
+            config?: components["schemas"]["RoutineConfig"] | null;
+        };
+        /** RunContext */
+        RunContext: {
+            /** Run Id */
+            run_id: string;
+            /** Kind */
+            kind: string;
+            /**
+             * Today
+             * Format: date
+             */
+            today: string;
+            /** Trip */
+            trip: {
+                [key: string]: unknown;
+            };
+            /** Routes */
+            routes: components["schemas"]["ContextRoute"][];
+            /** Topic */
+            topic: string | null;
+            /** Instructions */
+            instructions: string | null;
+            /** Rules */
+            rules: string[];
+            /** Blocked Domains */
+            blocked_domains: string[];
+        };
+        /**
+         * RunDetailOut
+         * @description A run with what it was asked to do and how it was started.
+         */
+        RunDetailOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Routine Id */
+            routine_id: number | null;
+            /** Trip Id */
+            trip_id: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "flight_api" | "flight_agent" | "research_agent";
+            /**
+             * Trigger
+             * @enum {string}
+             */
+            trigger: "schedule" | "manual" | "catch_up";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "succeeded" | "partial" | "failed" | "timed_out" | "cancelled" | "interrupted";
+            /** Params */
+            params: {
+                [key: string]: unknown;
+            };
+            /**
+             * Queued At
+             * Format: date-time
+             */
+            queued_at: string;
+            /** Started At */
+            started_at: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /** Summary */
+            summary: string | null;
+            /** Error */
+            error: string | null;
+            /** Accepted Count */
+            accepted_count: number;
+            /** Rejected Count */
+            rejected_count: number;
+            /** Input Tokens */
+            input_tokens: number | null;
+            /** Output Tokens */
+            output_tokens: number | null;
+            /** Cost Usd Est */
+            cost_usd_est: string | null;
+            /** Cancel Requested */
+            cancel_requested: boolean;
+            /** Prompt */
+            prompt: string | null;
+            /** Argv Redacted */
+            argv_redacted: string[] | null;
+            /** Exit Code */
+            exit_code: number | null;
+            /** Report */
+            report: {
+                [key: string]: unknown;
+            } | null;
+            /** Log Path */
+            log_path: string | null;
         };
         /** RunEventOut */
         RunEventOut: {
@@ -1129,6 +1609,18 @@ export interface components {
             cost_usd_est: string | null;
             /** Cancel Requested */
             cancel_requested: boolean;
+        };
+        /**
+         * RunOutputs
+         * @description Everything a run saved or had rejected.
+         */
+        RunOutputs: {
+            /** Quotes */
+            quotes: components["schemas"]["QuoteOut"][];
+            /** Notes */
+            notes: components["schemas"]["NoteOut"][];
+            /** Rejections */
+            rejections: components["schemas"]["RejectionOut"][];
         };
         /** SerpApiUsage */
         SerpApiUsage: {
@@ -1296,7 +1788,9 @@ export interface operations {
     };
     system_status: {
         parameters: {
-            query?: never;
+            query?: {
+                recheck?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1310,6 +1804,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SystemStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -2016,6 +2519,8 @@ export interface operations {
             query?: {
                 trip_id?: number | null;
                 routine_id?: number | null;
+                kind?: ("flight_api" | "flight_agent" | "research_agent") | null;
+                status?: ("queued" | "running" | "succeeded" | "partial" | "failed" | "timed_out" | "cancelled" | "interrupted") | null;
                 limit?: number;
             };
             header?: never;
@@ -2061,7 +2566,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RunOut"];
+                    "application/json": components["schemas"]["RunDetailOut"];
                 };
             };
             /** @description Validation Error */
@@ -2108,6 +2613,37 @@ export interface operations {
             };
         };
     };
+    run_outputs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunOutputs"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     cancel_run: {
         parameters: {
             query?: never;
@@ -2126,6 +2662,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_routines: {
+        parameters: {
+            query?: {
+                trip_id?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoutineOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_routine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoutineCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoutineOut"];
                 };
             };
             /** @description Validation Error */
@@ -2170,6 +2770,66 @@ export interface operations {
             };
         };
     };
+    get_routine_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                routine_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoutineOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_routine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                routine_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     update_routine: {
         parameters: {
             query?: never;
@@ -2193,6 +2853,99 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["RoutineOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_routine_now: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                routine_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trip_notes: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_note: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                note_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -2360,6 +3113,173 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AppSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_context: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunContext"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lookup_airports: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AirportOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_flight_quotes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteBatchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteBatchResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_note: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    finish_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinishIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentAck"];
                 };
             };
             /** @description Validation Error */

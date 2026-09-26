@@ -271,6 +271,18 @@
   --tp-line-c: #f07aa2;
 }
 
+/* A run's outcome stamp pressing onto the page (uses `scale`, so it composes with `rotate`). */
+@keyframes stamp-press {
+  from {
+    scale: 1.3;
+    opacity: 0;
+  }
+  to {
+    scale: 1;
+    opacity: 1;
+  }
+}
+
 /* Guilloche draw-on: paths use pathLength="1" so one dash covers the whole curve. */
 @keyframes guilloche-draw {
   from {

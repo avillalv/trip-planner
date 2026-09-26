@@ -51,14 +51,29 @@ function connectionItems(s: SystemStatus): Item[] {
     configured
       ? { label: name, state: 'ready', detail: 'Key added' }
       : { label: name, state: 'missing', detail: purpose }
+  const version = `version ${s.claude.version ?? 'unknown'}`
   return [
-    s.claude.found
-      ? { label: 'Claude Code', state: 'ready', detail: `Found · version ${s.claude.version ?? 'unknown'}` }
-      : {
+    !s.claude.found
+      ? {
           label: 'Claude Code',
           state: 'missing',
           detail: <>Not found. Install Claude Code, or set <Env>CLAUDE_PATH</Env> in .env.</>,
-        },
+        }
+      : s.claude.signed_in === false
+        ? {
+            label: 'Claude Code',
+            state: 'problem',
+            detail: (
+              <>
+                Signed out, so agents can't run. Run <Env>claude</Env> in a terminal and type <Env>/login</Env>.
+              </>
+            ),
+          }
+        : {
+            label: 'Claude Code',
+            state: 'ready',
+            detail: s.claude.signed_in ? `Found · ${version} · signed in` : `Found · ${version}`,
+          },
     key('Geoapify', s.integrations.geoapify, 'Add GEOAPIFY_API_KEY to .env to search for places.'),
     key('SerpApi', s.integrations.serpapi, 'Add SERPAPI_API_KEY to .env for live Google Flights prices.'),
     key('Travelpayouts', s.integrations.travelpayouts, 'Add TRAVELPAYOUTS_TOKEN to .env for cached fare calendars.'),
