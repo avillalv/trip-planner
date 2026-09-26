@@ -256,10 +256,11 @@ Runs the API with auto-reload, the worker, and the Vite dev server. Open http://
 | Command | What it does |
 |---|---|
 | `npm test` | Backend tests (pytest, uses the `tripplanner_test` database) and frontend tests (Vitest) |
+| `npm run test:e2e` | Browser smoke test (Playwright, in Edge): creates a trip, tracks a route, plans a day, saves a place to stay, and presents it. Runs on port 8011 against the test database, so it's safe while the app runs |
 | `npm run lint` | ruff for Python; oxlint and the TypeScript compiler for the frontend |
 | `npm run format` | Auto-format Python code |
 | `npm run gen:api` | Regenerate the frontend's API types after changing backend routes or schemas |
-| `uv run --project backend trip-planner --help` | Backend CLI: `serve`, `web`, `worker`, `setup-db`, `migrate`, `seed-airports`, `openapi` |
+| `uv run --project backend trip-planner --help` | Backend CLI: `serve`, `web`, `worker`, `setup-db`, `migrate`, `seed-airports`, `backup`, `restore`, `openapi` |
 | `npm run autostart:install` / `autostart:remove` | Start the app at Windows sign-in, or stop doing so |
 | `npm run agent:smoke` | One real Claude flight-agent run against a throwaway trip in the test database (uses your subscription once) |
 

@@ -13,6 +13,9 @@ Personal, locally run trip planner for two people. Windows 11, PowerShell/Git Ba
 ## Commands (repo root)
 - `npm run setup` once; `npm start` runs web + worker at http://localhost:8000; `npm run dev` for hot reload (UI on :5173).
 - `npm test` (pytest + vitest), `npm run lint` (ruff + oxlint + tsc), `npm run format`.
+- `npm run test:e2e`: Playwright smoke test in Edge on port 8011; it resets the test database
+  (`backend/tests/e2e_seed.py`) and never touches the real one. Pytest and this both wipe
+  `tripplanner_test`, so reseed before checking the UI on `app-testdb` afterwards.
 - `npm run gen:api` after changing any API route or schema — commit the regenerated types.
 - Backend tests need the `tripplanner_test` database that setup creates.
 - While the user's `npm start` is running, `uv sync` can't replace `backend/.venv/Scripts/trip-planner.exe`;
