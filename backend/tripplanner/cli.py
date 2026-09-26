@@ -15,10 +15,14 @@ log = logging.getLogger("tripplanner")
 
 def _use_test_db() -> None:
     """Development convenience: run against the throwaway test database."""
+    from tripplanner.services.backups import backup_dir
+
     settings = get_settings()
     if not settings.test_database_url:
         sys.exit("TEST_DATABASE_URL is not set in .env.")
-    override_settings(settings.model_copy(update={"database_url": settings.test_database_url}))
+    # Its backups are kept apart, so one never stands in for a real nightly backup.
+    update = {"database_url": settings.test_database_url, "backup_dir": backup_dir() / "test-db"}
+    override_settings(settings.model_copy(update=update))
     log.warning("Using the TEST database; pytest runs wipe it.")
 
 
@@ -95,6 +99,48 @@ def _cmd_agent_smoke(_args: argparse.Namespace) -> None:
     sys.exit(run_smoke())
 
 
+def _cmd_backup(args: argparse.Namespace) -> None:
+    from tripplanner.services.backups import BackupError, run_backup
+
+    if args.test_db:
+        _use_test_db()
+    try:
+        info = run_backup()
+    except BackupError as exc:
+        log.error("%s", exc)
+        sys.exit(1)
+    log.info("Backed up the database to %s (%d KB).", info.path, max(1, info.size // 1024))
+
+
+def _cmd_restore(args: argparse.Namespace) -> None:
+    from sqlalchemy.engine import make_url
+
+    from tripplanner.services.backups import BackupError, list_backups, restore
+
+    path: Path | None = args.file
+    if path is None:
+        # The newest real backup, also when checking one by restoring it into the test database.
+        newest = next(iter(list_backups()), None)
+        if newest is None:
+            sys.exit("There are no backups yet. Name a backup file to restore.")
+        path = newest.path
+    if args.test_db:
+        _use_test_db()
+    database_url = get_settings().database_url
+    database = make_url(database_url).database
+    if not args.yes:
+        print(f"This replaces everything in the '{database}' database with {path}.")
+        print("Stop Trip Planner first: close `npm start`, or end its task if it starts at sign-in.")
+        if input("Type 'restore' to continue: ").strip().lower() != "restore":
+            sys.exit("Nothing was changed.")
+    try:
+        restore(path, database_url)
+    except BackupError as exc:
+        log.error("%s", exc)
+        sys.exit(1)
+    log.info("Restored %s into the '%s' database.", path.name, database)
+
+
 def _cmd_openapi(args: argparse.Namespace) -> None:
     from tripplanner.main import create_app
 
@@ -135,6 +181,18 @@ def main(argv: list[str] | None = None) -> None:
     sub.add_parser(
         "agent-smoke", help="one real Claude flight-agent run against a throwaway trip in the test database"
     ).set_defaults(func=_cmd_agent_smoke)
+
+    backup = sub.add_parser("backup", help="back up the database now (the worker also does this nightly)")
+    backup.add_argument("--test-db", action="store_true", help="use TEST_DATABASE_URL (development)")
+    backup.set_defaults(func=_cmd_backup)
+
+    restore = sub.add_parser("restore", help="replace the database with a backup (stop the app first)")
+    restore.add_argument("file", type=Path, nargs="?", help="a .dump file (default: the newest backup)")
+    restore.add_argument(
+        "--test-db", action="store_true", help="restore into TEST_DATABASE_URL instead (to check a backup)"
+    )
+    restore.add_argument("--yes", action="store_true", help="don't ask for confirmation")
+    restore.set_defaults(func=_cmd_restore)
 
     openapi = sub.add_parser("openapi", help="write the OpenAPI schema to a file")
     openapi.add_argument("--out", type=Path, required=True)

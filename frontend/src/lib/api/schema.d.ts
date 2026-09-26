@@ -46,6 +46,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/system/backup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Back Up Now
+         * @description Back up the database now (the worker also does this every night).
+         */
+        post: operations["back_up_now"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/session": {
         parameters: {
             query?: never;
@@ -1164,6 +1184,22 @@ export interface components {
         AppSettingsOut: {
             /** Home Currency */
             home_currency: string;
+        };
+        /**
+         * BackupStatus
+         * @description Nightly database backups: where they go, the newest one, and the last problem, if any.
+         */
+        BackupStatus: {
+            /** Directory */
+            directory: string;
+            /** Count */
+            count: number;
+            /** Last At */
+            last_at: string | null;
+            /** Last Size */
+            last_size: number | null;
+            /** Error */
+            error: string | null;
         };
         /** ClaudeCliStatus */
         ClaudeCliStatus: {
@@ -2596,6 +2632,7 @@ export interface components {
             claude: components["schemas"]["ClaudeCliStatus"];
             integrations: components["schemas"]["IntegrationStatus"];
             access: components["schemas"]["AccessInfo"];
+            backups: components["schemas"]["BackupStatus"];
         };
         /** TrendPoint */
         TrendPoint: {
@@ -2769,6 +2806,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    back_up_now: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupStatus"];
                 };
             };
         };

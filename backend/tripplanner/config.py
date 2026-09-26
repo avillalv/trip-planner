@@ -46,6 +46,10 @@ class Settings(BaseSettings):
     claude_path: str | None = None
     # Scratch folders for agent runs. Kept outside the repo so agents don't see project files.
     agent_runs_dir: Path | None = None
+    # Nightly database backups (default: data/backups in the repo).
+    backup_dir: Path | None = None
+    # PostgreSQL's bin folder, if pg_dump isn't on PATH or in the usual install folder.
+    pg_bin_dir: str | None = None
 
     @property
     def open_to_network(self) -> bool:

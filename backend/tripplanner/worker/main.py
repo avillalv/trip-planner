@@ -1,4 +1,4 @@
-"""Background worker process: heartbeat, routine schedules, and the run dispatcher."""
+"""Background worker process: heartbeat, routine schedules, the run dispatcher, and nightly backups."""
 
 import logging
 import os
@@ -20,6 +20,9 @@ HEARTBEAT_SECONDS = 30
 SYNC_SECONDS = 15
 CATCH_UP_SECONDS = 300
 TICK_SECONDS = 2
+BACKUP_CHECK_SECONDS = 300
+# After a failed backup (say, pg_dump missing), try again later rather than every check.
+BACKUP_RETRY_SECONDS = 6 * 3600
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +45,7 @@ def beat(started_at: datetime, engine: Engine | None = None) -> None:
 
 
 def run_worker() -> None:
+    from tripplanner.services.backups import backup_if_due
     from tripplanner.worker.scheduler import RoutineScheduler
 
     start_parent_watchdog()
@@ -57,7 +61,14 @@ def run_worker() -> None:
     started_at = datetime.now(UTC)
     log.info("Worker started (pid %s).", os.getpid())
     scheduler: RoutineScheduler | None = None
-    last = {"beat": 0.0, "sync": 0.0, "catch_up": time.monotonic()}
+    never = float("-inf")
+    last = {
+        "beat": never,
+        "sync": never,
+        "catch_up": time.monotonic(),
+        "backup": never,
+        "backup_failed": never,
+    }
 
     while not stop.is_set():
         now = time.monotonic()
@@ -76,6 +87,13 @@ def run_worker() -> None:
             if now - last["catch_up"] >= CATCH_UP_SECONDS:
                 scheduler.catch_up()
                 last["catch_up"] = now
+            if (
+                now - last["backup"] >= BACKUP_CHECK_SECONDS
+                and now - last["backup_failed"] >= BACKUP_RETRY_SECONDS
+            ):
+                last["backup"] = now
+                if backup_if_due() is False:
+                    last["backup_failed"] = now
             scheduler.dispatch()
         except SQLAlchemyError as exc:
             log.warning("Database unavailable, will retry: %s", exc.__class__.__name__)

@@ -44,6 +44,16 @@ class AccessInfo(BaseModel):
     urls: list[str]
 
 
+class BackupStatus(BaseModel):
+    """Nightly database backups: where they go, the newest one, and the last problem, if any."""
+
+    directory: str
+    count: int
+    last_at: datetime | None
+    last_size: int | None
+    error: str | None
+
+
 class SystemStatus(BaseModel):
     version: str
     database: Literal["ok", "unavailable"]
@@ -51,3 +61,4 @@ class SystemStatus(BaseModel):
     claude: ClaudeCliStatus
     integrations: IntegrationStatus
     access: AccessInfo
+    backups: BackupStatus

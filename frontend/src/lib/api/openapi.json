@@ -71,6 +71,28 @@
         }
       }
     },
+    "/api/v1/system/backup": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Back Up Now",
+        "description": "Back up the database now (the worker also does this every night).",
+        "operationId": "back_up_now",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/auth/session": {
       "get": {
         "tags": [
@@ -3945,6 +3967,62 @@
           "home_currency"
         ],
         "title": "AppSettingsOut"
+      },
+      "BackupStatus": {
+        "properties": {
+          "directory": {
+            "type": "string",
+            "title": "Directory"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "last_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last At"
+          },
+          "last_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Size"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "directory",
+          "count",
+          "last_at",
+          "last_size",
+          "error"
+        ],
+        "title": "BackupStatus",
+        "description": "Nightly database backups: where they go, the newest one, and the last problem, if any."
       },
       "ClaudeCliStatus": {
         "properties": {
@@ -8964,6 +9042,9 @@
           },
           "access": {
             "$ref": "#/components/schemas/AccessInfo"
+          },
+          "backups": {
+            "$ref": "#/components/schemas/BackupStatus"
           }
         },
         "type": "object",
@@ -8973,7 +9054,8 @@
           "worker",
           "claude",
           "integrations",
-          "access"
+          "access",
+          "backups"
         ],
         "title": "SystemStatus"
       },

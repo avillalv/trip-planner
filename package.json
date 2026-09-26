@@ -21,7 +21,9 @@
     "gen:api": "uv run --project backend trip-planner openapi --out frontend/src/lib/api/openapi.json && npm run gen:api --prefix frontend",
     "autostart:install": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/autostart-install.ps1",
     "autostart:remove": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/autostart-remove.ps1",
-    "agent:smoke": "uv run --project backend trip-planner agent-smoke"
+    "agent:smoke": "uv run --project backend trip-planner agent-smoke",
+    "backup": "uv run --project backend trip-planner backup",
+    "restore": "uv run --project backend trip-planner restore"
   },
   "devDependencies": {
     "concurrently": "^10.0.5"
