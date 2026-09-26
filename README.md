@@ -92,6 +92,30 @@ Open a day to plan it on a calendar:
 Places come from Geoapify (OpenStreetMap data). Each search costs one of your 3,000 free daily
 credits, and results are kept for a week, so repeating a search is free.
 
+## Save places to stay
+
+A trip's **Lodging** page collects the places you're considering, from any site. There are
+three ways to add one:
+
+- **Bookmarklet (computers).** Open "Save listings from any site with one click" on the Lodging
+  page and drag **Save to Trip Planner** to your bookmarks bar. On a listing you're viewing
+  (Airbnb, Vrbo, Booking.com, or anywhere else), click it: Trip Planner opens with the name,
+  photos, price, and rating the page shows, ready to check and save. It reads only the page you
+  have open; the app never visits those sites itself.
+- **Add a place (works on phones).** Paste the listing's link and its dates and number of guests
+  fill in from the link. **Get title and photo** reads the page once, like a chat app's link
+  preview. Many listing sites block that, so type in the price and anything else it missed.
+- **Search rentals** lists priced vacation rentals for your dates from Google Hotels' partners
+  (Airbnb listings may not appear), and **Add to list** saves one. Each new search uses one of
+  the month's SerpApi searches, shared with flight price checks; repeating a search within
+  12 hours is free.
+
+Each card shows the total, the price per night, and the price per person in the trip's
+currency (other currencies are converted with the latest European Central Bank rates). Star your favorites,
+give each place a heart from either of you, and mark it **Shortlisted**, **Booked**, or
+**Not for us**. Tick **Compare** on two to four places to see them side by side, with the lowest
+price, the best rating, and the one closest to your planned activities marked, plus a map.
+
 ## Agent routines (Claude)
 
 On the **Agents** page, **New routine** sets up work for Claude to do on a schedule:
