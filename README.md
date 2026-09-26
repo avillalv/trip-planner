@@ -43,6 +43,9 @@ npm start
 Then open http://localhost:8000. This runs the web server and the background worker together;
 press Ctrl+C to stop both.
 
+After you update Trip Planner, `npm start` brings the database up to date by itself, backing it
+up first (see [Backups](#backups)).
+
 ## Add your API keys
 
 The app works without them, but these free keys unlock its data sources. Put them in `.env`,

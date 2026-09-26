@@ -23,7 +23,46 @@ def _spawn(name: str, env: dict[str, str]) -> subprocess.Popen[bytes]:
     return subprocess.Popen([sys.executable, "-m", "tripplanner.cli", name], env=env)
 
 
+def prepare_database(attempts: int = 12, wait_seconds: float = 5) -> None:
+    """Apply database changes from an update before starting, backing up first so they can be undone.
+
+    At sign-in PostgreSQL may still be starting, so the check waits for it for about a minute.
+    """
+    from sqlalchemy.exc import OperationalError
+
+    from tripplanner.migrate import pending_migrations, upgrade
+    from tripplanner.services.backups import BackupError, run_backup
+
+    for attempt in range(attempts):
+        try:
+            waiting = pending_migrations()
+            break
+        except OperationalError:
+            if attempt == attempts - 1:
+                log.warning("Couldn't reach the database to check for updates; starting anyway.")
+                return
+            time.sleep(wait_seconds)
+    if not waiting:
+        return
+    log.info("This version changes the database (%d update(s)); backing it up first.", len(waiting))
+    try:
+        info = run_backup()
+        log.info("Backed up the database to %s.", info.path)
+    except BackupError as exc:
+        log.warning("Couldn't back up before updating the database: %s", exc)
+    try:
+        upgrade()
+    except Exception:
+        log.exception(
+            "Couldn't update the database. Nothing was started; see the error above. "
+            "To go back, restore the backup with `npm run restore`."
+        )
+        raise SystemExit(1) from None
+    log.info("Database updated.")
+
+
 def serve() -> None:
+    prepare_database()
     env = {**os.environ, PARENT_PID_ENV: str(os.getpid())}
     procs = {name: _spawn(name, env) for name in CHILDREN}
     started = dict.fromkeys(CHILDREN, time.monotonic())

@@ -24,6 +24,8 @@ Personal, locally run trip planner for two people. Windows 11, PowerShell/Git Ba
 
 ## Rules
 - Every schema change gets an Alembic migration in `backend/tripplanner/migrations/versions/`.
+  `trip-planner serve` (npm start, autostart) applies pending ones at startup after a backup;
+  `npm run dev` doesn't, so run `uv run --no-sync --project backend trip-planner migrate` there.
 - Secrets live only in `.env` (gitignored); document new variables in `.env.example`.
 - Agent routines (`claude -p`) must always run with `--model sonnet` and no fallback model.
   Agents never touch the database; they write only through the ingest API (`/api/agent/v1`),
