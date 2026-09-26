@@ -116,6 +116,26 @@ give each place a heart from either of you, and mark it **Shortlisted**, **Booke
 **Not for us**. Tick **Compare** on two to four places to see them side by side, with the lowest
 price, the best rating, and the one closest to your planned activities marked, plus a map.
 
+## Present the trip
+
+**Present**, at the top of every trip page, opens the trip as full-screen slides built from what's
+saved right now:
+
+- a title slide, then one slide for each destination (summary, local time, money, and a map)
+- one for each flight route: the cheapest fares and how the lowest price has moved
+- your lodging shortlist (or every place you're still considering)
+- one for each day with plans: its timeline and a map of the stops
+- a closing summary
+
+Sections with nothing in them are left out.
+
+Use → or Space for the next slide and ← to go back, Home and End for the first and last, F for
+full screen, G to see every slide, and Esc to leave. On a phone, swipe. The address ends in the
+slide number (`/present#5`), so a reload keeps your place.
+
+To print or save a PDF, use the printer button (or Ctrl+P) and choose **Save as PDF** as the
+printer: each slide prints on its own 16:9 page, and maps print as a simple plot of the stops.
+
 ## Agent routines (Claude)
 
 On the **Agents** page, **New routine** sets up work for Claude to do on a schedule:
