@@ -170,6 +170,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/presentation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Presentation
+         * @description Everything the presentation deck shows, gathered in one response.
+         */
+        get: operations["presentation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trips/{trip_id}/refresh-info": {
         parameters: {
             query?: never;
@@ -1251,6 +1271,111 @@ export interface components {
             /** Destination Id */
             destination_id?: number | null;
         };
+        /** DeckActivity */
+        DeckActivity: {
+            /** Id */
+            id: number;
+            /** Start Time */
+            start_time: string | null;
+            /** End Time */
+            end_time: string | null;
+            /** Title */
+            title: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "sights" | "museum" | "food" | "nature" | "nightlife" | "shopping" | "travel" | "other";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "idea" | "planned" | "booked";
+            /** Location Name */
+            location_name: string | null;
+            /** Lat */
+            lat: number | null;
+            /** Lon */
+            lon: number | null;
+            /** Notes */
+            notes: string;
+        };
+        /** DeckDay */
+        DeckDay: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Title */
+            title: string;
+            /** Notes */
+            notes: string;
+            /** Destination Name */
+            destination_name: string | null;
+            /** Timezone */
+            timezone: string | null;
+            /** In Trip */
+            in_trip: boolean;
+            /** Activities */
+            activities: components["schemas"]["DeckActivity"][];
+        };
+        /** DeckDestination */
+        DeckDestination: {
+            /** Id */
+            id: number;
+            /** Position */
+            position: number;
+            /** Name */
+            name: string;
+            /** Region */
+            region: string | null;
+            /** Country */
+            country: string | null;
+            /** Country Code */
+            country_code: string | null;
+            /** Kind */
+            kind: string | null;
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /** Timezone */
+            timezone: string | null;
+            /** Bbox */
+            bbox: number[] | null;
+            /** Summary */
+            summary: string | null;
+            /** Wiki Url */
+            wiki_url: string | null;
+            /** Image Url */
+            image_url: string | null;
+            /** Image File */
+            image_file: string | null;
+            /**
+             * Info Status
+             * @enum {string}
+             */
+            info_status: "pending" | "ready" | "not_found" | "failed" | "skipped";
+            /** Currency */
+            currency: string | null;
+            /** Rate */
+            rate: string | null;
+        };
+        /** DeckRoute */
+        DeckRoute: {
+            route: components["schemas"]["RouteOut"];
+            /** Options */
+            options: components["schemas"]["QuoteOut"][];
+            /** Trend */
+            trend: components["schemas"]["TrendPoint"][];
+            /** Typical Low */
+            typical_low: string | null;
+            /** Typical High */
+            typical_high: string | null;
+            /** Price Level */
+            price_level: string | null;
+        };
         /** DestinationIn */
         DestinationIn: {
             /**
@@ -1812,6 +1937,25 @@ export interface components {
              * @default Powered by Geoapify · © OpenStreetMap contributors
              */
             attribution?: string;
+        };
+        /** Presentation */
+        Presentation: {
+            trip: components["schemas"]["TripOut"];
+            /** Destinations */
+            destinations: components["schemas"]["DeckDestination"][];
+            /** Routes */
+            routes: components["schemas"]["DeckRoute"][];
+            /** Lodging */
+            lodging: components["schemas"]["LodgingOut"][];
+            /** Days */
+            days: components["schemas"]["DeckDay"][];
+            /** Idea Count */
+            idea_count: number;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
         };
         /** QuoteBatchIn */
         QuoteBatchIn: {
@@ -2453,6 +2597,16 @@ export interface components {
             integrations: components["schemas"]["IntegrationStatus"];
             access: components["schemas"]["AccessInfo"];
         };
+        /** TrendPoint */
+        TrendPoint: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Price */
+            price: string;
+        };
         /** TripCover */
         TripCover: {
             /** Image Url */
@@ -2941,6 +3095,37 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    presentation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Presentation"];
+                };
             };
             /** @description Validation Error */
             422: {

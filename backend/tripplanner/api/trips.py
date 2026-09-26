@@ -1,7 +1,9 @@
 from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 
 from tripplanner.api.deps import DbSession
+from tripplanner.schemas.presentation import Presentation
 from tripplanner.schemas.trips import TripIn, TripOut
+from tripplanner.services import presentation as deck
 from tripplanner.services import trips as service
 from tripplanner.services.enrichment import enrich_destinations
 
@@ -31,6 +33,15 @@ def create_trip(body: TripIn, db: DbSession, background: BackgroundTasks) -> Tri
 def get_trip(trip_id: int, db: DbSession) -> TripOut:
     try:
         return service.to_out(service.get_trip(db, trip_id))
+    except service.TripNotFound as exc:
+        raise _not_found() from exc
+
+
+@router.get("/{trip_id}/presentation", response_model=Presentation)
+def presentation(trip_id: int, db: DbSession) -> Presentation:
+    """Everything the presentation deck shows, gathered in one response."""
+    try:
+        return deck.build(db, service.get_trip(db, trip_id))
     except service.TripNotFound as exc:
         raise _not_found() from exc
 

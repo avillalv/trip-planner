@@ -478,6 +478,49 @@
         }
       }
     },
+    "/api/v1/trips/{trip_id}/presentation": {
+      "get": {
+        "tags": [
+          "trips"
+        ],
+        "summary": "Presentation",
+        "description": "Everything the presentation deck shows, gathered in one response.",
+        "operationId": "presentation",
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Trip Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Presentation"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/trips/{trip_id}/refresh-info": {
       "post": {
         "tags": [
@@ -4273,6 +4316,436 @@
         "type": "object",
         "title": "DayUpdate"
       },
+      "DeckActivity": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "start_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          },
+          "end_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "sights",
+              "museum",
+              "food",
+              "nature",
+              "nightlife",
+              "shopping",
+              "travel",
+              "other"
+            ],
+            "title": "Category"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "idea",
+              "planned",
+              "booked"
+            ],
+            "title": "Status"
+          },
+          "location_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Name"
+          },
+          "lat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lat"
+          },
+          "lon": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lon"
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "start_time",
+          "end_time",
+          "title",
+          "category",
+          "status",
+          "location_name",
+          "lat",
+          "lon",
+          "notes"
+        ],
+        "title": "DeckActivity"
+      },
+      "DeckDay": {
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes"
+          },
+          "destination_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Destination Name"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
+          },
+          "in_trip": {
+            "type": "boolean",
+            "title": "In Trip"
+          },
+          "activities": {
+            "items": {
+              "$ref": "#/components/schemas/DeckActivity"
+            },
+            "type": "array",
+            "title": "Activities"
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "title",
+          "notes",
+          "destination_name",
+          "timezone",
+          "in_trip",
+          "activities"
+        ],
+        "title": "DeckDay"
+      },
+      "DeckDestination": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "country_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "lat": {
+            "type": "number",
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "title": "Lon"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
+          },
+          "bbox": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bbox"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "wiki_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wiki Url"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "image_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image File"
+          },
+          "info_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "ready",
+              "not_found",
+              "failed",
+              "skipped"
+            ],
+            "title": "Info Status"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "position",
+          "name",
+          "region",
+          "country",
+          "country_code",
+          "kind",
+          "lat",
+          "lon",
+          "timezone",
+          "bbox",
+          "summary",
+          "wiki_url",
+          "image_url",
+          "image_file",
+          "info_status",
+          "currency",
+          "rate"
+        ],
+        "title": "DeckDestination"
+      },
+      "DeckRoute": {
+        "properties": {
+          "route": {
+            "$ref": "#/components/schemas/RouteOut"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/QuoteOut"
+            },
+            "type": "array",
+            "title": "Options"
+          },
+          "trend": {
+            "items": {
+              "$ref": "#/components/schemas/TrendPoint"
+            },
+            "type": "array",
+            "title": "Trend"
+          },
+          "typical_low": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Typical Low"
+          },
+          "typical_high": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Typical High"
+          },
+          "price_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Level"
+          }
+        },
+        "type": "object",
+        "required": [
+          "route",
+          "options",
+          "trend",
+          "typical_low",
+          "typical_high",
+          "price_level"
+        ],
+        "title": "DeckRoute"
+      },
       "DestinationIn": {
         "properties": {
           "id": {
@@ -6340,6 +6813,61 @@
           "cached"
         ],
         "title": "PlaceSearchResult"
+      },
+      "Presentation": {
+        "properties": {
+          "trip": {
+            "$ref": "#/components/schemas/TripOut"
+          },
+          "destinations": {
+            "items": {
+              "$ref": "#/components/schemas/DeckDestination"
+            },
+            "type": "array",
+            "title": "Destinations"
+          },
+          "routes": {
+            "items": {
+              "$ref": "#/components/schemas/DeckRoute"
+            },
+            "type": "array",
+            "title": "Routes"
+          },
+          "lodging": {
+            "items": {
+              "$ref": "#/components/schemas/LodgingOut"
+            },
+            "type": "array",
+            "title": "Lodging"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/DeckDay"
+            },
+            "type": "array",
+            "title": "Days"
+          },
+          "idea_count": {
+            "type": "integer",
+            "title": "Idea Count"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "trip",
+          "destinations",
+          "routes",
+          "lodging",
+          "days",
+          "idea_count",
+          "generated_at"
+        ],
+        "title": "Presentation"
       },
       "QuoteBatchIn": {
         "properties": {
@@ -8448,6 +8976,26 @@
           "access"
         ],
         "title": "SystemStatus"
+      },
+      "TrendPoint": {
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day"
+          },
+          "price": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Price"
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "price"
+        ],
+        "title": "TrendPoint"
       },
       "TripCover": {
         "properties": {
