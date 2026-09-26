@@ -12,6 +12,7 @@ import httpx
 from tripplanner import __version__
 
 API_URL = "https://en.wikipedia.org/w/api.php"
+WIKIDATA_URL = "https://www.wikidata.org/w/api.php"
 # A standard Wikimedia thumbnail width; large enough for a hero image.
 IMAGE_WIDTH = 1280
 
@@ -49,7 +50,26 @@ class WikipediaClient:
         results = hits.get("query", {}).get("search", [])
         if not results:
             return None
+        return self.article(results[0]["title"])
 
+    def english_title(self, wikidata_id: str) -> str | None:
+        """The English Wikipedia article linked from a Wikidata item (OSM tags places with these)."""
+        response = self._client.get(
+            WIKIDATA_URL,
+            params={
+                "action": "wbgetentities",
+                "ids": wikidata_id,
+                "props": "sitelinks",
+                "sitefilter": "enwiki",
+                "format": "json",
+            },
+        )
+        response.raise_for_status()
+        entity = (response.json().get("entities") or {}).get(wikidata_id) or {}
+        return ((entity.get("sitelinks") or {}).get("enwiki") or {}).get("title")
+
+    def article(self, title: str) -> WikiArticle | None:
+        """The lead of an article by title, or None if it's missing or a disambiguation page."""
         data = self._query(
             {
                 "action": "query",
@@ -62,7 +82,7 @@ class WikipediaClient:
                 "inprop": "url",
                 "ppprop": "disambiguation",
                 "redirects": 1,
-                "titles": results[0]["title"],
+                "titles": title,
             }
         )
         pages = data.get("query", {}).get("pages", [])
