@@ -46,7 +46,7 @@ press Ctrl+C to stop both.
 ## Add your API keys
 
 The app works without them, but these free keys unlock its data sources. Put them in `.env`,
-then restart the app. The home page's **Setup** checklist shows which ones are active.
+then restart the app. **Settings → Setup** shows which ones are active.
 
 | Key | Used for | Where to get it |
 |---|---|---|
@@ -268,9 +268,9 @@ Runs the API with auto-reload, the worker, and the Vite dev server. Open http://
 
 ```
 backend/     FastAPI app, background worker, database models and migrations (Python 3.13, uv)
-frontend/    React + TypeScript web app (Vite, Tailwind, shadcn/ui)
+frontend/    React + TypeScript web app (Vite, Tailwind, shadcn/ui); e2e/ is the browser smoke test
 scripts/     Setup and Windows helper scripts
-data/        Runtime files: caches, logs, agent run folders (not committed)
+data/        Runtime files: caches, logs, and backups (not committed)
 ```
 
 ## Troubleshooting
@@ -280,7 +280,9 @@ data/        Runtime files: caches, logs, agent run folders (not committed)
   `Get-Service postgresql*`, and that you entered the superuser password chosen during install.
 - **"npm.ps1 cannot be loaded because running scripts is disabled"** — allow local scripts for
   your user once: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
-- **Port 8000 is already in use** — set a different `PORT` in `.env`.
+- **Port 8000 is already in use** — if Trip Planner starts at sign-in, it's already running:
+  open http://localhost:8000, or stop it with `Stop-ScheduledTask -TaskName 'Trip Planner'`.
+  Otherwise another program has the port; set a different `PORT` in `.env`.
 - **The Setup checklist says the background worker isn't running** — start the app with
   `npm start` (not only the web server).
 - **Agent runs fail with "Claude Code isn't signed in"** — run `claude` in a terminal, type
@@ -289,3 +291,15 @@ data/        Runtime files: caches, logs, agent run folders (not committed)
   `PORT` for agents to save anything. Check the run folder's `stderr.log` for details.
 - **The app doesn't start at sign-in** — open Task Scheduler, find **Trip Planner**, and check
   *Last Run Result*; the app's own messages are in `data\logs\trip-planner.log`.
+- **Backups fail with "Couldn't find pg_dump"** — set `PG_BIN_DIR` in `.env` to PostgreSQL's
+  `bin` folder (the one with `pg_dump.exe`), restart the app, and choose **Back up now** in
+  Settings to check.
+- **Restoring fails or waits** — stop Trip Planner first; the database can't be replaced while
+  the app is using it.
+- **A page says "Trip Planner was updated"** — the app was rebuilt while that tab was open.
+  Reload the page.
+- **Maps say they need WebGL** — turn on hardware acceleration in the browser (in Edge or
+  Chrome: Settings → System → *Use graphics acceleration when available*), then reload. Places
+  search, lists, and everything else work without it.
+- **`npm run test:e2e` can't start Edge** — install Microsoft Edge, or run
+  `npx playwright install chromium` in `frontend` and set `E2E_BROWSER_CHANNEL=chromium`.
