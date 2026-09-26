@@ -46,8 +46,8 @@ SECONDS_PER_MINUTE = 60  # tests shrink this to exercise timeouts quickly
 # A few popular Airbnb country sites, on top of the bare and www hosts of each blocked domain.
 AIRBNB_COUNTRY_TLDS = ("co.uk", "ca", "com.au", "fr", "de", "es", "it", "mx", "jp")
 SIGN_IN_HELP = (
-    "Claude Code isn't signed in, or its sign-in expired. Open a terminal, run `claude`, type /login, "
-    "and then run the routine again."
+    "Claude Code isn't signed in, or its sign-in expired. In a terminal on this PC, run claude and type "
+    "/login, then run the routine again."
 )
 
 # Set when the worker stops; running agents are killed and their runs marked interrupted.
