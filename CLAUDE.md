@@ -24,7 +24,10 @@ Personal, locally run trip planner for two people. Windows 11, PowerShell/Git Ba
 - Secrets live only in `.env` (gitignored); document new variables in `.env.example`.
 - Agent routines (`claude -p`) must always run with `--model sonnet` and no fallback model.
   Agents never touch the database; they write only through the ingest API (`/api/agent/v1`),
-  which requires the API key and a localhost client.
+  which requires the API key and a localhost client. The whole `claude` command line lives in
+  `backend/tripplanner/worker/agents/runner.py`; agents reach the API through the stdio MCP
+  bridge in `backend/tripplanner/agent_bridge/`. Pipeline tests use `backend/tests/fake_claude.py`,
+  never the real CLI.
 - Any subagent spawned while building this project must use the Sonnet model.
 - Respect site terms: never fetch Airbnb/Vrbo/Booking pages automatically; no scraper libraries.
 - UI copy: sentence case, plain verbs, errors say what happened and how to fix it.
