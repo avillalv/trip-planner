@@ -1,6 +1,6 @@
 import { Menu } from 'lucide-react'
 import { useState } from 'react'
-import { Outlet, useMatch } from 'react-router'
+import { Outlet, useMatch, useNavigation } from 'react-router'
 import { Logo } from '@/components/brand/logo'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
@@ -22,9 +22,16 @@ export function AppShell() {
   const tripId = tripParam ? Number(tripParam) : undefined
   const [menuOpen, setMenuOpen] = useState(false)
   const closeMenu = () => setMenuOpen(false)
+  // Pages load on demand; on a slow connection this shows that the tap registered.
+  const loading = useNavigation().state === 'loading'
 
   return (
     <div className="min-h-dvh md:grid md:grid-cols-[15rem_minmax(0,1fr)]">
+      {loading && (
+        <div role="progressbar" aria-label="Loading the page" className="fixed inset-x-0 top-0 z-50 h-0.5 overflow-hidden">
+          <div className="tp-nav-progress h-full w-1/3 bg-brand" />
+        </div>
+      )}
       {/* Desktop: the passport-cover navigation rail */}
       <aside className="on-cover sticky top-0 hidden h-dvh flex-col bg-sidebar text-sidebar-foreground md:flex">
         <div className="px-5 pt-6 pb-7">

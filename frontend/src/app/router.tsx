@@ -1,21 +1,14 @@
 import { createBrowserRouter } from 'react-router'
 import { AppShell } from '@/components/layout/app-shell'
-import { AgentsPage } from '@/routes/agents/agents-page'
-import { RunPage } from '@/routes/agents/run-page'
 import { NotFound, RouteError } from '@/routes/errors'
-import { LodgingImport } from '@/routes/lodging-import'
-import { SettingsPage } from '@/routes/settings-page'
-import { TripDay } from '@/routes/trip/trip-day'
-import { TripFlights } from '@/routes/trip/trip-flights'
-import { TripItinerary } from '@/routes/trip/trip-itinerary'
-import { TripLodging } from '@/routes/trip/trip-lodging'
 import { TripLayout } from '@/routes/trip/trip-layout'
 import { TripOverview } from '@/routes/trip/trip-overview'
 import { TripsHome } from '@/routes/trips-home'
 
+// The trips list and a trip's overview load with the app; every other page loads when first opened.
 export const router = createBrowserRouter([
   {
-    // Full screen, outside the app's navigation; loaded on demand.
+    // Full screen, outside the app's navigation.
     path: 'trips/:tripId/present',
     errorElement: <RouteError />,
     lazy: async () => ({ Component: (await import('@/routes/present-page')).PresentPage }),
@@ -24,23 +17,53 @@ export const router = createBrowserRouter([
     element: <AppShell />,
     errorElement: <RouteError />,
     children: [
-      { index: true, element: <TripsHome /> },
       {
-        path: 'trips/:tripId',
-        element: <TripLayout />,
+        // A page that fails shows its error inside the app, with the navigation still there.
+        errorElement: <RouteError />,
         children: [
-          { index: true, element: <TripOverview /> },
-          { path: 'flights', element: <TripFlights /> },
-          { path: 'itinerary', element: <TripItinerary /> },
-          { path: 'itinerary/:day', element: <TripDay /> },
-          { path: 'lodging', element: <TripLodging /> },
+          { index: true, element: <TripsHome /> },
+          {
+            path: 'trips/:tripId',
+            element: <TripLayout />,
+            children: [
+              { index: true, element: <TripOverview /> },
+              {
+                path: 'flights',
+                lazy: async () => ({ Component: (await import('@/routes/trip/trip-flights')).TripFlights }),
+              },
+              {
+                path: 'itinerary',
+                lazy: async () => ({ Component: (await import('@/routes/trip/trip-itinerary')).TripItinerary }),
+              },
+              {
+                path: 'itinerary/:day',
+                lazy: async () => ({ Component: (await import('@/routes/trip/trip-day')).TripDay }),
+              },
+              {
+                path: 'lodging',
+                lazy: async () => ({ Component: (await import('@/routes/trip/trip-lodging')).TripLodging }),
+              },
+            ],
+          },
+          {
+            path: 'lodging/import',
+            lazy: async () => ({ Component: (await import('@/routes/lodging-import')).LodgingImport }),
+          },
+          {
+            path: 'agents',
+            lazy: async () => ({ Component: (await import('@/routes/agents/agents-page')).AgentsPage }),
+          },
+          {
+            path: 'agents/runs/:runId',
+            lazy: async () => ({ Component: (await import('@/routes/agents/run-page')).RunPage }),
+          },
+          {
+            path: 'settings',
+            lazy: async () => ({ Component: (await import('@/routes/settings-page')).SettingsPage }),
+          },
+          { path: '*', element: <NotFound /> },
         ],
       },
-      { path: 'lodging/import', element: <LodgingImport /> },
-      { path: 'agents', element: <AgentsPage /> },
-      { path: 'agents/runs/:runId', element: <RunPage /> },
-      { path: 'settings', element: <SettingsPage /> },
-      { path: '*', element: <NotFound /> },
     ],
   },
 ])
