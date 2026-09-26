@@ -55,6 +55,9 @@ describe('PresentPage', () => {
     expect(await screen.findByText('Slide 5 of 6: Day 2: Temples')).toBeInTheDocument()
     const day = screen.getByRole('group', { name: /^5 of 6/ })
     expect(within(day).getByText('Fushimi Inari')).toBeInTheDocument()
+
+    window.location.hash = '#2'
+    expect(await screen.findByText('Slide 2 of 6: Kyoto')).toBeInTheDocument()
   })
 
   it('jumps to a slide from the overview', async () => {

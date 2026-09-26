@@ -80,6 +80,13 @@ export function PresentPage() {
     if (total) window.history.replaceState(window.history.state, '', `#${index + 1}`)
   }, [index, total])
 
+  // Typing a slide number into the address goes there too.
+  useEffect(() => {
+    const onHash = () => setRequested(slideFromHash())
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
   useEffect(() => {
     if (!deck.data) return
     const before = document.title
