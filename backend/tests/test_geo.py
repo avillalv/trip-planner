@@ -102,3 +102,54 @@ def test_airport_search_ranks_exact_code_then_size(client: TestClient, db_sessio
     assert search("san") == ["SAN", "SFO", "SJC"]
     assert search("sfo") == ["SFO"]
     assert search("mineta") == ["SJC"]
+
+
+def test_nearby_airports_prefer_big_ones(client: TestClient, db_session: Session) -> None:
+    from tripplanner.models import Airport
+
+    db_session.add_all(
+        [
+            Airport(
+                iata="HND",
+                name="Haneda",
+                city="Tokyo",
+                country_code="JP",
+                lat=35.55,
+                lon=139.78,
+                kind="large_airport",
+            ),
+            Airport(
+                iata="NRT",
+                name="Narita",
+                city="Narita",
+                country_code="JP",
+                lat=35.77,
+                lon=140.39,
+                kind="large_airport",
+            ),
+            Airport(
+                iata="CHB",
+                name="Chofu",
+                city="Tokyo",
+                country_code="JP",
+                lat=35.67,
+                lon=139.53,
+                kind="medium_airport",
+            ),
+            Airport(
+                iata="KIX",
+                name="Kansai",
+                city="Osaka",
+                country_code="JP",
+                lat=34.43,
+                lon=135.24,
+                kind="large_airport",
+            ),
+        ]
+    )
+    db_session.flush()
+
+    nearby = client.get("/api/v1/airports/nearby", params={"lat": 35.68, "lon": 139.76}).json()
+
+    assert [a["iata"] for a in nearby] == ["HND", "NRT", "CHB"]
+    assert nearby[0]["distance_km"] < 20

@@ -13,18 +13,23 @@ from tripplanner.process import configure_logging, start_parent_watchdog
 log = logging.getLogger("tripplanner")
 
 
+def _use_test_db() -> None:
+    """Development convenience: run against the throwaway test database."""
+    settings = get_settings()
+    if not settings.test_database_url:
+        sys.exit("TEST_DATABASE_URL is not set in .env.")
+    override_settings(settings.model_copy(update={"database_url": settings.test_database_url}))
+    log.warning("Using the TEST database; pytest runs wipe it.")
+
+
 def _cmd_web(args: argparse.Namespace) -> None:
     import uvicorn
 
-    settings = get_settings()
     if args.test_db:
         if args.reload:
             sys.exit("--test-db can't be combined with --reload.")
-        if not settings.test_database_url:
-            sys.exit("TEST_DATABASE_URL is not set in .env.")
-        # Development convenience: try the UI against the throwaway test database.
-        override_settings(settings.model_copy(update={"database_url": settings.test_database_url}))
-        log.warning("Using the TEST database; pytest runs wipe it.")
+        _use_test_db()
+    settings = get_settings()
     start_parent_watchdog()
     uvicorn.run(
         "tripplanner.main:app",
@@ -38,9 +43,11 @@ def _cmd_web(args: argparse.Namespace) -> None:
     )
 
 
-def _cmd_worker(_args: argparse.Namespace) -> None:
+def _cmd_worker(args: argparse.Namespace) -> None:
     from tripplanner.worker.main import run_worker
 
+    if args.test_db:
+        _use_test_db()
     run_worker()
 
 
@@ -100,7 +107,9 @@ def main(argv: list[str] | None = None) -> None:
     web.add_argument("--test-db", action="store_true", help="use TEST_DATABASE_URL (development)")
     web.set_defaults(func=_cmd_web)
 
-    sub.add_parser("worker", help="run the background worker").set_defaults(func=_cmd_worker)
+    worker = sub.add_parser("worker", help="run the background worker")
+    worker.add_argument("--test-db", action="store_true", help="use TEST_DATABASE_URL (development)")
+    worker.set_defaults(func=_cmd_worker)
     sub.add_parser("serve", help="run web server and worker together").set_defaults(func=_cmd_serve)
 
     setup = sub.add_parser("setup-db", help="create the database role and databases, migrate, and seed")

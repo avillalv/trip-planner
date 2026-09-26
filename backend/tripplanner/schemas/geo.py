@@ -25,3 +25,7 @@ class AirportOut(BaseModel):
     city: str | None
     country_code: str
     kind: str
+
+
+class NearbyAirport(AirportOut):
+    distance_km: float

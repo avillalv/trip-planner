@@ -155,6 +155,7 @@ def best_options(
                 FlightQuote.return_date,
                 FlightQuote.airlines,
                 FlightQuote.stops_out,
+                FlightQuote.depart_at_local,
             )
         )
         .where(
@@ -172,6 +173,7 @@ def best_options(
             FlightQuote.return_date,
             FlightQuote.airlines,
             FlightQuote.stops_out,
+            FlightQuote.depart_at_local,
             FlightQuote.observed_at.desc(),
         )
     )
