@@ -10,6 +10,7 @@ from getpass import getpass
 
 import psycopg
 from psycopg import sql
+from psycopg.conninfo import make_conninfo
 from sqlalchemy.engine import make_url
 
 from tripplanner.config import get_settings
@@ -50,7 +51,7 @@ def setup_database(seed: bool = True) -> None:
     password = os.environ.get("POSTGRES_SUPERUSER_PASSWORD") or getpass(
         f"Password for the PostgreSQL superuser '{superuser}' (set when you installed PostgreSQL): "
     )
-    conninfo = psycopg.conninfo.make_conninfo(
+    conninfo = make_conninfo(
         host=app_url.host or "localhost",
         port=app_url.port or 5432,
         user=superuser,

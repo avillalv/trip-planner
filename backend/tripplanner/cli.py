@@ -77,7 +77,7 @@ def _cmd_openapi(args: argparse.Namespace) -> None:
     schema = create_app().openapi()
     out: Path = args.out
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(schema, indent=2) + "\n", encoding="utf-8")
+    out.write_text(json.dumps(schema, indent=2) + "\n", encoding="utf-8", newline="\n")
     log.info("Wrote OpenAPI schema to %s", out)
 
 
