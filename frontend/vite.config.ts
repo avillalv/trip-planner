@@ -9,6 +9,8 @@ export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(import.meta.dirname, './src') },
   },
+  // Module workers (MapLibre's is an ES module that shares code with the main bundle).
+  worker: { format: 'es' },
   server: {
     port: 5173,
     // In dev, the FastAPI backend runs on :8000; proxy API calls so the app is same-origin.

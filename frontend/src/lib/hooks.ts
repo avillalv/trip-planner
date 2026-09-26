@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 
 /** The value, updated only after it stops changing for `delay` ms (for search-as-you-type). */
 export function useDebouncedValue<T>(value: T, delay = 300): T {
@@ -18,4 +18,19 @@ export function useNow(intervalMs = 60_000): Date {
     return () => clearInterval(timer)
   }, [intervalMs])
   return now
+}
+
+function subscribeToDarkMode(onChange: () => void): () => void {
+  const observer = new MutationObserver(onChange)
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+  return () => observer.disconnect()
+}
+
+/** Whether the page shows in dark mode right now (from the theme toggle or the system setting). */
+export function useIsDark(): boolean {
+  return useSyncExternalStore(
+    subscribeToDarkMode,
+    () => document.documentElement.classList.contains('dark'),
+    () => false,
+  )
 }

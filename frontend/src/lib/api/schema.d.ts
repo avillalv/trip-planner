@@ -337,6 +337,142 @@ export interface paths {
         patch: operations["update_quote"];
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/days": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Days
+         * @description Every day of the trip (plus any outside its dates that have activities), with a summary of each.
+         */
+        get: operations["list_days"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/days/{day}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Day */
+        put: operations["update_day"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/activities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Activities */
+        get: operations["list_activities"];
+        put?: never;
+        /** Create Activity */
+        post: operations["create_activity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/activities/{activity_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Activity */
+        delete: operations["delete_activity"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Activity
+         * @description Change some fields. `version` must match the server's, or you get 409 and should reload.
+         */
+        patch: operations["update_activity"];
+        trace?: never;
+    };
+    "/api/v1/places/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search Places
+         * @description Things to do near a point: by category (`kind`) or by name (`q`). Results are cached for a week.
+         */
+        get: operations["search_places"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/places/wiki": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Place Wiki
+         * @description The English Wikipedia summary for a place, when it has one (null otherwise).
+         */
+        get: operations["place_wiki"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/places/geoapify/{place_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Place Details
+         * @description Hours, website, and links for a place found by name (category results already include them).
+         */
+        get: operations["place_details"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/runs": {
         parameters: {
             query?: never;
@@ -749,6 +885,140 @@ export interface components {
             /** Urls */
             urls: string[];
         };
+        /** ActivityBrief */
+        ActivityBrief: {
+            /** Title */
+            title: string;
+            /** Start Time */
+            start_time: string | null;
+        };
+        /** ActivityIn */
+        ActivityIn: {
+            /** Title */
+            title: string;
+            /** Day */
+            day?: string | null;
+            /** Start Time */
+            start_time?: string | null;
+            /** End Time */
+            end_time?: string | null;
+            /**
+             * Category
+             * @default other
+             * @enum {string}
+             */
+            category: "sights" | "museum" | "food" | "nature" | "nightlife" | "shopping" | "travel" | "other";
+            /** Status */
+            status?: ("idea" | "planned" | "booked") | null;
+            /** Location Name */
+            location_name?: string | null;
+            /** Address */
+            address?: string | null;
+            /** Lat */
+            lat?: number | null;
+            /** Lon */
+            lon?: number | null;
+            /** Url */
+            url?: string | null;
+            /**
+             * Notes
+             * @default
+             */
+            notes: string;
+            place?: components["schemas"]["PlaceRef"] | null;
+        };
+        /** ActivityOut */
+        ActivityOut: {
+            /** Id */
+            id: number;
+            /** Trip Id */
+            trip_id: number;
+            /** Day */
+            day: string | null;
+            /** Start Time */
+            start_time: string | null;
+            /** End Time */
+            end_time: string | null;
+            /** Title */
+            title: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "sights" | "museum" | "food" | "nature" | "nightlife" | "shopping" | "travel" | "other";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "idea" | "planned" | "booked";
+            /** Location Name */
+            location_name: string | null;
+            /** Address */
+            address: string | null;
+            /** Lat */
+            lat: number | null;
+            /** Lon */
+            lon: number | null;
+            /** Url */
+            url: string | null;
+            /** Notes */
+            notes: string;
+            /** Place Provider */
+            place_provider: string | null;
+            /** Place Id */
+            place_id: string | null;
+            /** Place Data */
+            place_data: {
+                [key: string]: unknown;
+            } | null;
+            /** Version */
+            version: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * ActivityUpdate
+         * @description Only the fields sent are changed; send null to clear one (e.g. `day: null` makes it an idea).
+         */
+        ActivityUpdate: {
+            /**
+             * Version
+             * @description The version you edited; a newer one on the server means a conflict.
+             */
+            version: number;
+            /** Title */
+            title?: string | null;
+            /** Day */
+            day?: string | null;
+            /** Start Time */
+            start_time?: string | null;
+            /** End Time */
+            end_time?: string | null;
+            /** Category */
+            category?: ("sights" | "museum" | "food" | "nature" | "nightlife" | "shopping" | "travel" | "other") | null;
+            /** Status */
+            status?: ("idea" | "planned" | "booked") | null;
+            /** Location Name */
+            location_name?: string | null;
+            /** Address */
+            address?: string | null;
+            /** Lat */
+            lat?: number | null;
+            /** Lon */
+            lon?: number | null;
+            /** Url */
+            url?: string | null;
+            /** Notes */
+            notes?: string | null;
+        };
         /** AgentAck */
         AgentAck: {
             /** Ok */
@@ -851,6 +1121,39 @@ export interface components {
              * Format: date-time
              */
             observed_at: string;
+        };
+        /** DayOut */
+        DayOut: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Title */
+            title: string;
+            /** Notes */
+            notes: string;
+            /** Destination Id */
+            destination_id: number | null;
+            /** Destination Name */
+            destination_name: string | null;
+            /** Timezone */
+            timezone: string | null;
+            /** In Trip */
+            in_trip: boolean;
+            /** Activity Count */
+            activity_count: number;
+            first: components["schemas"]["ActivityBrief"] | null;
+            last: components["schemas"]["ActivityBrief"] | null;
+        };
+        /** DayUpdate */
+        DayUpdate: {
+            /** Title */
+            title?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Destination Id */
+            destination_id?: number | null;
         };
         /** DestinationIn */
         DestinationIn: {
@@ -1094,6 +1397,82 @@ export interface components {
             color: string;
             /** Home Airports */
             home_airports: string[];
+        };
+        /**
+         * PlaceOut
+         * @description A place from a search, with whatever details the provider already returned.
+         */
+        PlaceOut: {
+            /**
+             * Provider
+             * @constant
+             */
+            provider: "geoapify";
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Local Name */
+            local_name?: string | null;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "sights" | "museum" | "food" | "nature" | "nightlife" | "shopping" | "travel" | "other";
+            /** Kinds */
+            kinds: string[];
+            /** Address */
+            address?: string | null;
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /** Distance M */
+            distance_m?: number | null;
+            /** Website */
+            website?: string | null;
+            /** Opening Hours */
+            opening_hours?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Wikidata */
+            wikidata?: string | null;
+            /** Wikipedia */
+            wikipedia?: string | null;
+            /**
+             * Has Details
+             * @default false
+             */
+            has_details: boolean;
+        };
+        /**
+         * PlaceRef
+         * @description The place an activity was added from, as returned by the places search.
+         */
+        PlaceRef: {
+            /**
+             * Provider
+             * @constant
+             */
+            provider: "geoapify";
+            /** Id */
+            id: string;
+            /** Data */
+            data?: {
+                [key: string]: unknown;
+            };
+        };
+        /** PlaceSearchResult */
+        PlaceSearchResult: {
+            /** Places */
+            places: components["schemas"]["PlaceOut"][];
+            /** Cached */
+            cached: boolean;
+            /**
+             * Attribution
+             * @default Powered by Geoapify · © OpenStreetMap contributors
+             */
+            attribution: string;
         };
         /** QuoteBatchIn */
         QuoteBatchIn: {
@@ -1746,6 +2125,17 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** WikiSummary */
+        WikiSummary: {
+            /** Title */
+            title: string;
+            /** Extract */
+            extract: string;
+            /** Url */
+            url: string | null;
+            /** Image Url */
+            image_url: string | null;
         };
         /** WorkerStatus */
         WorkerStatus: {
@@ -2501,6 +2891,308 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QuoteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_days: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DayOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_day: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: number;
+                day: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DayUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DayOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_activities: {
+        parameters: {
+            query?: {
+                day?: string | null;
+                /** @description Only ideas (activities without a day) */
+                ideas?: boolean;
+            };
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_activity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivityIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_activity: {
+        parameters: {
+            query: {
+                version: number;
+            };
+            header?: never;
+            path: {
+                activity_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_activity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                activity_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivityUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_places: {
+        parameters: {
+            query: {
+                lat: number;
+                lon: number;
+                kind?: ("restaurants" | "cafes" | "museums" | "landmarks" | "viewpoints" | "parks" | "beaches" | "nightlife" | "shopping") | null;
+                q?: string | null;
+                radius_m?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaceSearchResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    place_wiki: {
+        parameters: {
+            query?: {
+                wikidata?: string | null;
+                wikipedia?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WikiSummary"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    place_details: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                place_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaceOut"];
                 };
             };
             /** @description Validation Error */

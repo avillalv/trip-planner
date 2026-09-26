@@ -52,6 +52,16 @@
   --heat-ink-4: var(--tp-ink);
   --heat-ink-5: #ffffff;
 
+  /*
+   * Activity groups (itinerary blocks and pins), validated all-pairs for color-blind separation.
+   * Icons and labels tell the categories within a group apart.
+   */
+  --cat-culture: #5b47b0; /* sights, museums */
+  --cat-food: #e0621e; /* food, nightlife */
+  --cat-outdoors: #0f9f76;
+  --cat-shopping: #2f86d8;
+  --cat-neutral: var(--tp-ink-soft); /* getting around, other */
+
   /* Passport-cover navigation rail */
   --tp-cover: #16213d;
   --tp-cover-ink: #dde4ef;
@@ -132,6 +142,11 @@
   --heat-ink-3: #e5ebf4;
   --heat-ink-4: #0d1527;
   --heat-ink-5: #0d1527;
+
+  --cat-culture: #a07fe0;
+  --cat-food: #d95926;
+  --cat-outdoors: #1a9f71;
+  --cat-shopping: #2869cc;
 }
 
 @theme inline {
@@ -302,5 +317,89 @@
   .guilloche-animate path {
     animation: none;
     stroke-dashoffset: 0;
+  }
+}
+
+/*
+ * FullCalendar (classic theme), dressed in the app's tokens so it follows light and dark mode.
+ * Events set --fc-event-color themselves: a tint of their group color (see activity-meta.ts).
+ */
+:root {
+  --fc-classic-button: var(--tp-sheet);
+  --fc-classic-button-border: var(--tp-rule);
+  --fc-classic-button-strong: var(--tp-sunken);
+  --fc-classic-button-strong-border: var(--tp-rule);
+  --fc-classic-button-outline: color-mix(in oklab, var(--tp-brand) 40%, transparent);
+  --fc-classic-button-foreground: var(--tp-ink);
+  --fc-classic-primary: var(--tp-brand);
+  --fc-classic-primary-foreground: var(--tp-brand-ink);
+  --fc-classic-event: var(--tp-brand);
+  --fc-classic-event-contrast: var(--tp-ink);
+  --fc-classic-background-event: var(--tp-teal);
+  --fc-classic-background-event-opacity: 15%;
+  --fc-classic-background-event-foreground-opacity: 50%;
+  --fc-classic-highlight: color-mix(in oklab, var(--tp-brand) 12%, transparent);
+  --fc-classic-today: transparent;
+  --fc-classic-now: var(--tp-brand);
+  --fc-classic-small-dot-width: 8px;
+  --fc-classic-large-dot-width: 10px;
+  --fc-classic-background: var(--tp-sheet);
+  --fc-classic-faint: color-mix(in oklab, var(--tp-ink) 3%, transparent);
+  --fc-classic-muted: color-mix(in oklab, var(--tp-ink) 7%, transparent);
+  --fc-classic-strong: color-mix(in oklab, var(--tp-ink) 14%, transparent);
+  --fc-classic-foreground: var(--tp-ink);
+  --fc-classic-faint-foreground: color-mix(in oklab, var(--tp-ink-soft) 70%, transparent);
+  --fc-classic-muted-foreground: var(--tp-ink-soft);
+  --fc-classic-border: var(--tp-rule);
+  --fc-classic-strong-border: color-mix(in oklab, var(--tp-ink-soft) 60%, transparent);
+}
+
+/* Time labels in the data face, like the rest of the app's numbers. */
+.tp-calendar {
+  font-variant-numeric: tabular-nums;
+}
+
+/* MapLibre controls and pins in the app's colors. */
+.maplibregl-ctrl-attrib {
+  font-size: 0.6875rem;
+}
+/* The marker element itself must stay untransformed: MapLibre positions it with transform. */
+.tp-map-pin {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.tp-map-pin[data-selected='true'] {
+  z-index: 2;
+}
+.tp-map-pin > span {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px 9999px 9999px 2px;
+  rotate: -45deg;
+  border: 2px solid var(--tp-sheet);
+  background: var(--pin-color, var(--tp-brand));
+  color: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 35%);
+  transition: scale 120ms ease;
+}
+.tp-map-pin > span > span {
+  rotate: 45deg;
+  font: 700 0.75rem/1 "Atkinson Hyperlegible Mono Variable", ui-monospace, monospace;
+}
+.tp-map-pin[data-selected='true'] > span {
+  scale: 1.25;
+  outline: 3px solid color-mix(in oklab, var(--pin-color, var(--tp-brand)) 35%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tp-map-pin > span {
+    transition: none;
   }
 }

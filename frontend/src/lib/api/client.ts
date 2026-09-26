@@ -49,8 +49,26 @@ export function errorMessage(error: unknown, fallback = 'Something went wrong. T
   return fallback
 }
 
-/** Unwrap an openapi-fetch result, throwing a readable Error on failure. */
+/** A failed API call: a readable message, plus the HTTP status for callers that react to it. */
+export class ApiError extends Error {
+  readonly status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
+/** Unwrap an openapi-fetch result, throwing a readable ApiError on failure. */
 export function unwrap<T>(result: { data?: T; error?: unknown; response: Response }): T {
-  if (result.error !== undefined || !result.response.ok) throw new Error(errorMessage(result.error))
+  if (result.error !== undefined || !result.response.ok) {
+    throw new ApiError(errorMessage(result.error), result.response.status)
+  }
   return result.data as T
+}
+
+/** True when another device changed (409) or deleted (404) the thing being edited. */
+export function isStale(error: unknown): boolean {
+  return error instanceof ApiError && (error.status === 409 || error.status === 404)
 }

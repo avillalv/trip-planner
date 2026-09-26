@@ -5,7 +5,9 @@ import { RunPage } from '@/routes/agents/run-page'
 import { NotFound, RouteError } from '@/routes/errors'
 import { SectionPlaceholder } from '@/routes/section-placeholder'
 import { SettingsPage } from '@/routes/settings-page'
+import { TripDay } from '@/routes/trip/trip-day'
 import { TripFlights } from '@/routes/trip/trip-flights'
+import { TripItinerary } from '@/routes/trip/trip-itinerary'
 import { TripLayout } from '@/routes/trip/trip-layout'
 import { TripOverview } from '@/routes/trip/trip-overview'
 import { TripsHome } from '@/routes/trips-home'
@@ -22,10 +24,8 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <TripOverview /> },
           { path: 'flights', element: <TripFlights /> },
-          {
-            path: 'itinerary',
-            element: <SectionPlaceholder title="Itinerary" description="Your day-by-day plan will appear here." />,
-          },
+          { path: 'itinerary', element: <TripItinerary /> },
+          { path: 'itinerary/:day', element: <TripDay /> },
           {
             path: 'lodging',
             element: (
