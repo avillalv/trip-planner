@@ -1,13 +1,14 @@
 """Routines: per-trip schedules for background work."""
 
 from datetime import datetime, timedelta
+from typing import Any
 
 from apscheduler.triggers.cron import CronTrigger
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 from tzlocal import get_localzone_name
 
-from tripplanner.models import Routine, Trip
+from tripplanner.models import FlightRoute, Routine, Run, Trip
 
 DEFAULT_FLIGHT_SCHEDULE = "0 8,20 * * *"  # 8:00 and 20:00 every day
 
@@ -88,3 +89,70 @@ def get_routine(db: Session, routine_id: int) -> Routine:
     if routine is None:
         raise RoutineNotFound(routine_id)
     return routine
+
+
+# --- Agent routines (created and removed by the user) -----------------------------------------
+
+DEFAULT_AGENT_SCHEDULES = {"flight_agent": "0 8,20 * * *", "research_agent": "0 9 * * 1"}
+
+
+class RoutineError(ValueError):
+    """A routine setting that can't be used; the message is shown to the user."""
+
+
+def clean_config(db: Session, trip_id: int, kind: str, config: dict[str, Any]) -> dict[str, Any]:
+    route_ids = config.get("route_ids") or []
+    if route_ids:
+        found = set(
+            db.scalars(
+                select(FlightRoute.id).where(FlightRoute.trip_id == trip_id, FlightRoute.id.in_(route_ids))
+            )
+        )
+        if set(route_ids) - found:
+            raise RoutineError("Some of the chosen routes aren't part of this trip.")
+    if kind == "flight_agent":
+        has_route = db.scalar(select(FlightRoute.id).where(FlightRoute.trip_id == trip_id).limit(1))
+        if has_route is None:
+            raise RoutineError("Add a flight route to this trip first. The agent searches the trip's routes.")
+    return {k: v for k, v in config.items() if v not in (None, "", [])}
+
+
+def create_routine(
+    db: Session,
+    *,
+    trip: Trip,
+    name: str,
+    kind: str,
+    schedule_cron: str,
+    enabled: bool,
+    catch_up: bool,
+    config: dict[str, Any],
+) -> Routine:
+    timezone = local_timezone()
+    parse_cron(schedule_cron, timezone)
+    routine = Routine(
+        trip_id=trip.id,
+        name=name,
+        kind=kind,
+        enabled=enabled,
+        schedule_cron=schedule_cron,
+        timezone=timezone,
+        catch_up=catch_up,
+        config=clean_config(db, trip.id, kind, config),
+    )
+    db.add(routine)
+    db.commit()
+    return routine
+
+
+def delete_routine(db: Session, routine: Routine) -> None:
+    """Remove an agent routine. Its past runs stay in the history; queued ones are cancelled."""
+    if routine.kind == "flight_api":
+        raise RoutineError("Price checks are set up automatically for each trip. Turn this one off instead.")
+    db.execute(
+        update(Run)
+        .where(Run.routine_id == routine.id, Run.status == "queued")
+        .values(status="cancelled", finished_at=func.now(), summary="Cancelled: the routine was deleted.")
+    )
+    db.delete(routine)
+    db.commit()
