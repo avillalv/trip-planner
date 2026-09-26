@@ -1,0 +1,255 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/archivo/standard.css";
+@import "@fontsource-variable/atkinson-hyperlegible-next";
+@import "@fontsource-variable/atkinson-hyperlegible-mono";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Trip Planner design tokens — "a passport page per trip".
+ * Palette: security-paper ground, passport-navy ink, one burgundy accent, and the
+ * teal → violet → rose "split-fountain" inks reserved for guilloche linework.
+ */
+:root {
+  --tp-paper: #edf1f5;
+  --tp-sheet: #fafbfd;
+  --tp-sunken: #e3e8ef;
+  --tp-ink: #15203a;
+  --tp-ink-soft: #55607a;
+  --tp-rule: #d3dae4;
+  --tp-brand: #8c1d40;
+  --tp-brand-ink: #ffffff;
+  --tp-brand-soft: #f4e4ea;
+  --tp-teal: #1f7f86;
+  --tp-violet: #5b47b0;
+  --tp-rose: #c24472;
+  --tp-success: #1d7a52;
+  --tp-warning: #a86a12;
+  --tp-danger: #b42318;
+
+  /* Passport-cover navigation rail */
+  --tp-cover: #16213d;
+  --tp-cover-ink: #dde4ef;
+  --tp-cover-soft: #9aa6be;
+  --tp-cover-raised: #22304f;
+  --tp-cover-rule: #2a3754;
+  --tp-cover-mark: #e8678c;
+
+  --background: var(--tp-paper);
+  --foreground: var(--tp-ink);
+  --card: var(--tp-sheet);
+  --card-foreground: var(--tp-ink);
+  --popover: var(--tp-sheet);
+  --popover-foreground: var(--tp-ink);
+  --primary: var(--tp-brand);
+  --primary-foreground: var(--tp-brand-ink);
+  --secondary: var(--tp-sunken);
+  --secondary-foreground: var(--tp-ink);
+  --muted: var(--tp-sunken);
+  --muted-foreground: var(--tp-ink-soft);
+  --accent: var(--tp-sunken);
+  --accent-foreground: var(--tp-ink);
+  --destructive: var(--tp-danger);
+  --border: var(--tp-rule);
+  --input: var(--tp-rule);
+  --ring: var(--tp-brand);
+  --chart-1: var(--tp-teal);
+  --chart-2: var(--tp-violet);
+  --chart-3: var(--tp-rose);
+  --chart-4: var(--tp-warning);
+  --chart-5: var(--tp-ink-soft);
+  --radius: 0.625rem;
+  --sidebar: var(--tp-cover);
+  --sidebar-foreground: var(--tp-cover-ink);
+  --sidebar-primary: var(--tp-cover-mark);
+  --sidebar-primary-foreground: var(--tp-cover);
+  --sidebar-accent: var(--tp-cover-raised);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: var(--tp-cover-rule);
+  --sidebar-ring: var(--tp-cover-mark);
+}
+
+.dark {
+  --tp-paper: #0d1527;
+  --tp-sheet: #141e35;
+  --tp-sunken: #1b2641;
+  --tp-ink: #e5ebf4;
+  --tp-ink-soft: #9ba7be;
+  --tp-rule: #26324d;
+  --tp-brand: #e8678c;
+  --tp-brand-ink: #1a0610;
+  --tp-brand-soft: #3a1b2b;
+  --tp-teal: #3fb5bc;
+  --tp-violet: #9a86f0;
+  --tp-rose: #f07aa2;
+  --tp-success: #4cc38a;
+  --tp-warning: #e0a44a;
+  --tp-danger: #f07167;
+
+  --tp-cover: #0a1121;
+  --tp-cover-ink: #dde4ef;
+  --tp-cover-soft: #8f9bb3;
+  --tp-cover-raised: #18233d;
+  --tp-cover-rule: #1d2842;
+}
+
+@theme inline {
+  --font-display: "Archivo Variable", "Arial Narrow", sans-serif;
+  --font-sans: "Atkinson Hyperlegible Next Variable", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Atkinson Hyperlegible Mono Variable", "Cascadia Mono", ui-monospace, monospace;
+  --font-heading: var(--font-display);
+
+  --color-paper: var(--tp-paper);
+  --color-sheet: var(--tp-sheet);
+  --color-ink: var(--tp-ink);
+  --color-ink-soft: var(--tp-ink-soft);
+  --color-rule: var(--tp-rule);
+  --color-brand: var(--tp-brand);
+  --color-brand-soft: var(--tp-brand-soft);
+  --color-teal: var(--tp-teal);
+  --color-violet: var(--tp-violet);
+  --color-rose: var(--tp-rose);
+  --color-success: var(--tp-success);
+  --color-warning: var(--tp-warning);
+  --color-cover: var(--tp-cover);
+  --color-cover-ink: var(--tp-cover-ink);
+  --color-cover-soft: var(--tp-cover-soft);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    font-size: 100%;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-size: 0.9375rem;
+    line-height: 1.55;
+  }
+}
+
+/*
+ * Type roles. Archivo is used wide (font-stretch) and only for names, codes and
+ * page titles; everything else is Atkinson Hyperlegible Next.
+ */
+@utility type-display {
+  font-family: var(--font-display);
+  font-stretch: 125%;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+}
+@utility type-title {
+  font-family: var(--font-display);
+  font-stretch: 118%;
+  font-weight: 700;
+  font-size: 1.875rem;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+}
+@utility type-heading {
+  font-family: var(--font-display);
+  font-stretch: 110%;
+  font-weight: 650;
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+@utility type-code {
+  /* IATA codes and other short identifiers, like a bag tag */
+  font-family: var(--font-display);
+  font-stretch: 125%;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+@utility type-label {
+  font-family: var(--font-display);
+  font-stretch: 112%;
+  font-weight: 600;
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+@utility type-data {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Guilloche inks. Surfaces that are always dark (the navy nav rail) use the bright set. */
+:root {
+  --tp-line-a: var(--tp-teal);
+  --tp-line-b: var(--tp-violet);
+  --tp-line-c: var(--tp-rose);
+}
+.on-cover {
+  --tp-line-a: #3fb5bc;
+  --tp-line-b: #9a86f0;
+  --tp-line-c: #f07aa2;
+}
+
+/* Guilloche draw-on: paths use pathLength="1" so one dash covers the whole curve. */
+@keyframes guilloche-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.guilloche-animate path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: guilloche-draw 1.8s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+@media (prefers-reduced-motion: reduce) {
+  .guilloche-animate path {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}

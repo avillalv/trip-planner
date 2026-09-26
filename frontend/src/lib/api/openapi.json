@@ -1,0 +1,221 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Trip Planner API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Health",
+        "description": "Liveness check for scripts: 200 when the database is reachable, 503 otherwise.",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/system/status": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "System Status",
+        "description": "Setup checklist data: database, worker, Claude CLI, and which API keys are configured.",
+        "operationId": "system_status",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ClaudeCliStatus": {
+        "properties": {
+          "found": {
+            "type": "boolean",
+            "title": "Found"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "found"
+        ],
+        "title": "ClaudeCliStatus"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "database": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unavailable"
+            ],
+            "title": "Database"
+          },
+          "worker": {
+            "$ref": "#/components/schemas/WorkerStatus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "version",
+          "database",
+          "worker"
+        ],
+        "title": "HealthResponse"
+      },
+      "IntegrationStatus": {
+        "properties": {
+          "geoapify": {
+            "type": "boolean",
+            "title": "Geoapify"
+          },
+          "serpapi": {
+            "type": "boolean",
+            "title": "Serpapi"
+          },
+          "travelpayouts": {
+            "type": "boolean",
+            "title": "Travelpayouts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "geoapify",
+          "serpapi",
+          "travelpayouts"
+        ],
+        "title": "IntegrationStatus",
+        "description": "Which API keys are configured. Values are never exposed, only presence."
+      },
+      "SystemStatus": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "database": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unavailable"
+            ],
+            "title": "Database"
+          },
+          "worker": {
+            "$ref": "#/components/schemas/WorkerStatus"
+          },
+          "claude": {
+            "$ref": "#/components/schemas/ClaudeCliStatus"
+          },
+          "integrations": {
+            "$ref": "#/components/schemas/IntegrationStatus"
+          },
+          "home_currency": {
+            "type": "string",
+            "title": "Home Currency"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "database",
+          "worker",
+          "claude",
+          "integrations",
+          "home_currency"
+        ],
+        "title": "SystemStatus"
+      },
+      "WorkerStatus": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "stale",
+              "never_started",
+              "unknown"
+            ],
+            "title": "Status"
+          },
+          "last_seen": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "WorkerStatus"
+      }
+    }
+  }
+}
