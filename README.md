@@ -171,6 +171,7 @@ Runs the API with auto-reload, the worker, and the Vite dev server. Open http://
 | `npm run gen:api` | Regenerate the frontend's API types after changing backend routes or schemas |
 | `uv run --project backend trip-planner --help` | Backend CLI: `serve`, `web`, `worker`, `setup-db`, `migrate`, `seed-airports`, `openapi` |
 | `npm run autostart:install` / `autostart:remove` | Start the app at Windows sign-in, or stop doing so |
+| `npm run agent:smoke` | One real Claude flight-agent run against a throwaway trip in the test database (uses your subscription once) |
 
 ## Project layout
 

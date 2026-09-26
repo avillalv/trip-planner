@@ -4,6 +4,7 @@ The API key comes from .env, so nothing secret appears in Claude's MCP config or
 """
 
 import argparse
+import logging
 import sys
 from uuid import UUID
 
@@ -19,6 +20,8 @@ def main() -> None:
     parser.add_argument("--api-url", help="Trip Planner's address on this PC (default: from .env)")
     args = parser.parse_args()
 
+    # Claude keeps the bridge's stderr; per-request lines from httpx would only add noise there.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     settings = get_settings()
     key = settings.agent_ingest_api_key.get_secret_value() if settings.agent_ingest_api_key else ""
     if not key:

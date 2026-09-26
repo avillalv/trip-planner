@@ -89,6 +89,12 @@ def _cmd_seed_airports(args: argparse.Namespace) -> None:
     seed_airports(refresh=args.refresh)
 
 
+def _cmd_agent_smoke(_args: argparse.Namespace) -> None:
+    from tripplanner.worker.agents.smoke import run_smoke
+
+    sys.exit(run_smoke())
+
+
 def _cmd_openapi(args: argparse.Namespace) -> None:
     from tripplanner.main import create_app
 
@@ -125,6 +131,10 @@ def main(argv: list[str] | None = None) -> None:
     seed = sub.add_parser("seed-airports", help="load airports from OurAirports")
     seed.add_argument("--refresh", action="store_true", help="download a fresh copy instead of the cache")
     seed.set_defaults(func=_cmd_seed_airports)
+
+    sub.add_parser(
+        "agent-smoke", help="one real Claude flight-agent run against a throwaway trip in the test database"
+    ).set_defaults(func=_cmd_agent_smoke)
 
     openapi = sub.add_parser("openapi", help="write the OpenAPI schema to a file")
     openapi.add_argument("--out", type=Path, required=True)
