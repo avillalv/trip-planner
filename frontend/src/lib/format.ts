@@ -34,3 +34,9 @@ export function timeAgo(iso: string, now: Date = new Date()): string {
   }
   return relative.format(0, 'second')
 }
+
+/** 76 KB, 2.1 MB: file sizes the way Windows shows them. */
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}

@@ -17,8 +17,9 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDeletePerson, usePeople, type Person } from '@/lib/api/people'
 import { useAppSettings, useUpdateAppSettings } from '@/lib/api/settings'
-import { useSystemStatus } from '@/lib/api/system'
+import { useBackUpNow, useSystemStatus } from '@/lib/api/system'
 import { currencyOptions } from '@/lib/currencies'
+import { formatBytes } from '@/lib/format'
 import { SetupChecklist } from './setup-checklist'
 
 function Section({ id, title, description, children }: { id: string; title: string; description?: string; children: ReactNode }) {
@@ -211,6 +212,53 @@ function OtherDevicesSection() {
   )
 }
 
+const backupTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+
+function BackupsSection() {
+  const status = useSystemStatus()
+  const backUp = useBackUpNow()
+  const backups = status.data?.backups
+  if (!backups) return null
+
+  return (
+    <Section id="backups-heading" title="Backups" description="Everything is saved to a backup file each night; the newest 14 are kept.">
+      {backups.error && (
+        <p role="alert" className="mb-3 text-sm text-destructive">
+          The last backup didn’t work: {backups.error}
+        </p>
+      )}
+      <p className="text-sm">
+        {backups.last_at && backups.last_size !== null
+          ? `Last backup: ${backupTime.format(new Date(backups.last_at))} (${formatBytes(backups.last_size)}). ${backups.count} kept.`
+          : 'No backups yet. The first one runs tonight, or back up now.'}
+      </p>
+      <p className="mt-1 text-xs break-all text-ink-soft">
+        In <code className="type-data">{backups.directory}</code>
+      </p>
+      <Button
+        variant="outline"
+        className="mt-3"
+        disabled={backUp.isPending}
+        onClick={() =>
+          backUp.mutate(undefined, {
+            onSuccess: () => toast.success('Backed up'),
+            onError: (e) => toast.error(e.message),
+          })
+        }
+      >
+        {backUp.isPending ? 'Backing up…' : 'Back up now'}
+      </Button>
+      <p className="mt-5 text-sm">
+        To go back to a backup, stop Trip Planner, then run this in the trip-planner folder. It restores the newest
+        one; add a file name after <code className="type-data">--</code> to pick another.
+      </p>
+      <div className="mt-2">
+        <CopyableCode text="npm run restore" />
+      </div>
+    </Section>
+  )
+}
+
 export function SettingsPage() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8 md:px-10 md:py-12">
@@ -218,6 +266,7 @@ export function SettingsPage() {
       <TravelersSection />
       <CurrencySection />
       <OtherDevicesSection />
+      <BackupsSection />
       <Section id="setup-heading" title="Setup">
         <SetupChecklist />
       </Section>
