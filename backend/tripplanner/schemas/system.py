@@ -28,6 +28,15 @@ class IntegrationStatus(BaseModel):
     geoapify: bool
     serpapi: bool
     travelpayouts: bool
+    wikimedia: bool
+
+
+class AccessInfo(BaseModel):
+    """Whether other devices on the home network can open the app, and at which addresses."""
+
+    other_devices: bool
+    passcode_configured: bool
+    urls: list[str]
 
 
 class SystemStatus(BaseModel):
@@ -36,4 +45,4 @@ class SystemStatus(BaseModel):
     worker: WorkerStatus
     claude: ClaudeCliStatus
     integrations: IntegrationStatus
-    home_currency: str
+    access: AccessInfo

@@ -18,8 +18,8 @@ function fail(message) {
   process.exit(1)
 }
 
-function run(cmd, args) {
-  const result = spawnSync(cmd, args, { cwd: root, stdio: 'inherit', shell: useShell })
+function run(cmd, args, cwd = root) {
+  const result = spawnSync(cmd, args, { cwd, stdio: 'inherit', shell: useShell })
   if (result.status !== 0) fail(`"${cmd} ${args.join(' ')}" failed — see the output above.`)
 }
 
@@ -71,7 +71,8 @@ prepareEnvFile()
 
 step('Installing JavaScript dependencies')
 run('npm', ['install', '--no-fund', '--no-audit'])
-run('npm', ['install', '--no-fund', '--no-audit', '--prefix', 'frontend'])
+// Run from inside frontend/: `npm install --prefix frontend` would install the root package into it.
+run('npm', ['install', '--no-fund', '--no-audit'], join(root, 'frontend'))
 
 step('Installing Python dependencies')
 run('uv', ['sync', '--project', 'backend'])

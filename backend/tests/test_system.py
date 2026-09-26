@@ -6,7 +6,6 @@ from sqlalchemy import Engine, delete, select
 from sqlalchemy.orm import Session
 
 from tripplanner.api import system as system_api
-from tripplanner.config import Settings
 from tripplanner.models import WorkerHeartbeat
 from tripplanner.schemas.system import ClaudeCliStatus
 from tripplanner.services.system_status import worker_status
@@ -58,12 +57,9 @@ def test_beat_upserts_a_single_row(db_engine: Engine) -> None:
 
 
 def test_system_status_reports_key_presence_without_values(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, use_settings
 ) -> None:
-    settings = Settings(
-        _env_file=None, geoapify_api_key="geo-secret", serpapi_api_key=None, home_currency="EUR"
-    )
-    monkeypatch.setattr(system_api, "get_settings", lambda: settings)
+    use_settings(geoapify_api_key="geo-secret", wikimedia_contact="me@example.com")
     monkeypatch.setattr(
         system_api,
         "claude_cli_status",
@@ -74,7 +70,28 @@ def test_system_status_reports_key_presence_without_values(
 
     assert response.status_code == 200
     body = response.json()
-    assert body["integrations"] == {"geoapify": True, "serpapi": False, "travelpayouts": False}
+    assert body["integrations"] == {
+        "geoapify": True,
+        "serpapi": False,
+        "travelpayouts": False,
+        "wikimedia": True,
+    }
     assert body["claude"]["version"] == "9.9.9"
-    assert body["home_currency"] == "EUR"
+    assert body["access"] == {"other_devices": False, "passcode_configured": True, "urls": []}
     assert "geo-secret" not in response.text
+
+
+def test_system_status_lists_phone_urls_when_open_to_the_network(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, use_settings
+) -> None:
+    use_settings(host="0.0.0.0", port=8000)
+    monkeypatch.setattr(system_api, "lan_addresses", lambda: ["192.168.1.23"])
+    monkeypatch.setattr(system_api, "claude_cli_status", lambda _s: ClaudeCliStatus(found=False))
+
+    access = client.get("/api/v1/system/status").json()["access"]
+
+    assert access == {
+        "other_devices": True,
+        "passcode_configured": True,
+        "urls": ["http://192.168.1.23:8000"],
+    }

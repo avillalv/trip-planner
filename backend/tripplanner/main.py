@@ -8,6 +8,7 @@ from fastapi.routing import APIRoute
 from tripplanner import __version__
 from tripplanner.api import api_router
 from tripplanner.paths import FRONTEND_DIST
+from tripplanner.security import access_guard
 from tripplanner.spa import mount_frontend
 
 
@@ -25,6 +26,7 @@ def create_app(frontend_dist: Path = FRONTEND_DIST) -> FastAPI:
         openapi_url="/api/openapi.json",
         generate_unique_id_function=_operation_id,
     )
+    app.middleware("http")(access_guard)
     app.include_router(api_router)
     # Registered last: the SPA catch-all must not shadow API routes.
     mount_frontend(app, frontend_dist)

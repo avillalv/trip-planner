@@ -19,7 +19,11 @@ def built_dist(tmp_path: Path) -> Path:
 
 
 def test_unbuilt_frontend_explains_how_to_build(tmp_path: Path) -> None:
-    client = TestClient(create_app(frontend_dist=tmp_path / "missing"))
+    client = TestClient(
+        create_app(frontend_dist=tmp_path / "missing"),
+        base_url="http://localhost",
+        client=("127.0.0.1", 50000),
+    )
 
     response = client.get("/")
 
@@ -28,7 +32,9 @@ def test_unbuilt_frontend_explains_how_to_build(tmp_path: Path) -> None:
 
 
 def test_client_side_routes_fall_back_to_index(built_dist: Path) -> None:
-    client = TestClient(create_app(frontend_dist=built_dist))
+    client = TestClient(
+        create_app(frontend_dist=built_dist), base_url="http://localhost", client=("127.0.0.1", 50000)
+    )
 
     assert client.get("/").text == "<html>app</html>"
     assert client.get("/trips/abc/itinerary").text == "<html>app</html>"
@@ -36,7 +42,9 @@ def test_client_side_routes_fall_back_to_index(built_dist: Path) -> None:
 
 
 def test_unknown_api_paths_are_404_not_the_app(built_dist: Path) -> None:
-    client = TestClient(create_app(frontend_dist=built_dist))
+    client = TestClient(
+        create_app(frontend_dist=built_dist), base_url="http://localhost", client=("127.0.0.1", 50000)
+    )
 
     response = client.get("/api/does-not-exist")
 
@@ -45,7 +53,9 @@ def test_unknown_api_paths_are_404_not_the_app(built_dist: Path) -> None:
 
 
 def test_paths_outside_dist_are_never_served(built_dist: Path) -> None:
-    client = TestClient(create_app(frontend_dist=built_dist))
+    client = TestClient(
+        create_app(frontend_dist=built_dist), base_url="http://localhost", client=("127.0.0.1", 50000)
+    )
 
     response = client.get("/..%2Fsecret.txt")
 

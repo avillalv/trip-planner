@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
-from tripplanner.api import system
+from tripplanner.api import auth, geo, people, settings, system, trips
 
 api_router = APIRouter()
-api_router.include_router(system.router)
+for module in (system, auth, people, trips, geo, settings):
+    api_router.include_router(module.router)
