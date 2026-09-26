@@ -72,6 +72,26 @@ move.
 - If the computer was off or asleep at a scheduled time, the missed check runs once when the
   app is back.
 
+## Plan each day
+
+A trip's **Itinerary** page shows a card per day: its city, and its first and last plans.
+Open a day to plan it on a calendar:
+
+- Drag across empty time to add something, drag a block to move it, or drag its bottom edge to
+  change how long it takes. Click a block to edit it, move it to another day, or delete it.
+- **Ideas** are things you might do, with no day yet. Drag one onto the calendar, or use its **+**.
+- **Add activity** searches near the day's city: pick a category (restaurants, cafés, museums,
+  landmarks, viewpoints, parks, beaches, nightlife, shopping) or type a name. Results show on a
+  map with their opening hours, website, a Wikipedia summary when there is one, and a link to
+  Google Maps for reviews and photos. Or choose **Add your own**.
+- Times are local to the destination, whatever time zone your phone or laptop is in. A late
+  evening can end after midnight.
+- If two of you change the same activity at once, the second change is refused with an
+  explanation, and the latest version is shown so nothing is silently overwritten.
+
+Places come from Geoapify (OpenStreetMap data). Each search costs one of your 3,000 free daily
+credits, and results are kept for a week, so repeating a search is free.
+
 ## Agent routines (Claude)
 
 On the **Agents** page, **New routine** sets up work for Claude to do on a schedule:
