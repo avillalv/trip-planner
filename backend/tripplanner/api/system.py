@@ -50,6 +50,7 @@ def system_status(db: DbSession) -> SystemStatus:
         access=AccessInfo(
             other_devices=open_to_network,
             passcode_configured=settings.app_passcode is not None,
+            port=settings.port,
             urls=[f"http://{ip}:{settings.port}" for ip in lan_addresses()] if open_to_network else [],
         ),
     )

@@ -18,7 +18,8 @@ function RailFooter() {
 }
 
 export function AppShell() {
-  const tripId = useMatch('/trips/:tripId/*')?.params.tripId
+  const tripParam = useMatch('/trips/:tripId/*')?.params.tripId
+  const tripId = tripParam ? Number(tripParam) : undefined
   const [menuOpen, setMenuOpen] = useState(false)
   const closeMenu = () => setMenuOpen(false)
 

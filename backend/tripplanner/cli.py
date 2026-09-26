@@ -6,7 +6,7 @@ import logging
 import sys
 from pathlib import Path
 
-from tripplanner.config import get_settings
+from tripplanner.config import get_settings, override_settings
 from tripplanner.paths import PACKAGE_DIR
 from tripplanner.process import configure_logging, start_parent_watchdog
 
@@ -17,6 +17,14 @@ def _cmd_web(args: argparse.Namespace) -> None:
     import uvicorn
 
     settings = get_settings()
+    if args.test_db:
+        if args.reload:
+            sys.exit("--test-db can't be combined with --reload.")
+        if not settings.test_database_url:
+            sys.exit("TEST_DATABASE_URL is not set in .env.")
+        # Development convenience: try the UI against the throwaway test database.
+        override_settings(settings.model_copy(update={"database_url": settings.test_database_url}))
+        log.warning("Using the TEST database; pytest runs wipe it.")
     start_parent_watchdog()
     uvicorn.run(
         "tripplanner.main:app",
@@ -89,6 +97,7 @@ def main(argv: list[str] | None = None) -> None:
     web.add_argument("--host")
     web.add_argument("--port", type=int)
     web.add_argument("--reload", action="store_true", help="restart on code changes (development)")
+    web.add_argument("--test-db", action="store_true", help="use TEST_DATABASE_URL (development)")
     web.set_defaults(func=_cmd_web)
 
     sub.add_parser("worker", help="run the background worker").set_defaults(func=_cmd_worker)

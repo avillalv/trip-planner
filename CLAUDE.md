@@ -15,6 +15,9 @@ Personal, locally run trip planner for two people. Windows 11, PowerShell/Git Ba
 - `npm test` (pytest + vitest), `npm run lint` (ruff + oxlint + tsc), `npm run format`.
 - `npm run gen:api` after changing any API route or schema — commit the regenerated types.
 - Backend tests need the `tripplanner_test` database that setup creates.
+- While the user's `npm start` is running, `uv sync` can't replace `backend/.venv/Scripts/trip-planner.exe`;
+  use `uv run --no-sync` and `uv sync --no-install-project --inexact`, and check UI changes with
+  `.claude/launch.json` → `app-testdb` (port 8010, test database) instead of touching their data.
 
 ## Rules
 - Every schema change gets an Alembic migration in `backend/tripplanner/migrations/versions/`.

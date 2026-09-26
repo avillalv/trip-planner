@@ -1,35 +1,50 @@
 import { screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
-import type { SystemStatus } from '@/lib/api/system'
-import { jsonResponse, renderWithProviders } from '@/test/render'
+import { describe, expect, it } from 'vitest'
+import { systemStatus, trip } from '@/test/fixtures'
+import { mockApi, renderWithProviders } from '@/test/render'
 import { TripsHome } from './trips-home'
 
-const status: SystemStatus = {
-  version: '0.1.0',
-  database: 'ok',
-  worker: { status: 'ok', last_seen: new Date().toISOString() },
-  claude: { found: true, path: 'claude', version: '2.1.211' },
-  integrations: { geoapify: true, serpapi: false, travelpayouts: false },
-  home_currency: 'USD',
-}
-
-describe('TripsHome setup checklist', () => {
-  it('shows what is ready and what still needs a key', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(status))
+describe('TripsHome', () => {
+  it('lists trips with destinations, dates, and length', async () => {
+    mockApi({ '/api/v1/trips': [trip()], '/api/v1/system/status': systemStatus() })
 
     renderWithProviders(<TripsHome />)
 
-    expect(await screen.findByText('4 of 6 ready')).toBeInTheDocument()
-    expect(screen.getByText('Connected')).toBeInTheDocument()
-    expect(screen.getByText('Found · version 2.1.211')).toBeInTheDocument()
-    expect(screen.getByText('Add SERPAPI_API_KEY to .env for live Google Flights prices.')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Japan in autumn' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Japan in autumn/ })).toHaveAttribute('href', '/trips/7')
+    expect(screen.getByText('Kyoto')).toBeInTheDocument()
+    expect(screen.getByText(/Nov 5\s*–\s*15, 2026 · 11 days/)).toBeInTheDocument()
+    expect(screen.getByText('Travelers: Alex Rivera')).toBeInTheDocument()
   })
 
-  it('explains how to start the server when it is unreachable', async () => {
-    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
+  it('invites you to plan the first trip when there are none', async () => {
+    mockApi({ '/api/v1/trips': [], '/api/v1/system/status': systemStatus() })
 
     renderWithProviders(<TripsHome />)
 
-    expect(await screen.findByText(/Can't reach the Trip Planner server/)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'No trips yet' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Plan a trip' })).toBeInTheDocument()
+  })
+
+  it('points to Settings for unfinished setup', async () => {
+    mockApi({ '/api/v1/trips': [trip()], '/api/v1/system/status': systemStatus() })
+
+    renderWithProviders(<TripsHome />)
+
+    expect(await screen.findByText(/Not set up yet: SerpApi, Travelpayouts, Wikipedia contact\./)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Review in Settings' })).toHaveAttribute('href', '/settings')
+  })
+
+  it('keeps archived trips out of the main list', async () => {
+    mockApi({
+      '/api/v1/trips': [trip(), trip({ id: 8, name: 'Old trip', status: 'archived' })],
+      '/api/v1/system/status': systemStatus(),
+    })
+
+    renderWithProviders(<TripsHome />)
+
+    await screen.findByRole('heading', { name: 'Japan in autumn' })
+    expect(screen.queryByRole('heading', { name: 'Old trip' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Show archived trips (1)' })).toBeInTheDocument()
   })
 })

@@ -62,6 +62,18 @@ function connectionItems(s: SystemStatus): Item[] {
     key('Geoapify', s.integrations.geoapify, 'Add GEOAPIFY_API_KEY to .env to search for places.'),
     key('SerpApi', s.integrations.serpapi, 'Add SERPAPI_API_KEY to .env for live Google Flights prices.'),
     key('Travelpayouts', s.integrations.travelpayouts, 'Add TRAVELPAYOUTS_TOKEN to .env for cached fare calendars.'),
+    s.integrations.wikimedia
+      ? { label: 'Wikipedia', state: 'ready', detail: 'Contact added' }
+      : {
+          label: 'Wikipedia',
+          state: 'missing',
+          detail: (
+            <>
+              Add <Env>WIKIMEDIA_CONTACT</Env> to .env (your email or a website address) for destination summaries
+              and photos. Wikipedia asks apps to say who is calling.
+            </>
+          ),
+        },
   ]
 }
 

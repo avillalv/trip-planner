@@ -36,6 +36,7 @@ class AccessInfo(BaseModel):
 
     other_devices: bool
     passcode_configured: bool
+    port: int
     urls: list[str]
 
 

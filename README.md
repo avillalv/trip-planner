@@ -53,6 +53,26 @@ then restart the app. The home page's **Setup** checklist shows which ones are a
 | `GEOAPIFY_API_KEY` | Places search and destination lookup (3,000 free credits/day) | https://myprojects.geoapify.com → create a project |
 | `SERPAPI_API_KEY` | Live Google Flights prices and vacation rentals (250 free searches/month) | https://serpapi.com/manage-api-key |
 | `TRAVELPAYOUTS_TOKEN` | Cached Aviasales fare calendars (free) | https://www.travelpayouts.com → Profile → API token |
+| `WIKIMEDIA_CONTACT` | Destination summaries and photos from Wikipedia (free, no key) | Your email address or a website URL; Wikipedia requires apps to identify a contact |
+
+## Use it from phones and other computers on your Wi‑Fi
+
+By default only this PC can open Trip Planner. To let other devices on your home network in:
+
+1. In `.env`, set `HOST=0.0.0.0` and choose an `APP_PASSCODE`.
+2. Allow the app through Windows Firewall on private networks. Run this once in PowerShell
+   opened as Administrator (change the port if you changed `PORT`), and make sure your Wi‑Fi
+   network is set to *Private* in Windows settings:
+
+   ```powershell
+   New-NetFirewallRule -DisplayName "Trip Planner (LAN)" -Direction Inbound -Protocol TCP -LocalPort 8000 -Profile Private -Action Allow
+   ```
+
+3. Restart the app. **Settings → Other devices** lists the addresses to open on your phone.
+
+Each device asks for the passcode once and then stays signed in for 30 days (changing the
+passcode signs everyone out). This PC never asks. Traffic on your home network is plain HTTP,
+so only enable this on a network you trust.
 
 ## Development
 

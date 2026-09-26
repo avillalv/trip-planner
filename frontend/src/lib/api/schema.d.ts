@@ -33,10 +33,206 @@ export interface paths {
         };
         /**
          * System Status
-         * @description Setup checklist data: database, worker, Claude CLI, and which API keys are configured.
+         * @description Setup checklist data: database, worker, Claude CLI, API keys, and network access.
          */
         get: operations["system_status"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Session */
+        get: operations["session"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Login */
+        post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Logout */
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/people": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List People */
+        get: operations["list_people"];
+        put?: never;
+        /** Create Person */
+        post: operations["create_person"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/people/{person_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Person */
+        put: operations["update_person"];
+        post?: never;
+        /** Delete Person */
+        delete: operations["delete_person"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Trips */
+        get: operations["list_trips"];
+        put?: never;
+        /** Create Trip */
+        post: operations["create_trip"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Trip */
+        get: operations["get_trip"];
+        /** Update Trip */
+        put: operations["update_trip"];
+        post?: never;
+        /** Delete Trip */
+        delete: operations["delete_trip"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/refresh-info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh Destination Info
+         * @description Fetch Wikipedia summaries and photos again for destinations that don't have them.
+         */
+        post: operations["refresh_destination_info"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/geo/destinations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Destination Suggestions */
+        get: operations["destination_suggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/airports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Airports */
+        get: operations["airports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Settings */
+        get: operations["read_settings"];
+        /** Update Settings */
+        put: operations["update_settings"];
         post?: never;
         delete?: never;
         options?: never;
@@ -48,6 +244,43 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AccessInfo
+         * @description Whether other devices on the home network can open the app, and at which addresses.
+         */
+        AccessInfo: {
+            /** Other Devices */
+            other_devices: boolean;
+            /** Passcode Configured */
+            passcode_configured: boolean;
+            /** Port */
+            port: number;
+            /** Urls */
+            urls: string[];
+        };
+        /** AirportOut */
+        AirportOut: {
+            /** Iata */
+            iata: string;
+            /** Name */
+            name: string;
+            /** City */
+            city: string | null;
+            /** Country Code */
+            country_code: string;
+            /** Kind */
+            kind: string;
+        };
+        /** AppSettingsIn */
+        AppSettingsIn: {
+            /** Home Currency */
+            home_currency: string;
+        };
+        /** AppSettingsOut */
+        AppSettingsOut: {
+            /** Home Currency */
+            home_currency: string;
+        };
         /** ClaudeCliStatus */
         ClaudeCliStatus: {
             /** Found */
@@ -56,6 +289,105 @@ export interface components {
             path?: string | null;
             /** Version */
             version?: string | null;
+        };
+        /** DestinationIn */
+        DestinationIn: {
+            /**
+             * Id
+             * @description Set for destinations that already belong to the trip.
+             */
+            id?: number | null;
+            /** Name */
+            name: string;
+            /** Region */
+            region?: string | null;
+            /** Country */
+            country?: string | null;
+            /** Country Code */
+            country_code?: string | null;
+            /** Kind */
+            kind?: string | null;
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /** Timezone */
+            timezone?: string | null;
+            /** Bbox */
+            bbox?: number[] | null;
+            /** Geoapify Place Id */
+            geoapify_place_id?: string | null;
+        };
+        /** DestinationOut */
+        DestinationOut: {
+            /** Id */
+            id: number;
+            /** Position */
+            position: number;
+            /** Name */
+            name: string;
+            /** Region */
+            region: string | null;
+            /** Country */
+            country: string | null;
+            /** Country Code */
+            country_code: string | null;
+            /** Kind */
+            kind: string | null;
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /** Timezone */
+            timezone: string | null;
+            /** Bbox */
+            bbox: number[] | null;
+            /** Summary */
+            summary: string | null;
+            /** Wiki Url */
+            wiki_url: string | null;
+            /** Image Url */
+            image_url: string | null;
+            /** Image File */
+            image_file: string | null;
+            /**
+             * Info Status
+             * @enum {string}
+             */
+            info_status: "pending" | "ready" | "not_found" | "failed" | "skipped";
+        };
+        /**
+         * DestinationSuggestion
+         * @description A place a trip can go, as found by Geoapify.
+         */
+        DestinationSuggestion: {
+            /** Label */
+            label: string;
+            /** Name */
+            name: string;
+            /** Region */
+            region: string | null;
+            /** Country */
+            country: string | null;
+            /** Country Code */
+            country_code: string | null;
+            /** Kind */
+            kind: string;
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /** Timezone */
+            timezone: string | null;
+            /** Bbox */
+            bbox: number[] | null;
+            /** Geoapify Place Id */
+            geoapify_place_id: string | null;
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
         };
         /** HealthResponse */
         HealthResponse: {
@@ -84,6 +416,42 @@ export interface components {
             serpapi: boolean;
             /** Travelpayouts */
             travelpayouts: boolean;
+            /** Wikimedia */
+            wikimedia: boolean;
+        };
+        /** LoginIn */
+        LoginIn: {
+            /** Passcode */
+            passcode: string;
+        };
+        /** PersonIn */
+        PersonIn: {
+            /** Name */
+            name: string;
+            /** Color */
+            color: string;
+            /** Home Airports */
+            home_airports?: string[];
+        };
+        /** PersonOut */
+        PersonOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Color */
+            color: string;
+            /** Home Airports */
+            home_airports: string[];
+        };
+        /** SessionInfo */
+        SessionInfo: {
+            /** Authenticated */
+            authenticated: boolean;
+            /** Local */
+            local: boolean;
+            /** Passcode Configured */
+            passcode_configured: boolean;
         };
         /** SystemStatus */
         SystemStatus: {
@@ -97,8 +465,92 @@ export interface components {
             worker: components["schemas"]["WorkerStatus"];
             claude: components["schemas"]["ClaudeCliStatus"];
             integrations: components["schemas"]["IntegrationStatus"];
+            access: components["schemas"]["AccessInfo"];
+        };
+        /** TripCover */
+        TripCover: {
+            /** Image Url */
+            image_url: string;
+            /** Image File */
+            image_file: string | null;
+            /** Wiki Url */
+            wiki_url: string | null;
+            /** Destination Name */
+            destination_name: string;
+        };
+        /** TripIn */
+        TripIn: {
+            /** Name */
+            name: string;
+            /** Start Date */
+            start_date?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            /**
+             * Status
+             * @default planning
+             * @enum {string}
+             */
+            status: "planning" | "booked" | "done" | "archived";
             /** Home Currency */
             home_currency: string;
+            /**
+             * Notes
+             * @default
+             */
+            notes: string;
+            /** Destinations */
+            destinations?: components["schemas"]["DestinationIn"][];
+            /** Traveler Ids */
+            traveler_ids?: number[];
+        };
+        /** TripOut */
+        TripOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Start Date */
+            start_date: string | null;
+            /** End Date */
+            end_date: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "planning" | "booked" | "done" | "archived";
+            /** Home Currency */
+            home_currency: string;
+            /** Notes */
+            notes: string;
+            /** Destinations */
+            destinations: components["schemas"]["DestinationOut"][];
+            /** Travelers */
+            travelers: components["schemas"]["PersonOut"][];
+            cover: components["schemas"]["TripCover"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
         /** WorkerStatus */
         WorkerStatus: {
@@ -155,6 +607,486 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SystemStatus"];
+                };
+            };
+        };
+    };
+    session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionInfo"];
+                };
+            };
+        };
+    };
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_people: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonOut"][];
+                };
+            };
+        };
+    };
+    create_person: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_person: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_person: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_trips: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TripOut"][];
+                };
+            };
+        };
+    };
+    create_trip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TripIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TripOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_trip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TripOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_trip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TripIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TripOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_trip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_destination_info: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    destination_suggestions: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DestinationSuggestion"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    airports: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AirportOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppSettingsOut"];
+                };
+            };
+        };
+    };
+    update_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppSettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

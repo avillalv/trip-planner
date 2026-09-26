@@ -2,6 +2,9 @@ import { createBrowserRouter } from 'react-router'
 import { AppShell } from '@/components/layout/app-shell'
 import { NotFound, RouteError } from '@/routes/errors'
 import { SectionPlaceholder } from '@/routes/section-placeholder'
+import { SettingsPage } from '@/routes/settings-page'
+import { TripLayout } from '@/routes/trip/trip-layout'
+import { TripOverview } from '@/routes/trip/trip-overview'
 import { TripsHome } from '@/routes/trips-home'
 
 export const router = createBrowserRouter([
@@ -12,11 +15,9 @@ export const router = createBrowserRouter([
       { index: true, element: <TripsHome /> },
       {
         path: 'trips/:tripId',
+        element: <TripLayout />,
         children: [
-          {
-            index: true,
-            element: <SectionPlaceholder title="Overview" description="A summary of this trip will appear here." />,
-          },
+          { index: true, element: <TripOverview /> },
           {
             path: 'flights',
             element: (
@@ -47,15 +48,7 @@ export const router = createBrowserRouter([
           />
         ),
       },
-      {
-        path: 'settings',
-        element: (
-          <SectionPlaceholder
-            title="Settings"
-            description="Your home currency, home airports, and connection keys will be managed here."
-          />
-        ),
-      },
+      { path: 'settings', element: <SettingsPage /> },
       { path: '*', element: <NotFound /> },
     ],
   },

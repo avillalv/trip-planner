@@ -77,14 +77,19 @@ def test_system_status_reports_key_presence_without_values(
         "wikimedia": True,
     }
     assert body["claude"]["version"] == "9.9.9"
-    assert body["access"] == {"other_devices": False, "passcode_configured": True, "urls": []}
+    assert body["access"] == {
+        "other_devices": False,
+        "passcode_configured": True,
+        "port": 8000,
+        "urls": [],
+    }
     assert "geo-secret" not in response.text
 
 
 def test_system_status_lists_phone_urls_when_open_to_the_network(
     client: TestClient, monkeypatch: pytest.MonkeyPatch, use_settings
 ) -> None:
-    use_settings(host="0.0.0.0", port=8000)
+    use_settings(host="0.0.0.0", port=8123)
     monkeypatch.setattr(system_api, "lan_addresses", lambda: ["192.168.1.23"])
     monkeypatch.setattr(system_api, "claude_cli_status", lambda _s: ClaudeCliStatus(found=False))
 
@@ -93,5 +98,6 @@ def test_system_status_lists_phone_urls_when_open_to_the_network(
     assert access == {
         "other_devices": True,
         "passcode_configured": True,
-        "urls": ["http://192.168.1.23:8000"],
+        "port": 8123,
+        "urls": ["http://192.168.1.23:8123"],
     }
