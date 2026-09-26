@@ -188,6 +188,278 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/routes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Routes */
+        get: operations["list_routes"];
+        put?: never;
+        /** Create Route */
+        post: operations["create_route"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/routes/{route_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Route */
+        put: operations["update_route"];
+        post?: never;
+        /** Delete Route */
+        delete: operations["delete_route"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/flights/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh Prices
+         * @description Check prices now (all routes, or the ones listed).
+         */
+        post: operations["refresh_prices"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/flights/best": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Best Options
+         * @description Latest price per itinerary, cheapest first.
+         */
+        get: operations["best_options"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/flights/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Route Summaries */
+        get: operations["route_summaries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/routes/{route_id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Route History */
+        get: operations["route_history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/routes/{route_id}/date-grid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Date Grid */
+        get: operations["date_grid"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/flight-quotes/{quote_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Quote
+         * @description Hide a fare, or confirm one flagged as suspect.
+         */
+        patch: operations["update_quote"];
+        trace?: never;
+    };
+    "/api/v1/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Runs */
+        get: operations["list_runs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Run */
+        get: operations["get_run"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runs/{run_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Run Events
+         * @description Log lines after `after_seq`, for polling while a run is in progress.
+         */
+        get: operations["run_events"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runs/{run_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Run */
+        post: operations["cancel_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/routines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Trip Routines */
+        get: operations["trip_routines"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/routines/{routine_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Routine */
+        patch: operations["update_routine"];
+        trace?: never;
+    };
+    "/api/v1/usage/serpapi": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Serpapi Usage
+         * @description Live Google Flights searches used and left under the monthly cap.
+         */
+        get: operations["serpapi_usage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/geo/destinations": {
         parameters: {
             query?: never;
@@ -290,6 +562,25 @@ export interface components {
             /** Version */
             version?: string | null;
         };
+        /** DateGridCell */
+        DateGridCell: {
+            /**
+             * Depart Date
+             * Format: date
+             */
+            depart_date: string;
+            /** Return Date */
+            return_date: string | null;
+            /** Price */
+            price: string;
+            /** Source */
+            source: string;
+            /**
+             * Observed At
+             * Format: date-time
+             */
+            observed_at: string;
+        };
         /** DestinationIn */
         DestinationIn: {
             /**
@@ -384,6 +675,16 @@ export interface components {
             /** Geoapify Place Id */
             geoapify_place_id: string | null;
         };
+        /** GoogleHistoryPoint */
+        GoogleHistoryPoint: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Price */
+            price: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -404,6 +705,18 @@ export interface components {
              */
             database: "ok" | "unavailable";
             worker: components["schemas"]["WorkerStatus"];
+        };
+        /** HistoryPoint */
+        HistoryPoint: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Source */
+            source: string;
+            /** Price */
+            price: string;
         };
         /**
          * IntegrationStatus
@@ -443,6 +756,361 @@ export interface components {
             color: string;
             /** Home Airports */
             home_airports: string[];
+        };
+        /** QuoteOut */
+        QuoteOut: {
+            /** Id */
+            id: number;
+            /** Route Id */
+            route_id: number;
+            /** Source */
+            source: string;
+            /** Confidence */
+            confidence: string;
+            /** Origin */
+            origin: string;
+            /** Destination */
+            destination: string;
+            /**
+             * Depart Date
+             * Format: date
+             */
+            depart_date: string;
+            /** Return Date */
+            return_date: string | null;
+            /** Price Total */
+            price_total: string;
+            /** Currency */
+            currency: string;
+            /** Price Home */
+            price_home: string | null;
+            /** Home Currency */
+            home_currency: string;
+            /** Passengers */
+            passengers: number;
+            /** Airlines */
+            airlines: string[];
+            /** Stops Out */
+            stops_out: number | null;
+            /** Stops Back */
+            stops_back: number | null;
+            /** Duration Out Min */
+            duration_out_min: number | null;
+            /** Duration Back Min */
+            duration_back_min: number | null;
+            /** Depart At Local */
+            depart_at_local: string | null;
+            /** Flight Numbers */
+            flight_numbers: string[] | null;
+            /** Booking Url */
+            booking_url: string | null;
+            /** Source Url */
+            source_url: string | null;
+            /**
+             * Observed At
+             * Format: date-time
+             */
+            observed_at: string;
+            /** Suspect */
+            suspect: boolean;
+            /** Hidden */
+            hidden: boolean;
+        };
+        /** QuoteUpdate */
+        QuoteUpdate: {
+            /** Hidden */
+            hidden?: boolean | null;
+            /** Suspect */
+            suspect?: boolean | null;
+        };
+        /** RefreshRequest */
+        RefreshRequest: {
+            /** Route Ids */
+            route_ids?: number[];
+        };
+        /** RouteHistory */
+        RouteHistory: {
+            /** Currency */
+            currency: string;
+            /** Points */
+            points: components["schemas"]["HistoryPoint"][];
+            /** Google */
+            google: components["schemas"]["GoogleHistoryPoint"][];
+            /** Typical Low */
+            typical_low: string | null;
+            /** Typical High */
+            typical_high: string | null;
+            /** Price Level */
+            price_level: string | null;
+        };
+        /** RouteIn */
+        RouteIn: {
+            /** Label */
+            label?: string | null;
+            /** Origin Codes */
+            origin_codes: string[];
+            /** Destination Codes */
+            destination_codes: string[];
+            /**
+             * Trip Type
+             * @default round_trip
+             * @enum {string}
+             */
+            trip_type: "round_trip" | "one_way";
+            /**
+             * Depart From
+             * Format: date
+             */
+            depart_from: string;
+            /**
+             * Depart To
+             * Format: date
+             */
+            depart_to: string;
+            /** Return From */
+            return_from?: string | null;
+            /** Return To */
+            return_to?: string | null;
+            /** Min Nights */
+            min_nights?: number | null;
+            /** Max Nights */
+            max_nights?: number | null;
+            /**
+             * Adults
+             * @default 1
+             */
+            adults: number;
+            /**
+             * Children
+             * @default 0
+             */
+            children: number;
+            /**
+             * Cabin
+             * @default economy
+             * @enum {string}
+             */
+            cabin: "economy" | "premium_economy" | "business" | "first";
+            /** Max Stops */
+            max_stops?: number | null;
+            /** Sources */
+            sources?: ("serpapi" | "travelpayouts" | "agent")[];
+            /** Alert Price */
+            alert_price?: number | string | null;
+            /**
+             * Active
+             * @default true
+             */
+            active: boolean;
+        };
+        /** RouteOut */
+        RouteOut: {
+            /** Id */
+            id: number;
+            /** Trip Id */
+            trip_id: number;
+            /** Label */
+            label: string | null;
+            /** Origin Codes */
+            origin_codes: string[];
+            /** Destination Codes */
+            destination_codes: string[];
+            /**
+             * Trip Type
+             * @enum {string}
+             */
+            trip_type: "round_trip" | "one_way";
+            /**
+             * Depart From
+             * Format: date
+             */
+            depart_from: string;
+            /**
+             * Depart To
+             * Format: date
+             */
+            depart_to: string;
+            /** Return From */
+            return_from: string | null;
+            /** Return To */
+            return_to: string | null;
+            /** Min Nights */
+            min_nights: number | null;
+            /** Max Nights */
+            max_nights: number | null;
+            /** Adults */
+            adults: number;
+            /** Children */
+            children: number;
+            /**
+             * Cabin
+             * @enum {string}
+             */
+            cabin: "economy" | "premium_economy" | "business" | "first";
+            /** Max Stops */
+            max_stops: number | null;
+            /** Sources */
+            sources: ("serpapi" | "travelpayouts" | "agent")[];
+            /** Alert Price */
+            alert_price: string | null;
+            /** Active */
+            active: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * RouteSummary
+         * @description Per-route status for the Flights page.
+         */
+        RouteSummary: {
+            /** Route Id */
+            route_id: number;
+            cheapest: components["schemas"]["QuoteOut"] | null;
+            /** Last Checked At */
+            last_checked_at: string | null;
+            /** Quote Count */
+            quote_count: number;
+        };
+        /** RoutineOut */
+        RoutineOut: {
+            /** Id */
+            id: number;
+            /** Trip Id */
+            trip_id: number;
+            /** Name */
+            name: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "flight_api" | "flight_agent" | "research_agent";
+            /** Enabled */
+            enabled: boolean;
+            /** Schedule Cron */
+            schedule_cron: string;
+            /** Timezone */
+            timezone: string;
+            /** Catch Up */
+            catch_up: boolean;
+            /** Config */
+            config: {
+                [key: string]: unknown;
+            };
+            /** Next Run At */
+            next_run_at: string | null;
+            last_run: components["schemas"]["RunOut"] | null;
+        };
+        /** RoutineUpdate */
+        RoutineUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Schedule Cron */
+            schedule_cron?: string | null;
+            /** Catch Up */
+            catch_up?: boolean | null;
+        };
+        /** RunEventOut */
+        RunEventOut: {
+            /** Seq */
+            seq: number;
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /** Type */
+            type: string;
+            /** Tool Name */
+            tool_name: string | null;
+            /** Summary */
+            summary: string;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** RunOut */
+        RunOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Routine Id */
+            routine_id: number | null;
+            /** Trip Id */
+            trip_id: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "flight_api" | "flight_agent" | "research_agent";
+            /**
+             * Trigger
+             * @enum {string}
+             */
+            trigger: "schedule" | "manual" | "catch_up";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "succeeded" | "partial" | "failed" | "timed_out" | "cancelled" | "interrupted";
+            /** Params */
+            params: {
+                [key: string]: unknown;
+            };
+            /**
+             * Queued At
+             * Format: date-time
+             */
+            queued_at: string;
+            /** Started At */
+            started_at: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /** Summary */
+            summary: string | null;
+            /** Error */
+            error: string | null;
+            /** Accepted Count */
+            accepted_count: number;
+            /** Rejected Count */
+            rejected_count: number;
+            /** Input Tokens */
+            input_tokens: number | null;
+            /** Output Tokens */
+            output_tokens: number | null;
+            /** Cost Usd Est */
+            cost_usd_est: string | null;
+            /** Cancel Requested */
+            cancel_requested: boolean;
+        };
+        /** SerpApiUsage */
+        SerpApiUsage: {
+            /** Monthly Cap */
+            monthly_cap: number;
+            /** Used This Month */
+            used_this_month: number;
+            /** Used Today */
+            used_today: number;
+            /** Daily Allowance */
+            daily_allowance: number;
+            /** Remaining Today */
+            remaining_today: number;
+            /** Plan Searches Left */
+            plan_searches_left: number | null;
+            /** Account Synced At */
+            account_synced_at: string | null;
         };
         /** SessionInfo */
         SessionInfo: {
@@ -972,6 +1640,552 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_routes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RouteOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_route: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RouteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RouteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_route: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                route_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RouteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RouteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_route: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                route_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_prices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefreshRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    best_options: {
+        parameters: {
+            query?: {
+                route_id?: number | null;
+                max_age_days?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    route_summaries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RouteSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    route_history: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path: {
+                route_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RouteHistory"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    date_grid: {
+        parameters: {
+            query?: {
+                max_age_days?: number;
+            };
+            header?: never;
+            path: {
+                route_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DateGridCell"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_quote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_runs: {
+        parameters: {
+            query?: {
+                trip_id?: number | null;
+                routine_id?: number | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_events: {
+        parameters: {
+            query?: {
+                after_seq?: number;
+            };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunEventOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trip_routines: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoutineOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_routine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                routine_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoutineUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoutineOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    serpapi_usage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SerpApiUsage"];
                 };
             };
         };

@@ -1,13 +1,10 @@
-"""Background worker process.
-
-Phase 1: keeps a heartbeat row fresh so the UI can show that background work is running.
-The scheduler and job dispatcher build on this loop in later phases.
-"""
+"""Background worker process: heartbeat, routine schedules, and the run dispatcher."""
 
 import logging
 import os
 import signal
 import threading
+import time
 from datetime import UTC, datetime
 
 from sqlalchemy import Engine, func
@@ -20,6 +17,9 @@ from tripplanner.models import WorkerHeartbeat
 from tripplanner.process import start_parent_watchdog
 
 HEARTBEAT_SECONDS = 30
+SYNC_SECONDS = 15
+CATCH_UP_SECONDS = 300
+TICK_SECONDS = 2
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +42,8 @@ def beat(started_at: datetime, engine: Engine | None = None) -> None:
 
 
 def run_worker() -> None:
+    from tripplanner.worker.scheduler import RoutineScheduler
+
     start_parent_watchdog()
     stop = threading.Event()
 
@@ -54,11 +56,33 @@ def run_worker() -> None:
 
     started_at = datetime.now(UTC)
     log.info("Worker started (pid %s).", os.getpid())
+    scheduler: RoutineScheduler | None = None
+    last = {"beat": 0.0, "sync": 0.0, "catch_up": time.monotonic()}
+
     while not stop.is_set():
+        now = time.monotonic()
         try:
-            beat(started_at)
+            if now - last["beat"] >= HEARTBEAT_SECONDS:
+                beat(started_at)
+                last["beat"] = now
+            if scheduler is None:
+                # Started only once the database is reachable (it may still be booting at sign-in).
+                scheduler = RoutineScheduler()
+                scheduler.start()
+                last["sync"] = now
+            if now - last["sync"] >= SYNC_SECONDS:
+                scheduler.sync_schedules()
+                last["sync"] = now
+            if now - last["catch_up"] >= CATCH_UP_SECONDS:
+                scheduler.catch_up()
+                last["catch_up"] = now
+            scheduler.dispatch()
         except SQLAlchemyError as exc:
-            # The database may still be starting (e.g. right after Windows sign-in); keep trying.
-            log.warning("Heartbeat failed, will retry: %s", exc.__class__.__name__)
-        stop.wait(HEARTBEAT_SECONDS)
+            log.warning("Database unavailable, will retry: %s", exc.__class__.__name__)
+            stop.wait(10)
+            continue
+        stop.wait(TICK_SECONDS)
+
+    if scheduler is not None:
+        scheduler.shutdown()
     log.info("Worker stopped.")

@@ -1,0 +1,335 @@
+{
+ "search_metadata": {
+  "google_flights_url": "https://www.google.com/travel/flights?tfs=fixture"
+ },
+ "other_flights": [
+  {
+   "flights": [
+    {
+     "departure_airport": {
+      "name": "Los Angeles International Airport",
+      "id": "LAX",
+      "time": "2026-11-05 11:10"
+     },
+     "arrival_airport": {
+      "name": "Ninoy Aquino International Airport",
+      "id": "MNL",
+      "time": "2026-11-06 18:45"
+     },
+     "duration": 935,
+     "airplane": "Boeing 777",
+     "airline": "Philippine Airlines",
+     "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/PR.png",
+     "travel_class": "Economy",
+     "flight_number": "PR 113",
+     "legroom": "33 in",
+     "extensions": [
+      "Above average legroom (33 in)",
+      "Wi-Fi for a fee",
+      "In-seat USB outlet",
+      "On-demand video",
+      "Carbon emissions estimate: 1411 kg"
+     ]
+    },
+    {
+     "departure_airport": {
+      "name": "Ninoy Aquino International Airport",
+      "id": "MNL",
+      "time": "2026-11-07 03:00"
+     },
+     "arrival_airport": {
+      "name": "Narita International Airport",
+      "id": "NRT",
+      "time": "2026-11-07 08:00"
+     },
+     "duration": 240,
+     "airplane": "Airbus A321",
+     "airline": "Philippine Airlines",
+     "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/PR.png",
+     "travel_class": "Economy",
+     "flight_number": "PR 430",
+     "legroom": "30 in",
+     "extensions": [
+      "Average legroom (30 in)",
+      "Stream media to your device",
+      "Carbon emissions estimate: 540 kg"
+     ],
+     "overnight": true
+    }
+   ],
+   "layovers": [
+    {
+     "duration": 495,
+     "name": "Ninoy Aquino International Airport",
+     "id": "MNL"
+    }
+   ],
+   "total_duration": 1670,
+   "carbon_emissions": {
+    "this_flight": 1952000,
+    "typical_for_this_route": 1238000,
+    "difference_percent": 58
+   },
+   "price": 1859,
+   "type": "Round trip",
+   "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/PR.png",
+   "departure_token": "WyJDalJJYUc1U05rcDJjRlJrZDNOQlRIcHhabEZDUnkwdExTMHRMUzB0TFc5NVkyZG5PVUZCUVVGQlIzRTBRMFJOVFRNdGRtTkJFZ3RRVWpFeE0zeFFValF6TUJvTENJcXNDeEFDR2dOVlUwUTRISENLckFzPSIsW1siTEFYIiwiMjAyNi0xMS0wNSIsIk1OTCIsbnVsbCwiUFIiLCIxMTMiXSxbIk1OTCIsIjIwMjYtMTEtMDciLCJOUlQiLG51bGwsIlBSIiwiNDMwIl1dXQ=="
+  },
+  {
+   "flights": [
+    {
+     "departure_airport": {
+      "name": "Los Angeles International Airport",
+      "id": "LAX",
+      "time": "2026-11-05 22:10"
+     },
+     "arrival_airport": {
+      "name": "Ninoy Aquino International Airport",
+      "id": "MNL",
+      "time": "2026-11-07 05:40"
+     },
+     "duration": 930,
+     "airplane": "Boeing 777",
+     "airline": "Philippine Airlines",
+     "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/PR.png",
+     "travel_class": "Economy",
+     "flight_number": "PR 103",
+     "legroom": "33 in",
+     "extensions": [
+      "Above average legroom (33 in)",
+      "Wi-Fi for a fee",
+      "In-seat USB outlet",
+      "On-demand video",
+      "Carbon emissions estimate: 1411 kg"
+     ],
+     "overnight": true
+    },
+    {
+     "departure_airport": {
+      "name": "Ninoy Aquino International Airport",
+      "id": "MNL",
+      "time": "2026-11-07 07:40"
+     },
+     "arrival_airport": {
+      "name": "Narita International Airport",
+      "id": "NRT",
+      "time": "2026-11-07 12:50"
+     },
+     "duration": 250,
+     "airplane": "Airbus A321",
+     "airline": "Philippine Airlines",
+     "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/PR.png",
+     "travel_class": "Economy",
+     "flight_number": "PR 428",
+     "legroom": "30 in",
+     "extensions": [
+      "Average legroom (30 in)",
+      "In-seat USB outlet",
+      "On-demand video",
+      "Carbon emissions estimate: 554 kg"
+     ]
+    }
+   ],
+   "layovers": [
+    {
+     "duration": 120,
+     "name": "Ninoy Aquino International Airport",
+     "id": "MNL"
+    }
+   ],
+   "total_duration": 1300,
+   "carbon_emissions": {
+    "this_flight": 1966000,
+    "typical_for_this_route": 1238000,
+    "difference_percent": 59
+   },
+   "price": 1859,
+   "type": "Round trip",
+   "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/PR.png",
+   "departure_token": "WyJDalJJYUc1U05rcDJjRlJrZDNOQlRIcHhabEZDUnkwdExTMHRMUzB0TFc5NVkyZG5PVUZCUVVGQlIzRTBRMFJOVFRNdGRtTkJFZ3RRVWpFd00zeFFValF5T0JvTENJcXNDeEFDR2dOVlUwUTRISENLckFzPSIsW1siTEFYIiwiMjAyNi0xMS0wNSIsIk1OTCIsbnVsbCwiUFIiLCIxMDMiXSxbIk1OTCIsIjIwMjYtMTEtMDciLCJOUlQiLG51bGwsIlBSIiwiNDI4Il1dXQ=="
+  },
+  {
+   "flights": [
+    {
+     "departure_airport": {
+      "name": "Los Angeles International Airport",
+      "id": "LAX",
+      "time": "2026-11-05 22:10"
+     },
+     "arrival_airport": {
+      "name": "Ninoy Aquino International Airport",
+      "id": "MNL",
+      "time": "2026-11-07 05:40"
+     },
+     "duration": 930,
+     "airplane": "Boeing 777",
+     "airline": "Philippine Airlines",
+     "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/PR.png",
+     "travel_class": "Economy",
+     "flight_number": "PR 103",
+     "legroom": "33 in",
+     "extensions": [
+      "Above average legroom (33 in)",
+      "Wi-Fi for a fee",
+      "In-seat USB outlet",
+      "On-demand video",
+      "Carbon emissions estimate: 1411 kg"
+     ],
+     "overnight": true
+    },
+    {
+     "departure_airport": {
+      "name": "Ninoy Aquino International Airport",
+      "id": "MNL",
+      "time": "2026-11-07 19:10"
+     },
+     "arrival_airport": {
+      "name": "Haneda Airport",
+      "id": "HND",
+      "time": "2026-11-08 00:15"
+     },
+     "duration": 245,
+     "airplane": "Airbus A321",
+     "airline": "Philippine Airlines",
+     "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/PR.png",
+     "travel_class": "Economy",
+     "flight_number": "PR 424",
+     "legroom": "30 in",
+     "extensions": [
+      "Average legroom (30 in)",
+      "Stream media to your device",
+      "Carbon emissions estimate: 527 kg"
+     ]
+    }
+   ],
+   "layovers": [
+    {
+     "duration": 810,
+     "name": "Ninoy Aquino International Airport",
+     "id": "MNL"
+    }
+   ],
+   "total_duration": 1985,
+   "carbon_emissions": {
+    "this_flight": 1939000,
+    "typical_for_this_route": 1238000,
+    "difference_percent": 57
+   },
+   "price": 1860,
+   "type": "Round trip",
+   "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/PR.png",
+   "departure_token": "WyJDalJJYUc1U05rcDJjRlJrZDNOQlRIcHhabEZDUnkwdExTMHRMUzB0TFc5NVkyZG5PVUZCUVVGQlIzRTBRMFJOVFRNdGRtTkJFZ3RRVWpFd00zeFFValF5TkJvTENMS3NDeEFDR2dOVlUwUTRISEN5ckFzPSIsW1siTEFYIiwiMjAyNi0xMS0wNSIsIk1OTCIsbnVsbCwiUFIiLCIxMDMiXSxbIk1OTCIsIjIwMjYtMTEtMDciLCJITkQiLG51bGwsIlBSIiwiNDI0Il1dXQ=="
+  }
+ ],
+ "price_insights": {
+  "lowest_price": 1859,
+  "price_level": "high",
+  "typical_price_range": [
+   1050,
+   1850
+  ]
+ },
+ "airports": [
+  {
+   "departure": [
+    {
+     "airport": {
+      "id": "LAX",
+      "name": "Los Angeles International Airport"
+     },
+     "city": "Los Angeles",
+     "country": "United States",
+     "country_code": "US",
+     "image": "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcTFuS2Y5_b7ZIl-g2Hm7jnG7zoi2uk0CQltF_DFbp6gIzfYznnOB6uJm9d6ePT5PJO5XM1j8vigwCNxRA",
+     "thumbnail": "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcT4B0K7etaN3KgEgtU5dJajdcmLtB5QSDRYr4KqcwH1iWxMm7TIqwtcUTTHD5AmNyeeFIpVpTnbSDeuD_HVlkYzOam-TO9w1worRSGRTUo"
+    },
+    {
+     "airport": {
+      "id": "SFO",
+      "name": "San Francisco International Airport"
+     },
+     "city": "San Francisco",
+     "country": "United States",
+     "country_code": "US",
+     "image": "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcQhLXJKshv7iRU8OcvmRyc3ZHyoSy8ZfBGcntDNb8iTixSq8i7XIcn9tZMPIcM6-rm7kKcu2VQS3BKoYw",
+     "thumbnail": "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcRbcxCKTUaj5vz8PrFeUUBVCm8J3fXiMRJpnz4UfNsPeLOkP1EZK9sez1dEX--y-VLxpPAaVB5zo1hzXliHeLl3l0VFwrWrVz7UCQpkzCY"
+    }
+   ],
+   "arrival": [
+    {
+     "airport": {
+      "id": "NRT",
+      "name": "Narita International Airport"
+     },
+     "city": "Tokyo",
+     "country": "Japan",
+     "country_code": "JP",
+     "image": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcTqHkzEeI2bSglPzmSGZL7bxXmn0wJgOn2ZtEN8I47uBnzY1CnHzGtD-YseJXqyexcAcw_uJp-D5HTkCg",
+     "thumbnail": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcRLnIToEgwiM_jV3cbw5eQZoUAIg6XqdrJAiClDyyg0w-JBSRN5ZeOT-iFb3SvwkwP1uoBCmT-gKE5VcyCYf-xq4guL4NAFICSaNyOnYOA"
+    },
+    {
+     "airport": {
+      "id": "HND",
+      "name": "Haneda Airport"
+     },
+     "city": "Tokyo",
+     "country": "Japan",
+     "country_code": "JP",
+     "image": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcTqHkzEeI2bSglPzmSGZL7bxXmn0wJgOn2ZtEN8I47uBnzY1CnHzGtD-YseJXqyexcAcw_uJp-D5HTkCg",
+     "thumbnail": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcRLnIToEgwiM_jV3cbw5eQZoUAIg6XqdrJAiClDyyg0w-JBSRN5ZeOT-iFb3SvwkwP1uoBCmT-gKE5VcyCYf-xq4guL4NAFICSaNyOnYOA"
+    }
+   ]
+  },
+  {
+   "departure": [
+    {
+     "airport": {
+      "id": "NRT",
+      "name": "Narita International Airport"
+     },
+     "city": "Tokyo",
+     "country": "Japan",
+     "country_code": "JP",
+     "image": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcTqHkzEeI2bSglPzmSGZL7bxXmn0wJgOn2ZtEN8I47uBnzY1CnHzGtD-YseJXqyexcAcw_uJp-D5HTkCg",
+     "thumbnail": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcRLnIToEgwiM_jV3cbw5eQZoUAIg6XqdrJAiClDyyg0w-JBSRN5ZeOT-iFb3SvwkwP1uoBCmT-gKE5VcyCYf-xq4guL4NAFICSaNyOnYOA"
+    },
+    {
+     "airport": {
+      "id": "HND",
+      "name": "Haneda Airport"
+     },
+     "city": "Tokyo",
+     "country": "Japan",
+     "country_code": "JP",
+     "image": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcTqHkzEeI2bSglPzmSGZL7bxXmn0wJgOn2ZtEN8I47uBnzY1CnHzGtD-YseJXqyexcAcw_uJp-D5HTkCg",
+     "thumbnail": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcRLnIToEgwiM_jV3cbw5eQZoUAIg6XqdrJAiClDyyg0w-JBSRN5ZeOT-iFb3SvwkwP1uoBCmT-gKE5VcyCYf-xq4guL4NAFICSaNyOnYOA"
+    }
+   ],
+   "arrival": [
+    {
+     "airport": {
+      "id": "LAX",
+      "name": "Los Angeles International Airport"
+     },
+     "city": "Los Angeles",
+     "country": "United States",
+     "country_code": "US",
+     "image": "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcTFuS2Y5_b7ZIl-g2Hm7jnG7zoi2uk0CQltF_DFbp6gIzfYznnOB6uJm9d6ePT5PJO5XM1j8vigwCNxRA",
+     "thumbnail": "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcT4B0K7etaN3KgEgtU5dJajdcmLtB5QSDRYr4KqcwH1iWxMm7TIqwtcUTTHD5AmNyeeFIpVpTnbSDeuD_HVlkYzOam-TO9w1worRSGRTUo"
+    },
+    {
+     "airport": {
+      "id": "SFO",
+      "name": "San Francisco International Airport"
+     },
+     "city": "San Francisco",
+     "country": "United States",
+     "country_code": "US",
+     "image": "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcQhLXJKshv7iRU8OcvmRyc3ZHyoSy8ZfBGcntDNb8iTixSq8i7XIcn9tZMPIcM6-rm7kKcu2VQS3BKoYw",
+     "thumbnail": "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcRbcxCKTUaj5vz8PrFeUUBVCm8J3fXiMRJpnz4UfNsPeLOkP1EZK9sez1dEX--y-VLxpPAaVB5zo1hzXliHeLl3l0VFwrWrVz7UCQpkzCY"
+    }
+   ]
+  }
+ ],
+ "best_flights": []
+}
