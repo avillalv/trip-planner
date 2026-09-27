@@ -81,6 +81,12 @@ the return date. While a flight is chosen, the trip's dates can only change by c
 another flight or clearing it (**Clear** under **Your flight**). Each check looks at the chosen
 dates first, so you can see whether that flight's price has gone up or down.
 
+Click any column heading in **Cheapest options** to sort by it, and click again to reverse
+the order. **Nights** and **Per night** (the price divided by the nights you'd stay) show
+whether a cheap fare only looks cheap because the trip is short. Narrow the list by nights,
+departure and return dates, stops, or airline. **Cheapest by trip length** shows the lowest
+price for each number of nights; pick one to show only flights of that length.
+
 ## Plan each day
 
 A trip's **Itinerary** page shows a card per day: its city, and its first and last plans.
