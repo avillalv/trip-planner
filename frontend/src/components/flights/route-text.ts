@@ -44,3 +44,9 @@ export function quoteDates(quote: Pick<Quote, 'depart_date' | 'return_date'>): s
   const nights = daysBetween(parseDate(quote.depart_date), parseDate(quote.return_date))
   return `${formatShortDate(quote.depart_date)} → ${formatShortDate(quote.return_date)} · ${nights} night${nights === 1 ? '' : 's'}`
 }
+
+/** "Nov 22 → Dec 4", or "Nov 22 · one way" when there's no return. */
+export function quoteDateRange(quote: Pick<Quote, 'depart_date' | 'return_date'>): string {
+  if (!quote.return_date) return `${formatShortDate(quote.depart_date)} · one way`
+  return `${formatShortDate(quote.depart_date)} → ${formatShortDate(quote.return_date)}`
+}

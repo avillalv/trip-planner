@@ -38,7 +38,16 @@ export function useBestOptions(tripId: number, routeId?: number) {
     queryFn: async (): Promise<Quote[]> =>
       unwrap(
         await api.GET('/api/v1/trips/{trip_id}/flights/best', {
-          params: { path: { trip_id: tripId }, query: { route_id: routeId, limit: 60 } },
+          params: {
+            path: { trip_id: tripId },
+            query: {
+              route_id: routeId,
+              // shortcut: the table sorts and filters in the browser, so it asks for the API's maximum
+              // (300); options beyond the 300 cheapest never show. Upgrade when routes produce more than
+              // 300 options a week: filter on the server.
+              limit: 300,
+            },
+          },
         }),
       ),
     placeholderData: keepPreviousData,
