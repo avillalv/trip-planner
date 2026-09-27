@@ -3,7 +3,8 @@ import path from 'node:path'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 
 // The main flow, end to end: create a trip, track a route (prices come from fixtures, not the
-// web), plan a day and move a plan on the calendar, save a place to stay, and present it all.
+// web) and choose a flight, plan a day and move a plan on the calendar, save a place to stay, and
+// present it all.
 
 const backend = path.resolve(import.meta.dirname, '../../backend')
 
@@ -67,6 +68,17 @@ test('plan a trip, from creating it to presenting it', async ({ page }) => {
     execFileSync('uv', ['run', '--no-sync', 'python', '-m', 'tests.e2e_seed', 'fares'], { cwd: backend })
     await page.reload()
     await expect(page.getByText('$1,248').first()).toBeVisible()
+  })
+
+  await test.step('choose a flight, and the trip takes its dates', async () => {
+    const before = await page.getByRole('heading', { level: 1, name: trip }).locator('xpath=following-sibling::p[1]').innerText()
+    await page.getByRole('row', { name: /\$1,248/ }).getByRole('button', { name: /^Choose/ }).click()
+    const dialog = page.getByRole('alertdialog', { name: 'Use this flight for the trip?' })
+    await dialog.getByRole('button', { name: 'Use this flight' }).click()
+    await expect(page.getByText(/^The trip is now /)).toBeVisible()
+    await expect(page.getByText('Your flight', { exact: true }).first()).toBeVisible()
+    const after = await page.getByRole('heading', { level: 1, name: trip }).locator('xpath=following-sibling::p[1]').innerText()
+    expect(after).not.toBe(before)
   })
 
   await test.step('plan the first day and move a plan on the calendar', async () => {
