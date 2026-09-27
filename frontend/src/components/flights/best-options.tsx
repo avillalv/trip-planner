@@ -216,7 +216,8 @@ export function BestOptions({ quotes, currency, onHide, chosen, onChoose, dimmed
           </ul>
 
           {/* Wider screens: a table. */}
-          <div className="mt-3 hidden overflow-x-auto rounded-xl border bg-card md:block">
+          {/* relative: keeps the sr-only header text inside this scroll box, not past the page's edge. */}
+          <div className="relative mt-3 hidden overflow-x-auto rounded-xl border bg-card md:block">
             <table className="w-full text-sm">
               <caption className="sr-only">{captionFor(sort)}</caption>
               <thead>

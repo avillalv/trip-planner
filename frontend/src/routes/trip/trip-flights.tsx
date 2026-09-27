@@ -102,7 +102,7 @@ function Trends({
         )}
       </div>
       <div className="grid gap-4 xl:grid-cols-2">
-        <div className="rounded-xl border bg-card p-4">
+        <div className="min-w-0 rounded-xl border bg-card p-4">
           <h4 className="mb-3 text-sm font-semibold">Cheapest price each day</h4>
           {history.data ? (
             <PriceHistoryChart history={history.data} dimmed={history.isPlaceholderData} />
@@ -110,7 +110,7 @@ function Trends({
             <Skeleton className="h-64" />
           )}
         </div>
-        <div className="rounded-xl border bg-card p-4">
+        <div className="min-w-0 rounded-xl border bg-card p-4">
           <h4 className="mb-3 text-sm font-semibold">Best price by date (last 7 days)</h4>
           {grid.data ? (
             <DateGrid
