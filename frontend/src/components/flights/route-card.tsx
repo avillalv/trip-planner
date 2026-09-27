@@ -7,9 +7,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import type { FlightRoute, RouteSummary } from '@/lib/api/flights'
+import { flightKey, type FlightRoute, type Quote, type RouteSummary } from '@/lib/api/flights'
 import { timeAgo } from '@/lib/format'
 import { formatMoney } from '@/lib/money'
+import { cn } from '@/lib/utils'
 import { quoteDates, routeDescription, stopsText } from './route-text'
 import { SourceTag } from './source-tag'
 
@@ -21,10 +22,66 @@ type Props = {
   onCheck: () => void
   onToggleActive: () => void
   onDelete: () => void
+  onClearChoice: () => void
 }
 
-export function RouteCard({ route, summary, currency, onEdit, onCheck, onToggleActive, onDelete }: Props) {
+const total = (q: Quote) => Number(q.price_home ?? q.price_total)
+
+/** The flight picked for the trip, at its latest price, and how that moved since it was chosen. */
+function ChosenFlight({
+  latest,
+  then,
+  cheapest,
+  currency,
+  onClear,
+}: {
+  latest: Quote
+  then: Quote
+  cheapest: Quote | null
+  currency: string
+  onClear: () => void
+}) {
+  const change = total(latest) - total(then)
+  return (
+    <div>
+      <p className="flex items-center gap-2">
+        <span className="type-label text-brand">Your flight</span>
+        <Button variant="link" size="xs" className="h-auto px-0 text-ink-soft" onClick={onClear}>
+          Clear
+        </Button>
+      </p>
+      <p className="mt-1 text-3xl font-bold tracking-tight">{formatMoney(total(latest), latest.home_currency || currency)}</p>
+      {Math.abs(change) >= 1 && (
+        <p className={cn('text-sm font-semibold', change < 0 ? 'text-success' : 'text-warning')}>
+          {change < 0 ? 'Down' : 'Up'} {formatMoney(Math.abs(change), currency)} since you chose it
+        </p>
+      )}
+      <p className="mt-1 text-sm text-ink-soft">
+        {formatMoney(total(latest) / latest.passengers, currency)} per person · {quoteDates(latest)}
+      </p>
+      <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-ink-soft">
+        <span>{latest.airlines.join(', ') || 'Airline unknown'}</span>·<span>{stopsText(latest.stops_out)}</span>·
+        <SourceTag source={latest.source} />
+        <span>· {timeAgo(latest.observed_at)}</span>
+      </p>
+      {cheapest && flightKey(cheapest) !== flightKey(latest) && total(cheapest) < total(latest) && (
+        <p className="mt-2 text-sm text-ink-soft">
+          Cheapest on any dates:{' '}
+          <span className="type-data font-semibold text-foreground">
+            {formatMoney(total(cheapest), cheapest.home_currency || currency)}
+          </span>{' '}
+          · {quoteDates(cheapest)}
+        </p>
+      )}
+    </div>
+  )
+}
+
+export function RouteCard({ route, summary, currency, onEdit, onCheck, onToggleActive, onDelete, onClearChoice }: Props) {
   const cheapest = summary?.cheapest ?? null
+  const chosen = summary?.chosen ?? null
+  const latest = summary?.chosen_latest ?? chosen
+  const booking = (latest ?? cheapest)?.booking_url
   const perPerson = cheapest ? Number(cheapest.price_home ?? cheapest.price_total) / cheapest.passengers : null
   return (
     <article className="flex flex-col rounded-xl border bg-card p-5" aria-label={`Route ${route.origin_codes.join(', ')} to ${route.destination_codes.join(', ')}`}>
@@ -50,6 +107,7 @@ export function RouteCard({ route, summary, currency, onEdit, onCheck, onToggleA
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={onEdit}>Edit route</DropdownMenuItem>
             <DropdownMenuItem onSelect={onToggleActive}>{route.active ? 'Pause checks' : 'Resume checks'}</DropdownMenuItem>
+            {chosen && <DropdownMenuItem onSelect={onClearChoice}>Clear your flight</DropdownMenuItem>}
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onSelect={onDelete}>
               Delete route
@@ -59,7 +117,9 @@ export function RouteCard({ route, summary, currency, onEdit, onCheck, onToggleA
       </div>
 
       <div className="mt-5 flex flex-wrap items-end justify-between gap-3">
-        {cheapest ? (
+        {chosen && latest ? (
+          <ChosenFlight latest={latest} then={chosen} cheapest={cheapest} currency={currency} onClear={onClearChoice} />
+        ) : cheapest ? (
           <div>
             <p className="type-label text-ink-soft">Cheapest now</p>
             <p className="mt-1 text-3xl font-bold tracking-tight">
@@ -79,9 +139,9 @@ export function RouteCard({ route, summary, currency, onEdit, onCheck, onToggleA
             {route.active ? 'No prices yet. The first check runs right after you add a route.' : 'Checks are paused.'}
           </p>
         )}
-        {cheapest?.booking_url && (
+        {booking && (
           <Button asChild variant="outline" size="sm">
-            <a href={cheapest.booking_url} target="_blank" rel="noreferrer">
+            <a href={booking} target="_blank" rel="noreferrer">
               View flights
               <ExternalLink aria-hidden="true" />
             </a>

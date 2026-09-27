@@ -126,6 +126,7 @@ function AtAGlance({ trip, now }: { trip: Trip; now: Date }) {
           <dd className="type-data mt-0.5">
             {dated ? formatDateRange(trip.start_date!, trip.end_date!) : 'Not decided yet'}
           </dd>
+          {trip.flight_dates && <dd className="mt-0.5 text-xs text-ink-soft">Set by your flight</dd>}
         </div>
         {dated && (
           <div>

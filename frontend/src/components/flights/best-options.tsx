@@ -1,13 +1,21 @@
-import { EyeOff, ExternalLink, TriangleAlert } from 'lucide-react'
+import { Check, EyeOff, ExternalLink, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { Quote } from '@/lib/api/flights'
+import { flightKey, type Quote } from '@/lib/api/flights'
 import { timeAgo } from '@/lib/format'
 import { formatDuration, formatMoney } from '@/lib/money'
 import { cn } from '@/lib/utils'
 import { quoteDates, stopsText } from './route-text'
 import { SourceTag } from './source-tag'
 
-type Props = { quotes: Quote[]; currency: string; onHide: (quote: Quote) => void; dimmed?: boolean }
+type Props = {
+  quotes: Quote[]
+  currency: string
+  onHide: (quote: Quote) => void
+  /** Flights chosen for the trip (see flightKey), marked instead of offering Choose. */
+  chosen?: Set<string>
+  onChoose?: (quote: Quote) => void
+  dimmed?: boolean
+}
 
 function Price({ quote, currency }: { quote: Quote; currency: string }) {
   const total = quote.price_home ?? quote.price_total
@@ -31,8 +39,32 @@ function SuspectNote() {
   )
 }
 
+function YourFlight() {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-brand">
+      <Check className="size-3" aria-hidden="true" />
+      Your flight
+    </span>
+  )
+}
+
+function ChooseButton({ quote, onChoose }: { quote: Quote; onChoose: (quote: Quote) => void }) {
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      title="Use this flight's dates for the trip"
+      aria-label={`Choose the ${quoteDates(quote)} flight`}
+      onClick={() => onChoose(quote)}
+    >
+      Choose
+    </Button>
+  )
+}
+
 /** Latest price per itinerary, cheapest first. Doubles as the table view for the charts. */
-export function BestOptions({ quotes, currency, onHide, dimmed }: Props) {
+export function BestOptions({ quotes, currency, onHide, chosen, onChoose, dimmed }: Props) {
+  const isChosen = (q: Quote) => chosen?.has(flightKey(q)) ?? false
   if (quotes.length === 0) {
     return <p className="rounded-xl border border-dashed p-6 text-center text-ink-soft">No prices in the last 7 days yet.</p>
   }
@@ -41,7 +73,7 @@ export function BestOptions({ quotes, currency, onHide, dimmed }: Props) {
       {/* Phones: a list. */}
       <ul className="divide-y rounded-xl border bg-card md:hidden">
         {quotes.map((q) => (
-          <li key={q.id} className="flex items-start justify-between gap-3 p-4">
+          <li key={q.id} className={cn('flex items-start justify-between gap-3 p-4', isChosen(q) && 'bg-brand-soft/40')}>
             <div className="min-w-0 space-y-0.5">
               <p className="type-code text-sm">
                 {q.origin} → {q.destination}
@@ -53,8 +85,9 @@ export function BestOptions({ quotes, currency, onHide, dimmed }: Props) {
               <SourceTag source={q.source} />
               {q.suspect && <SuspectNote />}
             </div>
-            <div className="shrink-0 text-right">
+            <div className="flex shrink-0 flex-col items-end gap-1 text-right">
               <Price quote={q} currency={currency} />
+              {isChosen(q) ? <YourFlight /> : onChoose && <ChooseButton quote={q} onChoose={onChoose} />}
               {q.booking_url && (
                 <a href={q.booking_url} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-brand">
                   View <ExternalLink className="size-3" aria-hidden="true" />
@@ -84,7 +117,7 @@ export function BestOptions({ quotes, currency, onHide, dimmed }: Props) {
           </thead>
           <tbody className="divide-y">
             {quotes.map((q) => (
-              <tr key={q.id} className="align-top hover:bg-accent/40">
+              <tr key={q.id} className={cn('align-top hover:bg-accent/40', isChosen(q) && 'bg-brand-soft/40')}>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <Price quote={q} currency={currency} />
                 </td>
@@ -102,6 +135,17 @@ export function BestOptions({ quotes, currency, onHide, dimmed }: Props) {
                 <td className="px-3 py-3 whitespace-nowrap"><SourceTag source={q.source} /></td>
                 <td className="px-3 py-3 whitespace-nowrap text-ink-soft">{timeAgo(q.observed_at)}</td>
                 <td className="px-3 py-2 whitespace-nowrap text-right">
+                  {isChosen(q) ? (
+                    <span className="mr-1 align-middle">
+                      <YourFlight />
+                    </span>
+                  ) : (
+                    onChoose && (
+                      <span className="mr-1">
+                        <ChooseButton quote={q} onChoose={onChoose} />
+                      </span>
+                    )
+                  )}
                   {q.booking_url && (
                     <Button asChild variant="ghost" size="icon-sm" aria-label="View these flights">
                       <a href={q.booking_url} target="_blank" rel="noreferrer">

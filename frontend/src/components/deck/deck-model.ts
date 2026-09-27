@@ -87,7 +87,8 @@ export function exchangeText(home: string, local: string, rate: number): string 
 export type ClosingFacts = {
   plans: number
   ideas: number
-  cheapestFare: { perPerson: number; currency: string; route: string } | null
+  /** The chosen flight when there is one, else the cheapest fare. */
+  fare: { perPerson: number; currency: string; route: string; chosen: boolean } | null
   booked: Lodging | null
   shortlisted: number
   /** Whether those are a shortlist, not just every option still considered. */
@@ -95,20 +96,19 @@ export type ClosingFacts = {
 }
 
 export function closingFacts(deck: Presentation): ClosingFacts {
-  let cheapestFare: ClosingFacts['cheapestFare'] = null
-  for (const { route, options } of deck.routes) {
-    const best = options[0]
+  let fare: ClosingFacts['fare'] = null
+  for (const { route, options, chosen } of deck.routes) {
+    const best = chosen ?? options[0]
     if (!best) continue
     const { amount, currency } = farePrice(best)
-    const perPerson = amount / Math.max(1, best.passengers)
-    if (cheapestFare === null || (currency === cheapestFare.currency && perPerson < cheapestFare.perPerson)) {
-      cheapestFare = { perPerson, currency, route: routeTitle(route) }
-    }
+    const next = { perPerson: amount / Math.max(1, best.passengers), currency, route: routeTitle(route), chosen: Boolean(chosen) }
+    const cheaper = next.chosen === fare?.chosen && currency === fare.currency && next.perPerson < fare.perPerson
+    if (fare === null || (next.chosen && !fare.chosen) || cheaper) fare = next
   }
   return {
     plans: deck.days.reduce((sum, day) => sum + day.activities.length, 0),
     ideas: deck.idea_count,
-    cheapestFare,
+    fare,
     booked: deck.lodging.find((o) => o.status === 'booked') ?? null,
     shortlisted: deck.lodging.length,
     onShortlist: deck.lodging.some((o) => o.status === 'shortlisted' || o.favorite),

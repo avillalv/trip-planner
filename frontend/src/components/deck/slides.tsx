@@ -145,8 +145,10 @@ function stops(quote: DeckRoute['options'][number]): string {
 }
 
 function FlightsSlide({ deck, slide, index, total }: PageProps<'flights'>) {
-  const { route, options, trend, typical_low, typical_high, price_level } = slide.route
-  const [best, ...others] = options
+  const { route, options, trend, typical_low, typical_high, price_level, chosen } = slide.route
+  // The chosen flight leads; without one, the cheapest fare does.
+  const best = chosen ?? options[0]
+  const others = chosen ? options.slice(0, 2) : options.slice(1)
   const fare = farePrice(best)
   const home = deck.trip.home_currency
   const typical = typical_low !== null && typical_high !== null ? { low: Number(typical_low), high: Number(typical_high) } : null
@@ -168,7 +170,9 @@ function FlightsSlide({ deck, slide, index, total }: PageProps<'flights'>) {
 
       <div className="mt-[4cqmin] grid min-h-0 flex-1 grid-cols-[1fr_1.15fr] items-center gap-[5cqmin] slide-tall:flex-none slide-tall:grid-cols-1">
         <div className="flex min-w-0 flex-col gap-[1.4cqmin]">
-          <p className="deck-label text-ink-soft">Best fare right now</p>
+          <p className={cn('deck-label', chosen ? 'text-brand' : 'text-ink-soft')}>
+            {chosen ? 'Our flight' : 'Best fare right now'}
+          </p>
           <p className="deck-figure">{formatMoney(fare.amount, fare.currency)}</p>
           <p className="deck-body">
             <span className="type-data">{formatMoney(fare.amount / Math.max(1, best.passengers), fare.currency)}</span> per
@@ -182,7 +186,10 @@ function FlightsSlide({ deck, slide, index, total }: PageProps<'flights'>) {
             {seriesFor(best.source).label} · checked {timeAgo(best.observed_at)}
           </p>
           {others.length > 0 && (
-            <ul className="mt-[2cqmin] space-y-[1.2cqmin] border-t pt-[2cqmin]">
+            <ul
+              aria-label={chosen ? 'Other fares' : 'More fares'}
+              className="mt-[2cqmin] space-y-[1.2cqmin] border-t pt-[2cqmin]"
+            >
               {others.map((quote) => {
                 const price = farePrice(quote)
                 return (
@@ -489,10 +496,10 @@ function ClosingSlide({ deck }: { deck: Presentation }) {
       value: `${facts.plans} ${facts.plans === 1 ? 'plan' : 'plans'}`,
       note: facts.ideas ? `and ${facts.ideas} ${facts.ideas === 1 ? 'idea' : 'ideas'} for later` : null,
     },
-    facts.cheapestFare && {
-      label: 'Flights from',
-      value: formatMoney(facts.cheapestFare.perPerson, facts.cheapestFare.currency),
-      note: `per person, ${facts.cheapestFare.route}`,
+    facts.fare && {
+      label: facts.fare.chosen ? 'Our flight' : 'Flights from',
+      value: formatMoney(facts.fare.perPerson, facts.fare.currency),
+      note: `per person, ${facts.fare.route}`,
     },
     facts.booked
       ? { label: 'Staying at', value: facts.booked.title, note: 'Booked' }

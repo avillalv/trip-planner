@@ -1,6 +1,8 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, unwrap } from './client'
+import { itineraryKey } from './itinerary'
 import type { components } from './schema'
+import { tripKey, tripsKey, type Trip } from './trips'
 
 export type FlightRoute = components['schemas']['RouteOut']
 export type RouteInput = components['schemas']['RouteIn']
@@ -188,5 +190,49 @@ export function useSerpApiUsage() {
     queryKey: ['serpapi-usage'],
     queryFn: async (): Promise<SerpApiUsage> => unwrap(await api.GET('/api/v1/usage/serpapi')),
     refetchInterval: 60_000,
+  })
+}
+
+/** Identifies a flight across price checks: same route, source, airports, dates, airlines, and stops. */
+export function flightKey(q: Pick<Quote, 'route_id' | 'source' | 'origin' | 'destination' | 'depart_date' | 'return_date' | 'airlines' | 'stops_out'>): string {
+  return [q.route_id, q.source, q.origin, q.destination, q.depart_date, q.return_date ?? '', q.airlines.join('+'), q.stops_out ?? ''].join('|')
+}
+
+// Choosing a flight moves the trip's dates, so the trip, its days, and its deck all refresh.
+function useAfterChoice() {
+  const queryClient = useQueryClient()
+  return (trip: Trip) => {
+    queryClient.setQueryData(tripKey(trip.id), trip)
+    return Promise.all([
+      queryClient.invalidateQueries({ queryKey: tripsKey }),
+      queryClient.invalidateQueries({ queryKey: flightsKey(trip.id) }),
+      queryClient.invalidateQueries({ queryKey: itineraryKey(trip.id) }),
+      queryClient.invalidateQueries({ queryKey: ['presentation', trip.id] }),
+    ])
+  }
+}
+
+/** Make a fare the trip's flight: the trip's dates move to its departure and return. */
+export function useChooseFlight() {
+  const after = useAfterChoice()
+  return useMutation({
+    mutationFn: async ({ routeId, quoteId }: { routeId: number; quoteId: number }): Promise<Trip> =>
+      unwrap(
+        await api.PUT('/api/v1/routes/{route_id}/choice', {
+          params: { path: { route_id: routeId } },
+          body: { quote_id: quoteId },
+        }),
+      ),
+    onSuccess: after,
+  })
+}
+
+/** Stop using a route's flight for the dates; they stay as they are and become editable. */
+export function useClearFlight() {
+  const after = useAfterChoice()
+  return useMutation({
+    mutationFn: async (routeId: number): Promise<Trip> =>
+      unwrap(await api.DELETE('/api/v1/routes/{route_id}/choice', { params: { path: { route_id: routeId } } })),
+    onSuccess: after,
   })
 }

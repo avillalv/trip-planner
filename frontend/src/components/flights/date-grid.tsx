@@ -45,8 +45,21 @@ function columnsFor(route: FlightRoute): Column[] {
   }))
 }
 
-/** Cheapest recent price for each departure × trip length. Every value is printed, so this is also a table. */
-export function DateGrid({ route, cells, currency }: { route: FlightRoute; cells: DateGridCell[]; currency: string }) {
+type Props = {
+  route: FlightRoute
+  cells: DateGridCell[]
+  currency: string
+  /** The dates of the flight chosen for the trip, outlined. */
+  chosen?: { depart_date: string; return_date: string | null } | null
+  /** Choosing a cell makes its fare the trip's flight. */
+  onChoose?: (cell: DateGridCell) => void
+}
+
+/**
+ * Cheapest recent price for each departure × trip length. Every value is printed, so this is also a
+ * table; each price is a button that makes its fare the trip's flight.
+ */
+export function DateGrid({ route, cells, currency, chosen = null, onChoose }: Props) {
   const today = toISODate(new Date())
   const departures = datesBetween(route.depart_from > today ? route.depart_from : today, route.depart_to)
   const columns = columnsFor(route)
@@ -92,21 +105,33 @@ export function DateGrid({ route, cells, currency }: { route: FlightRoute; cells
                   const price = Number(cell.price)
                   const step = priceStep(price, prices)
                   const isCheapest = price === cheapest
+                  const isChosen = chosen !== null && chosen.depart_date === depart && (chosen.return_date ?? null) === ret
                   const nights = ret ? daysBetween(parseDate(depart), parseDate(ret)) : null
                   const description = `${formatShortDate(depart)}${ret ? ` to ${formatShortDate(ret)} (${nights} nights)` : ''}: ${formatMoney(price, currency)} from ${seriesFor(cell.source).label}, ${timeAgo(cell.observed_at)}`
-                  return (
-                    <td
-                      key={column.key}
-                      tabIndex={0}
-                      title={description}
-                      aria-label={isCheapest ? `Cheapest. ${description}` : description}
-                      className={cn(
-                        'type-data h-8 min-w-16 rounded-sm px-2 text-center font-semibold outline-offset-1 focus-visible:outline-2 focus-visible:outline-ring',
-                        isCheapest && 'ring-2 ring-foreground ring-inset',
-                      )}
-                      style={{ backgroundColor: `var(--heat-${step})`, color: `var(--heat-ink-${step})` }}
-                    >
-                      {formatMoney(price, currency, price >= 10_000)}
+                  const label = `${isChosen ? 'Your flight. ' : isCheapest ? 'Cheapest. ' : ''}${description}`
+                  const look = cn(
+                    'type-data h-8 w-full min-w-16 rounded-sm px-2 text-center font-semibold outline-offset-1 focus-visible:outline-2 focus-visible:outline-ring',
+                    isCheapest && 'ring-2 ring-foreground ring-inset',
+                    isChosen && 'ring-3 ring-brand ring-inset',
+                  )
+                  const heat = { backgroundColor: `var(--heat-${step})`, color: `var(--heat-ink-${step})` }
+                  const text = formatMoney(price, currency, price >= 10_000)
+                  return onChoose ? (
+                    <td key={column.key} className="p-0">
+                      <button
+                        type="button"
+                        title={`${description}. Choose these dates for the trip.`}
+                        aria-label={`${label}. Choose these dates for the trip.`}
+                        onClick={() => onChoose(cell)}
+                        className={cn(look, 'cursor-pointer hover:brightness-95')}
+                        style={heat}
+                      >
+                        {text}
+                      </button>
+                    </td>
+                  ) : (
+                    <td key={column.key} tabIndex={0} title={description} aria-label={label} className={look} style={heat}>
+                      {text}
                     </td>
                   )
                 })}
@@ -127,6 +152,13 @@ export function DateGrid({ route, cells, currency }: { route: FlightRoute; cells
           <span className="inline-block h-3 w-5 rounded-sm ring-2 ring-foreground ring-inset" aria-hidden="true" />
           Cheapest
         </span>
+        {chosen && (
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-3 w-5 rounded-sm ring-3 ring-brand ring-inset" aria-hidden="true" />
+            Your flight
+          </span>
+        )}
+        {onChoose && <span>Pick a price to use its dates for the trip.</span>}
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-3 w-5 rounded-sm bg-muted" aria-hidden="true" />
           Not checked yet

@@ -68,14 +68,14 @@ describe('closingFacts', () => {
     expect(closingFacts(presentation())).toEqual({
       plans: 1,
       ideas: 2,
-      cheapestFare: { perPerson: 624, currency: 'USD', route: 'LAX → HND, NRT' },
+      fare: { perPerson: 624, currency: 'USD', route: 'LAX → HND, NRT', chosen: false },
       booked: null,
       shortlisted: 1,
       onShortlist: true,
     })
     const booked = lodging({ status: 'booked', title: 'Garden machiya' })
     expect(closingFacts(presentation({ lodging: [booked], routes: [] }))).toMatchObject({
-      cheapestFare: null,
+      fare: null,
       booked: { title: 'Garden machiya' },
     })
   })

@@ -24,7 +24,7 @@ export type SearchKind =
   | 'nightlife'
   | 'shopping'
 
-const itineraryKey = (tripId: number) => ['itinerary', tripId] as const
+export const itineraryKey = (tripId: number) => ['itinerary', tripId] as const
 const daysKey = (tripId: number) => [...itineraryKey(tripId), 'days'] as const
 const activitiesKey = (tripId: number) => [...itineraryKey(tripId), 'activities'] as const
 

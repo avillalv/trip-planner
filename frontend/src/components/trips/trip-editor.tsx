@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import {
   AlertDialog,
@@ -67,6 +67,8 @@ function TripEditorForm({ trip, onDone }: { trip?: Trip; onDone: () => void }) {
   )
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  // A chosen flight fixes the trip's dates (the end too, unless it's a single one-way flight).
+  const fromFlight = trip?.flight_dates ?? null
 
   const update = (patch: Partial<TripInput>) => setDraft((d) => ({ ...d, ...patch }))
 
@@ -127,7 +129,7 @@ function TripEditorForm({ trip, onDone }: { trip?: Trip; onDone: () => void }) {
           />
         </Field>
 
-        <Field label="Dates" hint="Leave both empty if you haven't picked dates yet.">
+        <Field label="Dates" hint={fromFlight ? undefined : "Leave both empty if you haven't picked dates yet."}>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label htmlFor="trip-start" className="text-xs text-ink-soft">
@@ -136,6 +138,7 @@ function TripEditorForm({ trip, onDone }: { trip?: Trip; onDone: () => void }) {
               <Input
                 id="trip-start"
                 type="date"
+                disabled={fromFlight !== null}
                 value={draft.start_date ?? ''}
                 onChange={(e) => {
                   const start = e.target.value || null
@@ -150,12 +153,26 @@ function TripEditorForm({ trip, onDone }: { trip?: Trip; onDone: () => void }) {
               <Input
                 id="trip-end"
                 type="date"
+                disabled={fromFlight?.end != null}
                 value={draft.end_date ?? ''}
                 min={draft.start_date ?? undefined}
                 onChange={(e) => update({ end_date: e.target.value || null })}
               />
             </div>
           </div>
+          {fromFlight && trip && (
+            <p className="text-xs text-ink-soft">
+              Set by your flight (
+              {fromFlight.flights
+                .map((f) => `${f.origin} → ${f.destination}${f.airlines.length ? `, ${f.airlines.join(', ')}` : ''}`)
+                .join('; ')}
+              ). To change {fromFlight.end ? 'them' : 'the start'}, choose another flight on the{' '}
+              <Link to={`/trips/${trip.id}/flights`} onClick={onDone} className="font-semibold text-brand underline-offset-2 hover:underline">
+                Flights page
+              </Link>
+              , or clear it there.
+            </p>
+          )}
         </Field>
 
         <Field label="Who's going?">
