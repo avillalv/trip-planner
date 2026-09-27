@@ -8,6 +8,7 @@ from tripplanner.models import FlightQuote, Trip
 from tripplanner.schemas.automation import RefreshRequest, RunOut
 from tripplanner.schemas.flights import (
     DateGridCell,
+    FlightChoiceIn,
     GoogleHistoryPoint,
     HistoryPoint,
     QuoteOut,
@@ -17,8 +18,10 @@ from tripplanner.schemas.flights import (
     RouteOut,
     RouteSummary,
 )
-from tripplanner.services import quotes
+from tripplanner.schemas.trips import TripOut
+from tripplanner.services import flight_choice, quotes
 from tripplanner.services import routes as route_service
+from tripplanner.services import trips as trip_service
 from tripplanner.services.routines import ensure_flight_routine
 from tripplanner.services.runs import enqueue
 
@@ -114,12 +117,16 @@ def route_summaries(trip_id: int, db: DbSession) -> list[RouteSummary]:
         last_checked, count = db.execute(
             select(func.max(FlightQuote.created_at), func.count()).where(FlightQuote.route_id == route.id)
         ).one()
+        chosen = route.chosen_quote
+        latest = quotes.latest_same_flight(db, chosen) if chosen else None
         summaries.append(
             RouteSummary(
                 route_id=route.id,
                 cheapest=QuoteOut.model_validate(cheapest[0]) if cheapest else None,
                 last_checked_at=last_checked,
                 quote_count=count,
+                chosen=QuoteOut.model_validate(chosen) if chosen else None,
+                chosen_latest=QuoteOut.model_validate(latest) if latest else None,
             )
         )
     return summaries
@@ -151,8 +158,27 @@ def date_grid(route_id: int, db: DbSession, max_age_days: int = Query(7, ge=1, l
     _route(db, route_id)
     rows = quotes.date_grid(db, route_id, timedelta(days=max_age_days))
     return [
-        DateGridCell(depart_date=d, return_date=r, price=p, source=s, observed_at=o) for d, r, p, s, o in rows
+        DateGridCell(quote_id=q, depart_date=d, return_date=r, price=p, source=s, observed_at=o)
+        for q, d, r, p, s, o in rows
     ]
+
+
+@router.put("/routes/{route_id}/choice", response_model=TripOut)
+def choose_flight(route_id: int, body: FlightChoiceIn, db: DbSession) -> TripOut:
+    """Make a fare the trip's flight: the trip's dates move to its departure and return."""
+    route = _route(db, route_id)
+    try:
+        trip = flight_choice.choose(db, route, body.quote_id, today=datetime.now(UTC).date())
+    except flight_choice.ChoiceError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    return trip_service.to_out(trip_service.get_trip(db, trip.id))
+
+
+@router.delete("/routes/{route_id}/choice", response_model=TripOut)
+def clear_flight(route_id: int, db: DbSession) -> TripOut:
+    """Stop using this route's flight for the trip's dates (they stay as they are, now editable)."""
+    trip = flight_choice.clear(db, _route(db, route_id))
+    return trip_service.to_out(trip_service.get_trip(db, trip.id))
 
 
 @router.patch("/flight-quotes/{quote_id}", response_model=QuoteOut)

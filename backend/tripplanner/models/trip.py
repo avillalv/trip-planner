@@ -42,6 +42,8 @@ class Trip(TimestampMixin, Base):
         back_populates="trip", order_by="TripDestination.position", cascade="all, delete-orphan"
     )
     travelers: Mapped[list[Person]] = relationship(secondary=trip_travelers, order_by=Person.id)
+    # Read-only here (routes are edited through their own API); a chosen flight sets the dates.
+    routes: Mapped[list["FlightRoute"]] = relationship(order_by="FlightRoute.id", viewonly=True)  # noqa: F821
 
 
 class TripDestination(Base):

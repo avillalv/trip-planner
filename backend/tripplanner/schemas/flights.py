@@ -90,6 +90,8 @@ class RouteOut(BaseModel):
     sources: list[RouteSource]
     alert_price: Decimal | None
     active: bool
+    # The flight picked for the trip (its dates are the trip's dates), if any.
+    chosen_quote_id: int | None
     created_at: datetime
     updated_at: datetime
 
@@ -150,6 +152,8 @@ class RouteHistory(BaseModel):
 
 
 class DateGridCell(BaseModel):
+    # The fare behind the price, so a cell can be chosen as the trip's flight.
+    quote_id: int
     depart_date: date
     return_date: date | None
     price: Decimal
@@ -164,3 +168,10 @@ class RouteSummary(BaseModel):
     cheapest: QuoteOut | None
     last_checked_at: datetime | None
     quote_count: int
+    # The flight picked for the trip, as it was when chosen, and its latest price.
+    chosen: QuoteOut | None = None
+    chosen_latest: QuoteOut | None = None
+
+
+class FlightChoiceIn(BaseModel):
+    quote_id: int

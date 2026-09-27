@@ -6,6 +6,7 @@ from tripplanner.schemas.trips import TripIn, TripOut
 from tripplanner.services import presentation as deck
 from tripplanner.services import trips as service
 from tripplanner.services.enrichment import enrich_destinations
+from tripplanner.services.flight_choice import DatesFromFlight
 
 router = APIRouter(prefix="/api/v1/trips", tags=["trips"])
 
@@ -52,7 +53,7 @@ def update_trip(trip_id: int, body: TripIn, db: DbSession, background: Backgroun
         trip, needs_info = service.update_trip(db, trip_id, body)
     except service.TripNotFound as exc:
         raise _not_found() from exc
-    except service.InvalidReference as exc:
+    except (service.InvalidReference, DatesFromFlight) as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
     background.add_task(enrich_destinations, needs_info)
     return service.to_out(trip)

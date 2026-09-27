@@ -16,7 +16,7 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from tripplanner.models.base import Base, TimestampMixin
 
@@ -68,6 +68,12 @@ class FlightRoute(TimestampMixin, Base):
     sources: Mapped[list[str]] = mapped_column(ARRAY(String(20)), server_default="{serpapi,travelpayouts}")
     alert_price: Mapped[Decimal | None] = mapped_column(Money)
     active: Mapped[bool] = mapped_column(Boolean, server_default="true")
+    # The flight picked for the trip: its departure and return become the trip's dates.
+    # (Quotes point back at their route, so this foreign key is added after both tables.)
+    chosen_quote_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("flight_quotes.id", ondelete="SET NULL", use_alter=True)
+    )
+    chosen_quote: Mapped["FlightQuote | None"] = relationship(foreign_keys=[chosen_quote_id], viewonly=True)
 
 
 class FlightQuote(Base):

@@ -3,9 +3,10 @@
 from sqlalchemy import case, select
 from sqlalchemy.orm import Session, selectinload
 
-from tripplanner.models import Person, Trip, TripDestination
+from tripplanner.models import FlightRoute, Person, Trip, TripDestination
 from tripplanner.schemas.people import PersonOut
 from tripplanner.schemas.trips import DestinationIn, DestinationOut, TripCover, TripIn, TripOut
+from tripplanner.services.flight_choice import check_dates, flight_dates
 
 # Fields copied straight from the request onto a destination.
 _LOCATION_FIELDS = ("name", "region", "country", "country_code", "kind", "lat", "lon", "timezone", "bbox")
@@ -20,7 +21,11 @@ class InvalidReference(ValueError):
 
 
 def _with_relations():
-    return select(Trip).options(selectinload(Trip.destinations), selectinload(Trip.travelers))
+    return select(Trip).options(
+        selectinload(Trip.destinations),
+        selectinload(Trip.travelers),
+        selectinload(Trip.routes).selectinload(FlightRoute.chosen_quote),
+    )
 
 
 def list_trips(db: Session) -> list[Trip]:
@@ -96,6 +101,7 @@ def create_trip(db: Session, data: TripIn) -> tuple[Trip, list[int]]:
 
 def update_trip(db: Session, trip_id: int, data: TripIn) -> tuple[Trip, list[int]]:
     trip = get_trip(db, trip_id)
+    check_dates(trip, data.start_date, data.end_date)
     needs_info = _apply(db, trip, data)
     db.commit()
     db.expire_all()
@@ -131,6 +137,7 @@ def to_out(trip: Trip) -> TripOut:
         destinations=[DestinationOut.model_validate(d) for d in trip.destinations],
         travelers=[PersonOut.model_validate(p) for p in trip.travelers],
         cover=cover,
+        flight_dates=flight_dates(trip.routes),
         created_at=trip.created_at,
         updated_at=trip.updated_at,
     )

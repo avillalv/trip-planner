@@ -1,8 +1,9 @@
 """Decide which date pairs get a live (paid-quota) search.
 
 A route's flexible window expands into many date pairs; only a few can be searched live each
-run. The planner keeps the current best pair under watch, then follows cheap cached fares,
-then spreads the rest of the budget across pairs that haven't been checked, oldest first.
+run. The planner keeps the trip's chosen flight and the current best pair under watch, then
+follows cheap cached fares, then spreads the rest across pairs that haven't been checked, oldest
+first.
 """
 
 from collections.abc import Iterable
@@ -53,6 +54,8 @@ class PlannerInput:
     cached_prices: dict[DatePair, Decimal]
     last_live_check: dict[DatePair, datetime]
     best_live_pair: DatePair | None
+    # The flight picked for the trip: watched first, even if the route's window has since moved.
+    chosen_pair: DatePair | None = None
 
 
 def pick_live_searches(plan: PlannerInput, allowance: int, now: datetime) -> list[DatePair]:
@@ -70,6 +73,8 @@ def pick_live_searches(plan: PlannerInput, allowance: int, now: datetime) -> lis
         checked = plan.last_live_check.get(pair)
         return checked is None or now - checked >= after
 
+    if plan.chosen_pair and allowance > 0 and stale(plan.chosen_pair, WATCH_BEST_EVERY):
+        picks.append(plan.chosen_pair)
     if plan.best_live_pair and stale(plan.best_live_pair, WATCH_BEST_EVERY):
         take([plan.best_live_pair])
     cheap_first = sorted(plan.cached_prices, key=lambda p: plan.cached_prices[p])

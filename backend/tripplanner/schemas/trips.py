@@ -83,6 +83,26 @@ class TripCover(BaseModel):
     destination_name: str
 
 
+class ChosenFlight(BaseModel):
+    route_id: int
+    origin: str
+    destination: str
+    depart_date: date
+    return_date: date | None
+    airlines: list[str]
+
+
+class FlightDates(BaseModel):
+    """The trip's dates when chosen flights set them: the first departure to the last return.
+
+    `end` is None when no chosen flight sets it (a single one-way flight); then only `start` is fixed.
+    """
+
+    start: date
+    end: date | None
+    flights: list[ChosenFlight]
+
+
 class TripOut(BaseModel):
     id: int
     name: str
@@ -94,5 +114,6 @@ class TripOut(BaseModel):
     destinations: list[DestinationOut]
     travelers: list[PersonOut]
     cover: TripCover | None
+    flight_dates: FlightDates | None = None
     created_at: datetime
     updated_at: datetime

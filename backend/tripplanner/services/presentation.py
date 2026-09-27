@@ -7,7 +7,7 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from tripplanner.models import Activity, Trip, TripDestination
+from tripplanner.models import Activity, FlightQuote, Trip, TripDestination
 from tripplanner.schemas.flights import QuoteOut, RouteOut
 from tripplanner.schemas.lodging import LodgingOut
 from tripplanner.schemas.presentation import (
@@ -50,20 +50,26 @@ def _destination(db: Session, destination: TripDestination, home_currency: str) 
     )
 
 
+def _flight(q: FlightQuote) -> tuple[object, ...]:
+    return (q.origin, q.destination, q.depart_date, q.return_date, tuple(q.airlines), q.stops_out)
+
+
 def _routes(db: Session, trip: Trip, now: datetime) -> list[DeckRoute]:
     """Routes with current fares: the cheapest few, and how the lowest price has moved."""
     deck = []
     for route in route_service.list_routes(db, trip.id):
+        chosen = route.chosen_quote
+        chosen_now = (quotes.latest_same_flight(db, chosen) or chosen) if chosen else None
         fares = []
-        seen: set[tuple[object, ...]] = set()
+        # The chosen flight is shown on its own, so it isn't repeated among the options.
+        seen: set[tuple[object, ...]] = {_flight(chosen_now)} if chosen_now else set()
         # Cheapest first, so each flight keeps its lowest price when several sources list it.
         for q in quotes.best_options(db, trip.id, route.id, limit=24, now=now):
-            flight = (q.origin, q.destination, q.depart_date, q.return_date, tuple(q.airlines), q.stops_out)
-            if q.suspect or flight in seen:
+            if q.suspect or _flight(q) in seen:
                 continue
-            seen.add(flight)
+            seen.add(_flight(q))
             fares.append(q)
-        if not fares:
+        if not fares and chosen_now is None:
             continue
         lows: dict[date, Decimal] = {}
         for day, _source, price in quotes.daily_lows(db, route.id, TREND_DAYS, now):
@@ -79,6 +85,7 @@ def _routes(db: Session, trip: Trip, now: datetime) -> list[DeckRoute]:
                 typical_low=insight.typical_low if comparable and insight else None,
                 typical_high=insight.typical_high if comparable and insight else None,
                 price_level=insight.price_level if insight else None,
+                chosen=QuoteOut.model_validate(chosen_now) if chosen_now else None,
             )
         )
     return deck

@@ -94,14 +94,16 @@ def test_best_options_keep_only_the_latest_price_per_itinerary(db_session: Sessi
 def test_date_grid_takes_the_cheapest_per_date_pair(db_session: Session) -> None:
     route = add_route(db_session, add_trip(db_session))
     add_quote(db_session, route, quote(1300), "USD")
-    add_quote(
+    cheap = add_quote(
         db_session, route, quote(1100, source="travelpayouts", confidence="cached", airlines=["MU"]), "USD"
     )
-    add_quote(db_session, route, quote(1250, depart=date(2026, 11, 6), ret=date(2026, 11, 13)), "USD")
+    later = add_quote(db_session, route, quote(1250, depart=date(2026, 11, 6), ret=date(2026, 11, 13)), "USD")
+    assert cheap is not None and later is not None
 
     cells = date_grid(db_session, route.id, now=NOW)
 
-    assert [(c[0], c[2], c[3]) for c in cells] == [
-        (date(2026, 11, 5), Decimal(1100), "travelpayouts"),
-        (date(2026, 11, 6), Decimal(1250), "serpapi"),
+    # Each cell names the fare it came from, so it can be chosen as the trip's flight.
+    assert [(c[0], c[1], c[3], c[4]) for c in cells] == [
+        (cheap.id, date(2026, 11, 5), Decimal(1100), "travelpayouts"),
+        (later.id, date(2026, 11, 6), Decimal(1250), "serpapi"),
     ]

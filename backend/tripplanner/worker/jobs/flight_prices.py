@@ -3,7 +3,7 @@
 import logging
 from collections import Counter
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import httpx
@@ -253,6 +253,13 @@ def live_search(ctx: JobContext, route: FlightRoute, pair: DatePair) -> bool:
     return True
 
 
+def _chosen_pair(route: FlightRoute, today: date) -> DatePair | None:
+    chosen = route.chosen_quote
+    if chosen is None or chosen.depart_date < today:
+        return None
+    return (chosen.depart_date, chosen.return_date)
+
+
 def run_flight_prices(ctx: JobContext) -> tuple[str, str]:
     """Returns (status, summary)."""
     requested = set(ctx.run.params.get("route_ids") or [])
@@ -301,6 +308,7 @@ def run_flight_prices(ctx: JobContext) -> tuple[str, str]:
             cached_prices=cached,
             last_live_check=last_live_checks(ctx.db, route.id),
             best_live_pair=best_live_pair(ctx.db, route.id, ctx.now),
+            chosen_pair=_chosen_pair(route, today),
         )
         for pair in pick_live_searches(plan, shares[route.id], ctx.now):
             ctx.check_cancel()

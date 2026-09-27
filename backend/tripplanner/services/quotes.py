@@ -220,11 +220,12 @@ def latest_insight(db: Session, route_id: int) -> RoutePriceInsight | None:
 
 def date_grid(
     db: Session, route_id: int, max_age: timedelta = timedelta(days=7), now: datetime | None = None
-) -> list[tuple[date, date | None, Decimal, str, datetime]]:
-    """Cheapest recent price for each (departure, return) pair."""
+) -> list[tuple[int, date, date | None, Decimal, str, datetime]]:
+    """Cheapest recent price for each (departure, return) pair, with the fare it came from."""
     now = now or datetime.now(UTC)
     ranked = (
         select(
+            FlightQuote.id,
             FlightQuote.depart_date,
             FlightQuote.return_date,
             _price().label("price"),
@@ -247,12 +248,37 @@ def date_grid(
     )
     stmt = (
         select(
-            ranked.c.depart_date, ranked.c.return_date, ranked.c.price, ranked.c.source, ranked.c.observed_at
+            ranked.c.id,
+            ranked.c.depart_date,
+            ranked.c.return_date,
+            ranked.c.price,
+            ranked.c.source,
+            ranked.c.observed_at,
         )
         .where(ranked.c.rank == 1)
         .order_by(ranked.c.depart_date, ranked.c.return_date)
     )
     return list(db.execute(stmt).all())
+
+
+def latest_same_flight(db: Session, quote: FlightQuote) -> FlightQuote | None:
+    """The newest price for the same flight: same source, airports, dates, airlines, and stops."""
+    return db.scalar(
+        select(FlightQuote)
+        .where(
+            FlightQuote.route_id == quote.route_id,
+            FlightQuote.source == quote.source,
+            FlightQuote.origin == quote.origin,
+            FlightQuote.destination == quote.destination,
+            FlightQuote.depart_date == quote.depart_date,
+            FlightQuote.return_date.is_not_distinct_from(quote.return_date),
+            FlightQuote.airlines == quote.airlines,
+            FlightQuote.stops_out.is_not_distinct_from(quote.stops_out),
+            FlightQuote.hidden.is_(False),
+        )
+        .order_by(FlightQuote.observed_at.desc(), FlightQuote.id.desc())
+        .limit(1)
+    )
 
 
 def last_live_checks(db: Session, route_id: int) -> dict[tuple[date, date | None], datetime]:

@@ -31,6 +31,8 @@ class DeckRoute(BaseModel):
     typical_low: Decimal | None
     typical_high: Decimal | None
     price_level: str | None
+    # The flight picked for the trip, at its latest price (not repeated in `options`).
+    chosen: QuoteOut | None = None
 
 
 class DeckActivity(BaseModel):
