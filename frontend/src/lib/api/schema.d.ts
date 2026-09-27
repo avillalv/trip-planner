@@ -1034,7 +1034,7 @@ export interface components {
         };
         /**
          * AccessInfo
-         * @description Whether other devices on the home network can open the app, and at which addresses.
+         * @description Whether other devices can open the app, and at which addresses.
          */
         AccessInfo: {
             /** Other Devices */
@@ -1045,6 +1045,8 @@ export interface components {
             port: number;
             /** Urls */
             urls: string[];
+            /** Tailscale Urls */
+            tailscale_urls: string[];
         };
         /** ActivityBrief */
         ActivityBrief: {

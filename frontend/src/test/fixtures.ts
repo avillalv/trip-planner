@@ -10,7 +10,7 @@ export function systemStatus(overrides: Partial<SystemStatus> = {}): SystemStatu
     worker: { status: 'ok', last_seen: new Date().toISOString() },
     claude: { found: true, path: 'claude', version: '2.1.283', signed_in: true, auth_method: 'claude.ai' },
     integrations: { geoapify: true, serpapi: false, travelpayouts: false, wikimedia: false, agent_api: true },
-    access: { other_devices: false, passcode_configured: true, port: 8000, urls: [] },
+    access: { other_devices: false, passcode_configured: true, port: 8000, urls: [], tailscale_urls: [] },
     backups: { directory: 'C:\\trip-planner\\data\\backups', count: 0, last_at: null, last_size: null, error: null },
     ...overrides,
   }

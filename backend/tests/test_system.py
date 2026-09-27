@@ -87,6 +87,7 @@ def test_system_status_reports_key_presence_without_values(
         "passcode_configured": True,
         "port": 8000,
         "urls": [],
+        "tailscale_urls": [],
     }
     assert "geo-secret" not in response.text
 
@@ -105,7 +106,21 @@ def test_system_status_lists_phone_urls_when_open_to_the_network(
         "passcode_configured": True,
         "port": 8123,
         "urls": ["http://192.168.1.23:8123"],
+        "tailscale_urls": [],
     }
+
+
+def test_system_status_lists_the_tailscale_link(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, use_settings
+) -> None:
+    # `npm run share` adds this PC's Tailscale name to ALLOWED_HOSTS; the app itself stays on 127.0.0.1.
+    use_settings(allowed_hosts="tonys-pc.tail1234.ts.net, mypc.lan")
+    monkeypatch.setattr(system_api, "claude_cli_status", lambda _s, fresh=False: ClaudeCliStatus(found=False))
+
+    access = client.get("/api/v1/system/status").json()["access"]
+
+    assert access["other_devices"] is False
+    assert access["tailscale_urls"] == ["https://tonys-pc.tail1234.ts.net"]
 
 
 def test_claude_sign_in_is_read_from_the_cli(monkeypatch: pytest.MonkeyPatch) -> None:

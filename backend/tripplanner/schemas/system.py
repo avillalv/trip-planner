@@ -36,12 +36,14 @@ class IntegrationStatus(BaseModel):
 
 
 class AccessInfo(BaseModel):
-    """Whether other devices on the home network can open the app, and at which addresses."""
+    """Whether other devices can open the app, and at which addresses."""
 
     other_devices: bool
     passcode_configured: bool
     port: int
     urls: list[str]
+    # Links that work from anywhere through `tailscale serve` (see `npm run share`).
+    tailscale_urls: list[str]
 
 
 class BackupStatus(BaseModel):

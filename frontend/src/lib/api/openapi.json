@@ -3408,6 +3408,13 @@
             },
             "type": "array",
             "title": "Urls"
+          },
+          "tailscale_urls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tailscale Urls"
           }
         },
         "type": "object",
@@ -3415,10 +3422,11 @@
           "other_devices",
           "passcode_configured",
           "port",
-          "urls"
+          "urls",
+          "tailscale_urls"
         ],
         "title": "AccessInfo",
-        "description": "Whether other devices on the home network can open the app, and at which addresses."
+        "description": "Whether other devices can open the app, and at which addresses."
       },
       "ActivityBrief": {
         "properties": {

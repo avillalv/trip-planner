@@ -164,27 +164,54 @@ function CopyableCode({ text }: { text: string }) {
   )
 }
 
-function OtherDevicesSection() {
+function AddressList({ urls }: { urls: string[] }) {
+  return (
+    <ul className="mt-2 space-y-2">
+      {urls.map((url) => (
+        <li key={url}>
+          <CopyableCode text={url} />
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+export function OtherDevicesSection() {
   const status = useSystemStatus()
   const access = status.data?.access
   if (!access) return null
+  const tailscale = access.tailscale_urls.length > 0
 
-  if (access.other_devices) {
+  if (access.other_devices || tailscale) {
     return (
-      <Section id="devices-heading" title="Other devices" description="Phones and laptops on your Wi-Fi can open Trip Planner.">
+      <Section
+        id="devices-heading"
+        title="Other devices"
+        description={
+          tailscale
+            ? 'Devices you share this computer with in Tailscale can open Trip Planner from anywhere.'
+            : 'Phones and laptops on your Wi-Fi can open Trip Planner.'
+        }
+      >
         {!access.passcode_configured && (
           <p role="alert" className="mb-3 text-sm text-destructive">
             Set APP_PASSCODE in .env and restart; other devices can't sign in without it.
           </p>
         )}
-        <p className="text-sm">Open one of these addresses on a device connected to the same Wi-Fi:</p>
-        <ul className="mt-2 space-y-2">
-          {access.urls.map((url) => (
-            <li key={url}>
-              <CopyableCode text={url} />
-            </li>
-          ))}
-        </ul>
+        <div className="space-y-4">
+          {tailscale && (
+            <div>
+              <p className="text-sm">Send this link. It opens on any device signed in to Tailscale that can reach this computer:</p>
+              <AddressList urls={access.tailscale_urls} />
+            </div>
+          )}
+          {access.other_devices && (
+            <div>
+              <p className="text-sm">Open one of these addresses on a device connected to the same Wi-Fi:</p>
+              <AddressList urls={access.urls} />
+            </div>
+          )}
+        </div>
         <p className="mt-3 text-xs text-ink-soft">Each device asks for the passcode once, then stays signed in for 30 days.</p>
       </Section>
     )
@@ -208,6 +235,10 @@ function OtherDevicesSection() {
           Addresses for your phone will appear here.
         </li>
       </ol>
+      <p className="mt-4 text-sm">
+        To use it from anywhere, privately: install Tailscale on this computer, sign in, and run{' '}
+        <code className="type-data">npm run share</code>. The README's “Use it from anywhere” section has the steps.
+      </p>
     </Section>
   )
 }

@@ -70,6 +70,9 @@ def system_status(db: DbSession, recheck: bool = False) -> SystemStatus:
             passcode_configured=settings.app_passcode is not None,
             port=settings.port,
             urls=[f"http://{ip}:{settings.port}" for ip in lan_addresses()] if open_to_network else [],
+            tailscale_urls=[
+                f"https://{h}" for h in sorted(settings.extra_allowed_hosts) if h.endswith(".ts.net")
+            ],
         ),
         backups=_backup_status(db, db_ok),
     )
