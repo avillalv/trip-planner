@@ -262,6 +262,29 @@ Each device asks for the passcode once and then stays signed in for 30 days (cha
 passcode signs everyone out). This PC never asks. Traffic on your home network is plain HTTP,
 so only enable this on a network you trust.
 
+## Use it from anywhere
+
+[Tailscale](https://tailscale.com) (free) links your devices into a private network, so you can
+open Trip Planner from home, work, or your phone's data while nobody else on the internet can
+reach it. Trip Planner keeps running on this PC, so the PC has to be on and awake.
+
+1. On this PC, install Tailscale from https://tailscale.com/download and sign in.
+2. In this folder, run `npm run share`. The first time, Tailscale may ask you to turn on HTTPS
+   certificates for your network; open the link it prints, turn them on, and run the command
+   again. It prints your link (like `https://tonys-pc.tail1234.ts.net`), adds that name to
+   `ALLOWED_HOSTS` in `.env`, and restarts Trip Planner. **Settings → Other devices** shows the
+   link too.
+3. Share this PC with the other person: in the Tailscale admin console
+   (https://login.tailscale.com/admin/machines), open this PC's menu, choose **Share**, and send
+   them the invite link.
+4. On their phone or laptop, they install Tailscale, sign in with their own account, accept the
+   invite, and open the link. Each device asks for the passcode once.
+
+Your own phone or laptop works the same way: install Tailscale, sign in with your account, and
+open the link. The app itself still listens only on this PC, so it needs no firewall rule, and
+your Wi‑Fi can't reach it. To stop sharing, run `tailscale serve --https=443 off`, or remove the
+share in the admin console.
+
 ## Development
 
 ```powershell
@@ -280,6 +303,7 @@ Runs the API with auto-reload, the worker, and the Vite dev server. Open http://
 | `npm run gen:api` | Regenerate the frontend's API types after changing backend routes or schemas |
 | `uv run --project backend trip-planner --help` | Backend CLI: `serve`, `web`, `worker`, `setup-db`, `migrate`, `seed-airports`, `backup`, `restore`, `openapi` |
 | `npm run autostart:install` / `autostart:remove` | Start the app at Windows sign-in, or stop doing so |
+| `npm run share` | Share the app privately through Tailscale and print the link (see "Use it from anywhere") |
 | `npm run agent:smoke` | One real Claude flight-agent run against a throwaway trip in the test database (uses your subscription once) |
 
 ## Project layout
