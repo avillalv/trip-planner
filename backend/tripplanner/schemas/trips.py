@@ -50,6 +50,8 @@ class DestinationOut(BaseModel):
     lon: float
     timezone: str | None
     bbox: list[float] | None
+    # Geoapify's id for the place: lets a search cover all of it (its boundary).
+    geoapify_place_id: str | None = None
     summary: str | None
     wiki_url: str | None
     image_url: str | None

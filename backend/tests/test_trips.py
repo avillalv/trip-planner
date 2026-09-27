@@ -137,3 +137,23 @@ def test_deleting_a_person_removes_them_from_trips(client: TestClient, db_sessio
     client.delete(f"/api/v1/people/{alex.id}")
 
     assert client.get(f"/api/v1/trips/{trip['id']}").json()["travelers"] == []
+
+
+def test_editing_a_trip_keeps_each_destinations_place_id(client: TestClient) -> None:
+    created = client.post(
+        "/api/v1/trips", json=trip_payload(destinations=[destination(geoapify_place_id="51kyoto")])
+    ).json()
+    kept = created["destinations"][0]
+    assert kept["geoapify_place_id"] == "51kyoto"
+
+    # An edit that leaves the id out (as older versions of the app did) doesn't erase it...
+    same_place = {**destination(), "id": kept["id"]}
+    renamed = client.put(
+        f"/api/v1/trips/{created['id']}", json=trip_payload(name="Kyoto", destinations=[same_place])
+    )
+    assert renamed.json()["destinations"][0]["geoapify_place_id"] == "51kyoto"
+
+    # ...but moving the destination to another place does, since the id was for the old one.
+    elsewhere = {**destination("Osaka", lat=34.69, lon=135.5), "id": kept["id"]}
+    moved = client.put(f"/api/v1/trips/{created['id']}", json=trip_payload(destinations=[elsewhere]))
+    assert moved.json()["destinations"][0]["geoapify_place_id"] is None

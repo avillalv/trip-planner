@@ -63,7 +63,8 @@ def _apply_destinations(trip: Trip, items: list[DestinationIn]) -> list[TripDest
             moved = True
         for field in _LOCATION_FIELDS:
             setattr(destination, field, getattr(item, field))
-        destination.geoapify_place_id = item.geoapify_place_id
+        if item.geoapify_place_id is not None or moved:
+            destination.geoapify_place_id = item.geoapify_place_id
         destination.position = position
         if moved:
             _reset_info(destination)
