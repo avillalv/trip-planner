@@ -124,7 +124,10 @@ export function useDeleteActivity(tripId: number) {
 
 // --- Places -------------------------------------------------------------------------------------
 
-export type PlaceQuery = { lat: number; lon: number; radius_m: number } & ({ kind: SearchKind } | { q: string })
+export type PlaceQuery = { lat: number; lon: number; radius_m: number; within?: number } & (
+  | { kind: SearchKind }
+  | { q: string }
+)
 
 export function usePlaceSearch(query: PlaceQuery | null) {
   return useQuery({

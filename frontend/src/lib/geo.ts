@@ -17,3 +17,12 @@ export function distanceSummary(from: LatLon, points: LatLon[]): { average: numb
   const distances = points.map((p) => distanceKm(from, p))
   return { average: distances.reduce((sum, d) => sum + d, 0) / distances.length, nearest: Math.min(...distances) }
 }
+
+export const METERS_PER_MILE = 1609.344
+
+/** "250 ft", "1.4 mi", "12 mi": distances the way they're shown in the app (US units). */
+export function formatMiles(meters: number): string {
+  const miles = meters / METERS_PER_MILE
+  if (miles < 0.1) return `${Math.max(50, Math.round((meters * 3.28084) / 50) * 50)} ft`
+  return `${miles < 10 ? miles.toFixed(1) : Math.round(miles)} mi`
+}

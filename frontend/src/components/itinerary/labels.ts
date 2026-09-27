@@ -1,5 +1,6 @@
 import type { Day } from '@/lib/api/itinerary'
 import { parseDate } from '@/lib/dates'
+import { formatMiles } from '@/lib/geo'
 
 const shortDay = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
 const longDay = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
@@ -49,5 +50,5 @@ export function formatOpeningHours(value: string): string[] {
 
 export function formatDistance(meters: number | null | undefined): string | null {
   if (meters === null || meters === undefined) return null
-  return meters < 1000 ? `${Math.round(meters / 10) * 10} m` : `${(meters / 1000).toFixed(meters < 10_000 ? 1 : 0)} km`
+  return formatMiles(meters)
 }

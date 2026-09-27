@@ -107,10 +107,10 @@ describe('place labels', () => {
     expect(formatOpeningHours('24/7')).toEqual(['Open 24 hours'])
   })
 
-  it('shows distances in m or km', () => {
-    expect(formatDistance(242)).toBe('240 m')
-    expect(formatDistance(1234)).toBe('1.2 km')
-    expect(formatDistance(18_400)).toBe('18 km')
+  it('shows distances in feet or miles', () => {
+    expect(formatDistance(120)).toBe('400 ft')
+    expect(formatDistance(1234)).toBe('0.8 mi')
+    expect(formatDistance(18_400)).toBe('11 mi')
     expect(formatDistance(null)).toBeNull()
   })
 })

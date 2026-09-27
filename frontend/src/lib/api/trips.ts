@@ -95,6 +95,7 @@ export function toTripInput(trip: Trip): TripInput {
       lon: d.lon,
       timezone: d.timezone,
       bbox: d.bbox,
+      geoapify_place_id: d.geoapify_place_id,
     })),
   }
 }

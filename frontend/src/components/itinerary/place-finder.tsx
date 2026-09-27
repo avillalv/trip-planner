@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ErrorBoundary, PartFailed } from '@/components/common/error-boundary'
 import { CATEGORY, SEARCH_KINDS } from '@/lib/activity-meta'
 import { usePlaceSearch, type Day, type Place, type PlaceQuery, type SearchKind } from '@/lib/api/itinerary'
+import { METERS_PER_MILE } from '@/lib/geo'
 import { useDebouncedValue } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
 import { ActivityFields } from './activity-fields'
@@ -16,9 +17,17 @@ import { PlaceDetailsPane } from './place-details'
 
 const PlaceMap = lazy(() => import('./place-map'))
 
-const RADII = [1000, 2000, 5000, 10_000, 25_000]
+// How far to look, in miles; or all of the destination.
+const MILES = [1, 3, 5, 10, 25, 50, 100]
+type Reach = number | 'all'
 
-export type SearchCenter = { lat: number; lon: number; name: string }
+export type SearchCenter = {
+  lat: number
+  lon: number
+  name: string
+  /** The trip destination this is the middle of: a search can cover all of it (the default when large). */
+  destination?: { id: number; large: boolean }
+}
 
 type Props = {
   center: SearchCenter
@@ -32,17 +41,20 @@ type Props = {
 export function PlaceFinder({ center, days, initial, saving, onAdd }: Props) {
   const [text, setText] = useState('')
   const [kind, setKind] = useState<SearchKind | null>(null)
-  const [radius, setRadius] = useState(5000)
+  const [reach, setReach] = useState<Reach>(center.destination?.large ? 'all' : 5)
   const [area, setArea] = useState({ lat: center.lat, lon: center.lon, label: center.name })
   const [moved, setMoved] = useState<{ lat: number; lon: number } | null>(null)
   const [selected, setSelected] = useState<Place | null>(null)
   const typed = useDebouncedValue(text.trim(), 400)
+  const whole = reach === 'all' && center.destination !== undefined
 
   const query = useMemo<PlaceQuery | null>(() => {
-    const where = { lat: area.lat, lon: area.lon, radius_m: radius }
+    const where = whole
+      ? { lat: center.lat, lon: center.lon, radius_m: 8000, within: center.destination!.id }
+      : { lat: area.lat, lon: area.lon, radius_m: Math.round((reach === 'all' ? 25 : reach) * METERS_PER_MILE) }
     if (kind) return { ...where, kind }
     return typed.length >= 2 ? { ...where, q: typed } : null
-  }, [kind, typed, area.lat, area.lon, radius])
+  }, [kind, typed, whole, reach, area.lat, area.lon, center])
   const search = usePlaceSearch(query)
   const places = useMemo(() => (query ? (search.data?.places ?? []) : []), [query, search.data])
   const pins: MapPin[] = useMemo(
@@ -75,8 +87,8 @@ export function PlaceFinder({ center, days, initial, saving, onAdd }: Props) {
               <div className="relative min-w-0 flex-1">
                 <Search className="pointer-events-none absolute top-2.5 left-2.5 size-4 text-ink-soft" aria-hidden="true" />
                 <Input
-                  aria-label={`Search places near ${area.label}`}
-                  placeholder={`Search near ${area.label}`}
+                  aria-label={whole ? `Search places in ${center.name}` : `Search places near ${area.label}`}
+                  placeholder={whole ? `Search in ${center.name}` : `Search near ${area.label}`}
                   className="pl-8"
                   value={text}
                   onChange={(e) => {
@@ -86,14 +98,20 @@ export function PlaceFinder({ center, days, initial, saving, onAdd }: Props) {
                 />
               </div>
               <select
-                aria-label="Search radius"
-                value={radius}
-                onChange={(e) => setRadius(Number(e.target.value))}
+                aria-label="How far to look"
+                value={reach}
+                onChange={(e) => {
+                  const next = e.target.value === 'all' ? 'all' : Number(e.target.value)
+                  setReach(next)
+                  // All of the destination means around its middle again.
+                  if (next === 'all') setArea({ lat: center.lat, lon: center.lon, label: center.name })
+                }}
                 className="h-9 rounded-lg border border-input bg-card px-2 text-sm"
               >
-                {RADII.map((r) => (
-                  <option key={r} value={r}>
-                    Within {r / 1000} km
+                {center.destination && <option value="all">All of {center.name}</option>}
+                {MILES.map((miles) => (
+                  <option key={miles} value={miles}>
+                    Within {miles} mi
                   </option>
                 ))}
               </select>
@@ -138,14 +156,33 @@ export function PlaceFinder({ center, days, initial, saving, onAdd }: Props) {
                 </div>
               ) : places.length === 0 ? (
                 <p className="py-6 text-center text-sm text-ink-soft">
-                  Nothing found within {radius / 1000} km. Try a wider radius or another word.
+                  {whole
+                    ? `Nothing found in ${center.name}. Try another word or category.`
+                    : `Nothing found within ${reach} mi of ${area.label}. Try a wider distance${
+                        center.destination ? `, all of ${center.name},` : ''
+                      } or move the map and search that area.`}
                 </p>
               ) : (
-                <ol className={cn('divide-y', search.isPlaceholderData && 'opacity-60')}>
-                  {places.map((place, i) => (
-                    <ResultRow key={place.id} place={place} number={i + 1} onChoose={() => setSelected(place)} />
-                  ))}
-                </ol>
+                <>
+                  {whole && (
+                    <p className="pb-2 text-xs text-ink-soft">
+                      Nearest the middle of {center.name} first. To look around a town, move the map there and
+                      choose Search this area.
+                    </p>
+                  )}
+                  <ol className={cn('divide-y', search.isPlaceholderData && 'opacity-60')}>
+                    {places.map((place, i) => (
+                      <ResultRow
+                        key={place.id}
+                        place={place}
+                        number={i + 1}
+                        // Distances from the middle of a whole country mean little, so they're left off.
+                        showDistance={!whole}
+                        onChoose={() => setSelected(place)}
+                      />
+                    ))}
+                  </ol>
+                </>
               )}
             </div>
           </>
@@ -182,6 +219,7 @@ export function PlaceFinder({ center, days, initial, saving, onAdd }: Props) {
             className="absolute top-3 left-1/2 -translate-x-1/2 shadow-md"
             onClick={() => {
               setArea({ ...moved, label: 'this area' })
+              if (reach === 'all') setReach(10)
               setMoved(null)
               setSelected(null)
             }}
@@ -195,7 +233,17 @@ export function PlaceFinder({ center, days, initial, saving, onAdd }: Props) {
   )
 }
 
-function ResultRow({ place, number, onChoose }: { place: Place; number: number; onChoose: () => void }) {
+function ResultRow({
+  place,
+  number,
+  showDistance,
+  onChoose,
+}: {
+  place: Place
+  number: number
+  showDistance: boolean
+  onChoose: () => void
+}) {
   const { label, icon: Icon, color } = CATEGORY[place.category]
   const hours = place.opening_hours ? formatOpeningHours(place.opening_hours)[0] : null
   return (
@@ -215,7 +263,7 @@ function ResultRow({ place, number, onChoose }: { place: Place; number: number; 
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline justify-between gap-2">
             <span className="truncate font-semibold">{place.name}</span>
-            {place.distance_m !== null && (
+            {showDistance && place.distance_m !== null && (
               <span className="type-data shrink-0 text-xs text-ink-soft">{formatDistance(place.distance_m)}</span>
             )}
           </span>

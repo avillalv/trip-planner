@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { CATEGORY } from '@/lib/activity-meta'
 import type { Activity } from '@/lib/api/itinerary'
 import type { Lodging } from '@/lib/api/lodging'
-import { distanceKm, distanceSummary } from '@/lib/geo'
+import { distanceKm, distanceSummary, formatMiles } from '@/lib/geo'
 import { formatMoney } from '@/lib/money'
 import { cn } from '@/lib/utils'
 import { perPerson } from './lodging-meta'
@@ -33,7 +33,6 @@ function Badge({ children }: { children: ReactNode }) {
   )
 }
 
-const km = (value: number) => (value < 10 ? value.toFixed(1) : value.toFixed(0))
 const count = (n: number | string, one: string, many: string) => `${Number(n)} ${Number(n) === 1 ? one : many}`
 
 type Located = Activity & { lat: number; lon: number }
@@ -198,9 +197,9 @@ export function CompareDialog({ open, onOpenChange, options, activities, travele
               {line('To your plans', (row) =>
                 row.distance ? (
                   <span>
-                    <span className="type-data">{km(row.distance.average)} km</span> on average
+                    <span className="type-data">{formatMiles(row.distance.average * 1000)}</span> on average
                     {row.distance.average === closest && rows.length > 1 && <Badge>Closest</Badge>}
-                    <span className="block text-xs text-ink-soft">nearest {km(row.distance.nearest)} km</span>
+                    <span className="block text-xs text-ink-soft">nearest {formatMiles(row.distance.nearest * 1000)}</span>
                   </span>
                 ) : (
                   <span className="text-ink-soft">

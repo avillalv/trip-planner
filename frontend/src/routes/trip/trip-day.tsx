@@ -9,6 +9,7 @@ import { AddActivityDialog } from '@/components/itinerary/add-activity-dialog'
 import type { TimeChange } from '@/components/itinerary/day-calendar'
 import { IdeasPanel } from '@/components/itinerary/ideas-panel'
 import { longDate } from '@/components/itinerary/labels'
+import { searchCenter } from '@/components/itinerary/search-center'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -226,7 +227,7 @@ function DayView({ tripId, day, days, activities }: DayViewProps) {
         onOpenChange={(open) => !open && setAdding(null)}
         tripId={tripId}
         days={days}
-        center={destination ? { lat: destination.lat, lon: destination.lon, name: destination.name } : null}
+        center={destination ? searchCenter(destination) : null}
         initial={adding ?? {}}
       />
       <ActivityEditor tripId={tripId} days={days} activity={editing} onClose={() => setEditing(null)} />

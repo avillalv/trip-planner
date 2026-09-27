@@ -4,6 +4,7 @@ import { ActivityEditor } from '@/components/itinerary/activity-editor'
 import { AddActivityDialog } from '@/components/itinerary/add-activity-dialog'
 import { DayCard } from '@/components/itinerary/day-card'
 import { IdeasPanel } from '@/components/itinerary/ideas-panel'
+import { searchCenter } from '@/components/itinerary/search-center'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useActivities, useDays, type Activity } from '@/lib/api/itinerary'
@@ -80,7 +81,7 @@ export function TripItinerary() {
         onOpenChange={setAdding}
         tripId={trip.id}
         days={days.data ?? []}
-        center={home ? { lat: home.lat, lon: home.lon, name: home.name } : null}
+        center={home ? searchCenter(home) : null}
         initial={{}}
       />
       <ActivityEditor tripId={trip.id} days={days.data ?? []} activity={editing} onClose={() => setEditing(null)} />

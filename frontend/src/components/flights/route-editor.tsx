@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useNearbyAirports, useSaveRoute, type FlightRoute, type RouteInput } from '@/lib/api/flights'
 import type { Trip } from '@/lib/api/trips'
+import { formatMiles } from '@/lib/geo'
 import { cn } from '@/lib/utils'
 import { defaultRoute, returnMode, validateRoute, withReturnMode } from './route-form'
 
@@ -133,7 +134,7 @@ function RouteForm({ trip, route, onDone }: { trip: Trip; route?: FlightRoute; o
                     type="button"
                     onClick={() => update({ destination_codes: [...draft.destination_codes, a.iata] })}
                     className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs hover:bg-accent"
-                    title={`${a.name} · ${Math.round(a.distance_km)} km away`}
+                    title={`${a.name} · ${formatMiles(a.distance_km * 1000)} away`}
                   >
                     <Plus className="size-3" aria-hidden="true" />
                     <span className="type-code">{a.iata}</span>
