@@ -74,6 +74,18 @@ def test_other_devices_are_refused_even_with_the_key(
     assert "only accepts requests from this computer" in response.json()["detail"]
 
 
+def test_devices_relayed_by_tailscale_serve_are_refused(
+    client: TestClient, setup: tuple[FlightRoute, Run]
+) -> None:
+    # `tailscale serve` connects from this PC; X-Forwarded-For says who it's relaying for.
+    _, run = setup
+    relayed = {**AGENT, "X-Forwarded-For": "100.101.102.103"}
+
+    response = client.get(f"/api/agent/v1/runs/{run.id}/context", headers=relayed)
+
+    assert response.status_code == 403
+
+
 def test_api_is_off_without_a_configured_key(client: TestClient, use_settings, setup) -> None:
     _, run = setup
     use_settings(agent_ingest_api_key=None)

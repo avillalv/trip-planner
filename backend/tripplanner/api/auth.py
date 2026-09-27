@@ -7,6 +7,8 @@ from tripplanner.schemas.auth import LoginIn, SessionInfo
 from tripplanner.security import (
     SESSION_COOKIE,
     SESSION_MAX_AGE,
+    client_address,
+    is_https,
     is_local_request,
     issue_session_token,
     login_limiter,
@@ -38,7 +40,7 @@ def login(body: LoginIn, request: Request, response: Response) -> None:
             "running Trip Planner, then restart it.",
         )
 
-    client_key = request.client.host if request.client else "unknown"
+    client_key = client_address(request)
     wait = login_limiter.retry_after(client_key)
     if wait is not None:
         minutes = max(1, round(wait / 60))
@@ -58,6 +60,7 @@ def login(body: LoginIn, request: Request, response: Response) -> None:
         max_age=SESSION_MAX_AGE,
         httponly=True,
         samesite="lax",
+        secure=is_https(request),
         path="/",
     )
 

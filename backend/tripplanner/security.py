@@ -1,6 +1,7 @@
 """Access control for a single-household app on a home network.
 
-- Requests from this PC (loopback) are trusted.
+- Requests from this PC (loopback) are trusted, unless a proxy on this PC relayed them from another
+  device (`tailscale serve` adds X-Forwarded-For).
 - Other devices need a session cookie, obtained by entering APP_PASSCODE.
 - The Host header must name this machine, which blocks DNS-rebinding attacks.
 - State-changing API calls need the X-Trip-Planner header and a same-origin Origin, so other
@@ -43,8 +44,29 @@ def is_loopback(host: str | None) -> bool:
         return host == "localhost"
 
 
+def is_relayed(request: Request) -> bool:
+    """True when a proxy on this PC (like `tailscale serve`) passed the request on from another device."""
+    return "x-forwarded-for" in request.headers or "forwarded" in request.headers
+
+
 def is_local_request(request: Request) -> bool:
-    return request.client is not None and is_loopback(request.client.host)
+    return request.client is not None and is_loopback(request.client.host) and not is_relayed(request)
+
+
+def client_address(request: Request) -> str:
+    """The device making the request: the address a proxy on this PC reports, else the socket peer."""
+    peer = request.client.host if request.client else "unknown"
+    if is_loopback(peer) and is_relayed(request):
+        return request.headers.get("x-forwarded-for", "").split(",")[0].strip() or peer
+    return peer
+
+
+def is_https(request: Request) -> bool:
+    """HTTPS end to end, including through a proxy on this PC (`tailscale serve` terminates TLS)."""
+    if request.url.scheme == "https":
+        return True
+    peer = request.client.host if request.client else None
+    return is_loopback(peer) and request.headers.get("x-forwarded-proto") == "https"
 
 
 # --- Sessions ----------------------------------------------------------------------------

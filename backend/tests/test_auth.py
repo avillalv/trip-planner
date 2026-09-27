@@ -8,6 +8,10 @@ from fastapi.testclient import TestClient
 from tests.conftest import TEST_PASSCODE
 from tripplanner.security import HostAllowList, _strip_port, issue_session_token, session_is_valid
 
+TAILNET_NAME = "tonys-pc.tail1234.ts.net"
+# What `tailscale serve` sends on: it connects from this PC, keeps the Host, and adds these.
+RELAYED = {"Host": TAILNET_NAME, "X-Forwarded-For": "100.101.102.103", "X-Forwarded-Proto": "https"}
+
 
 def test_this_pc_needs_no_passcode(client: TestClient) -> None:
     assert client.get("/api/v1/trips").status_code == 200
@@ -40,6 +44,7 @@ def test_correct_passcode_starts_a_session(remote_client: TestClient) -> None:
     assert "tp_session=" in cookie
     assert "HttpOnly" in cookie
     assert "samesite=lax" in cookie.lower()
+    assert "secure" not in cookie.lower()  # plain HTTP on the home network
     assert remote_client.get("/api/v1/trips").status_code == 200
 
 
@@ -54,6 +59,52 @@ def test_wrong_passcodes_are_rate_limited(remote_client: TestClient) -> None:
     assert blocked.status_code == 429
     assert int(blocked.headers["retry-after"]) > 0
     assert "Too many wrong passcodes" in blocked.json()["detail"]
+
+
+def test_devices_relayed_by_tailscale_serve_must_log_in(client: TestClient, use_settings) -> None:
+    use_settings(allowed_hosts=TAILNET_NAME)
+
+    assert client.get("/api/v1/trips", headers=RELAYED).status_code == 401
+    assert client.get("/api/auth/session", headers=RELAYED).json()["local"] is False
+
+
+def test_relayed_writes_from_the_tailscale_page_pass_the_origin_check(
+    client: TestClient, use_settings
+) -> None:
+    use_settings(allowed_hosts=TAILNET_NAME)
+    headers = {**RELAYED, "Origin": f"https://{TAILNET_NAME}"}
+
+    response = client.post("/api/v1/people", json={"name": "Sam", "color": "#1f7f86"}, headers=headers)
+
+    assert response.status_code == 401  # same origin, so not 403; just not signed in yet
+
+
+def test_tailscale_names_need_allowed_hosts(client: TestClient) -> None:
+    assert client.get("/api/health", headers=RELAYED).status_code == 400
+
+
+def test_a_relayed_login_gets_a_secure_cookie(client: TestClient, use_settings) -> None:
+    use_settings(allowed_hosts=TAILNET_NAME)
+
+    login = client.post("/api/auth/login", json={"passcode": TEST_PASSCODE}, headers=RELAYED)
+
+    assert login.status_code == 204
+    assert "secure" in login.headers["set-cookie"].lower()
+
+
+def test_wrong_passcodes_are_limited_per_relayed_device(client: TestClient, use_settings) -> None:
+    use_settings(allowed_hosts=TAILNET_NAME)
+    for _ in range(5):
+        client.post("/api/auth/login", json={"passcode": "nope"}, headers=RELAYED)
+
+    assert (
+        client.post("/api/auth/login", json={"passcode": TEST_PASSCODE}, headers=RELAYED).status_code == 429
+    )
+    other_device = {**RELAYED, "X-Forwarded-For": "100.64.0.9"}
+    assert (
+        client.post("/api/auth/login", json={"passcode": TEST_PASSCODE}, headers=other_device).status_code
+        == 204
+    )
 
 
 def test_login_is_refused_when_no_passcode_is_configured(remote_client: TestClient, use_settings) -> None:
