@@ -75,6 +75,12 @@ move.
 - If the computer was off or asleep at a scheduled time, the missed check runs once when the
   app is back.
 
+**Choose your flight** with **Choose** on a fare in **Cheapest options**, or on a cell of the
+date grid. The trip's dates become the flight's: it starts on the departure date and ends on
+the return date. While a flight is chosen, the trip's dates can only change by choosing
+another flight or clearing it (**Clear** under **Your flight**). Each check looks at the chosen
+dates first, so you can see whether that flight's price has gone up or down.
+
 ## Plan each day
 
 A trip's **Itinerary** page shows a card per day: its city, and its first and last plans.
@@ -83,10 +89,13 @@ Open a day to plan it on a calendar:
 - Drag across empty time to add something, drag a block to move it, or drag its bottom edge to
   change how long it takes. Click a block to edit it, move it to another day, or delete it.
 - **Ideas** are things you might do, with no day yet. Drag one onto the calendar, or use its **+**.
-- **Add activity** searches near the day's city: pick a category (restaurants, cafés, museums,
-  landmarks, viewpoints, parks, beaches, nightlife, shopping) or type a name. Results show on a
-  map with their opening hours, website, a Wikipedia summary when there is one, and a link to
-  Google Maps for reviews and photos. Or choose **Add your own**.
+- **Add activity** searches the day's destination: pick a category (restaurants, cafés, museums,
+  landmarks, viewpoints, parks, beaches, nightlife, shopping) or type a name. A country or
+  region is searched in full ("All of Costa Rica"); a city is searched within a distance you
+  pick, in miles. To look around one town, move the map there and choose **Search this area**,
+  or add the town as a destination. Results show on a map with their opening hours, website, a
+  Wikipedia summary when there is one, and a link to Google Maps for reviews and photos. Or
+  choose **Add your own**.
 - Times are local to the destination, whatever time zone your phone or laptop is in. A late
   evening can end after midnight.
 - If two of you change the same activity at once, the second change is refused with an
