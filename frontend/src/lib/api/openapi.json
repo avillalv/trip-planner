@@ -1063,6 +1063,100 @@
         }
       }
     },
+    "/api/v1/routes/{route_id}/choice": {
+      "put": {
+        "tags": [
+          "flights"
+        ],
+        "summary": "Choose Flight",
+        "description": "Make a fare the trip's flight: the trip's dates move to its departure and return.",
+        "operationId": "choose_flight",
+        "parameters": [
+          {
+            "name": "route_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Route Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlightChoiceIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "flights"
+        ],
+        "summary": "Clear Flight",
+        "description": "Stop using this route's flight for the trip's dates (they stay as they are, now editable).",
+        "operationId": "clear_flight",
+        "parameters": [
+          {
+            "name": "route_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Route Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/flight-quotes/{quote_id}": {
       "patch": {
         "tags": [
@@ -1452,7 +1546,7 @@
           "places"
         ],
         "summary": "Search Places",
-        "description": "Things to do near a point: by category (`kind`) or by name (`q`). Results are cached for a week.",
+        "description": "Things to do by category (`kind`) or by name (`q`): within `radius_m` of a point, or anywhere\nin a destination (`within`), nearest the point first. Results are cached for a week.",
         "operationId": "search_places",
         "parameters": [
           {
@@ -1528,11 +1622,29 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "maximum": 50000,
+              "maximum": 161000,
               "minimum": 200,
               "default": 5000,
               "title": "Radius M"
             }
+          },
+          {
+            "name": "within",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A destination id: search all of it.",
+              "title": "Within"
+            },
+            "description": "A destination id: search all of it."
           },
           {
             "name": "offset",
@@ -4024,6 +4136,56 @@
         "title": "BackupStatus",
         "description": "Nightly database backups: where they go, the newest one, and the last problem, if any."
       },
+      "ChosenFlight": {
+        "properties": {
+          "route_id": {
+            "type": "integer",
+            "title": "Route Id"
+          },
+          "origin": {
+            "type": "string",
+            "title": "Origin"
+          },
+          "destination": {
+            "type": "string",
+            "title": "Destination"
+          },
+          "depart_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Depart Date"
+          },
+          "return_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Return Date"
+          },
+          "airlines": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Airlines"
+          }
+        },
+        "type": "object",
+        "required": [
+          "route_id",
+          "origin",
+          "destination",
+          "depart_date",
+          "return_date",
+          "airlines"
+        ],
+        "title": "ChosenFlight"
+      },
       "ClaudeCliStatus": {
         "properties": {
           "found": {
@@ -4217,6 +4379,10 @@
       },
       "DateGridCell": {
         "properties": {
+          "quote_id": {
+            "type": "integer",
+            "title": "Quote Id"
+          },
           "depart_date": {
             "type": "string",
             "format": "date",
@@ -4251,6 +4417,7 @@
         },
         "type": "object",
         "required": [
+          "quote_id",
           "depart_date",
           "return_date",
           "price",
@@ -4656,6 +4823,17 @@
             ],
             "title": "Bbox"
           },
+          "geoapify_place_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Geoapify Place Id"
+          },
           "summary": {
             "anyOf": [
               {
@@ -4811,6 +4989,16 @@
               }
             ],
             "title": "Price Level"
+          },
+          "chosen": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuoteOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -5045,6 +5233,17 @@
               }
             ],
             "title": "Bbox"
+          },
+          "geoapify_place_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Geoapify Place Id"
           },
           "summary": {
             "anyOf": [
@@ -5295,6 +5494,55 @@
           "summary"
         ],
         "title": "FinishIn"
+      },
+      "FlightChoiceIn": {
+        "properties": {
+          "quote_id": {
+            "type": "integer",
+            "title": "Quote Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quote_id"
+        ],
+        "title": "FlightChoiceIn"
+      },
+      "FlightDates": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "flights": {
+            "items": {
+              "$ref": "#/components/schemas/ChosenFlight"
+            },
+            "type": "array",
+            "title": "Flights"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "flights"
+        ],
+        "title": "FlightDates",
+        "description": "The trip's dates when chosen flights set them: the first departure to the last return.\n\n`end` is None when no chosen flight sets it (a single one-way flight); then only `start` is fixed."
       },
       "GoogleHistoryPoint": {
         "properties": {
@@ -8005,6 +8253,17 @@
             "type": "boolean",
             "title": "Active"
           },
+          "chosen_quote_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chosen Quote Id"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -8037,6 +8296,7 @@
           "sources",
           "alert_price",
           "active",
+          "chosen_quote_id",
           "created_at",
           "updated_at"
         ],
@@ -8073,6 +8333,26 @@
           "quote_count": {
             "type": "integer",
             "title": "Quote Count"
+          },
+          "chosen": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuoteOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "chosen_latest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuoteOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -9268,6 +9548,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/TripCover"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "flight_dates": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FlightDates"
               },
               {
                 "type": "null"

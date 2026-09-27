@@ -357,6 +357,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/routes/{route_id}/choice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Choose Flight
+         * @description Make a fare the trip's flight: the trip's dates move to its departure and return.
+         */
+        put: operations["choose_flight"];
+        post?: never;
+        /**
+         * Clear Flight
+         * @description Stop using this route's flight for the trip's dates (they stay as they are, now editable).
+         */
+        delete: operations["clear_flight"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/flight-quotes/{quote_id}": {
         parameters: {
             query?: never;
@@ -462,7 +486,8 @@ export interface paths {
         };
         /**
          * Search Places
-         * @description Things to do near a point: by category (`kind`) or by name (`q`). Results are cached for a week.
+         * @description Things to do by category (`kind`) or by name (`q`): within `radius_m` of a point, or anywhere
+         *     in a destination (`within`), nearest the point first. Results are cached for a week.
          */
         get: operations["search_places"];
         put?: never;
@@ -1201,6 +1226,24 @@ export interface components {
             /** Error */
             error: string | null;
         };
+        /** ChosenFlight */
+        ChosenFlight: {
+            /** Route Id */
+            route_id: number;
+            /** Origin */
+            origin: string;
+            /** Destination */
+            destination: string;
+            /**
+             * Depart Date
+             * Format: date
+             */
+            depart_date: string;
+            /** Return Date */
+            return_date: string | null;
+            /** Airlines */
+            airlines: string[];
+        };
         /** ClaudeCliStatus */
         ClaudeCliStatus: {
             /** Found */
@@ -1257,6 +1300,8 @@ export interface components {
         };
         /** DateGridCell */
         DateGridCell: {
+            /** Quote Id */
+            quote_id: number;
             /**
              * Depart Date
              * Format: date
@@ -1380,6 +1425,8 @@ export interface components {
             timezone: string | null;
             /** Bbox */
             bbox: number[] | null;
+            /** Geoapify Place Id */
+            geoapify_place_id?: string | null;
             /** Summary */
             summary: string | null;
             /** Wiki Url */
@@ -1411,6 +1458,7 @@ export interface components {
             typical_high: string | null;
             /** Price Level */
             price_level: string | null;
+            chosen?: components["schemas"]["QuoteOut"] | null;
         };
         /** DestinationIn */
         DestinationIn: {
@@ -1464,6 +1512,8 @@ export interface components {
             timezone: string | null;
             /** Bbox */
             bbox: number[] | null;
+            /** Geoapify Place Id */
+            geoapify_place_id?: string | null;
             /** Summary */
             summary: string | null;
             /** Wiki Url */
@@ -1526,6 +1576,28 @@ export interface components {
             sources_checked?: string[];
             /** Issues */
             issues?: string[];
+        };
+        /** FlightChoiceIn */
+        FlightChoiceIn: {
+            /** Quote Id */
+            quote_id: number;
+        };
+        /**
+         * FlightDates
+         * @description The trip's dates when chosen flights set them: the first departure to the last return.
+         *
+         *     `end` is None when no chosen flight sets it (a single one-way flight); then only `start` is fixed.
+         */
+        FlightDates: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /** End */
+            end: string | null;
+            /** Flights */
+            flights: components["schemas"]["ChosenFlight"][];
         };
         /** GoogleHistoryPoint */
         GoogleHistoryPoint: {
@@ -2305,6 +2377,8 @@ export interface components {
             alert_price: string | null;
             /** Active */
             active: boolean;
+            /** Chosen Quote Id */
+            chosen_quote_id: number | null;
             /**
              * Created At
              * Format: date-time
@@ -2328,6 +2402,8 @@ export interface components {
             last_checked_at: string | null;
             /** Quote Count */
             quote_count: number;
+            chosen?: components["schemas"]["QuoteOut"] | null;
+            chosen_latest?: components["schemas"]["QuoteOut"] | null;
         };
         /**
          * RoutineConfig
@@ -2705,6 +2781,7 @@ export interface components {
             /** Travelers */
             travelers: components["schemas"]["PersonOut"][];
             cover: components["schemas"]["TripCover"] | null;
+            flight_dates?: components["schemas"]["FlightDates"] | null;
             /**
              * Created At
              * Format: date-time
@@ -3523,6 +3600,72 @@ export interface operations {
             };
         };
     };
+    choose_flight: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                route_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FlightChoiceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TripOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clear_flight: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                route_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TripOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     update_quote: {
         parameters: {
             query?: never;
@@ -3769,6 +3912,8 @@ export interface operations {
                 kind?: ("restaurants" | "cafes" | "museums" | "landmarks" | "viewpoints" | "parks" | "beaches" | "nightlife" | "shopping") | null;
                 q?: string | null;
                 radius_m?: number;
+                /** @description A destination id: search all of it. */
+                within?: number | null;
                 offset?: number;
             };
             header?: never;

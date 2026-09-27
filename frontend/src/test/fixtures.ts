@@ -147,6 +147,7 @@ export function deckRoute(overrides: Partial<DeckRoute> = {}): DeckRoute {
       sources: ['serpapi'],
       alert_price: null,
       active: true,
+      chosen_quote_id: null,
       created_at: '2026-09-26T12:00:00Z',
       updated_at: '2026-09-26T12:00:00Z',
     },
