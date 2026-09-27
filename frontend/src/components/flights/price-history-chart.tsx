@@ -124,7 +124,8 @@ export function PriceHistoryChart({ history, dimmed }: { history: RouteHistory; 
                 minTickGap={24}
               />
               <YAxis
-                tickFormatter={(v: number) => formatMoney(v, currency, true)}
+                // Full amounts under 10,000: compact ones round $1,400 and $1,480 to the same "$1K".
+                tickFormatter={(v: number) => formatMoney(v, currency, v >= 10_000)}
                 tick={{ fill: 'var(--tp-ink-soft)', fontSize: 12 }}
                 axisLine={false}
                 tickLine={false}
