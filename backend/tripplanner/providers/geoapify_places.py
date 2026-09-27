@@ -6,9 +6,13 @@ the Geocoding API, which matches English names well but returns only the basics;
 those come from Place Details on request (1 credit each). Geoapify allows storing results.
 """
 
+import logging
+from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
+from pydantic import ValidationError
 
 from tripplanner.providers import ProviderError
 from tripplanner.schemas.places import PlaceOut
@@ -17,6 +21,8 @@ PLACES_URL = "https://api.geoapify.com/v2/places"
 GEOCODE_URL = "https://api.geoapify.com/v1/geocode/search"
 DETAILS_URL = "https://api.geoapify.com/v2/place-details"
 PAGE_SIZE = 20
+
+log = logging.getLogger(__name__)
 
 # The search chips, as Geoapify categories.
 SEARCH_KINDS: dict[str, str] = {
@@ -50,16 +56,43 @@ def activity_category(kinds: list[str]) -> str:
     return "other"
 
 
-def _circle(lat: float, lon: float, radius_m: int) -> dict[str, str]:
-    return {"filter": f"circle:{lon},{lat},{radius_m}", "bias": f"proximity:{lon},{lat}"}
+@dataclass(frozen=True)
+class Area:
+    """A whole destination to search, like all of Costa Rica rather than a circle around its middle."""
+
+    place_id: str | None = None
+    # [west, south, east, north], used when there's no place id.
+    bbox: tuple[float, ...] | None = None
+    # Set for a country: text searches filter by it.
+    country_code: str | None = None
+
+
+# Without a boundary or box, "the whole area" falls back to this circle.
+WIDE_RADIUS_M = 80_000
+
+
+def _where(lat: float, lon: float, radius_m: int, area: Area | None, text: bool) -> dict[str, str]:
+    """Where to look: a circle, or a whole area. Results nearest the center come first either way."""
+    bias = f"proximity:{lon},{lat}"
+    if area is not None:
+        if text and area.country_code:
+            return {"filter": f"countrycode:{area.country_code.lower()}", "bias": bias}
+        # Place boundaries work for category search; text search takes the bounding box.
+        if area.place_id and not text:
+            return {"filter": f"place:{area.place_id}", "bias": bias}
+        if area.bbox:
+            west, south, east, north = area.bbox
+            return {"filter": f"rect:{west},{south},{east},{north}", "bias": bias}
+        radius_m = max(radius_m, WIDE_RADIUS_M)
+    return {"filter": f"circle:{lon},{lat},{radius_m}", "bias": bias}
 
 
 def kind_request(
-    kind: str, lat: float, lon: float, radius_m: int, offset: int = 0
+    kind: str, lat: float, lon: float, radius_m: int, offset: int = 0, area: Area | None = None
 ) -> tuple[str, dict[str, Any]]:
     params = {
         "categories": SEARCH_KINDS[kind],
-        **_circle(lat, lon, radius_m),
+        **_where(lat, lon, radius_m, area, text=False),
         "limit": PAGE_SIZE,
         "offset": offset,
         "lang": "en",
@@ -67,9 +100,28 @@ def kind_request(
     return PLACES_URL, params
 
 
-def text_request(text: str, lat: float, lon: float, radius_m: int) -> tuple[str, dict[str, Any]]:
-    params = {"text": text, "type": "amenity", **_circle(lat, lon, radius_m), "limit": PAGE_SIZE}
+def text_request(
+    text: str, lat: float, lon: float, radius_m: int, area: Area | None = None
+) -> tuple[str, dict[str, Any]]:
+    where = _where(lat, lon, radius_m, area, text=True)
+    params = {"text": text, "type": "amenity", **where, "limit": PAGE_SIZE}
     return GEOCODE_URL, {**params, "lang": "en", "format": "json"}
+
+
+# Destination kinds the geocoder can be asked for directly.
+GEOCODE_TYPES = {"country", "state", "city", "county", "postcode", "locality"}
+
+
+def place_request(
+    name: str, kind: str | None, country_code: str | None, lat: float, lon: float
+) -> tuple[str, dict[str, Any]]:
+    """Find a destination's own Geoapify id (for one saved before ids were kept)."""
+    params: dict[str, Any] = {"text": name, "bias": f"proximity:{lon},{lat}", "limit": 1, "format": "json"}
+    if kind in GEOCODE_TYPES:
+        params["type"] = kind
+    if country_code:
+        params["filter"] = f"countrycode:{country_code.lower()}"
+    return GEOCODE_URL, params
 
 
 def details_request(place_id: str) -> tuple[str, dict[str, Any]]:
@@ -100,6 +152,15 @@ def _address(props: dict[str, Any], name: str) -> str | None:
     return props.get("formatted") or props.get("address_line2")
 
 
+def _text(*values: Any) -> str | None:
+    """The first value given, as text. OpenStreetMap tags pass through as-is, so a phone number
+    can arrive as a number."""
+    for value in values:
+        if value is not None and value != "":
+            return str(value)
+    return None
+
+
 def _distance(props: dict[str, Any]) -> int | None:
     value = props.get("distance")
     return round(value) if isinstance(value, int | float) else None
@@ -126,11 +187,11 @@ def from_feature(props: dict[str, Any]) -> PlaceOut | None:
         lat=float(props["lat"]),
         lon=float(props["lon"]),
         distance_m=_distance(props),
-        website=props.get("website") or raw.get("website"),
-        opening_hours=props.get("opening_hours") or raw.get("opening_hours"),
-        phone=contact.get("phone") or raw.get("phone"),
-        wikidata=wiki.get("wikidata") or raw.get("wikidata"),
-        wikipedia=wiki.get("wikipedia") or raw.get("wikipedia"),
+        website=_text(props.get("website"), raw.get("website")),
+        opening_hours=_text(props.get("opening_hours"), raw.get("opening_hours")),
+        phone=_text(contact.get("phone"), raw.get("phone")),
+        wikidata=_text(wiki.get("wikidata"), raw.get("wikidata")),
+        wikipedia=_text(wiki.get("wikipedia"), raw.get("wikipedia")),
         has_details=True,
     )
 
@@ -157,14 +218,26 @@ def from_geocode(result: dict[str, Any]) -> PlaceOut | None:
     )
 
 
+def _each(items: list[dict[str, Any]], parse: Callable[[dict[str, Any]], PlaceOut | None]) -> list[PlaceOut]:
+    """Parse each result, skipping any that can't be read, so one odd place doesn't sink a search."""
+    places = []
+    for item in items:
+        try:
+            place = parse(item)
+        except (ValidationError, TypeError, ValueError) as exc:
+            log.warning("Skipped a Geoapify place that couldn't be read: %s", exc)
+            continue
+        if place is not None:
+            places.append(place)
+    return places
+
+
 def parse_places(data: dict[str, Any]) -> list[PlaceOut]:
-    places = (from_feature(f.get("properties") or {}) for f in data.get("features") or [])
-    return [p for p in places if p is not None]
+    return _each([f.get("properties") or {} for f in data.get("features") or []], from_feature)
 
 
 def parse_geocode(data: dict[str, Any]) -> list[PlaceOut]:
-    places = (from_geocode(r) for r in data.get("results") or [])
-    return [p for p in places if p is not None]
+    return _each(list(data.get("results") or []), from_geocode)
 
 
 def parse_details(data: dict[str, Any]) -> PlaceOut | None:

@@ -11,7 +11,8 @@ from sqlalchemy import delete
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from tripplanner.models import ApiCall, PlaceCacheEntry
+from tripplanner.models import ApiCall, PlaceCacheEntry, TripDestination
+from tripplanner.providers import ProviderError
 from tripplanner.providers import geoapify_places as geo
 from tripplanner.providers.wikipedia import WikipediaClient
 from tripplanner.schemas.places import PlaceOut, PlaceSearchResult, WikiSummary
@@ -76,25 +77,63 @@ def search(
     kind: str | None = None,
     text: str | None = None,
     offset: int = 0,
+    area: geo.Area | None = None,
     now: datetime | None = None,
 ) -> PlaceSearchResult:
-    """Search by category chip, or by free text when no chip is chosen."""
+    """Search by category chip, or by free text when no chip is chosen; in a circle or a whole area."""
     now = now or datetime.now(UTC)
     # Rounding the center lets small map moves reuse a cached search.
     lat, lon = round(lat, 3), round(lon, 3)
     if kind is not None:
         data, cached = _geoapify(
-            db, client, api_key, geo.kind_request(kind, lat, lon, radius_m, offset), "places", now
+            db, client, api_key, geo.kind_request(kind, lat, lon, radius_m, offset, area), "places", now
         )
         places = geo.parse_places(data)
     else:
         assert text
         data, cached = _geoapify(
-            db, client, api_key, geo.text_request(text.strip(), lat, lon, radius_m), "geocode", now
+            db, client, api_key, geo.text_request(text.strip(), lat, lon, radius_m, area), "geocode", now
         )
         places = geo.parse_geocode(data)
     places.sort(key=lambda p: p.distance_m if p.distance_m is not None else 10**9)
-    return PlaceSearchResult(places=places, cached=cached)
+    return PlaceSearchResult(places=distinct(places), cached=cached)
+
+
+def distinct(places: list[PlaceOut]) -> list[PlaceOut]:
+    """OpenStreetMap often maps a beach or park more than once (its outline, a point, stretches of a
+    long beach): keep one of each. Beaches and parks with the same name within about 2.5 km are the
+    same place; for everything else it's half a kilometer, since two cafés of a chain can be close."""
+    kept: list[PlaceOut] = []
+    for place in places:
+        near = 0.025 if place.category == "nature" else 0.005
+        twin = any(
+            p.name == place.name and abs(p.lat - place.lat) < near and abs(p.lon - place.lon) < near
+            for p in kept
+        )
+        if not twin:
+            kept.append(place)
+    return kept
+
+
+def ensure_place_id(
+    db: Session, client: httpx.Client, api_key: str, destination: TripDestination, now: datetime | None = None
+) -> None:
+    """Look up and keep a destination's Geoapify id, so searching all of it stays inside its boundary."""
+    if destination.geoapify_place_id:
+        return
+    now = now or datetime.now(UTC)
+    request = geo.place_request(
+        destination.name, destination.kind, destination.country_code, destination.lat, destination.lon
+    )
+    try:
+        data, _ = _geoapify(db, client, api_key, request, "geocode", now)
+    except ProviderError as exc:
+        log.warning("Couldn't look up %s's Geoapify id: %s", destination.name, exc)
+        return
+    found = next(iter(data.get("results") or []), {})
+    if found.get("place_id"):
+        destination.geoapify_place_id = found["place_id"]
+        db.commit()
 
 
 def details(

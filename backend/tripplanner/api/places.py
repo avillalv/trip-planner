@@ -6,7 +6,9 @@ from fastapi import APIRouter, HTTPException, Query, status
 from tripplanner import __version__
 from tripplanner.api.deps import DbSession
 from tripplanner.config import get_settings
+from tripplanner.models import TripDestination
 from tripplanner.providers import ProviderError
+from tripplanner.providers.geoapify_places import Area
 from tripplanner.providers.wikipedia import WikipediaClient
 from tripplanner.schemas.places import PlaceOut, PlaceSearchResult, SearchKind, WikiSummary
 from tripplanner.services import places
@@ -34,19 +36,43 @@ def search_places(
     lon: Annotated[float, Query(ge=-180, le=180)],
     kind: SearchKind | None = None,
     q: Annotated[str | None, Query(min_length=2, max_length=100)] = None,
-    radius_m: Annotated[int, Query(ge=200, le=50_000)] = 5000,
+    radius_m: Annotated[int, Query(ge=200, le=161_000)] = 5000,
+    within: Annotated[int | None, Query(description="A destination id: search all of it.")] = None,
     offset: Annotated[int, Query(ge=0, le=200)] = 0,
 ) -> PlaceSearchResult:
-    """Things to do near a point: by category (`kind`) or by name (`q`). Results are cached for a week."""
+    """Things to do by category (`kind`) or by name (`q`): within `radius_m` of a point, or anywhere
+    in a destination (`within`), nearest the point first. Results are cached for a week."""
     if kind is None and not (q and q.strip()):
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT, "Type something to search for, or pick a category."
         )
+    destination = None
+    if within is not None:
+        destination = db.get(TripDestination, within)
+        if destination is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "That destination isn't on any trip anymore.")
     key = _api_key()
     try:
         with _client() as client:
+            area = None
+            if destination is not None:
+                places.ensure_place_id(db, client, key, destination)
+                area = Area(
+                    place_id=destination.geoapify_place_id,
+                    bbox=tuple(destination.bbox) if destination.bbox and len(destination.bbox) == 4 else None,
+                    country_code=destination.country_code if destination.kind == "country" else None,
+                )
             return places.search(
-                db, client, key, lat=lat, lon=lon, radius_m=radius_m, kind=kind, text=q, offset=offset
+                db,
+                client,
+                key,
+                lat=lat,
+                lon=lon,
+                radius_m=radius_m,
+                kind=kind,
+                text=q,
+                offset=offset,
+                area=area,
             )
     except ProviderError as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc

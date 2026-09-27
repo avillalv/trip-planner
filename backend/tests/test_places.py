@@ -7,8 +7,13 @@ import httpx
 import pytest
 import respx
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
+from tests.factories import add_trip
+from tripplanner.models import TripDestination
 from tripplanner.providers import geoapify_places as geo
+from tripplanner.schemas.places import PlaceOut
+from tripplanner.services import places as places_service
 
 FIXTURES = Path(__file__).parent / "fixtures"
 KYOTO = {"lat": 35.0116, "lon": 135.7681}
@@ -185,3 +190,142 @@ def test_wiki_summary_needs_a_contact(client: TestClient, use_settings) -> None:
     use_settings(wikimedia_contact=None)
 
     assert client.get("/api/v1/places/wiki", params={"wikidata": "Q1"}).json() is None
+
+
+# --- Searching a whole destination ---------------------------------------------------------------
+
+COSTA_RICA = {"lat": 10.2736, "lon": -84.0739}
+
+
+def destination(db_session: Session, **fields) -> TripDestination:
+    trip = add_trip(db_session, name="Costa Rica")
+    values = {
+        "position": 0,
+        "name": "Costa Rica",
+        "country": "Costa Rica",
+        "country_code": "CR",
+        "kind": "country",
+        "lat": 10.2736,
+        "lon": -84.0739,
+        "bbox": [-87.102, 5.499, -82.43, 11.22],
+        "geoapify_place_id": "51cr-place-id",
+        "info_status": "skipped",
+        **fields,
+    }
+    trip.destinations = [TripDestination(**values)]
+    db_session.flush()
+    return trip.destinations[0]
+
+
+def test_a_country_is_searched_within_its_borders(
+    client: TestClient, db_session: Session, use_settings, no_real_network: respx.MockRouter
+) -> None:
+    use_settings(geoapify_api_key="test-geo-key")
+    country = destination(db_session)
+    places = no_real_network.get(geo.PLACES_URL).mock(
+        return_value=httpx.Response(200, json=fixture("geoapify_places_museums.json"))
+    )
+    names = no_real_network.get(geo.GEOCODE_URL).mock(return_value=httpx.Response(200, json={"results": []}))
+
+    client.get("/api/v1/places/search", params={**COSTA_RICA, "kind": "beaches", "within": country.id})
+    client.get("/api/v1/places/search", params={**COSTA_RICA, "q": "Tamarindo", "within": country.id})
+
+    beaches = places.calls[0].request.url.params
+    assert (beaches["categories"], beaches["filter"]) == ("beach", "place:51cr-place-id")
+    assert beaches["bias"] == "proximity:-84.074,10.274"
+    assert names.calls[0].request.url.params["filter"] == "countrycode:cr"
+
+
+def test_a_place_without_a_boundary_uses_its_box(
+    client: TestClient, db_session: Session, use_settings, no_real_network: respx.MockRouter
+) -> None:
+    use_settings(geoapify_api_key="test-geo-key")
+    city = destination(
+        db_session, name="Tamarindo", kind="city", geoapify_place_id=None, bbox=[-85.86, 10.28, -85.82, 10.32]
+    )
+    route = no_real_network.get(geo.PLACES_URL).mock(
+        return_value=httpx.Response(200, json=fixture("geoapify_places_museums.json"))
+    )
+    no_real_network.get(geo.GEOCODE_URL).mock(return_value=httpx.Response(200, json={"results": []}))
+
+    client.get("/api/v1/places/search", params={**COSTA_RICA, "kind": "nightlife", "within": city.id})
+
+    assert route.calls[0].request.url.params["filter"] == "rect:-85.86,10.28,-85.82,10.32"
+
+
+def test_a_missing_place_id_is_looked_up_once_and_kept(
+    client: TestClient, db_session: Session, use_settings, no_real_network: respx.MockRouter
+) -> None:
+    use_settings(geoapify_api_key="test-geo-key")
+    country = destination(db_session, geoapify_place_id=None)
+    lookup = no_real_network.get(geo.GEOCODE_URL).mock(
+        return_value=httpx.Response(200, json={"results": [{"place_id": "51found-cr"}]})
+    )
+    places = no_real_network.get(geo.PLACES_URL).mock(
+        return_value=httpx.Response(200, json=fixture("geoapify_places_museums.json"))
+    )
+
+    for kind in ("beaches", "nightlife"):
+        client.get("/api/v1/places/search", params={**COSTA_RICA, "kind": kind, "within": country.id})
+
+    assert lookup.call_count == 1
+    asked = lookup.calls[0].request.url.params
+    assert (asked["text"], asked["type"], asked["filter"]) == ("Costa Rica", "country", "countrycode:cr")
+    assert [c.request.url.params["filter"] for c in places.calls] == ["place:51found-cr", "place:51found-cr"]
+    assert country.geoapify_place_id == "51found-cr"
+
+
+def test_a_missing_destination_is_not_found(client: TestClient, use_settings) -> None:
+    use_settings(geoapify_api_key="test-geo-key")
+
+    response = client.get("/api/v1/places/search", params={**COSTA_RICA, "kind": "beaches", "within": 987654})
+
+    assert response.status_code == 404
+
+
+def test_circles_reach_100_miles(client: TestClient, use_settings, no_real_network: respx.MockRouter) -> None:
+    use_settings(geoapify_api_key="test-geo-key")
+    route = no_real_network.get(geo.PLACES_URL).mock(
+        return_value=httpx.Response(200, json=fixture("geoapify_places_museums.json"))
+    )
+
+    response = client.get(
+        "/api/v1/places/search", params={**COSTA_RICA, "kind": "beaches", "radius_m": 160_934}
+    )
+
+    assert response.status_code == 200
+    assert route.calls[0].request.url.params["filter"] == "circle:-84.074,10.274,160934"
+
+
+def test_odd_osm_values_dont_sink_a_search() -> None:
+    feature = fixture("geoapify_places_museums.json")["features"][0]
+    phone_as_number = {**feature["properties"], "contact": {"phone": 50660072170}}
+    broken = {"properties": {**feature["properties"], "place_id": "x", "lat": "not a number"}}
+
+    places = geo.parse_places({"features": [{"properties": phone_as_number}, broken]})
+
+    assert [p.phone for p in places] == ["50660072170"]
+
+
+def test_a_place_mapped_twice_shows_once() -> None:
+    def place(name: str, category: str, lat: float, lon: float) -> PlaceOut:
+        return PlaceOut(
+            provider="geoapify", id=f"{name}{lat}", name=name, category=category, kinds=[], lat=lat, lon=lon
+        )
+
+    shown = places_service.distinct(
+        [
+            place("Playa Caldera", "nature", 9.9193, -84.7129),
+            place("Playa Caldera", "nature", 9.9324, -84.7214),  # another stretch of the same beach
+            place("Playa Caldera", "nature", 9.4, -84.2),  # a different one, far away
+            place("Starbucks", "food", 9.93, -84.08),
+            place("Starbucks", "food", 9.94, -84.08),  # a second café, a kilometer away
+        ]
+    )
+
+    assert [(p.name, p.lat) for p in shown] == [
+        ("Playa Caldera", 9.9193),
+        ("Playa Caldera", 9.4),
+        ("Starbucks", 9.93),
+        ("Starbucks", 9.94),
+    ]
