@@ -41,7 +41,8 @@ so in a closing section, so the reasoning stays visible.
 | [07-local-to-app-store.md](07-local-to-app-store.md) | Mobile approach, frontend changes, in-app purchases, App Review checklist, phased roadmap, launch plan |
 | [08-affiliate-revenue.md](08-affiliate-revenue.md) | Every affiliate program researched (lodging, flights, cars, trains, tours, eSIM, insurance and more), higher-commission lanes (concierge through a host agency, group room blocks, in-app hotel booking), placement, compliance, tracking, revenue estimates |
 | [09-revenue-expansion.md](09-revenue-expansion.md) | Revenue beyond consumer subscriptions and affiliate links: advisor SaaS, group trips, partner guides, printed trip books, white-label; 5-year scenarios and what it takes to reach $500k and $1M a year |
-| [app-buildout/](app-buildout/README.md) | Self-contained build specification for Wayfold: product spec, architecture, database, API, UI, AI, monetization, admin control center, roadmap, quality and launch |
+| [competitive-analysis/](competitive-analysis/README.md) | TripIt, Trippy, Wanderlog and others: what they do better, what Wayfold does better, the gaps, and a plan to win their users (HTML presentation plus brainstorm) |
+| [app-buildout/](app-buildout/README.md) | Self-contained build specification for Wayfold, split into Phase 1 (launch in six months), Phase 2 and Phase 3: product spec, architecture, database, API, UI, AI, monetization, admin control center, roadmap, quality and launch |
 
 Suggested reading order: this page, 01, 02, 07 (the roadmap), then 03 to 06 as each phase starts.
 
@@ -53,8 +54,8 @@ Every file uses these. If a number changes, change it here first.
 
 | Decision | Value |
 |---|---|
-| Launch tiers | Free, Plus, Family, Trip Pass, Group Trip Pass, credit packs. Pro is built behind a flag and launches later. At launch the Group Trip Pass has polls and manual cost splitting; collecting money through Stripe comes in Phase 4. |
-| Free | $0. 2 active trips, 1 cached-fare route per trip, 12 AI credits a month, one lifetime deep agent run as a taster (served from the shared cache when possible), 1 price alert on cached fares, joins others' trips free, affiliate booking links, "Before you go" checklist |
+| Launch tiers | Phase 1 (launch, month 6): Free, Plus, Trip Pass, credit packs. Phase 2 (months 7 to 12): Family, Group Trip Pass with polls, manual cost splitting and room-block requests, Pro. Phase 3 (year 2+): Stripe group payments, advisors, print, LiteAPI. See [app-buildout/](app-buildout/README.md). |
+| Free | $0. 2 active trips, 1 cached-fare route per trip, 12 AI credits a month, one lifetime deep agent run as a taster (served from the shared cache when possible), 1 price alert on cached fares, invite 1 collaborator per trip (couples plan free; competitors such as Wanderlog make collaboration free), offline reading, joins others' trips free, affiliate booking links, "Before you go" checklist |
 | Plus | $5.99 a month or $39.99 a year (7-day trial on annual only; annual is pre-selected). Unlimited trips (fair use 25), 3 live-tracked routes checked daily within 120 days of departure, 60 credits a month (enough for one deep agent run plus extras), collaboration |
 | Family | $8.99 a month or $59.99 a year. Everything in Plus for up to 6 people in one household, 150 pooled credits a month, 5 live routes. Apple Family Sharing stays off; members are invited in the app. |
 | Trip Pass (lead offer) | $9.99 once. Upgrades one trip for 90 days: 2 live routes, at most 60 live checks, 40 credits, up to 6 collaborators. Sold as a non-renewing subscription in StoreKit, bound to the trip on the server. |

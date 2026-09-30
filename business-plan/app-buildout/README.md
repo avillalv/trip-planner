@@ -23,22 +23,23 @@ Positioning line: **Plan together. Know the fare.**
 
 ## How to use this folder
 
-Read the files in order. Each one is complete for its topic and uses the shared names defined
-below, so the database, API and screens line up.
+The build is split into three phases. **Build Phase 1 first and only Phase 1**: it is a complete,
+polished app you can publish to the App Store about six months after you start, already earning from
+subscriptions, trip passes, credit packs and affiliate links. Phases 2 and 3 are self-contained
+feature packs you add afterwards, one at a time.
 
-| File | What it specifies |
-|---|---|
-| [01-product-spec.md](01-product-spec.md) | Personas, every feature as user stories with acceptance criteria, tier and entitlement matrix |
-| [02-architecture.md](02-architecture.md) | Stack, repository layout, services, environments, configuration, third-party services, what to reuse from the existing Trip Planner code |
-| [03-database-schema.md](03-database-schema.md) | Full PostgreSQL schema (DDL), indexes, row-level security, enums, migration order, seed data |
-| [04-api-spec.md](04-api-spec.md) | REST API: auth, conventions, every endpoint, webhooks, the affiliate redirect, errors |
-| [05-ui-ux-spec.md](05-ui-ux-spec.md) | Design system, navigation, every screen with states and interactions, paywalls, affiliate cards, accessibility, copy rules |
-| [06-ai-agents-spec.md](06-ai-agents-spec.md) | Every AI feature: model, prompts, tools, limits, metering, shared cache, evals |
-| [07-monetization-spec.md](07-monetization-spec.md) | In-app purchases, entitlements, credit ledger, paywall logic, affiliate links and reporting, concierge, group payments, advisor billing |
-| [08-admin-control-center.md](08-admin-control-center.md) | The internal admin console: users, billing, credits, AI spend, kill switches, feature flags, affiliate revenue, support, audit |
-| [09-build-roadmap.md](09-build-roadmap.md) | Milestones and an ordered backlog of epics and tickets with acceptance criteria and definitions of done |
-| [10-quality-security-launch.md](10-quality-security-launch.md) | Testing, security, privacy and compliance, analytics events, observability, App Store submission, runbooks |
-| [brand/](brand/BRAND.md) | Logo files, colors, type, icon rules |
+| Folder | When | What it is |
+|---|---|---|
+| [phase-1-launch/](phase-1-launch/README.md) | Months 1 to 6 | The full specification for the launch app: product, architecture, database, API, UI, AI, monetization, admin, a month-by-month roadmap with tickets, and quality and launch. Everything needed and nothing more. |
+| [phase-2-growth/](phase-2-growth/README.md) | Months 7 to 12 | Feature packs: Family plan, Group Trip Pass with polls and cost splitting, comments, email-forward import, flight status alerts, Pro with scheduled agents, the concierge lane, direct affiliate programs, native Android, memories and sharing cards |
+| [phase-3-scale/](phase-3-scale/README.md) | Year 2 and later | Feature packs: Stripe group payments, Wayfold for Advisors, partner guides, printed trip books, in-app hotel booking (LiteAPI), white-label and API, card and loyalty offers |
+| [brand/](brand/BRAND.md) | Now | Logo files, colors, type, icon rules |
+
+Each feature pack says exactly what it adds to the Phase 1 database, API, screens, billing and admin,
+so it can be built on top without rereading everything.
+
+Competitive context for these choices (TripIt, Trippy, Wanderlog and others) is in
+[../competitive-analysis/](../competitive-analysis/README.md).
 
 ## Shared decisions (every file follows these)
 
@@ -46,7 +47,7 @@ below, so the database, API and screens line up.
 
 | Code | Name | Price (US) | Store product | Key limits |
 |---|---|---|---|---|
-| `free` | Free | $0 | none | 2 active trips, 1 cached-fare route per trip, 12 credits a month, one lifetime deep agent run ("taster"), 1 cached-fare alert, joins others' trips free |
+| `free` | Free | $0 | none | 2 active trips, 1 cached-fare route per trip, 12 credits a month, one lifetime deep agent run ("taster"), 1 cached-fare alert, invite 1 collaborator per trip (so couples plan free), offline reading, joins others' trips free |
 | `plus` | Plus | $5.99 a month, $39.99 a year | auto-renewing subscription, group `wayfold_membership` | unlimited trips (fair use 25), 3 live routes checked daily within 120 days of departure, 60 credits a month, can invite collaborators |
 | `family` | Family | $8.99 a month, $59.99 a year | auto-renewing subscription, same group | Plus for up to 6 household members, 150 pooled credits, 5 live routes |
 | `pro` | Pro (launches later) | $11.99 a month, $99 a year | auto-renewing subscription, same group | 240 credits, 6 live routes, scheduled agent routines, priority queue |
@@ -55,12 +56,14 @@ below, so the database, API and screens line up.
 | `credits_50` / `credits_150` / `credits_400` | Credit packs | $2.99 / $6.99 / $14.99 | consumable | purchased credits last 12 months and are spent last |
 | `advisor_seat` | Wayfold for Advisors (year 2) | $29 a seat a month, $24 annual | Stripe on the web, not the App Store | client workspaces, branded presentations, proposals, commission tracking |
 
-Group tools: polls and manual cost splitting are in every paid plan (`plus`, `family`, `pro`) and
+Group tools (Phase 2): polls and manual cost splitting are in every paid plan (`plus`, `family`, `pro`) and
 both passes; Free users use them on trips that have them. The Group Trip Pass adds up to 12 travelers
 and the room-block request. Collecting money through Stripe (Phase 4) is for `group_trip_pass` and `pro`.
 
-Launch scope: `free`, `plus`, `family`, `trip_pass`, `group_trip_pass` and credit packs at launch;
-`pro` behind a flag until its launch gate; Stripe group payments, advisors, print and LiteAPI in Phase 4.
+Phases: Phase 1 sells `free`, `plus`, `trip_pass` and the credit packs. `family`,
+`group_trip_pass` (with polls, manual cost splitting and the room-block request) and `pro` arrive in
+Phase 2. Stripe group payments, `advisor_seat`, print and LiteAPI arrive in Phase 3. The tier table
+above is the full ladder; each phase folder says which rows it builds.
 
 Rules: a trip's capabilities are the best of its owner's tier and any pass on that trip.
 Invitees join free and get the trip's capabilities on that trip. AI credits are charged to the
