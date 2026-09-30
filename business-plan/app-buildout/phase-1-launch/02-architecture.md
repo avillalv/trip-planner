@@ -684,7 +684,7 @@ Practice every switch in staging each quarter. Anthropic workspace spend limits 
 
 ## 14. Mapping the existing Trip Planner code
 
-Paths are under `backend/tripplanner/` and `frontend/src/` in the current repo. Reuse means copy with small changes; adapt means keep the idea and rewrite for multi-tenant and Wayfold names; drop means do not carry over.
+The existing code is the Trip Planner repository, https://github.com/avillalv/trip-planner. Build sessions clone it read-only to `.reference/trip-planner/` (gitignored). Paths are under `backend/tripplanner/` and `frontend/src/` in that repo. Reuse means copy with small changes; adapt means keep the idea and rewrite for multi-tenant and Wayfold names; drop means do not carry over.
 
 ### 14.1 Backend
 

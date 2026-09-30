@@ -6,13 +6,19 @@
    folder into its root, so the path is `app-buildout/prompts/KICKOFF.md`. Commit and push to `main`.
 2. In the repository settings, protect `main` so it requires CI to pass but lets Claude merge its own
    pull requests (do not require a human approval, or the build stops at the first merge).
-3. Start a Claude Code session on that repository with the **Claude Opus 5.5** model
+3. Give the session access to the base code, https://github.com/avillalv/trip-planner. In Claude
+   Code on the web, select both `wayfold` and `trip-planner` when you start the session. Locally,
+   make sure your GitHub login can clone it. The build clones it read-only to `.reference/`.
+4. The context-kit-v2 plugin is enabled in `.claude/settings.json`. If Claude Code does not install
+   it on its own, run `/plugin marketplace add https://github.com/avillalv/context-kit-v2.git` and
+   `/plugin install context-kit-v2@context-kit-v2`, then restart. Check with `/hooks`.
+5. Start a Claude Code session on that repository with the **Claude Opus 5.5** model
    (`/model` in the CLI, or the model picker on the web). Opus is the orchestrator; it will start
    Sonnet 5.5 subagents for research and coding.
-4. Let it work without stopping for approval on every edit: use auto or accept-edits permissions, and
+6. Let it work without stopping for approval on every edit: use auto or accept-edits permissions, and
    make sure the session can push, open pull requests and merge (the `gh` CLI logged in, or the
    GitHub connector in Claude Code on the web).
-5. Optional but useful: give the session an Anthropic API key with a monthly spend limit so the evals
+7. Optional but useful: give the session an Anthropic API key with a monthly spend limit so the evals
    in prompts 14 and 27 can measure real agent costs. Everything else works on fakes until you add
    keys from `HUMAN_TASKS.md`.
 
@@ -21,7 +27,9 @@
 ```text
 You are the orchestrator for building Wayfold Phase 1 in this repository.
 
-Read app-buildout/prompts/00-orchestrator.md and follow it exactly. Then read
+Read app-buildout/prompts/00-orchestrator.md and follow it exactly, starting with its
+"Base code" section (clone https://github.com/avillalv/trip-planner read-only into
+.reference/trip-planner and build on it) and its "Context system" section. Then read
 app-buildout/prompts/PROGRESS.md, find the first prompt that is not done, and work through
 app-buildout/prompts/01-*.md to 28-*.md in order until all of Phase 1 is built.
 
