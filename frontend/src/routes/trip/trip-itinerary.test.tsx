@@ -107,6 +107,23 @@ describe('TripItinerary', () => {
     expect(screen.queryByText(/Open-Meteo/)).not.toBeInTheDocument()
   })
 
+  it('opens the AI planner from the heading, without asking Claude anything yet', async () => {
+    mockApi({
+      '/api/v1/trips/7/days': [day()],
+      '/api/v1/trips/7/activities': [],
+      '/api/v1/trips/7/weather': [],
+      '/api/v1/runs': [],
+      '/api/v1/trips/7/suggestions': [],
+    })
+    const user = userEvent.setup()
+
+    renderItinerary()
+    await user.click(await screen.findByRole('button', { name: 'Plan with AI' }))
+
+    expect(await screen.findByRole('button', { name: 'Brainstorm' })).toBeEnabled()
+    expect(screen.getByLabelText('Day')).toHaveValue('')
+  })
+
   it('shows each day its forecast or typical weather, with the attribution once', async () => {
     mockApi({
       '/api/v1/trips/7/days': [day(), day({ day: '2026-11-06' }), day({ day: '2026-11-07' })],

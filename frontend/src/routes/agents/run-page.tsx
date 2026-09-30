@@ -3,7 +3,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
-import { KIND_LABEL, runDuration, TRIGGER_LABEL } from '@/components/agents/run-meta'
+import { KIND_LABEL, runDuration, savedCount, TRIGGER_LABEL } from '@/components/agents/run-meta'
 import { RejectionList, SavedOutputs } from '@/components/agents/run-outputs'
 import { RunStamp } from '@/components/agents/run-status'
 import { RunTimeline } from '@/components/agents/run-timeline'
@@ -155,7 +155,7 @@ export function RunPage() {
   const data = run.data
   const routine = routines.data?.find((r) => r.id === data.routine_id)
   const trip = trips.data?.find((t) => t.id === data.trip_id)
-  const saved = (outputs.data?.quotes.length ?? 0) + (outputs.data?.notes.length ?? 0)
+  const saved = outputs.data ? savedCount(outputs.data) : 0
   const rejected = outputs.data?.rejections.length ?? 0
   const log = events.data ?? []
   const current = tab ?? (live || saved === 0 ? 'log' : 'saved')
@@ -175,7 +175,7 @@ export function RunPage() {
           <div className="min-w-0">
             <h1 className="type-title">{routine?.name ?? KIND_LABEL[data.kind]}</h1>
             <p className="mt-1.5 text-ink-soft">
-              {[trip?.name, KIND_LABEL[data.kind], TRIGGER_LABEL[data.trigger]].filter(Boolean).join(' · ')}
+              {[trip?.name, routine && KIND_LABEL[data.kind], TRIGGER_LABEL[data.trigger]].filter(Boolean).join(' · ')}
             </p>
           </div>
           <div className="flex items-center gap-4">

@@ -86,7 +86,7 @@ export function useStopRun() {
   })
 }
 
-export type RunFilters = { tripId?: number; routineId?: number; status?: RunStatus; limit?: number }
+export type RunFilters = { tripId?: number; routineId?: number; kind?: Run['kind']; status?: RunStatus; limit?: number }
 
 export function useRuns(filters: RunFilters = {}) {
   return useQuery({
@@ -98,6 +98,7 @@ export function useRuns(filters: RunFilters = {}) {
             query: {
               trip_id: filters.tripId,
               routine_id: filters.routineId,
+              kind: filters.kind,
               status: filters.status,
               limit: filters.limit ?? 40,
             },

@@ -6,6 +6,7 @@ import { ErrorBoundary, PartFailed } from '@/components/common/error-boundary'
 import { ActivityEditor } from '@/components/itinerary/activity-editor'
 import type { ActivityDraft } from '@/components/itinerary/activity-form'
 import { AddActivityDialog } from '@/components/itinerary/add-activity-dialog'
+import { AiPlannerSheet } from '@/components/itinerary/ai-planner-sheet'
 import type { TimeChange } from '@/components/itinerary/day-calendar'
 import { IdeasPanel } from '@/components/itinerary/ideas-panel'
 import { longDate } from '@/components/itinerary/labels'
@@ -131,10 +132,13 @@ function DayView({ tripId, day, days, activities }: DayViewProps) {
               <ChevronRight aria-hidden="true" />
             </Button>
           </div>
-          <Button onClick={() => openAdd()}>
-            <Plus aria-hidden="true" />
-            Add activity
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <AiPlannerSheet trip={trip} days={days} day={day.in_trip ? day.day : undefined} />
+            <Button onClick={() => openAdd()}>
+              <Plus aria-hidden="true" />
+              Add activity
+            </Button>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-ink-soft">
           {number && <span>Day {number} of {tripDays.length}</span>}

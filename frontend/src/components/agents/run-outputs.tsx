@@ -1,21 +1,19 @@
 import { ExternalLink, TriangleAlert } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { AgentNote, Rejection, RunOutputs } from '@/lib/api/agents'
+import { suggestionWhen } from '@/components/itinerary/labels'
+import { CATEGORY } from '@/lib/activity-meta'
 import type { Quote } from '@/lib/api/flights'
+import type { Lodging } from '@/lib/api/lodging'
+import type { Suggestion } from '@/lib/api/suggestions'
 import { formatDateRange, parseDate } from '@/lib/dates'
+import { hostOf } from '@/lib/format'
 import { formatMoney } from '@/lib/money'
+import { lodgingOf, savedCount } from './run-meta'
 
 const day = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 
-function hostOf(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '')
-  } catch {
-    return url
-  }
-}
-
-function SourceLink({ url }: { url: string }) {
+export function SourceLink({ url }: { url: string }) {
   return (
     <a
       href={url}
@@ -87,9 +85,44 @@ export function NoteCard({ note, action }: { note: AgentNote; action?: ReactNode
   )
 }
 
+function SuggestionRow({ suggestion }: { suggestion: Suggestion }) {
+  const { icon: Icon, color, label } = CATEGORY[suggestion.category]
+  return (
+    <li className="flex items-start gap-3 py-3">
+      <Icon className="mt-0.5 size-4 shrink-0" style={{ color }} aria-label={label} />
+      <div className="min-w-0">
+        <p className="font-semibold">{suggestion.title}</p>
+        <p className="text-sm text-ink-soft">{suggestionWhen(suggestion)}</p>
+      </div>
+    </li>
+  )
+}
+
+function LodgingRow({ option }: { option: Lodging }) {
+  const price = option.price_total && option.currency ? formatMoney(option.price_total, option.currency) : null
+  return (
+    <li className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 py-3">
+      <div className="min-w-0">
+        <p className="font-semibold">{option.title}</p>
+        <p className="text-sm text-ink-soft">
+          {option.site}
+          {option.url && (
+            <>
+              {option.site && ' · '}
+              <SourceLink url={option.url} />
+            </>
+          )}
+        </p>
+      </div>
+      {price && <p className="type-data text-base font-semibold">{price}</p>}
+    </li>
+  )
+}
+
 export function SavedOutputs({ outputs }: { outputs: RunOutputs }) {
-  if (outputs.quotes.length === 0 && outputs.notes.length === 0) {
-    return <p className="text-sm text-ink-soft">This run didn't save any prices or notes.</p>
+  const lodging = lodgingOf(outputs)
+  if (savedCount(outputs) === 0) {
+    return <p className="text-sm text-ink-soft">This run didn't save any prices, notes, or ideas.</p>
   }
   return (
     <div className="space-y-6">
@@ -107,6 +140,30 @@ export function SavedOutputs({ outputs }: { outputs: RunOutputs }) {
             Agent prices are marked “indicative”: seen on the linked page, but not live-checked. Open the link before
             booking.
           </p>
+        </section>
+      )}
+      {outputs.suggestions.length > 0 && (
+        <section aria-labelledby="saved-ideas">
+          <h3 id="saved-ideas" className="type-label text-ink-soft">
+            Ideas
+          </h3>
+          <ul className="mt-1 divide-y">
+            {outputs.suggestions.map((suggestion) => (
+              <SuggestionRow key={suggestion.id} suggestion={suggestion} />
+            ))}
+          </ul>
+        </section>
+      )}
+      {lodging.length > 0 && (
+        <section aria-labelledby="saved-lodging">
+          <h3 id="saved-lodging" className="type-label text-ink-soft">
+            Places to stay
+          </h3>
+          <ul className="mt-1 divide-y">
+            {lodging.map((option) => (
+              <LodgingRow key={option.id} option={option} />
+            ))}
+          </ul>
         </section>
       )}
       {outputs.notes.length > 0 && (

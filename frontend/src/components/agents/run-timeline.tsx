@@ -1,4 +1,5 @@
 import {
+  BedDouble,
   CircleCheck,
   CircleX,
   ClipboardList,
@@ -10,6 +11,7 @@ import {
   MapPin,
   MessageSquareText,
   Search,
+  Sparkles,
   StickyNote,
   Ticket,
   TriangleAlert,
@@ -26,6 +28,8 @@ const TOOL_ICON: Record<string, LucideIcon> = {
   get_task: ClipboardList,
   lookup_airports: MapPin,
   submit_flight_quotes: Ticket,
+  suggest_activities: Sparkles,
+  suggest_lodging: BedDouble,
   add_note: StickyNote,
   finish_run: Flag,
 }

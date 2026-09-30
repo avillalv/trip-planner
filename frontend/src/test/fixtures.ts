@@ -1,5 +1,6 @@
 import type { Lodging } from '@/lib/api/lodging'
 import type { Presentation } from '@/lib/api/presentation'
+import type { Suggestion } from '@/lib/api/suggestions'
 import type { SystemStatus } from '@/lib/api/system'
 import type { Trip } from '@/lib/api/trips'
 
@@ -50,6 +51,31 @@ export function trip(overrides: Partial<Trip> = {}): Trip {
     cover: null,
     created_at: '2026-09-26T12:00:00Z',
     updated_at: '2026-09-26T12:00:00Z',
+    ...overrides,
+  }
+}
+
+export function suggestion(overrides: Partial<Suggestion> = {}): Suggestion {
+  return {
+    id: 5,
+    trip_id: 7,
+    run_id: '7f3c0a52-2f1e-4b1e-9d0e-1f2a3b4c5d6e',
+    mode: 'brainstorm',
+    title: 'Fushimi Inari at dawn',
+    category: 'sights',
+    description: 'Walk the torii gates before the tour groups arrive.',
+    why: 'You like temples and quiet mornings.',
+    timing_note: 'Dry until noon on the 6th.',
+    day: '2026-11-06',
+    start_time: '07:00:00',
+    end_time: '10:00:00',
+    duration_min: 180,
+    location_name: 'Fushimi Ward',
+    url: 'https://inari.jp/en/',
+    sources: ['https://www.japan-guide.com/e/e3915.html'],
+    status: 'new',
+    activity_id: null,
+    created_at: '2026-09-29T12:05:00Z',
     ...overrides,
   }
 }

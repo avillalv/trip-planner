@@ -2,6 +2,7 @@ import { CalendarDays, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { ActivityEditor } from '@/components/itinerary/activity-editor'
 import { AddActivityDialog } from '@/components/itinerary/add-activity-dialog'
+import { AiPlannerSheet } from '@/components/itinerary/ai-planner-sheet'
 import { DayCard } from '@/components/itinerary/day-card'
 import { IdeasPanel } from '@/components/itinerary/ideas-panel'
 import { searchCenter } from '@/components/itinerary/search-center'
@@ -39,6 +40,7 @@ export function TripItinerary() {
               </p>
             )}
           </div>
+          <AiPlannerSheet trip={trip} days={days.data ?? []} />
         </div>
 
         {days.isPending ? (

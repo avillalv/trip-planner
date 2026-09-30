@@ -4,7 +4,7 @@ import { Route, Routes } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import type { Routine, RunDetail, RunOutputs } from '@/lib/api/agents'
 import type { Run, RunEvent } from '@/lib/api/flights'
-import { systemStatus, trip } from '@/test/fixtures'
+import { suggestion, systemStatus, trip } from '@/test/fixtures'
 import { jsonResponse, mockApi, renderWithProviders } from '@/test/render'
 import { AgentsPage } from './agents-page'
 import { RunPage } from './run-page'
@@ -72,6 +72,23 @@ describe('AgentsPage', () => {
     expect(screen.getByText('Japan in autumn')).toBeInTheDocument()
     expect(screen.queryByText('No agent routines yet')).not.toBeInTheDocument()
     expect(await screen.findByText(/2 saved · 1 rejected/)).toBeInTheDocument()
+  })
+
+  it('lists runs that came from a traveler’s request rather than a routine', async () => {
+    mockApi({
+      '/api/v1/routines': [priceCheck],
+      '/api/v1/trips': [trip()],
+      '/api/v1/runs': [
+        run({ routine_id: null, kind: 'itinerary_agent', trigger: 'manual', summary: 'Three calm spots.', accepted_count: 3, rejected_count: 0 }),
+      ],
+      '/api/v1/system/status': systemStatus(),
+    })
+
+    renderWithProviders(<AgentsPage />, { route: '/agents' })
+
+    const row = (await screen.findByText('Itinerary ideas')).closest('li')!
+    expect(within(row).getByText('Three calm spots.')).toBeInTheDocument()
+    expect(within(row).getByText(/Started by hand · .*3 saved/)).toBeInTheDocument()
   })
 
   it('offers to create a routine and explains how to sign Claude in', async () => {
@@ -200,6 +217,27 @@ describe('RunPage', () => {
     expect(screen.getByText('Checked ZIPAIR and United.')).toBeInTheDocument()
     expect(await screen.findByText('ZIPAIR sale ends Oct 3')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /zipair\.net/ })).toHaveAttribute('href', 'https://www.zipair.net/en/sale')
+  })
+
+  it('counts an itinerary run’s ideas as saved and lists them', async () => {
+    mockApi({
+      [`/api/v1/runs/${RUN_ID}`]: { ...detail, routine_id: null, kind: 'itinerary_agent', trigger: 'manual', report: null, summary: 'Three calm spots.' },
+      [`/api/v1/runs/${RUN_ID}/events`]: events,
+      [`/api/v1/runs/${RUN_ID}/outputs`]: { ...outputs, notes: [], rejections: [], suggestions: [suggestion()] },
+      '/api/v1/routines': [],
+      '/api/v1/trips': [trip()],
+    })
+    renderWithProviders(
+      <Routes>
+        <Route path="/agents/runs/:runId" element={<RunPage />} />
+      </Routes>,
+      { route: `/agents/runs/${RUN_ID}` },
+    )
+
+    expect(await screen.findByRole('heading', { name: 'Itinerary ideas' })).toBeInTheDocument()
+    expect(await screen.findByRole('tab', { name: 'Saved (1)' })).toHaveAttribute('data-state', 'active')
+    expect(screen.getByText('Fushimi Inari at dawn')).toBeInTheDocument()
+    expect(screen.getByText(/Fri, Nov 6/)).toBeInTheDocument()
   })
 
   it('explains rejections and shows the log and the exact task', async () => {
