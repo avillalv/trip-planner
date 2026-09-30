@@ -32,7 +32,7 @@ Each ticket's description, dependencies, acceptance criteria, files and tests ar
 
 ## Notes
 
-- Create `CLAUDE.md` at the repo root (under 150 lines): stack, commands, the non-negotiable rules from `app-buildout/README.md`, the model rule (Opus 5.5 for planning, review and judgement; Sonnet 5.5 subagents for research and coding), and the pointer to `app-buildout/prompts/PROGRESS.md`. Put conditional rules in `.claude/rules/` (database migrations, frontend copy and styling, AI and worker code), each with `paths` frontmatter.
+- `CLAUDE.md` already exists, set up by context-kit-v2 (`/context-init`) with a `## Context layout` section. Extend it, do not replace it, and keep it under 200 lines: add the verified Commands section once the scaffold's commands actually run. Put conditional knowledge in `.claude/rules/` with narrow `paths` frontmatter (database migrations for `apps/api/wayfold/migrations/**` and `apps/api/wayfold/**/models*.py`; frontend copy and styling for `apps/web/src/**`; AI and worker code for `apps/worker/**` and `apps/api/wayfold/modules/ai/**`), reference material in `knowledge/` with a row in `knowledge/INDEX.md`, and repeatable procedures as skills in `.claude/skills/`.
 - The architecture tree mentions `docs/spec/`: the spec stays in `app-buildout/` at the repo root instead. Do not copy it.
 - Pin tool versions: Python 3.13 with uv, Node 22 LTS, PostgreSQL 18 in Docker. Write `.env.example` with every variable from 02 section 7, values empty.
 - The landing page can be a static page in `apps/web/public/` or a tiny separate route; the waitlist form posts to a stub endpoint that stores emails in a table later (store to a log until WF-012 exists).

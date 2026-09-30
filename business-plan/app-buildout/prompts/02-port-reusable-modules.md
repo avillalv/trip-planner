@@ -22,14 +22,15 @@ Each ticket's description, dependencies, acceptance criteria, files and tests ar
 
 ## Notes
 
-- The old code is the `trip-planner` repository (backend/ and frontend/). If it is not available in this session, ask the owner to attach it (read-only). If it cannot be attached, write the modules fresh from the specs and note that in PROGRESS.md.
+- The base code is the Trip Planner repository, https://github.com/avillalv/trip-planner (backend/ and frontend/). It should already be cloned read-only at `.reference/trip-planner/` (see `00-orchestrator.md`, "Base code"). Port from it with `git log`/blame available for context; never push to it. If it cannot be cloned, write the modules fresh from the specs and note that in PROGRESS.md.
+- Read `knowledge/trip-planner-base.md` first: what to reuse, adapt and drop, and where each piece lives.
 - Never port the Claude Code CLI runner, the MCP bridge, APScheduler, passcode auth or Windows scripts.
 
 ## Owner-only steps
 
 Add these to `app-buildout/prompts/HUMAN_TASKS.md` (do not block on them; use fakes, fixtures and flags until they are done):
 
-- Attach the old trip-planner repository to the session if it is not already available.
+- If the session cannot clone the Trip Planner repository (it is private), start the build session with both `wayfold` and `trip-planner` selected, or attach `trip-planner` read-only.
 
 ## Done when
 

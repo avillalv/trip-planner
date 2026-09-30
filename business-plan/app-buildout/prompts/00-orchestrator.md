@@ -17,6 +17,8 @@ the prompts in this folder in order, one pull request per prompt, until Phase 1 
 | `app-buildout/prompts/HUMAN_TASKS.md` | Steps only the owner can do (accounts, keys, Mac builds, App Store). Add to it; never block on it. |
 | `app-buildout/prompts/DECISIONS.md` | Judgement calls made during the build, with the reason and how to reverse them |
 | `app-buildout/phase-2-growth/`, `phase-3-scale/`, `reference-full-spec/` | Not part of this build. Do not implement anything from them. |
+| `.reference/trip-planner/` | Read-only clone of the base code (see "Base code" below). Gitignored. |
+| `CLAUDE.md`, `.claude/rules/`, `knowledge/`, `.claude/skills/`, `findings/` | The context-kit-v2 layout (see "Context system" below) |
 
 The application code lives at the repository root in the layout from
 `phase-1-launch/02-architecture.md` section 2 (`apps/`, `packages/`, `infra/`, `.github/`, `docs/`).
@@ -24,6 +26,54 @@ The spec stays in `app-buildout/`; do not copy it to `docs/spec/`.
 
 Precedence when documents disagree: `app-buildout/README.md`, then `phase-1-launch/README.md`
 (including its "Settled values"), then the topic spec (01 to 08, 10), then `09-build-roadmap.md`.
+
+## Base code: the Trip Planner repository
+
+Wayfold is built on the existing Trip Planner app, https://github.com/avillalv/trip-planner. It is
+not part of this repository. At the start of every session, before any prompt:
+
+1. If `.reference/trip-planner/` does not exist, clone it there read-only:
+   `git clone --depth 50 https://github.com/avillalv/trip-planner .reference/trip-planner`
+   (`.reference/` is in `.gitignore`). If the clone is refused because the repository is private,
+   the session needs access to it: in Claude Code on the web, start the session with both
+   `wayfold` and `trip-planner` selected; otherwise ask the owner. If it still cannot be cloned,
+   continue from the specs and note it in `PROGRESS.md`.
+2. If it exists, `git -C .reference/trip-planner pull --ff-only` to pick up the latest.
+3. Never commit to, push to, or edit files in `.reference/trip-planner/`. Copy what you port into
+   the Wayfold layout and adapt it there.
+
+`knowledge/trip-planner-base.md` says what to reuse, adapt and drop, and
+`phase-1-launch/02-architecture.md` section 14 maps every module.
+
+## Context system (context-kit-v2)
+
+This repository uses the context-kit-v2 plugin (enabled in `.claude/settings.json`): a three-tier
+layout (`CLAUDE.md`, `.claude/rules/`, `knowledge/` and `.claude/skills/`), a lean ruleset injected
+into every session and subagent, automatic skill capture, and graph tools. Use it to keep tokens low:
+
+- **Where knowledge goes.** Never grow `CLAUDE.md` on your own; it is capped at 200 lines. Knowledge
+  that applies to certain files goes in `.claude/rules/<topic>.md` with narrow `paths`; reference
+  goes in `knowledge/` with a row in `knowledge/INDEX.md`; a procedure that repeats becomes a skill
+  (skill capture writes it and reports one line).
+- **Before reading widely,** locate first: `knowledge/INDEX.md`, then the spec section, then the code.
+- **Before a pull request,** run `/blast-radius --diff` and check the downstream files are covered by
+  tests.
+- **Long investigations** record conclusions with `/finding`, so they survive compaction.
+- **At each month gate,** run `/context-graph --code` and `/context-init only audit, do not propose
+  moves yet`, and include both results in the gate file. Fix any rule whose `paths` match nothing.
+- If the plugin is not active (`/context-init` is unknown), install it once with
+  `/plugin marketplace add https://github.com/avillalv/context-kit-v2.git` then
+  `/plugin install context-kit-v2@context-kit-v2`, and restart the session.
+
+## Subagents
+
+Defined in `.claude/agents/`:
+
+| Agent | Model | Use for |
+|---|---|---|
+| `sonnet-researcher` | Sonnet | Read-only: spec lookups, reading the Trip Planner base, finding existing code. Returns conclusions, not file dumps. |
+| `sonnet-coder` | Sonnet | Implements exactly one ticket, tests first, runs lint and tests, reports a diffstat and results. |
+| `opus-reviewer` | Opus | Read-only adversarial review of a ticket's diff against its acceptance criteria and the rules. |
 
 ## Models
 

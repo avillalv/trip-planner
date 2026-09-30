@@ -158,7 +158,9 @@ Provider spend is stored in micro-dollars. All timestamps are `timestamptz` in U
 
 ## Reusing the existing Trip Planner code
 
-The current repository (`backend/`, `frontend/`) is a working single-household app. Much of it
+Wayfold is built on top of the existing **Trip Planner** repository, [https://github.com/avillalv/trip-planner](https://github.com/avillalv/trip-planner) (`backend/`,
+`frontend/`), a working single-household app. Build sessions clone it read-only to
+`.reference/trip-planner/` (gitignored) and port from it; never modify it. Much of it
 carries over: flight route and fare logic, itinerary and lodging features, presentation mode,
 the passport design tokens, Travelpayouts, Geoapify, Wikipedia and Frankfurter providers, the
 evidence rules in `services/agent_ingest.py`, and the agent prompts. What does not carry over:
