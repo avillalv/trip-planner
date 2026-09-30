@@ -223,6 +223,8 @@ def _lodging_lines(context: RunContext) -> list[str]:
         "",
         "You can't check Airbnb. If Airbnb is likely to have better options here, say so in your summary "
         "and name the neighborhoods worth searching.",
+        "",
+        "In your summary, call each place by its name. The travelers never see the index numbers.",
     ]
     if request.get("message"):
         lines += ["", "They also said:", f"<request>{request['message']}</request>"]
