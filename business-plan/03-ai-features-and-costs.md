@@ -226,7 +226,7 @@ $3.00, Trip Pass $0.80, Group Trip Pass $1.60, Pro $4.80.
 | Deep agent run | 40 | $0.56 typical | 20 turns, 10 searches, 10 fetches, $0.80 |
 | Deep agent run, free taster (once per Apple ID) | 0 | $0.56 typical, about $0.05 from the shared cache | Same caps, $0.80; own ledger line (5.7) |
 
-Any action that fails, is refused, times out or saves nothing is refunded automatically. A deep run stopped by the user is billed
+Any action that fails, is refused, times out or saves nothing is refunded automatically (a taster in that case is not consumed). A deep run stopped by the user is billed
 pro rata by turns used (minimum 8 credits); one stopped at the $0.80 limit is billed in full only if it saved something.
 
 ### 5.2 Metering and ledger tables
@@ -257,6 +257,7 @@ written lazily at first use, so idle accounts cost no writes.
 | Run | Turns | Searches | Fetches | Effort | Dollar stop | Other |
 |---|---|---|---|---|---|---|
 | Deep agent run | 20 | 10 | 10 | medium | $0.80 | 8-minute deadline; one run at a time per account |
+| Free taster run | 20 | 10 | 10 | medium | $0.80 | Same caps; once per Apple ID; no free-text instructions; cache first |
 | Research question | 3 requests | 5 in total | 8 | medium | $0.16 | 60k task budget |
 | Fare scan (Batch) | 5 | 6 | 3 | low | $0.15 (internal) | Premium only, scheduled |
 | Single calls | 1 | 0 | 0 | low or medium | the credit budget ($0.02; draft $0.08) | `max_tokens` per feature |
@@ -268,10 +269,12 @@ mark the run `partial` with "Stopped at the spending limit", and settle credits 
 
 | Tier | Monthly ceiling | Daily ceiling |
 |---|---|---|
-| Free | $0.25 | $0.05 |
-| Plus | $1.75 | $0.40 |
+| Free | $0.25, plus the one-time taster run ($0.80 stop, own ledger line) | $0.05 |
+| Plus | $2.25 | $0.40 |
+| Family | $3.40 pooled across the household | $0.40 |
 | Trip Pass | $1.80 per pass | $0.40 |
-| Premium | $5.50 | $1.25 |
+| Group Trip Pass | $3.60 per pass | $0.40 |
+| Pro | $5.50 | $1.25 |
 
 - The ceilings cover all provider spend attributed to the account (Claude, SerpApi, Geoapify). When one is hit, live and AI
   actions stop and cached data keeps working; the message says when it resets or offers a credit pack. Purchased credits raise
