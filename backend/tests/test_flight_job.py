@@ -1,6 +1,8 @@
 import json
+from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from decimal import Decimal
 from pathlib import Path
 
 import httpx
@@ -14,7 +16,7 @@ from tests.factories import add_route, add_trip
 from tripplanner.models import ApiCall, AppSetting, FlightQuote, RoutePriceInsight, Routine, RunEvent
 from tripplanner.providers import frankfurter, serpapi, travelpayouts
 from tripplanner.services.runs import RunLog, enqueue
-from tripplanner.worker.jobs.flight_prices import Cancelled, JobContext, run_flight_prices
+from tripplanner.worker.jobs.flight_prices import Cancelled, JobContext, offers_to_keep, run_flight_prices
 
 NOW = datetime(2026, 9, 26, 12, tzinfo=UTC)
 FIXTURE = json.loads(
@@ -156,3 +158,53 @@ def test_every_live_search_failing_fails_the_run(db_session: Session, apis: Apis
     assert status == "failed"
     assert "check SERPAPI_API_KEY" in summary
     assert "Invalid API key" in log_text(db_session, ctx)
+
+
+def itinerary(price: int, airline: str, number: str) -> dict:
+    return {
+        "flights": [
+            {
+                "airline": airline,
+                "flight_number": number,
+                "departure_airport": {"id": "LAX", "time": "2026-11-05 11:10"},
+                "arrival_airport": {"id": "NRT", "time": "2026-11-06 15:00"},
+            }
+        ],
+        "layovers": [],
+        "total_duration": 700,
+        "price": price,
+    }
+
+
+def offer(price: int, *airlines: str) -> serpapi.FlightOffer:
+    return serpapi.FlightOffer("LAX", "NRT", Decimal(price), list(airlines), 0, None, None, [], {})
+
+
+def test_offers_to_keep_takes_the_cheapest_five_plus_the_cheapest_three_of_each_airline() -> None:
+    offers = [
+        offer(100, "A"),
+        offer(200, "A"),
+        *(offer(300 + i, "B") for i in range(5)),  # the cheapest 5 overall end at B's third
+        offer(400, "C"),
+        offer(500, "A"),  # A's third: kept
+        offer(600, "A"),  # A's fourth: dropped
+        offer(700, "A", "B"),  # a different airline set: kept
+    ]
+
+    kept = offers_to_keep(offers)
+
+    assert [o.price_total for o in kept] == [100, 200, 300, 301, 302, 400, 500, 700]
+
+
+def test_a_pricier_airline_beyond_the_cheapest_five_is_still_stored(db_session: Session, apis: Apis) -> None:
+    spirit = [itinerary(400 + 10 * i, "Spirit", f"NK {100 + i}") for i in range(6)]
+    copa = itinerary(500, "Copa Airlines", "CM 467")  # the 7th cheapest of 8
+    american = itinerary(600, "American", "AA 1")
+    apis.search.mock(return_value=httpx.Response(200, json={"other_flights": [*spirit, copa, american]}))
+    ctx = context(db_session, travelpayouts_token=None)
+
+    run_flight_prices(ctx)
+
+    stored = Counter(tuple(q.airlines) for q in db_session.scalars(select(FlightQuote)))
+    assert stored == {("Spirit",): 6 * 5, ("Copa Airlines",): 6, ("American",): 6}
+    assert apis.search.call_count == 6  # no extra searches

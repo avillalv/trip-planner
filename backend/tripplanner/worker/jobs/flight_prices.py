@@ -21,7 +21,8 @@ from tripplanner.services.search_planner import DatePair, PlannerInput, date_pai
 
 MAX_LIVE_PER_ROUTE = 10
 MAX_LIVE_PER_RUN = 20
-OFFERS_PER_SEARCH = 5
+OFFERS_PER_SEARCH = 5  # the cheapest of any airline
+OFFERS_PER_AIRLINE = 3  # plus the cheapest of each airline, so pricier carriers aren't dropped
 
 log = logging.getLogger(__name__)
 
@@ -164,6 +165,21 @@ def scan_cached_fares(ctx: JobContext, route: FlightRoute, pairs: list[DatePair]
     return cheapest
 
 
+def offers_to_keep(offers: list[serpapi.FlightOffer]) -> list[serpapi.FlightOffer]:
+    """The cheapest OFFERS_PER_SEARCH offers, plus the cheapest OFFERS_PER_AIRLINE for each airline set.
+
+    `offers` come cheapest first (as `serpapi.search_flights` returns them), and keep that order.
+    """
+    per_airlines: Counter[tuple[str, ...]] = Counter()
+    keep = []
+    for rank, offer in enumerate(offers):
+        airlines = tuple(offer.airlines)
+        per_airlines[airlines] += 1
+        if rank < OFFERS_PER_SEARCH or per_airlines[airlines] <= OFFERS_PER_AIRLINE:
+            keep.append(offer)
+    return keep
+
+
 def live_search(ctx: JobContext, route: FlightRoute, pair: DatePair) -> bool:
     """One Google Flights search for a date pair. Returns False if the search failed."""
     key = ctx.settings.serpapi_api_key
@@ -191,7 +207,7 @@ def live_search(ctx: JobContext, route: FlightRoute, pair: DatePair) -> bool:
 
     passengers = route.adults + route.children
     stored = 0
-    for offer in result.offers[:OFFERS_PER_SEARCH]:
+    for offer in offers_to_keep(result.offers):
         quote = add_quote(
             ctx.db,
             route,

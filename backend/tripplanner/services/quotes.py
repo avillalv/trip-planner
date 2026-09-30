@@ -9,7 +9,7 @@ from typing import Any
 from urllib.parse import urlsplit
 from uuid import UUID
 
-from sqlalchemy import Date, cast, func, select
+from sqlalchemy import JSON, Date, cast, func, select
 from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.orm import Session
 
@@ -56,6 +56,7 @@ def dedupe_key(route_id: int, q: NewQuote) -> str:
         q.return_date,
         q.depart_at_local,
         ",".join(sorted(q.airlines)),
+        ",".join(q.flight_numbers or []),
         q.price_total.normalize(),
         q.currency,
     ]
@@ -156,6 +157,7 @@ def best_options(
                 FlightQuote.airlines,
                 FlightQuote.stops_out,
                 FlightQuote.depart_at_local,
+                FlightQuote.flight_numbers,
             )
         )
         .where(
@@ -174,6 +176,7 @@ def best_options(
             FlightQuote.airlines,
             FlightQuote.stops_out,
             FlightQuote.depart_at_local,
+            FlightQuote.flight_numbers,
             FlightQuote.observed_at.desc(),
         )
     )
@@ -262,7 +265,7 @@ def date_grid(
 
 
 def latest_same_flight(db: Session, quote: FlightQuote) -> FlightQuote | None:
-    """The newest price for the same flight: same source, airports, dates, airlines, and stops."""
+    """The newest price for the same flight: same source, airports, dates, airlines, stops, and flights."""
     return db.scalar(
         select(FlightQuote)
         .where(
@@ -274,6 +277,9 @@ def latest_same_flight(db: Session, quote: FlightQuote) -> FlightQuote | None:
             FlightQuote.return_date.is_not_distinct_from(quote.return_date),
             FlightQuote.airlines == quote.airlines,
             FlightQuote.stops_out.is_not_distinct_from(quote.stops_out),
+            # Quotes without flight numbers store JSON null, which IS NOT DISTINCT FROM NULL wouldn't match.
+            FlightQuote.flight_numbers
+            == (JSON.NULL if quote.flight_numbers is None else quote.flight_numbers),
             FlightQuote.hidden.is_(False),
         )
         .order_by(FlightQuote.observed_at.desc(), FlightQuote.id.desc())
