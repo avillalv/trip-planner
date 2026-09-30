@@ -10,7 +10,7 @@ Written 2026-09-30. This file defines every HTTP endpoint the web and iOS client
 
 | Item | Rule |
 |---|---|
-| API base | `https://api.wayfold.app/v1` in production, `https://api.staging.wayfold.app/v1` in staging, `http://localhost:8000/v1` in development. All paths below are relative to it unless they start with `/go` or `/.well-known`. |
+| API base | `https://api.wayfold.app/v1` in production, `https://api.staging.wayfold.app/v1` in staging, `http://localhost:8000/v1` in development. All paths below are relative to it unless they start with `/go`, `/health` or `/.well-known` (those are served at the host root). |
 | Redirect host | `https://go.wayfold.app/go/{click_id}` (same service, separate hostname so cookies and CSP never mix with the API). |
 | Format | JSON (`application/json; charset=utf-8`) in and out. Dates are `YYYY-MM-DD`, times `HH:MM:SS`, timestamps RFC 3339 in UTC (`2026-09-30T14:05:00Z`). Only the SSE and redirect endpoints return something else. |
 | Names | `snake_case` for fields, `kebab-case` for path segments, plural nouns for collections. |
@@ -23,7 +23,7 @@ Written 2026-09-30. This file defines every HTTP endpoint the web and iOS client
 ### 1.2 Authentication
 
 - Sign-in happens in Supabase Auth (Sign in with Apple, Google, email code). The client sends the Supabase access token on every call: `Authorization: Bearer <jwt>`. The web build may instead send the HttpOnly session cookie; cookie requests must also send `X-Wayfold-Client: web` and a same-origin `Origin` (CSRF guard carried over from `X-Trip-Planner: 1`).
-- One FastAPI dependency, `CurrentUser`, verifies signature (JWKS, cached 10 minutes), `iss`, `aud`, `exp` and `sub`, resolves `auth_identities(provider, subject)` to a `users` row, and rejects any status other than `active` with `403 account_inactive` (status `pending_deletion` gets `403 account_pending_deletion`, and only `POST /me/deletion/cancel` and `GET /me` work). A first-time valid JWT with no identity row is handled by `POST /me/bootstrap`, the only endpoint that accepts a JWT without a users row.
+- One FastAPI dependency, `CurrentUser`, verifies signature (JWKS, cached 1 hour and refreshed at most once a minute on an unknown `kid`, 02 section 6), `iss`, `aud`, `exp` and `sub`, resolves `auth_identities(provider, subject)` to a `users` row, and rejects any status other than `active` with `403 account_inactive` (status `pending_deletion` gets `403 account_pending_deletion`, and only `POST /me/deletion/cancel` and `GET /me` work). A first-time valid JWT with no identity row is handled by `POST /me/bootstrap`, the only endpoint that accepts a JWT without a users row.
 - Agent workers do not use user tokens. The worker calls internal functions directly, not HTTP. The legacy `/api/agent/v1` bridge is removed.
 - Partner callers (webhooks) authenticate with signatures or shared secrets (section 6). Admin callers use the admin API (section 5.25).
 - Guest mode is local-first; a guest has no token and calls no endpoint until they tap "Save your trip". `POST /me/claim` merges guest data after sign-in (5.1).
@@ -78,18 +78,18 @@ GET /v1/trips?limit=50&cursor=eyJ0IjoiMDE5MS4uLiJ9
 
 `Idempotency-Key: <uuid>` (client generated) is **required** on every POST that spends credits or money, and optional but honored on all other POSTs. The required list: `/trips/{id}/ai/*`, `/trips/{id}/agent-runs`, `/trips/{id}/flights/live-search`, `/trips/{id}/lodging/rental-search`, `/trips/{id}/concierge-requests`, `/trips/{id}/room-block-requests`, `/credits/packs/claim`, `/purchases/sync`, `/trips/{id}/expenses`, `/trips/{id}/settlements`, `/print-orders`, `/trips/{id}/agent-runs/{id}/cancel` (no cost, but it refunds).
 
-- Keys are stored for 24 hours with the request hash, the status and the response body (column `ai_usage.idempotency_key` for credit spends, and a generic `idempotency_keys` row for the rest, see Schema notes: key, user id, method, path, request hash, response). The same key with the same body replays the original response and adds `Idempotent-Replay: true`. The same key with a different body gets `422 idempotency_key_reused`. The same key while the first request is still running gets `409 idempotency_in_progress` with `Retry-After: 1`.
+- Keys are stored for 24 hours with the request hash, the status and the response body (`idempotency_keys` holds one row per user and key with the method, path, request hash, state, status and response; credit spends also carry the key, prefixed with the user id, in `ai_usage.idempotency_key` and `credit_ledger.idempotency_key`, so a retry can never charge twice even if the row is gone). The same key with the same body replays the original response and adds `Idempotent-Replay: true`. The same key with a different body gets `422 idempotency_key_reused`. The same key while the first request is still running gets `409 idempotency_in_progress` with `Retry-After: 1`.
 - A missing key on a required route gets `400 idempotency_key_required`.
 - Credit reservation and ledger writes key off the same value, so a retried agent start can never charge twice.
 
 ### 1.7 Optimistic concurrency
 
-Every editable resource has an integer `version` starting at 1, incremented on each successful write, and returns a strong `ETag: "<version>"`. Two equivalent ways to send it:
+Every editable resource has an integer `version` starting at 1, incremented on each successful write by the `bump_version()` trigger (03 convention 11: trips, itinerary days and items, routes, lodging options, polls, expenses, checklist items, notes and routines), and returns a strong `ETag: "<version>"`. Two equivalent ways to send it:
 
 - `If-Match: "<version>"` header on `PATCH`, `PUT` and `DELETE` (preferred).
 - `version` in the body of a PATCH.
 
-If both are absent, the write is rejected with `428 precondition_required` for resources marked "versioned" below (itinerary items, lodging options, notes, trip, expenses, polls, checklist items). On mismatch the response is `409 version_conflict` with the latest resource in `current`, and the client shows its conflict sheet ("Sam changed this. Keep yours or use theirs."). Last-writer-wins applies only to the offline queue, per field, where the client re-sends with the new version. Lists return `ETag` over the collection state and support `If-None-Match` for cheap polling (every 15 to 30 seconds on a shared trip, plus on foreground).
+If both are absent, the write is rejected with `428 precondition_required` for resources marked "versioned" below (trip, days, items, routes, lodging options, notes, polls, expenses, checklist items, routines). On mismatch the response is `409 version_conflict` with the latest resource in `current`, and the client shows its conflict sheet ("Sam changed this. Keep yours or use theirs."). Last-writer-wins applies only to the offline queue, per field, where the client re-sends with the new version. Lists return `ETag` over the collection state and support `If-None-Match` for cheap polling (every 15 to 30 seconds on a shared trip, plus on foreground).
 
 ### 1.8 Rate limits and headers
 
@@ -189,14 +189,14 @@ type PaywallHint = {
 ```ts
 type Capabilities = {
   effective_tier: Tier | "trip_pass" | "group_trip_pass"
-  source: "owner_tier" | "trip_pass"
+  source: "owner_tier" | "trip_pass" | "advisor_seat"
   can_invite: boolean               // owner has Plus or better, or an active pass
   max_collaborators: number         // plans.limits.collaborators: Free 0, Plus 6, Family 6, Pro 12, Trip Pass 6, Group Trip Pass 11
   live_routes_max: number           // Free 0 (cached only), Plus 3, Family 5, Pro 6, Trip Pass 2, Group Trip Pass 2
   live_routes_used: number
   live_checks_left: number | null   // either pass: live_checks_max (60) minus live_checks_used
   can_use_group_tools: boolean      // polls and manual cost splitting: owner on Plus, Family or Pro, or a Trip Pass or Group Trip Pass on the trip
-  can_collect_payments: boolean     // Phase 4, Stripe: Group Trip Pass on the trip or owner on Pro, and flag group_payments on
+  can_collect_payments: boolean     // Phase 4, Stripe: plans.limits.group_payments (Group Trip Pass on the trip or owner on Pro) and the group_payments flag on
   can_request_room_block: boolean   // Group Trip Pass only (plans.limits.room_block_request)
   agent_enabled: boolean            // owner setting and consent
   limited: boolean                  // tier lapsed: members downgraded to viewers, banner shown
@@ -215,6 +215,7 @@ type Trip = {
   my_role: Role
   capabilities: Capabilities
   ai_enabled: boolean                          // owner toggle
+  editors_can_invite: boolean                  // owner setting (trips.editors_can_invite): editors may invite viewers
   member_count: number
   owner: Attribution
   created_at: string; updated_at: string; deleted_at: string | null
@@ -236,7 +237,7 @@ type Trip = {
 | 403 | `insufficient_role` | Member role too low | Hide control |
 | 403 | `entitlement_required` | Tier or capability missing (`paywall` set) | Paywall moment |
 | 403 | `limit_reached` | Quota hit (active trips, routes, alerts, collaborators) | Paywall or explain |
-| 403 | `account_inactive` | `users.status` is neither `active` nor `pending_deletion` (03 has no suspension state yet, see Schema notes) | Show support contact |
+| 403 | `account_inactive` | `users.status` is `suspended` (an owner decision in the admin console) or `deleted` | Show support contact |
 | 403 | `account_pending_deletion` | In 30 day grace | Offer cancel |
 | 403 | `ai_consent_required` | No `ai_processing` consent | Show consent screen |
 | 403 | `ai_disabled_for_trip` | Owner turned AI off | Explain |
@@ -276,7 +277,7 @@ Gate codes used in the endpoint tables. A call that fails a gate returns the err
 | none | Any signed-in user | n/a |
 | `member(role)` | Caller is a member at or above `role` | 404 or `insufficient_role` |
 | `can_invite` | Trip capabilities say `can_invite` (owner Plus or better, or a pass) | 403 `entitlement_required`, reason `sharing` |
-| `active_trips` | Owner is under `plans.limits.active_trips` (Free 2, Plus and Family 25, Pro 50) | 403 `limit_reached`, reason `trip_limit` |
+| `active_trips` | Owner is under `plans.limits.active_trips` (Free 2, Plus and Family 25, Pro 50); a trip with an active pass does not count (limit key `active_trips_bonus`, 03 section 7.5) | 403 `limit_reached`, reason `trip_limit` |
 | `live_route` | `live_routes_used < live_routes_max` and within 120 days of departure | 403 `limit_reached`, reason `live_routes` |
 | `group_tools` | The trip's merged limits have `polls` and `cost_splitting` (owner on Plus, Family or Pro, or a Trip Pass or Group Trip Pass on the trip; Free owners only on trips that already have them) | 403 `entitlement_required`, reason `group_tools` |
 | `group_payments` | Phase 4: flag `group_payments` on, and the trip has a Group Trip Pass or the owner is on Pro | 403 `entitlement_required`, reason `group_payments` |
@@ -296,7 +297,7 @@ Table columns: **Endpoint** (method and path), **Auth** (minimum role, all requi
 
 | Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
 |---|---|---|---|---|
-| `POST /me/bootstrap` | JWT, no users row needed | none | `BootstrapIn` to `Me` (201 new, 200 existing) | Creates `users`, `auth_identities`, the "Me" `people` row, a `free` `entitlements` row, the first monthly `credit_grants` row (12 credits). Records Apple relay email flag. Emits `user_signed_up`. |
+| `POST /me/bootstrap` | JWT, no users row needed | none | `BootstrapIn` to `Me` (201 new, 200 existing; 409 `email_in_use` when the email belongs to another account) | Calls the `bootstrap_user` function (03), which creates `users`, `auth_identities`, the "Me" `people` row and a `free` `entitlements` row. No credit grant is written yet: the 12 Free credits are written on the first credit use of each month (`ensure_free_monthly_grant`, 03 section 5.13) and the taster grant at its first offer. Records Apple relay email flag. Emits `user_signed_up`. |
 | `GET /me` | user | none | `Me` | Returns server clock, `min_client_version`, feature flags evaluated for the user, and pending deletion state. Polled on foreground. |
 | `POST /me/claim` | user | none | `{ guest_token, merge?: boolean }` to `ClaimResult` | Validates the signed guest token (App Attest assertion inside). Imports the guest's local trip (one) and people. If identity already owns data and `merge` is absent: `409 state_conflict` with counts in `detail`. |
 | `POST /me/sign-out` | user | none | none to 204 | Revokes the current device's refresh token and unregisters its push token. |
@@ -305,7 +306,8 @@ Table columns: **Endpoint** (method and path), **Auth** (minimum role, all requi
 | `PUT /me/devices/{device_id}` | user | none | `DeviceIn` to `Device` | Registers or updates a device row (`devices.id`). Stores the push token (`push_token`, `push_environment`), `platform`, `app_version` and `os_version`; locale and notification prefs are saved on `users` and `users.prefs`. |
 | `DELETE /me/devices/{device_id}` | user | none | 204 | Revokes that device's session. |
 | `PUT /me/push-token` | user | none | `{ device_id, push_token, push_environment: "sandbox" \| "production" }` to 204 | Sets the token on the device. Invalid tokens are cleared when APNs answers 410. |
-| `GET /health` | none | none | `{ status: "ok", version }` | Liveness. `GET /health/ready` checks Postgres and the queue. No auth, no rate limit headers. |
+| `GET /health/live` | none | none | `{ status: "ok", version }` | Liveness, served at the host root (not under `/v1`). No auth, no rate limit headers. |
+| `GET /health/ready` | none | none | `{ status: "ok" \| "degraded", checks: { database, migrations, queue } }` | Readiness: Postgres reachable, Alembic revision at head, queue reachable; 503 when any check fails (deploys roll back on it). Same rules as `/health/live`. |
 
 ```ts
 type BootstrapIn = {
@@ -404,7 +406,7 @@ type HouseholdInvite = { id: Uuid; url: string; expires_at: string }
 | `GET /trips` | user | none | `?status=&include=joined,owned&limit&cursor&updated_since` to `Page<TripSummary>` | Trips where the caller is a member, excluding soft-deleted. `ETag` supported. |
 | `POST /trips` | user | `active_trips` | `TripCreate` to 201 `Trip` | Creates `trips`, the owner `trip_members` row, `trip_destinations`, and `trip_people` links. Free owner with 2 active trips gets 403 `limit_reached` (reason `trip_limit`, `free_path`: "Archive a trip or join trips other people plan"). Joined trips never count. |
 | `GET /trips/{trip_id}` | viewer | none | none to `Trip` | `ETag` is the trip version. |
-| `PATCH /trips/{trip_id}` | editor (status and `ai_enabled`: owner) | versioned | `TripUpdate` to `Trip` | Replaces destinations and travelers when sent. Changing dates re-derives `itinerary_days`; items on removed days become unscheduled, never deleted. Sets cover from the first destination image. |
+| `PATCH /trips/{trip_id}` | editor (status, `ai_enabled` and `editors_can_invite`: owner) | versioned | `TripUpdate` to `Trip` | Replaces destinations and travelers when sent. Changing dates re-derives `itinerary_days`; items on removed days become unscheduled, never deleted. Sets cover from the first destination image. |
 | `DELETE /trips/{trip_id}` | owner | none | none to 204 | Soft delete (`deleted_at`), 30 days in trash. Cancels active agent runs and routines, revokes invites and share links. |
 | `POST /trips/{trip_id}/restore` | owner | within 30 days | none to `Trip` | Undeletes. |
 | `POST /trips/{trip_id}/transfer` | owner | target is a member | `{ new_owner_id: Uuid }` to `Trip` | New owner becomes `owner`, previous owner becomes `editor`. Capabilities re-evaluated against the new owner's tier; a lapsed tier yields `limited: true`. Notifies both. |
@@ -425,6 +427,7 @@ type TripCreate = {
 type TripUpdate = Partial<Omit<TripCreate, "template">> & {
   status?: "planning" | "booked" | "done" | "archived"
   ai_enabled?: boolean
+  editors_can_invite?: boolean                   // owner only
   version?: number                               // or If-Match
 }
 type DestinationIn = {
@@ -477,7 +480,7 @@ type NearbyAirport = Airport & { distance_km: number }
 | `GET /invites/{token}` | none (rate limited) | none | none to `InvitePreview` | Public preview for the landing page: trip name, cover, inviter display name, role. No dates or places. `410 invite_expired` for bad tokens (same response for unknown and expired). |
 | `POST /invites/{token}/accept` | user | none | `{ person_id?: Uuid }` to 200 `Trip` | Redeems server side; the email need not match (Apple relay). Adds `trip_members`; single-use invites are consumed; link invites increment `use_count` up to `max_uses`. Free accounts join free and do not count toward their 2 active trips. `409 already_member` returns the trip id. |
 | `GET /trips/{trip_id}/share-links` | owner | none | none to `ShareLink[]` | |
-| `POST /trips/{trip_id}/share-links` | owner | `can_invite` | `ShareLinkCreate` to 201 `ShareLink` | Read-only public link `https://wayfold.app/s/<token>`. Default expiry 90 days. Redaction flags hide hotel address, prices and notes by default. |
+| `POST /trips/{trip_id}/share-links` | owner | `can_invite` | `ShareLinkCreate` to 201 `ShareLink` | Read-only public link `https://wayfold.app/s/<token>`. Default expiry 90 days (maximum 365). Redaction flags hide hotel address, prices and notes by default. |
 | `PATCH /trips/{trip_id}/share-links/{link_id}` | owner | none | `Partial<ShareLinkCreate>` to `ShareLink` | |
 | `DELETE /trips/{trip_id}/share-links/{link_id}` | owner | none | 204 | Revokes; later views return `410 share_link_revoked`. |
 | `GET /shared/{token}` | none (per-IP and per-token limit) | none | none to `SharedTrip` | Public read of the redacted presentation data (5.15). `Cache-Control: public, max-age=60`. Never includes affiliate click ids; the "Book the plan" slide links come from `POST /shared/{token}/outbound` (5.21). |
@@ -500,11 +503,11 @@ type Invite = {
 }
 type InvitePreview = { trip_name: string; cover_url: string | null; inviter_name: string; role: "editor" | "viewer" }
 type ShareLinkCreate = {
-  expires_in_days?: number | null     // null means no expiry
-  redact: { hotel_address: boolean; prices: boolean; notes: boolean; people: boolean }   // all true by default; maps to redact_address, redact_prices, redact_notes (people has no column in 03)
+  expires_in_days?: number            // 1 to 365, default 90; every share link expires
+  redact: { hotel_address: boolean; prices: boolean; notes: boolean; people: boolean }   // all true by default; maps to redact_address, redact_prices, redact_notes, redact_people
   show_book_slide: boolean            // "Book the plan" last slide, default true
 }
-type ShareLink = ShareLinkCreate & { id: Uuid; url: string; created_at: string; expires_at: string | null; view_count: number; revoked_at: string | null }
+type ShareLink = ShareLinkCreate & { id: Uuid; url: string; created_at: string; expires_at: string; view_count: number; revoked_at: string | null }
 type SharedTrip = { trip_name: string; presentation: Presentation; cta: { label: "Get the app to edit"; url: string }; book_slide: AffiliateOffer[] | null }
 ```
 
@@ -570,7 +573,7 @@ type RouteIn = {
 type Route = Omit<RouteIn, "version"> & {
   id: Uuid; trip_id: Uuid; version: number
   chosen_fare_id: Uuid | null; last_checked_at: string | null
-  next_live_check_at: string | null                         // live mode only
+  next_live_check_at: string | null                         // live mode only; derived from last_checked_at and the daily jitter window, not stored
   created_at: string; updated_at: string
 }
 type Fare = {
@@ -673,13 +676,13 @@ The itinerary is `itinerary_days` (one per trip date, created from the trip date
 | `GET /trips/{trip_id}/days` | viewer | none | `?updated_since` to `Day[]` | Every date in the trip range, with counts and first and last items. Days outside the range that hold items are included with `in_trip: false`. `ETag`. |
 | `PUT /trips/{trip_id}/days/{day}` | editor | versioned | `DayUpdate` to `Day` | `day` is `YYYY-MM-DD`. Creates the row if needed. |
 | `GET /trips/{trip_id}/items` | viewer | none | `?day=&unscheduled=true&category=&limit&cursor&updated_since` to `Page<Item>` | Ordered by day, then `sort_order`. |
-| `POST /trips/{trip_id}/items` | editor | none | `ItemIn` to 201 `Item` | Appends to the end of the day (or the pool). If `place` is given, saves it to `saved_places` when not present. Fails `422 validation_failed` if `end_time` precedes `start_time`. |
+| `POST /trips/{trip_id}/items` | editor | none | `ItemIn` to 201 `Item` | Appends to the end of the day (or the pool) with the next `sort_order`. If `place` is given, saves it to `saved_places` when not present and stores `source: "place_search"`; otherwise `source: "manual"`. Fails `422 validation_failed` if `end_time` precedes `start_time`. |
 | `GET /items/{item_id}` | viewer | none | none to `Item` | |
 | `PATCH /items/{item_id}` | editor | versioned | `ItemUpdate` to `Item` | Moving `day` is allowed here for a simple change; use `/move` to also set `sort_order`. |
 | `DELETE /items/{item_id}` | editor | versioned | 204 | |
 | `POST /trips/{trip_id}/days/{day}/reorder` | editor | none | `{ ids: Uuid[], version_map?: Record<Uuid, number> }` to `Item[]` | Sets `sort_order` by order for every item on that day. `ids` must be exactly the current items of the day else `409 version_conflict` with the current order in `current`. |
 | `POST /items/{item_id}/move` | editor | versioned | `{ day: string \| null, before_id?: Uuid \| null, start_time?: string \| null }` to `Item[]` | Moves between days or to the pool (`day: null`) and places before `before_id` (end if null). Returns every item whose position changed on both days. |
-| `POST /trips/{trip_id}/items/bulk` | editor | max 50 | `{ items: ItemIn[] }` to 201 `Item[]` | Used when accepting an AI draft. One transaction. |
+| `POST /trips/{trip_id}/items/bulk` | editor | max 50 | `{ items: ItemIn[], source?: "ai_draft" \| "import" }` to 201 `Item[]` | Used when accepting an AI draft or a booking import (`source` is stored on each item). One transaction. |
 | `GET /trips/{trip_id}/items/{item_id}/book-offers` | viewer | none | none to `AffiliateOffer[]` | "Tickets" offers for bookable items (Viator match by name and coordinates). Empty for parks and viewpoints. |
 | `GET /trips/{trip_id}/days/{day}/suggestions` | viewer | none | none to `ThingToDo[]` | Viator "things to do" near the day's plan, sorted by rating then distance, labeled as suggestions. Empty when there is no real match. No credits. |
 
@@ -698,6 +701,7 @@ type ItemIn = {
 type ItemUpdate = Partial<ItemIn> & { version?: number }
 type Item = Omit<ItemIn, "place" | "version"> & {
   id: Uuid; trip_id: Uuid; sort_order: number; version: number
+  source: "manual" | "place_search" | "ai_draft" | "agent" | "import" | "guide"     // itinerary_items.source: where the item came from; an accepted AI draft stays flagged
   place_provider: string | null; place_id: string | null; place_data: Record<string, unknown> | null
   bookable: boolean; added_by: Attribution; created_at: string; updated_at: string
 }
@@ -745,9 +749,9 @@ One-shot actions run inline or as a short job. All need the `ai` gate (consent, 
 | `POST /trips/{trip_id}/ai/draft-day` | editor | `ai`, `credits(1)` (`draft_day`) | `{ day: string, preferences?: string, replace?: boolean }` with `Idempotency-Key` to `DraftDayResult` | Returns a draft list of `ItemIn`, not saved. Applying it is `POST /trips/{trip_id}/items/bulk`. Hard stop $0.03. |
 | `POST /trips/{trip_id}/ai/draft-trip` | editor | `ai`, `credits(4)` (`draft_trip`) | `{ style?: string, pace?: "relaxed" \| "balanced" \| "packed", interests?: string[], budget?: Money }` with `Idempotency-Key` to 202 `DraftJob` | Whole-trip draft (days and items, plus a "why" per day). Runs as a job; poll `GET /ai/jobs/{id}`. Hard stop $0.10. |
 | `POST /trips/{trip_id}/ai/research` | editor | `ai`, `credits(8)`, or `credits(1)` if served from `shared_research_cache` (`research`) | `{ topic?: "destination_brief" \| "events_and_closures" \| "reservations_needed" \| "getting_around" \| "seasonal_notes", question?: string, scope?: "destination" \| "dates" \| "lodging" }` (a fixed `topic` can be served from the shared cache; a custom `question` bypasses it) with `Idempotency-Key` to 202 `ResearchJob` | Sonnet with 5 searches and 8 fetches at most, hard stop $0.16. Cache hit returns instantly with `from_cache: true` and charges 1. The shared cache stores only public facts keyed by destination, topic and date bucket, never personal context. |
-| `POST /trips/{trip_id}/ai/packing-list` | editor | `ai`, `credits(1)` (`explain` price class) | `{ preferences?: string }` with `Idempotency-Key` to `PackingListResult` | One short Haiku call from destination, dates, weather numbers and activity categories; nothing is saved until the user adds items to the checklist. |
-| `POST /trips/{trip_id}/ai/booking-import` | editor | `ai`, `credits(1)` (`explain` price class) | `{ text: string /* max 12000 */ }` with `Idempotency-Key` to `BookingImportResult` | Parses pasted confirmation text (personal data is replaced by placeholders before the call) into a draft flight, stay or itinerary item; the server never fetches a URL in the text. Nothing is saved until the user accepts. |
-| `GET /ai/jobs/{job_id}` | the requester
+| `POST /trips/{trip_id}/ai/packing-list` | editor | `ai`, `credits(1)` (`explain` price class) | `{ preferences?: string }` with `Idempotency-Key` to `PackingListResult` | One short Haiku call from destination, dates, weather numbers and activity categories; the run is stored as `runs.kind = 'packing_list'`. Nothing is saved until the user adds lines with `POST /trips/{trip_id}/checklist/packing` (5.16). |
+| `POST /trips/{trip_id}/ai/booking-import` | editor | `ai`, `credits(1)` (`explain` price class) | `{ text: string /* max 12000 */ }` with `Idempotency-Key` to `BookingImportResult` | Parses pasted confirmation text (personal data is replaced by placeholders before the call) into a draft flight, stay or itinerary item; the server never fetches a URL in the text. the run is stored as `runs.kind = 'booking_import'`. Nothing is saved until the user accepts; accepted drafts are created through the normal routes: a flight becomes an itinerary item (`category: "travel"`, `status: "booked"`, `source: "import"`), a stay a lodging option (`added_via: "manual"`, `status: "booked"`) and an activity an itinerary item (`source: "import"`). |
+| `GET /ai/jobs/{job_id}` | the requester | none | none to `AiJob` | Poll a draft-trip or research job until `done`, `failed` or `cancelled`. |
 | `POST /ai/jobs/{job_id}/cancel` | the requester | none | none to `AiJob` | Releases unspent reservation if no result was produced. |
 
 ```ts
@@ -854,8 +858,12 @@ Notes are either user notes or agent findings. An agent note must carry at least
 | `PATCH /notes/{note_id}` | author or owner | versioned | `Partial<NoteIn>` to `Note` | Agent notes can be pinned or hidden, not edited. |
 | `DELETE /notes/{note_id}` | author or owner | none | 204 | |
 | `GET /notes/{note_id}/evidence` | viewer | none | none to `Evidence` | Source URLs, titles, fetched times and the run that found them. |
+| `POST /reports` | user (viewer on the trip) | 20 per day per user | `ReportIn` to 201 `{ id: Uuid }` | "Report a problem" on an agent note or an AI answer. Writes `content_reports` (`target_type` `agent_note` or `ai_answer`; when the run used the shared cache the `cache_key` is added server side). The report immediately expires that cache entry so it is no longer served; the third report from different users also flags it (03 section 5.11). The reporter is never shown to anyone but moderators. |
+| `POST /shared/{token}/report` | none (share token) | 5 an hour per IP | `{ reason: ReportReason, detail?: string }` to 201 | Report a shared trip page (`target_type` `shared_trip`, `reporter_user_id` null). Reviewed in the admin moderation queue (08 6.12). |
 
 ```ts
+type ReportReason = "spam" | "harmful" | "wrong_info" | "copyright" | "privacy"   // content_reports.reason
+type ReportIn = { note_id?: Uuid; run_id?: Uuid; reason: ReportReason; detail?: string /* max 1000 */ }   // exactly one of note_id and run_id
 type NoteIn = { title?: string; body: string /* max 10000 */; pinned?: boolean; is_private?: boolean; day?: string | null; item_id?: Uuid | null; version?: number }
 type Note = NoteIn & {
   id: Uuid; trip_id: Uuid; version: number; kind: "user" | "agent"; author: Attribution | null
@@ -892,8 +900,10 @@ The checklist is derived from trip data by a rules module and stored as `checkli
 |---|---|---|---|---|
 | `GET /trips/{trip_id}/checklist` | viewer | none | none to `ChecklistItem[]` | Appears when the trip has a chosen flight or a saved stay, or 45 days before departure. Each item says why it is shown. Affiliate items carry `offer` with the disclosure line. Emits `checklist_item_shown` once per item per session. |
 | `PATCH /trips/{trip_id}/checklist/{kind}` | editor | versioned | `{ status: "todo" \| "done" \| "skipped" \| "not_needed", version?: number }` to `ChecklistItem` | Persists per trip. One nudge per item per week at most. |
-| `POST /trips/{trip_id}/checklist/custom` | editor | none | `{ title: string }` to 201 `ChecklistItem` | User items (`kind: "custom"`). |
-| `DELETE /trips/{trip_id}/checklist/{item_id}` | editor | custom items only | 204 | |
+| `PATCH /trips/{trip_id}/checklist/items/{item_id}` | editor | versioned | `{ status?: "todo" \| "done" \| "skipped" \| "not_needed", title?: string, version?: number }` to `ChecklistItem` | For custom items and AI packing lines, which have many rows per trip and so are addressed by id (rules items are addressed by `{kind}` above). |
+| `POST /trips/{trip_id}/checklist/custom` | editor | none | `{ title: string }` to 201 `ChecklistItem` | User items (`kind: "custom"`, `source: "user"`). |
+| `POST /trips/{trip_id}/checklist/packing` | editor | none | `{ items: { label: string, group: string }[] /* max 40 */ }` to 201 `ChecklistItem[]` | Saves the lines the user kept from a packing-list result as `kind: "packing"`, `source: "ai"`, `meta.group` set. Free; the credit was spent on the AI call. |
+| `DELETE /trips/{trip_id}/checklist/{item_id}` | editor | custom items and AI packing lines only | 204 | |
 | `GET /trips/{trip_id}/after-trip` | editor | trip end date passed | none to `AfterTrip` | "Was your flight delayed or cancelled?" prompt state. A partner link (compensation) is returned only after `PATCH` with `{ delayed: true }`. |
 | `PATCH /trips/{trip_id}/after-trip` | editor | none | `{ delayed?: boolean, dismissed?: boolean }` to `AfterTrip` | |
 
@@ -903,6 +913,7 @@ type ChecklistKind = "flights_booked" | "stay_booked" | "tickets" | "transfer_or
 type ChecklistItem = {
   id: Uuid; kind: ChecklistKind; title: string; why: string       // "You land in Lisbon at 21:40"
   status: "todo" | "done" | "skipped" | "not_needed"; group: string; version: number
+  source: "rules" | "user" | "ai"                                 // checklist_items.source: rules rows are one per kind; user and ai rows are many
   cost_hint: string | null; official_link: string | null          // documents links to the government source first
   offer: AffiliateOffer | null                                    // null for unmonetized items and when insurance is not enabled
   done_at: string | null; dismissed_at: string | null
@@ -952,7 +963,8 @@ type Expense = Omit<ExpenseIn, "version" | "shares"> & { id: Uuid; version: numb
 type Balances = { currency: string; fx_date: string; net: { person_id: Uuid; amount: Money }[]; transfers: { from: Uuid; to: Uuid; amount: Money }[] }
 type Settlement = {
   id: Uuid; from_person_id: Uuid; to_person_id: Uuid; amount: Money
-  method: "manual" | "cash" | "bank_transfer" | "stripe"; status: "recorded" | "pending" | "succeeded" | "failed" | "refunded"
+  method: "manual" | "cash" | "bank_transfer" | "stripe"; status: "recorded" | "pending" | "succeeded" | "failed" | "refunded" | "disputed"   // settlements.status
+  collection_id: Uuid | null                                        // Phase 4 Stripe collection (payment_collections)
   payment_url: string | null; settled_at: string | null
 }
 ```
@@ -996,12 +1008,12 @@ type RoomBlockRequest = RoomBlockIn & { id: Uuid; trip_id: Uuid; status: "submit
 | `POST /credits/packs/claim` | user | none | `{ product_id: string, transaction_id: string }` with `Idempotency-Key` to `CreditBalance` | Verifies the transaction through RevenueCat, grants credits keyed by `transaction_id` (never twice). Usually already granted by the webhook; this returns the balance. `409 state_conflict` if the transaction belongs to another user. |
 | `GET /trips/{trip_id}/pass` | viewer | none | none to `TripPass \| null` | Pass status and expiry for the trip settings screen. |
 | `GET /me/passes` | user | none | none to `TripPass[]` | Includes an unapplied pass waiting to be bound to a trip (a `store_transactions` row with `kind = 'pass'` and no `trip_passes` row yet). |
-| `POST /me/passes/{pass_id}/bind` | user (trip owner) | none | `{ trip_id: Uuid }` with `Idempotency-Key` to `TripPass` | Binds an unapplied pass to a trip the caller owns: inserts `trip_passes` (`starts_at` now, `expires_at` plus 90 days, limits copied from `plans.limits`), writes the `trip_pass` credit grant, recomputes capabilities. `409 state_conflict` if the trip already has an active pass. |
+| `POST /me/passes/{pass_id}/bind` | user (trip owner) | none | `{ trip_id: Uuid }` with `Idempotency-Key` to `TripPass` | Binds an unapplied pass to a trip the caller owns (the purchaser must be the owner): inserts `trip_passes` (`starts_at` now, `expires_at` plus 90 days, limits copied from `plans.limits`), writes the `trip_pass` credit grant, recomputes capabilities. `409 state_conflict` if the trip already has an active pass of the same plan, or if the pass is a Trip Pass and the trip has a Group Trip Pass. Binding a Group Trip Pass to a trip with an active Trip Pass is an upgrade: the Trip Pass becomes `upgraded`, the new pass runs a full 90 days from now, carries over `live_checks_used`, and the old pass's unspent credits stay spendable until their own expiry (07 7.9). |
 | `POST /me/passes/{pass_id}/move` | user (trip owner) | none | `{ trip_id: Uuid }` to `TripPass` | Moves an active pass to another trip the caller owns, once (`move_count`). Keeps `expires_at`, moves unspent pass credits and the live-check counter. `409 state_conflict` on a second move. |
 
 ```ts
 type Entitlements = {
-  tier: Tier; source: "none" | "subscription" | "household" | "comp"
+  tier: Tier; source: "none" | "subscription" | "household" | "comp" | "advisor"
   product_id: string | null; status: "none" | "active" | "in_trial" | "in_grace" | "billing_retry" | "paused" | "expired" | "refunded" | "revoked"
   valid_until: string | null; auto_renew: boolean | null; store: "apple" | "stripe" | "google" | null
   manage_subscription_url: string | null
@@ -1025,7 +1037,7 @@ type LedgerEntry = {
 type CreditPack = { plan_code: "credits_50" | "credits_150" | "credits_400"; product_id: "wayfold_credits_50" | "wayfold_credits_150" | "wayfold_credits_400"; credits: number; valid_months: 12 }
 type TripPass = {
   id: Uuid; product: "trip_pass" | "group_trip_pass" /* plan_code */; trip_id: Uuid | null   // id is trip_passes.id, or store_transactions.id while unapplied
-  starts_at: string | null; expires_at: string | null; status: "unapplied" | "active" | "expired" | "refunded"
+  starts_at: string | null; expires_at: string | null; status: "unapplied" | "active" | "expired" | "refunded" | "upgraded"   // upgraded: replaced by a Group Trip Pass on the same trip
   live_checks_left: number | null; collaborators_max: number
 }
 ```
@@ -1036,7 +1048,7 @@ The server decides which offer to show and why, so the client never hard codes p
 
 | Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
 |---|---|---|---|---|
-| `GET /paywall/offer` | user | none | `?reason=&trip_id=&surface=` to `PaywallOffer` | Logs `paywall_shown` (no experiment cell is shown twice in one session). Returns 200 with `offer: null` when nothing should be shown (for example when the user already has the capability). |
+| `GET /paywall/offer` | user | none | `?reason=&trip_id=&surface=` to `PaywallOffer` | Logs `paywall_viewed` (no experiment cell is shown twice in one session). Returns 200 with `offer: null` when nothing should be shown (for example when the user already has the capability). |
 | `POST /paywall/events` | user | none | `{ offer_id: Uuid, event: "viewed" \| "dismissed" \| "cta_tapped" \| "purchase_started" \| "purchased" \| "purchase_failed" \| "restore_tapped" }` to 204 | Analytics and experiment accounting only. |
 
 ```ts
@@ -1051,7 +1063,7 @@ type PaywallOffer = {
 } | null
 ```
 
-Mapping (decision table the endpoint implements, detail in 07): `sharing` leads with Trip Pass for a one-trip group or Plus annual for repeat planners; `live_routes` and `agent_taster_used` lead with Plus annual; `credits` shows credit packs first for Plus and Family members and Plus for Free; `group_tools` leads with Group Trip Pass; `routines` shows Pro; `trip_limit` shows Plus and the option to archive. Credit packs are never shown beside an upsell on a trips home screen. `reason` on `GET /paywall/offer` accepts every `PaywallHint.reason` plus the client-initiated trigger codes `footer_export`, `lodging_limit`, `lifecycle_14d` and `alert_limit` ([07-monetization-spec.md](07-monetization-spec.md) section 6.2). Product ids in `lead` and `alternatives` are `store_products.product_id` values such as `wayfold_plus_annual` and `wayfold_trip_pass`.
+Mapping (decision table the endpoint implements, detail in 07): `sharing` leads with Trip Pass for a one-trip group or Plus annual for repeat planners; `live_routes` and `agent_taster_used` lead with Plus annual; `credits` shows credit packs first for Plus and Family members and Plus for Free; `group_tools` leads with Group Trip Pass; `routines` shows Pro; `trip_limit` shows Plus and the option to archive. Credit packs are never shown beside an upsell on a trips home screen. `reason` on `GET /paywall/offer` accepts every `PaywallHint.reason` plus the client-initiated trigger codes `export_footer`, `ninth_stay`, `lifecycle_14d` and `alert_limit` ([07-monetization-spec.md](07-monetization-spec.md) section 6.2). Product ids in `lead` and `alternatives` are `store_products.product_id` values such as `wayfold_plus_annual` and `wayfold_trip_pass`.
 
 ### 5.21 Affiliate: outbound links, redirect and offers
 
@@ -1094,7 +1106,7 @@ Labeled partner guides (curated destination guides written by or with partners, 
 |---|---|---|---|---|
 | `GET /partner-guides` | user | none | `?destination=&country=&limit&cursor` to `Page<GuideSummary>` | Sorted by recency; never by partner payment. |
 | `GET /partner-guides/{slug}` | user | none | none to `Guide` | `Cache-Control: private, max-age=300`. |
-| `POST /trips/{trip_id}/items/from-guide` | editor | none | `{ guide_slug: string, entry_id: string }` to 201 `Item` | Copies a guide entry into the itinerary pool, attribution "From <guide>". |
+| `POST /trips/{trip_id}/items/from-guide` | editor | none | `{ guide_slug: string, entry_id: string }` to 201 `Item` | Copies a guide entry (from `partner_guides.entries`) into the itinerary pool with `source: "guide"`, attribution "From <guide>". |
 
 ```ts
 type GuideSummary = { slug: string; title: string; destination_name: string; partner_name: string; cover_image_url: string | null; label: "Partner guide"; disclosure: string }   // from partner_guides, status published
@@ -1107,8 +1119,8 @@ Printed trip books are ordered on the web only (Stripe checkout; never Apple In-
 
 | Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
 |---|---|---|---|---|
-| `POST /print-orders/quote` | owner or editor | none | `{ trip_id, format: "softcover" \| "hardcover", page_count: number, copies?: number, ship_to: Address }` to `PrintQuote` | Price and shipping from the print partner; valid 30 minutes. |
-| `POST /print-orders` | owner or editor | none | `{ quote_id: Uuid }` with `Idempotency-Key` to 201 `PrintOrder` | Creates `print_orders` (status `awaiting_payment`) and a Stripe Checkout Session; returns `checkout_url`. Status moves on Stripe webhooks. |
+| `POST /print-orders/quote` | owner or editor | none | `{ trip_id, format: "softcover" \| "hardcover", page_count: number, copies?: number, ship_to: Address }` to `PrintQuote` | Price and shipping from the print partner; valid 30 minutes. Stored as a `print_orders` row with status `draft` and `quote_expires_at` (amount, shipping and tax columns, address in `shipping_address`); `PrintQuote.id` is that row's id. |
+| `POST /print-orders` | owner or editor | none | `{ quote_id: Uuid }` with `Idempotency-Key` to 201 `PrintOrder` | Moves the unexpired draft quote to `awaiting_payment` (an expired one gets `422 validation_failed` with the field error code `quote_expired`) and creates a Stripe Checkout Session; returns `checkout_url`. Status moves on Stripe webhooks. |
 | `GET /print-orders` | user | none | `?limit&cursor` to `Page<PrintOrder>` | |
 | `GET /print-orders/{id}` | requester | none | none to `PrintOrder` | Tracking link when shipped. |
 | `POST /print-orders/{id}/cancel` | requester | status before `submitted` | `Idempotency-Key` to `PrintOrder` | Cancels and refunds through Stripe. |
@@ -1135,7 +1147,7 @@ Wayfold for Advisors is a workspace product sold on the web through Stripe ($29 
 
 ### 5.25 Admin API (outline)
 
-Base path `/v1/admin`, hidden from the public OpenAPI schema, reachable only from the admin console origin behind Cloudflare Access, with a separate admin Supabase project claim and `admin_users.role` (`admin_role`: `owner`, `support`, `finance`, `engineer`; 08 also uses a `content` role that 03 lacks, see Schema notes). Every mutating call needs a `reason` string and writes `audit_log` (actor, route, target, before and after). Routes return `404` to non-admins. The route list above is a summary; the full table, limits and permissions are in [08-admin-control-center.md](08-admin-control-center.md) section 8, which is authoritative.
+Base path `/v1/admin`, hidden from the public OpenAPI schema, reachable only from the admin console origin behind Cloudflare Access, with a separate admin Supabase project claim and `admin_users.role` (`admin_role`: `owner`, `support`, `finance`, `engineer`, `content`). Every mutating call needs a `reason` string and writes `audit_log` (actor, route, target, before and after). Routes return `404` to non-admins. The route list above is a summary; the full table, limits and permissions are in [08-admin-control-center.md](08-admin-control-center.md) section 8, which is authoritative.
 
 | Area | Endpoints (all under `/v1/admin`) | Minimum role |
 |---|---|---|
@@ -1161,9 +1173,9 @@ All webhook endpoints are public routes (no bearer token), excluded from the cro
 
 | Endpoint | Sender | Verification | Events handled and effects |
 |---|---|---|---|
-| `POST /webhooks/revenuecat` | RevenueCat | `Authorization: Bearer <REVENUECAT_WEBHOOK_SECRET>` compared in constant time; `environment` field must match the deployment (sandbox events are accepted only in staging) | `INITIAL_PURCHASE`, `RENEWAL`, `PRODUCT_CHANGE`, `CANCELLATION`, `UNCANCELLATION`, `BILLING_ISSUE`, `EXPIRATION`, `REFUND` (as `CANCELLATION` with reason), `NON_RENEWING_PURCHASE`, `TRANSFER`, `SUBSCRIBER_ALIAS`. Upserts `subscriptions` (unique on `store` and `original_transaction_id`) and `store_transactions` (unique on `store` and `store_transaction_id`), recomputes `entitlements`, grants the monthly credit allowance on renewal (`credit_grants.period_key` keeps it idempotent), binds Trip Pass and Group Trip Pass to the trip by inserting `trip_passes` (the purchase flow sent `trip_id` as a subscriber attribute; a pass with no trip stays `unapplied`, meaning a `store_transactions` row with no `trip_passes` row), grants credit packs keyed by the store transaction (`credit_grants.store_transaction_id` is unique), and claws back unspent credits on refund (`clawback` ledger rows; a shortfall blocks AI until later grants cover it). Family changes update household entitlements. `app_user_id` is our user UUID. Emits `subscription_started`, `subscription_renewed`, `subscription_cancelled`. |
+| `POST /webhooks/revenuecat` | RevenueCat | `Authorization: Bearer <REVENUECAT_WEBHOOK_SECRET>` compared in constant time; `environment` field must match the deployment (sandbox events are accepted only in staging) | `INITIAL_PURCHASE`, `RENEWAL`, `PRODUCT_CHANGE`, `CANCELLATION`, `UNCANCELLATION`, `BILLING_ISSUE`, `EXPIRATION`, `REFUND` (as `CANCELLATION` with reason), `NON_RENEWING_PURCHASE`, `TRANSFER`, `SUBSCRIBER_ALIAS`. Upserts `subscriptions` (unique on `store` and `original_transaction_id`) and `store_transactions` (unique on `store` and `store_transaction_id`), recomputes `entitlements`, grants the monthly credit allowance on renewal (`credit_grants.period_key` keeps it idempotent), binds Trip Pass and Group Trip Pass to the trip by inserting `trip_passes` (the purchase flow sent `trip_id` as a subscriber attribute; a pass with no trip stays `unapplied`, meaning a `store_transactions` row with no `trip_passes` row), grants credit packs keyed by the store transaction (`credit_grants.store_transaction_id` is unique), and claws back unspent credits on refund (`clawback` ledger rows; a shortfall blocks AI until later grants cover it). Family changes update household entitlements. `app_user_id` is our user UUID. Emits `subscription_started`, `subscription_renewed`, `subscription_canceled`. |
 | `POST /webhooks/apple` | Apple App Store Server Notifications V2, only if used directly | Signed JWS (`signedPayload`); verify the x5c chain to Apple's root, check bundle id and environment, verify the nested `signedTransactionInfo` and `signedRenewalInfo` | `SUBSCRIBED`, `DID_RENEW`, `DID_FAIL_TO_RENEW`, `GRACE_PERIOD_EXPIRED`, `EXPIRED`, `REFUND`, `REVOKE`, `DID_CHANGE_RENEWAL_STATUS`, `CONSUMPTION_REQUEST` (answer through the App Store Server API). Runs the same entitlement code as the RevenueCat handler. Off by default while RevenueCat is the source; kept so a move to direct StoreKit needs no API change. |
-| `POST /webhooks/stripe` | Stripe | `Stripe-Signature` with the endpoint secret, 5 minute tolerance | `checkout.session.completed` and `payment_intent.succeeded` (settlements, print orders), `payment_intent.payment_failed`, `charge.refunded` (print orders, settlements), `customer.subscription.created/updated/deleted` and `invoice.paid`, `invoice.payment_failed` (advisor seats). Updates `settlements`, `print_orders`, `advisor_seats`. Stripe never grants app features for consumer digital goods. |
+| `POST /webhooks/stripe` | Stripe | `Stripe-Signature` with the endpoint secret, 5 minute tolerance | `checkout.session.completed` and `payment_intent.succeeded` (settlements, print orders), `payment_intent.payment_failed`, `charge.refunded` (print orders, settlements), `charge.dispute.created` (a settlement becomes `disputed` until Stripe resolves it), `account.updated` (sets `users.stripe_connect_ready`), `customer.subscription.created/updated/deleted` and `invoice.paid`, `invoice.payment_failed` (advisor seats). Updates `settlements`, `payment_collections`, `print_orders`, `advisor_seats`. Stripe never grants app features for consumer digital goods. |
 | `POST /webhooks/affiliate/{network}` | Travelpayouts, Impact, Stay22, Viator (where a network offers postbacks); `{network}` is an `affiliate_programs.network` value and the `webhook_events.provider` | Per network: Travelpayouts shared token in a header or query parameter plus IP allow-list; Impact HMAC signature; Stay22 and Viator by token. Reject unknown slugs with `404`. | Writes `affiliate_conversions` upserted on `(program_id, network_txn_id)`, matched to `link_clicks` by sub-id, status history (`pending`, `approved`, `rejected`, `paid`). An unmatched conversion is stored with `click_id = null` and counted toward the unmatched-share health metric. Postbacks are a supplement: the nightly network pull job is the source of truth. Conversions never change any user-visible feature. |
 
 Replay protection: a webhook older than 7 days is stored and ignored unless it is a refund or revocation. `webhook_events` rows are kept 12 months (03 section 8).
@@ -1278,19 +1290,3 @@ GET  /go/3vQ9kT2mX0bE7nLw1ZpCya   -> 302 Location: https://www.aviasales.com/...
 ```
 
 Later the nightly Travelpayouts pull (or a postback to `/v1/webhooks/affiliate/travelpayouts`) writes an `affiliate_conversions` row matched to the click by sub-id. Nothing in the app changes for the user.
-
-## Schema notes
-
-Things this file needs that 03-database-schema.md does not have yet. The text above works around each one and names the nearest 03 equivalent.
-
-- `version` columns: 1.7 and the types give `version` to trips, polls, expenses, routines and checklist items. 03 has `version` only on `itinerary_days`, `itinerary_items`, `lodging_options` and `notes`. Either add `version integer NOT NULL DEFAULT 1` with `bump_version()` to the others, or use an `ETag` derived from `updated_at` for them.
-- `idempotency_keys` (1.6): 03 has `ai_usage.idempotency_key` and `credit_ledger.idempotency_key` but no generic table for the other required routes (key, user, method, path, request hash, response, 24 hour expiry).
-- `devices` has no `installation_id` and no locale or notification columns; 5.1 keys the row by `devices.id` and keeps preferences in `users.prefs`.
-- Redaction of people on `trip_share_links` (`redact.people`, 5.6): 03 has `redact_address`, `redact_prices` and `redact_notes` only.
-- Routes: `flight_routes.trip_type` has no `open_jaw` (dropped from `RouteIn`); `next_live_check_at` (5.8) is derived, not stored.
-- Notes: `notes` has no `day` or `item_id` columns (5.14 `NoteIn`); polls have no `max_choices` (5.17); room-block and concierge requests have no `lodging_id`, `preferred_contact` or phone columns (they go into `brief` or `preferences`).
-- Print quotes (5.23) are not stored in 03; `PrintQuote.id` needs a short-lived cache or a table.
-- Partner guide `entries` (5.22) have no table; 03 holds `body_md` only.
-- `users.status` (`user_status`) has no `suspended` value, yet 1.2 and the error catalogue reserve `403 account_inactive` for suspended accounts. Until 03 adds a suspension state the code is unreachable (08 lists the same gap).
-- `admin_role` has no `content` value (5.25 and 08 use it).
-- `editors_can_invite` (5.6) is a trip setting with no column on `trips`; add it or drop the option.

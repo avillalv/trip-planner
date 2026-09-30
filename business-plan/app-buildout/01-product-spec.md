@@ -309,7 +309,7 @@ action code and price, or "none". Acceptance bullets are testable at API or UI l
   - Each destination stores a time zone used for every time shown for that place.
   - Removing a destination asks what to do with its itinerary items (move, keep as ideas,
     delete).
-- Tier: all; up to 8 destinations per trip. Credits: none.
+- Tier: all; up to 12 destinations per trip. Credits: none.
 
 #### F-TRP-3 Destination info
 
@@ -447,8 +447,8 @@ action code and price, or "none". Acceptance bullets are testable at API or UI l
   grandparents and friends can look.
 - Acceptance:
   - `trip_share_links` creates a public read-only web page of itinerary and map, with redaction
-    flags on by default: hide exact lodging address, prices, notes.
-  - Default expiry 90 days; owner can revoke at any time; views are throttled per IP and token.
+    flags on by default: hide exact lodging address, prices, notes and traveler names.
+  - Default expiry 90 days (owner can choose 1 to 365); owner can revoke at any time; views are throttled per IP and token.
   - Page ends with "Get the app to edit" and shows the "Made with Wayfold" footer on `free`
     trips.
   - Partner links on the page follow F-AFF rules and can be turned off by the owner.
@@ -478,9 +478,9 @@ Reuse note: route, fare and choice logic carry over from the existing Trip Plann
     and either trip length in nights or a return window; traveler count defaults to the trip's.
   - Airport search supports city names, codes and "nearby airports" with distances.
   - Validation: window must be in the future and at most 330 days out; nights 1 to 60.
-  - Route limits per trip: `free` 1; `plus` 3 live plus cached extras; `family` 5 live; `pro` 6
-    live; `trip_pass` 2 live; `group_trip_pass` 2 live. Routes beyond the live limit still work
-    on cached fares with up to 4 cached routes per trip on paid tiers.
+  - Routes per trip (`routes_per_trip`): `free` 1; `plus` 5; `family` 5; `pro` 8; `trip_pass` 3;
+    `group_trip_pass` 3. Live-tracked routes (`live_routes`): `plus` 3; `family` 5; `pro` 6;
+    `trip_pass` 2; `group_trip_pass` 2. Routes beyond the live limit still work on cached fares.
   - `free` airports per side: 2; paid: 4.
 - Tier: all, limits above. Credits: none.
 - Edge cases: adding a second route on `free` shows a preview of its cached fares and the
@@ -672,7 +672,10 @@ rewritten; no ranking by commission.
     changes duration; clicking edits, moves to another day, or deletes.
   - Times are in the destination's local time regardless of device time zone; an evening can end
     after midnight.
-  - Item types: activity, meal, transport, lodging check-in or check-out, free time.
+  - Each item has one category (`itinerary_items.category`: sights, museum, food, nature,
+    nightlife, shopping, travel, other) and a status (idea, planned, booked); a lodging check-in
+    or check-out is an item in `travel` or `other`, and free time is a day with no items.
+  - Order within a day is start time, then `sort_order`.
   - Keyboard alternative exists for every drag action (see section 6.3).
 - Tier: all.
 
@@ -699,7 +702,7 @@ rewritten; no ranking by commission.
   - Geoapify and OpenStreetMap attribution is visible.
   - Soft limits per day: `free` 30 searches, `plus`, `family`, passes 100, `pro` 200; cached
     results always work.
-  - "Save place" puts it in `saved_places` for the user across trips.
+  - "Save place" puts it in the trip's `saved_places` shortlist.
 - Tier: all. Credits: none.
 
 #### F-ITN-5 Map
@@ -716,7 +719,8 @@ rewritten; no ranking by commission.
 
 - Story: As a traveler, I want to attach confirmations to items, so that I find them on the go.
 - Acceptance:
-  - An item can store a confirmation number, a booking link (user's own, unchanged), and notes.
+  - An item can store a booking link (user's own, unchanged) and notes, where the person can
+    also keep a confirmation number.
   - Bookable items show a "Tickets" action per F-AFF-4 where a program applies.
 - Tier: all.
 
@@ -852,6 +856,41 @@ Full technical detail is in [06-ai-agents-spec.md](06-ai-agents-spec.md). User-f
   - The balance and history are visible in Settings; the client never decides balance.
 - Tier: all.
 
+#### F-AI-9 Packing list
+
+- Story: As a traveler, I want a packing list that fits the weather and my plans, so that I
+  pack once.
+- Acceptance:
+  - "Suggest a packing list" in the Before you go checklist (packing group) returns 18 to 35 short
+    lines grouped as clothing, toiletries, documents, electronics, health and other, from the
+    destination, dates, daily weather numbers, activity categories and party size (adults and
+    children). No names, notes or product links are sent or returned.
+  - Costs 1 credit (`explain` price class, Haiku 4.5, hard stop $0.01); the same inputs within 7
+    days return the earlier list free. The result is a preview: the lines the person keeps are
+    saved as tick-off checklist rows (`checklist_items` with `kind = 'packing'`, `source = 'ai'`).
+  - Documents lines never state a visa, vaccine or insurance requirement; they point to official
+    sources.
+  - Kill switch `ai.packing`; needs AI consent and `trips.ai_enabled`.
+- Tier: all, from the user's credits. Credits: `explain` 1. Model: Claude Haiku 4.5.
+
+#### F-AI-10 Booking import
+
+- Story: As a planner, I want to paste a confirmation email and have it become a flight, stay or
+  activity entry, so that I do not retype it.
+- Acceptance:
+  - "Paste a booking" (Flights, Stays, Add item) takes pasted text up to 12,000 characters and
+    returns a draft flight, stay or activity with dates, places, amounts and references only as
+    the text states them; missing fields stay empty.
+  - Personal data in the text (names, emails, phone numbers, booking references, frequent flyer
+    numbers) is replaced with placeholders before the model call and restored into the draft
+    locally. The server never fetches a link in the text.
+  - Costs 1 credit (`explain` price class, Haiku 4.5, hard stop $0.01); text with no booking in it
+    is refunded and says so. Nothing is saved until the person accepts: a flight or activity
+    becomes an itinerary item (`source = 'import'`, flights as `travel`, `booked`), a stay becomes
+    a lodging option (`status = 'booked'`).
+  - Kill switch `ai.import`; needs AI consent and `trips.ai_enabled`.
+- Tier: all, from the user's credits. Credits: `explain` 1. Model: Claude Haiku 4.5.
+
 ### 4.8 Notes and evidence (F-NTE)
 
 #### F-NTE-1 Notes feed
@@ -923,7 +962,7 @@ Reuse note: extends the existing `presentation` page.
     chosen flight or booking), documents (passport validity, visa or e-authorization,
     vaccinations, linking to official government sites first), luggage storage (late departure),
     money (tell the bank, cash, no-fee card), home (mail, pets, out-of-office), packing list
-    (from weather).
+    (from weather; the optional AI packing list is F-AI-9).
   - At least half of the items carry no affiliate link.
   - Each partner item shows what it is, why it is here ("You land in Lisbon at 21:40"), cost
     range if known, and three actions: "Get it" (affiliate), "I have this", "Not needed".
@@ -957,7 +996,7 @@ Phase 4) is for `group_trip_pass` and `pro` only.
 - Story: As an organizer, I want a quick vote on dates, stays or activities, so that the group
   decides without a chat thread.
 - Acceptance:
-  - A poll (`polls`) has a question, 2 to 10 options, single or multiple choice, optional
+  - A poll (`polls`) has a question, 2 to 12 options, single or multiple choice, optional
     deadline, and anonymous or named; votes in `poll_votes`.
   - Poll types: free text, date ranges, or pick from the trip's lodging candidates or ideas.
   - Members vote from the app or the link; results update live on refresh; owner closes the poll
@@ -974,7 +1013,7 @@ Phase 4) is for `group_trip_pass` and `pro` only.
 - Acceptance:
   - An expense (`expenses`) has amount in minor units plus currency, payer, date, category,
     description, and shares (`expense_shares`) by equal split, by exact amounts, by percentages,
-    or by shares; it may link to an itinerary item or stay.
+    or by shares; the description can name the item or stay it is for.
   - Foreign currency amounts convert to the trip currency with the ECB rate of the expense date
     and store both.
   - Editors and owners can add; every member can view their own balance.
@@ -999,11 +1038,14 @@ Phase 4) is for `group_trip_pass` and `pro` only.
 - Story: As a debtor, I want to pay or record a payment, so that the trip is squared away.
 - Acceptance:
   - A settlement (`settlements`) is "Pay with card or bank through Stripe" (web, funds go to the
-    payee's connected account; Wayfold takes no cut in year 1) or "Mark as paid" (manual, both
-    sides confirm).
-  - Status: proposed, paid, confirmed, disputed. Confirmed settlements reduce balances.
+    organizer's connected account as a destination charge inside a `payment_collections` row;
+    Wayfold takes no cut in year 1) or "Mark as paid" (manual, both sides confirm).
+  - Status (`settlements.status`): pending (waiting for the payee to confirm, or for Stripe),
+    recorded (confirmed manual payment), succeeded (Stripe paid), failed, refunded, disputed.
+    Recorded and succeeded settlements reduce balances.
   - Payment is only for real-world trip costs; nothing digital is sold through it.
-  - Payees must complete Stripe onboarding to receive; manual marking works without it.
+  - The organizer must complete Stripe Connect onboarding to collect (`users.stripe_connect_account_id`);
+    manual marking works without it.
 - Tier: Stripe collection is `group_trip_pass` and `pro` only and ships in Phase 4 (flag
   `group_payments`); manual marking is in every F-GRP-2 tier from launch.
 - Edge cases: a member leaves with a balance: the balance stays and the owner can write it off
@@ -1213,19 +1255,37 @@ Global rules (each is a testable requirement):
 
 - Story: As a trip-focused user, I want to upgrade one trip, so that I do not subscribe.
 - Acceptance:
-  - A Trip Pass or Group Trip Pass is bound to one trip on the server (`trip_passes`), lasts 90
-    days from purchase, and can be moved to another trip at most once.
+  - A Trip Pass or Group Trip Pass is bound to one trip on the server (`trip_passes`) and lasts
+    90 days from binding. Purchase comes first, binding second: the purchase is a
+    `store_transactions` row (`kind = 'pass'`) and the pass has no trip until the owner picks one.
+  - Binding flow: before the purchase the app asks "Which trip is this for?" (pre-selected when
+    the purchase started from a trip) and sends the trip with `POST /v1/purchases/sync`. A pass
+    bought with no trip waits as "unapplied" in Settings, Purchases (listed by `GET /v1/me/passes`,
+    kept 12 months) until the owner binds it with `POST /v1/me/passes/{pass_id}/bind`. Only the
+    trip's owner can bind, and the purchaser must be that owner. A trip holds one active pass;
+    a second apply of the same plan is refused.
+  - One move: an active pass can move to another trip the same owner owns, once
+    (`POST /v1/me/passes/{pass_id}/move`). The move keeps the original expiry, carries the
+    unspent pass credits and the live-check counter, and pauses live routes on the old trip. A
+    second move is refused.
+  - Upgrade: buying a Group Trip Pass for a trip that has an active Trip Pass replaces it (the
+    Trip Pass becomes `upgraded`, the new pass gets a full 90 days, the live-check counter carries
+    over and unspent Trip Pass credits stay spendable until their own expiry).
   - Trip Pass: 2 live routes, at most 60 live checks, 40 credits, up to 6 collaborators, polls and
     manual cost splitting. Group Trip Pass: the same plus up to 12 travelers, 80 credits and the
-    room-block request.
+    room-block request. The passed trip does not count toward the owner's active-trip limit.
   - A trip's capabilities are the best of its owner's tier and any pass on it.
-  - Pass credits go to the purchaser's ledger with a 90 day expiry and are spent before
-    purchased credits.
+  - Pass credits are a pool tied to the trip (a `trip_pass` grant with the trip id), expire with
+    the pass after 90 days, are spendable by any member acting on that trip, and are spent after
+    the actor's monthly allowance and before purchased credits.
+  - The trip settings screen shows the pass status and expiry, a notice 7 days before expiry, and
+    a renewal offer (a new pass starts a new 90 days).
   - Default paywall order: Trip Pass first when a trip has dates within 120 days; annual `plus`
     first when the user has 2 or more active trips.
 - Tier: purchasable by any user. Credits: pass credits as above.
 - Edge cases: a pass bought while on `plus` still applies its extra group features; an expired
-  pass returns the trip to the owner's tier (F-SUB-6).
+  pass returns the trip to the owner's tier (F-SUB-6); a refunded pass stops granting
+  capabilities and its unspent credits are removed.
 
 #### F-SUB-3 Family
 
@@ -1248,10 +1308,12 @@ Global rules (each is a testable requirement):
     capped at 240), `trip_pass` 40 once, `group_trip_pass` 80 once; monthly grants do not roll
     over (except `pro`).
   - Purchased packs last 12 months and are spent last; expiry dates are shown.
-  - Spend order: monthly allowance, then pass credits, then purchased credits (oldest first).
+  - Spend order: monthly allowance (or the household pool), then promo (the taster), then pass
+    credits for that trip, then adjustments, then purchased credits (oldest expiry first).
   - Balance, history and expiry are visible (`credit_ledger`, `credit_grants`).
-  - Refunds through Apple remove unspent credits from that purchase; if already spent the
-    account is flagged and further packs stop.
+  - Refunds through Apple remove unspent credits from that purchase; if some were already spent
+    the shortfall is recorded as a debt (`credit_debts`) that blocks paid AI until later credits
+    cover it, and repeated refunds block pack purchases for 180 days.
   - On lapse, purchased credits stay usable on `free`; allowance credits vanish.
 - Tier: all.
 
@@ -1363,14 +1425,14 @@ applies to the passed trip only.
 | Join others' trips | yes | yes | yes | yes | yes | yes |
 | Archived trips: read and export | yes | yes | yes | yes | yes | yes |
 | Travelers per trip | 2 | 8 | 8 | 12 | 8 | 12 |
-| Destinations per trip | 8 | 8 | 8 | 8 | 8 | 8 |
+| Destinations per trip | 12 | 12 | 12 | 12 | 12 | 12 |
 | Invite collaborators | no | yes, 6 per trip | yes, 6 per trip | yes, 12 per trip | yes, 6 | yes, up to 12 travelers |
 | Read-only share link | no | yes | yes | yes | yes | yes |
-| Cached-fare routes per trip | 1 | 4 | 4 | 4 | 4 | 4 |
+| Routes per trip (cached fares; live where allowed) | 1 | 5 | 5 | 8 | 3 | 3 |
 | Airports per side of a route | 2 | 4 | 4 | 4 | 4 | 4 |
 | Live-tracked routes (daily, within 120 days) | 0 | 3 | 5 | 6 | 2 (max 60 checks) | 2 |
 | Refresh now (live peek) | 1 credit | 1 credit | 1 credit | 1 credit | 1 credit | 1 credit |
-| Price alerts | 1 cached | 3 live and cached | 5 live and cached | 6 live and cached | 2 | 2 |
+| Price alerts | 1 cached | 3 live and cached | 3 live and cached | 6 live and cached | 2 | 2 |
 | Saved stays per trip | 8 | unlimited (fair use 100) | unlimited (fair use 100) | unlimited | 30 | 30 |
 | Lodging compare | 2 | 4 | 4 | 4 | 4 | 4 |
 | Rental search | 1 credit | 1 credit | 1 credit | 1 credit | 1 credit | 1 credit |
@@ -1381,7 +1443,7 @@ applies to the passed trip only.
 | After-trip prompt | yes | yes | yes | yes | yes | yes |
 | Affiliate booking links | yes | yes | yes | yes | yes | yes |
 | Monthly credits | 12 | 60 | 150 pooled (6 members) | 240 (one month rolls over) | 40 once | 80 once |
-| `explain` (1) | credits | credits | credits | credits | credits | credits |
+| `explain` (1), `packing_list` (1), `booking_import` (1) | credits | credits | credits | credits | credits | credits |
 | `draft_day` (1), `draft_trip` (4) | credits | credits | credits | credits | credits | credits |
 | `research` (8, 1 cached) | credits | credits | credits | credits | credits | credits |
 | `agent_run` manual (40, 8 cached) | credits | credits | credits | credits | credits | credits |
@@ -1500,8 +1562,8 @@ Notes:
   and opt-out in Settings; Apple privacy label and `PrivacyInfo.xcprivacy` match the real data
   use.
 - Retention: soft-deleted trips 30 days; deleted accounts 30 days then purge, backups age out
-  within 35 days; invite tokens purged at 30 days; auth and audit logs 12 months with IPs hashed
-  after 30 days; AI prompt content 30 days server side; crash and analytics data 90 days.
+  within 35 days; invite tokens purged at 30 days; the audit log 13 months (money, security and control actions
+  7 years) with IPs hashed from the start; AI prompt content 30 days server side; crash and analytics data 90 days.
 - GDPR and CCPA: export and delete in the app, consent records, breach notice within 72 hours,
   no sale of data (stated in the policy).
 - Transport and storage: TLS everywhere, encryption at rest, files in R2 behind signed expiring

@@ -398,7 +398,7 @@ Tool: PostHog (first party, no ad SDKs). Rules:
 - Opt-out respected (Settings, Privacy) and Global Privacy Control honored. Events are dropped, not queued, when opted out.
 - Retention in PostHog 90 days for events, 13 months for aggregated dashboards.
 
-Common properties on every event (not repeated below): `app_version`, `platform` (`ios`, `web`), `tier` (`free`, `plus`, `family`, `pro`), `locale`, `env`.
+Common properties on every event (not repeated below): `app_version`, `platform` (`ios`, `web`), `tier` (`free`, `plus`, `family`, `pro`), `is_guest` (bool), `locale`, `env` and a random per-launch `session_id`. Screens in [05-ui-ux-spec.md](05-ui-ux-spec.md) list their events by the names in this table; an event a screen needs that is missing here is added here first.
 
 | Event | Properties | When fired |
 |---|---|---|
@@ -411,14 +411,14 @@ Common properties on every event (not repeated below): `app_version`, `platform`
 | `onboarding_step_completed` | `step` (`profile`, `home_airport`, `first_trip`) | Each onboarding step |
 | `trip_created` | `source` (`blank`, `template`, `concierge`), `destination_count`, `has_dates` | Trip saved |
 | `first_itinerary_item_added` | `minutes_since_signup_bucket` | First item in the user's first trip (activation) |
-| `itinerary_item_added` | `kind` (`activity`, `food`, `transport`, `stay`, `other`), `source` (`manual`, `place_search`, `ai_draft`) | Item created |
-| `flight_route_added` | `route_type` (`one_way`, `round_trip`, `multi`), `days_to_departure_bucket` | Route created |
+| `itinerary_item_added` | `category` (`itinerary_items.category`: `sights`, `museum`, `food`, `nature`, `nightlife`, `shopping`, `travel`, `other`), `source` (`itinerary_items.source`: `manual`, `place_search`, `ai_draft`, `agent`, `import`, `guide`) | Item created |
+| `flight_route_added` | `route_type` (`one_way`, `round_trip`), `days_to_departure_bucket` | Route created |
 | `fare_alert_created` | `kind` (`cached`, `live`) | Alert created |
 | `price_alert_delivered` | `channel` (`push`, `email`, `in_app`) | Alert notification sent |
 | `price_alert_opened` | `channel` | User opens from an alert |
-| `lodging_option_added` | `source` (`manual`, `link`, `search`, `bookmarklet`) | Option created |
-| `lodging_voted` | `vote` (`up`, `down`, `neutral`) | Vote cast |
-| `poll_created` | `option_count` | Poll created |
+| `lodging_option_added` | `source` (`lodging_options.added_via`: `paste`, `bookmarklet`, `partner_search`, `agent`, `manual`) | Option created |
+| `lodging_voted` | `voted` (bool: a heart added or removed) | Heart toggled |
+| `poll_created` | `option_count`, `subject` (`custom`, `dates`, `lodging`, `activity`, `destination`) | Poll created |
 | `present_mode_started` | `slide_count_bucket` | Presentation opened |
 | `invite_sent` | `channel` (`link`, `email`, `sms_share`), `role` | Invite created |
 | `invite_opened` | `platform_before_install` (`installed`, `not_installed`) | Invite link opened |
@@ -428,8 +428,8 @@ Common properties on every event (not repeated below): `app_version`, `platform`
 | `ai_consent_shown` | none | Consent screen displayed |
 | `ai_consent_granted` | `version` | Consent accepted |
 | `ai_consent_declined` | none | "Not now" |
-| `ai_action_started` | `action` (`explain`, `live_search`, `draft_day`, `draft_trip`, `research`, `agent_run`), `credits`, `from_cache` (bool) | Credits reserved |
-| `ai_action_completed` | `action`, `outcome` (`ok`, `partial`, `failed`, `refunded`), `duration_seconds_bucket` | Run settled |
+| `ai_action_started` | `action` (`explain`, `live_search`, `draft_day`, `draft_trip`, `research`, `agent_run`), `feature` (`explain`, `packing_list`, `booking_import`, `fare_hunt`, `deep_research`, and so on, from 06 section 1), `credits`, `from_cache` (bool), `taster` (bool) | Credits reserved (or the taster grant spent) |
+| `ai_action_completed` | `action`, `feature`, `outcome` (`ok`, `partial`, `failed`, `refunded`; a run the user stopped is `partial`), `taster` (bool), `duration_seconds_bucket` | Run settled |
 | `ai_feedback_given` | `action`, `rating` (`up`, `down`), `reason` (enum) | Thumbs tapped |
 | `fare_marked_wrong` | none | "Price was different" tapped |
 | `credits_low_shown` | `balance_bucket` | Low credit banner shown |
@@ -439,25 +439,90 @@ Common properties on every event (not repeated below): `app_version`, `platform`
 | `purchase_completed` | `product`, `period`, `is_trial` (bool) | Server confirms entitlement |
 | `purchase_failed` | `product`, `reason` (`cancelled`, `pending`, `error`) | Purchase ends without success |
 | `restore_tapped` | `result` (`restored`, `nothing`) | Restore purchases tapped |
-| `trip_pass_applied` | none | Pass bound to a trip |
+| `trip_pass_applied` | `product` (`trip_pass`, `group_trip_pass`), `is_upgrade` (bool) | Pass bound to a trip |
 | `subscription_canceled` | `product`, `days_active_bucket` | From RevenueCat webhook |
 | `subscription_expired` | `product`, `reason` (`voluntary`, `billing`, `refund`) | From webhook |
 | `partner_card_viewed` | `program` (code), `placement` (`flight`, `stay`, `activity`, `esim`, `car`, `insurance`, `checklist`), `sponsored` (bool) | Card enters viewport (once per screen visit) |
 | `partner_link_tapped` | `program`, `placement` | `/go` click created |
 | `affiliate_conversion_imported` | `program`, `status` (`pending`, `approved`, `reversed`) | Server import (no amounts in analytics) |
-| `concierge_requested` | `kind` (`stay`, `cruise`, `complex_trip`), `region` | Request submitted |
-| `concierge_status_changed` | `kind`, `status` | Server status change |
-| `expense_added` | `split_type` (`equal`, `custom`), `member_count_bucket` | Expense created |
-| `settlement_started` | `method` (`stripe`, `manual`) | Settle-up begun |
+| `concierge_requested` | `kind` (`stay`, `cruise`, `complex_trip`, `other`), `region` | Request submitted |
+| `concierge_status_changed` | `kind`, `status` (`concierge_status`) | Server status change, including a cancel by the requester |
+| `expense_added` | `split_type` (`expenses.split_method`: `equal`, `exact`, `percent`, `shares`), `member_count_bucket` | Expense created |
+| `settlement_started` | `method` (`settlements.method`: `manual`, `cash`, `bank_transfer`, `stripe`) | Settle-up begun or a payment request created |
 | `push_prompt_shown` | `context` (`after_invite`, `after_alert`) | Reason screen shown |
 | `push_permission_result` | `result` (`granted`, `denied`) | System prompt result |
 | `offline_trip_saved` | `trigger` (`manual`, `auto_departure`) | Trip cached for offline |
 | `export_requested` | none | Export started |
+| `export_ready` | none | Export file ready (server side) |
 | `account_deletion_requested` | `had_subscription` (bool) | Deletion confirmed |
 | `account_deletion_cancelled` | none | Restored in grace window |
 | `review_prompt_shown` | none | Native review prompt displayed |
 | `error_shown` | `code` (stable error code), `screen` | User sees an error state |
 | `kill_switch_banner_shown` | `switch` | User sees a paused feature message |
+| `screen_viewed` | `screen` (the route name from 05 section 5.4) | Any screen appears; not repeated in the per-screen lists in 05 |
+| `onboarding_started` | none | Splash shown to a signed-out visitor |
+| `onboarding_choice_made` | `choice` (`plan`, `sign_in`, `invite`) | A splash button tapped |
+| `onboarding_step_skipped` | `step` (`profile`, `home_airport`, `first_trip`) | "Skip for now" on a step |
+| `sign_in_failed` | `method`, `reason` (`wrong_code`, `expired_code`, `rate_limited`, `cancelled`, `error`) | Sign-in ends without success |
+| `save_prompt_shown` | `trigger` (`invite`, `sync`, `ai`, `export`, `alert`, `purchase`, `banner`) | Guest "Save your trip" sheet shown |
+| `save_prompt_dismissed` | `trigger` | Guest taps "Not now" |
+| `trips_home_viewed` | `trip_count_bucket`, `active_count` | Trips home opened |
+| `trip_opened` | `source` (`home`, `link`, `push`, `switcher`) | A trip workspace opened |
+| `trip_archived` | none | Trip archived |
+| `trip_create_started` | none | Create-trip flow opened |
+| `trip_overview_viewed` | none | Overview tab opened |
+| `next_step_tapped` | `step` (`dates`, `flight`, `stay`, `first_day`) | A Next steps row tapped |
+| `section_opened` | `section` (`flights`, `stays`, `plan`, `group`, `notes`, `checklist`, `ai_activity`) | A summary card or section tab opened |
+| `invite_sheet_opened` | none | Invite sheet opened |
+| `traveler_linked` | none | "Which traveler are you?" answered |
+| `fare_chip_tapped` | `source` (`live`, `cached`, `agent`, `google`) | Fare chip tapped |
+| `fare_detail_viewed` | `age_hours_bucket` | Fare detail opened |
+| `fare_marked_booked` | none | "Mark as booked" on a chosen fare |
+| `flight_chosen` | none | A fare is chosen for a route (server side) |
+| `lodging_compare_opened` | `count` | Compare opened with 2 to 4 stays |
+| `lodging_booked` | none | A stay marked Booked |
+| `plan_viewed` | `mode` (`days`, `calendar`, `map`) | Plan section opened |
+| `itinerary_item_moved` | `method` (`drag`, `move_to_sheet`, `actions`) | Item moved to another day or position |
+| `itinerary_item_deleted` | none | Item deleted |
+| `edit_conflict_shown` | `resolution` (`keep_mine`, `use_theirs`, `dismissed`) | 409 `version_conflict` sheet resolved |
+| `place_searched` | `result_count_bucket` | Place search run |
+| `map_opened` | none | Plan map opened |
+| `map_pin_selected` | none | Pin tapped |
+| `maps_handoff` | `app` (`apple`, `google`) | "Open in ..." maps tapped |
+| `ai_sheet_opened` | none | Ask sheet opened |
+| `agent_finding_saved` | `kind` (`fare`, `note`) | "Save to trip" on a run finding |
+| `taster_offered` | none | Taster card shown |
+| `taster_upsell_shown` | none | Post-taster card shown |
+| `note_added` | `scope` (`trip`, `day`, `item`, `stay`), `private` (bool) | Note created |
+| `evidence_opened` | none | Evidence row or source opened |
+| `finding_saved_to_notes` | none | A finding copied to notes |
+| `present_mode_printed` | none | Print or PDF from present mode |
+| `checklist_item_shown` | `kind` (`checklist_items.kind`) | Checklist row seen, once per item per session |
+| `checklist_item_updated` | `kind`, `status` (`done`, `skipped`, `not_needed`, `todo`) | Row ticked, dismissed or reset |
+| `poll_voted` | `selection` (`single`, `multiple`) | Vote cast |
+| `settle_up_viewed` | none | Settle up list opened |
+| `concierge_card_shown` | `surface` (`stays`, `overview`) | Entry card in view |
+| `discover_viewed` | none | Discover opened |
+| `destination_opened` | `country_code` | A destination page opened |
+| `trip_started_from_discover` | none | "Start a trip here" tapped |
+| `activity_viewed` | `unread_bucket` | Activity opened |
+| `activity_item_opened` | `kind` (`alert`, `change`, `poll`, `run`, `invite`, `concierge`, `expense`) | Activity row opened |
+| `account_viewed` | none | Account opened |
+| `setting_changed` | `key` (the setting name, never its value) | A setting toggled |
+| `booking_links_hidden` | `value` (bool) | "Hide booking links" switched |
+| `manage_subscription_tapped` | none | "Manage subscription" tapped |
+| `notification_opened` | `type` (`price_alert`, `trip_change`, `reminder`, `digest`, `run_done`, `concierge`) | App opened from a push |
+| `subscription_started` | `product`, `period`, `is_trial` (bool) | From the RevenueCat webhook |
+| `subscription_renewed` | `product`, `period` | From the webhook |
+| `trial_converted` | `product` | First paid renewal after a trial |
+| `subscription_changed` | `direction` (`upgrade`, `downgrade`), `from`, `to` (product codes) | Upgrade applied or downgrade scheduled |
+| `trip_pass_moved` | none | A pass moved to another trip |
+| `trip_pass_expired` | `product` | Pass reaches `expires_at` |
+| `credits_expired` | `credits_bucket` | Grant expiry sweep (server side, no user id in the event) |
+| `payment_collection_created` | `member_count_bucket` | Phase 4: Stripe collection opened |
+| `payment_collection_paid` | `share_count_bucket` | Phase 4: every share paid |
+
+Screen names in 05 map to the catalogue as follows, so a screen never invents a name: the Subscription and credits screen is `screen_viewed {screen: subscription}`; a credit pack tap is `purchase_started` with a `credits_*` product; a live check or an explain is `ai_action_started` with its `action`; "Book on ..." on a fare, a stay or a checklist row is `partner_link_tapped` with the matching `placement`; sharing from present mode is `share_link_created`.
 
 Funnels tracked from these events: activation (`signup_completed` to `first_itinerary_item_added` within 24 hours), invite loop (`invite_sent` to `invite_accepted` to second `trip_created`), paywall (`paywall_viewed` to `purchase_started` to `purchase_completed`), AI (`ai_consent_granted` to `ai_action_completed` with `outcome=ok`), affiliate (`partner_card_viewed` to `partner_link_tapped`).
 

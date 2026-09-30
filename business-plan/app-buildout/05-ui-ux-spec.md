@@ -69,6 +69,8 @@ All tokens are CSS custom properties defined in `packages/tokens` (CSS and TS, p
 
 Rules: chart series follow the price source, never its rank, so a partner's color can never signal "best". Activity groups are validated for color-blind separation; an icon and a text label always accompany the color.
 
+The `--cat-*` tokens are color groups over the eight `itinerary_items.category` values of 03 (`item_category`): `--cat-culture` is `sights` and `museum`, `--cat-food` is `food` and `nightlife`, `--cat-outdoors` is `nature`, `--cat-shopping` is `shopping`, and `--cat-neutral` is `travel` (getting around) and `other`. Every item has exactly one category; the UI labels are Sights, Museums, Food, Outdoors, Nightlife, Shopping, Getting around and Other.
+
 ### 2.3 Measured contrast (WCAG 2.x ratios)
 
 | Pair | Light | Dark |
@@ -236,7 +238,7 @@ Two modes on the Plan section. **Month and range** (`react-day-picker` style gri
 
 ### 4.8 Day card
 
-One per day in the Plan list. Header: "Day 3", date in mono, a one-line theme the person wrote or accepted ("Sintra by train"), total walking or transit time if known. Body: ordered items with time, icon in the group color, title, optional place photo, and an "added by" avatar when someone else added it. Footer: "Add" and "Draft this day (1 credit)". Variants: collapsed (first two items plus "3 more"), expanded, drop-target (dashed `--tp-edge` border while dragging), today (brand-soft header), empty. Reorder by drag handle on web, "Move up" and "Move down" actions plus drag on touch (for VoiceOver, custom actions). Booked items show a small check stamp; unbooked bookable items show the "Tickets" partner link only on explicit expand (see 4.13).
+One per day in the Plan list. Header: "Day 3", date in mono, a one-line theme the person wrote or accepted ("Sintra by train"), total walking or transit time if known. Body: ordered items with time, icon in the group color, title, optional place photo, and an "added by" avatar when someone else added it. Footer: "Add" and "Draft this day (1 credit)". Variants: collapsed (first two items plus "3 more"), expanded, drop-target (dashed `--tp-edge` border while dragging), today (brand-soft header), empty. Items are ordered by start time, then by `sort_order` (a number on each item, `itinerary_items.sort_order`; untimed items keep the order the person sets). Reorder by drag handle on web, "Move up" and "Move down" actions plus drag on touch (for VoiceOver, custom actions); each reorder or move writes `sort_order` through `POST /trips/{id}/days/{day}/reorder` or `POST /items/{id}/move`. Booked items show a small check stamp; unbooked bookable items show the "Tickets" partner link only on explicit expand (see 4.13).
 
 ### 4.9 Place card
 
@@ -244,7 +246,7 @@ Used in search, saved places, ideas and Discover. Photo 16:10 (or category icon 
 
 ### 4.10 Lodging card with votes
 
-Photo strip (swipe, up to 6 photos, page dots), name, area, price per night and total for the trip in mono with currency, per-person price for the party, bedrooms, source chip ("Pasted link", "From Stay22 search", "Added by hand"), status chip (Shortlisted, Booked, Rejected), and the vote row. **Votes:** one row of avatar chips, each with a heart or a "no" mark; the viewer's own state is a 44 pt toggle button ("You love this" with `aria-pressed`). Counts read "3 of 4 like this", names on tap. Variants: shortlist card, compare column (2 to 4 columns, horizontal scroll with a sticky label column), booked (stamp-press on the status), rejected (collapsed). Buttons: "Open" always opens the user's saved URL exactly as pasted; "Book via partner" is a separate labeled button only when a program is approved for that host and never for Airbnb (see 4.13). States: no price yet ("Add a price to compare"), price older than 7 days ("Price from 12 Sep, check the site"), locked "later" list on Free after 8 saved (read and export still work), conflict ("Sam also edited this").
+Photo strip (swipe, up to 6 photos, page dots), name, area, price per night and total for the trip in mono with currency, per-person price for the party, bedrooms, source chip ("Pasted link", "From Stay22 search", "Added by hand"), status chip (Shortlisted, Booked, Rejected), and the vote row. **Votes are hearts, nothing else:** one row of avatar chips, one per traveler who hearted the stay (there is no down vote and no "no" mark); the viewer's own state is a 44 pt heart toggle ("You love this" with `aria-pressed`) that sends `{ voted: true }` or `{ voted: false }` to `PUT /lodging/{id}/votes/me`. Counts read "3 of 4 like this" (hearts over travelers), names on tap. Variants: shortlist card, compare column (2 to 4 columns, horizontal scroll with a sticky label column), booked (stamp-press on the status), rejected (collapsed). Buttons: "Open" always opens the user's saved URL exactly as pasted; "Book via partner" is a separate labeled button only when a program is approved for that host and never for Airbnb (see 4.13). States: no price yet ("Add a price to compare"), price older than 7 days ("Price from 12 Sep, check the site"), locked "later" list on Free after 8 saved (read and export still work), conflict ("Sam also edited this").
 
 ### 4.11 Credit cost chip
 
@@ -397,7 +399,7 @@ The current repository routes (`/trips/:tripId/itinerary`, `/lodging`, `/agents`
 
 ## 6. Screens
 
-Every screen follows one template: **Purpose**, **Layout**, **Content**, **Interactions**, **States** (loading, empty, error, offline, no permission, limit reached where they apply), **Copy**, **Events** (analytics names, snake_case, properties in braces; `screen_viewed {screen}` fires on every screen and is not repeated), **Accessibility**. Copy follows section 7. Credit prices and limits come from the README.
+Every screen follows one template: **Purpose**, **Layout**, **Content**, **Interactions**, **States** (loading, empty, error, offline, no permission, limit reached where they apply), **Copy**, **Events** (analytics names, snake_case, properties in braces; `screen_viewed {screen}` fires on every screen and is not repeated; names and property values are the catalog in 10 section 4), **Accessibility**. Copy follows section 7. Credit prices and limits come from the README.
 
 ### 6.1 Splash and onboarding
 
@@ -428,7 +430,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 **Interactions.** "Plan a trip" enters guest mode and opens Create trip (6.6). "Sign in" opens 6.3. Invite links skip this screen. A returning signed-out user sees "Sign in" as primary. Age gate: a one-line confirmation in the sign-in step for storefronts that need it (13 and over, 16 and over for EU and UK locales).
 **States.** Loading: the lockup shows instantly, buttons are always active (nothing to load). Offline: same screen, guest planning works offline. Error: not applicable. No permission prompts on this screen, no ATT prompt anywhere.
 **Copy.** Title "Plan together. Know the fare." Button "Plan a trip". Legal "By continuing you agree to the Terms and the Privacy policy."
-**Events.** `onboarding_started`, `onboarding_choice {choice: plan|sign_in|invite}`.
+**Events.** `onboarding_started`, `onboarding_choice_made {choice: plan|sign_in|invite}`.
 **Accessibility.** The rosette is hidden from assistive tech; heading order is lockup, headline, body; buttons reachable in order; draw-on skipped under reduced motion.
 
 ### 6.2 Guest mode and save your trip
@@ -439,7 +441,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 **Save sheet (bottom sheet, triggered by any of the above).** Title "Save your trip". Body "Create a free account so your trip is safe and you can share it. Nothing you built will be lost." Buttons in this order: Continue with Apple (black, per Apple HIG), Continue with Google, Continue with email, then "Not now" as a text button. After success the guest trip is claimed into the account (merge screen if the identity already has trips: "You already have 2 trips. Add this one too?" with counts).
 **Interactions.** The banner "Save" opens the sheet. Dismissing the sheet mutes the prompt for that trigger for 7 days, but the banner remains (it is not a paywall).
 **States.** Offline: sign-in buttons disabled with "Connect to the internet to create your account. Your trip stays on this phone." Error on claim: "We could not move your trip into your account. It is still on this phone. Try again." with Retry. Limit: a second guest trip shows "Guests can plan one trip. Create a free account to add more."
-**Events.** `guest_started`, `save_prompt_shown {trigger}`, `save_prompt_dismissed`, `guest_claimed {trips}`.
+**Events.** `guest_trip_created`, `save_prompt_shown {trigger}`, `save_prompt_dismissed {trigger}`, `guest_claimed {trip_count_bucket}`.
 **Accessibility.** Sheet focus rules from 4.19; the Apple button meets Apple's contrast and size rules.
 
 ### 6.3 Sign in
@@ -449,7 +451,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 **Interactions.** Apple returns the identity token; "Hide My Email" relay is accepted and shown as the email. The code field auto-submits at six digits. Three wrong codes show a gentle warning; five invalidate the code. Passwords do not exist.
 **States.** Loading: button spinners. Error (wrong code): "That code is not right. Check the email we sent and try again." Expired: "That code expired. Send a new one." Rate limited: "Too many tries. Wait 10 minutes, then send a new code." Offline: "You are offline. Connect to sign in." Account pending deletion: "Your account is scheduled for deletion on 14 Nov. Restore it to keep your trips." with "Restore account".
 **Copy.** Email helper "We will send a six digit code. No password needed."
-**Events.** `sign_in_started {method}`, `sign_in_succeeded {method, new_user}`, `sign_in_failed {method, reason}`.
+**Events.** `signup_started {method}`, `signup_completed {method, from_invite, was_guest}` (new account) or `sign_in_completed {method}` (existing account), `sign_in_failed {method, reason}`.
 **Accessibility.** The code field announces "Six digit code"; paste works; error text is linked with `aria-describedby`; the Apple button has a VoiceOver label "Continue with Apple".
 
 ### 6.4 Profile setup (skippable)
@@ -458,7 +460,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 **Layout.** One sheet: Name, Home airport (combobox with "Use my location" that asks for permission only on tap), Currency (prefilled from locale). "Skip for now" is a full button.
 **Interactions.** Saving creates the "Me" traveler. Skipping still creates "Me" with no airport.
 **States.** Location denied: "Location is off. Type a city or an airport code instead." Offline: fields work, saved locally.
-**Events.** `profile_completed {has_airport}`, `profile_skipped`.
+**Events.** `onboarding_step_completed {step: profile|home_airport}`, `onboarding_step_skipped {step}`.
 **Accessibility.** The location button states what it does and why ("Use my location to suggest nearby airports").
 
 ### 6.5 Trips home
@@ -469,7 +471,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 **Interactions.** Tap opens the trip at the last section. Swipe left: Archive. Long press: Open, Share, Archive, Delete. Pull to refresh. "+" opens Create trip. Archived trips are under a "Past" section toggle, always readable and exportable.
 **States.** Loading: three trip card skeletons. Empty: rosette, "No trips yet", "Start with a place and a few dates. You can change everything later.", [New trip]. Error: "We could not load your trips. Pull down to try again." Offline: cached trips with "Saved offline" icons and a banner "You are offline. Showing your saved trips." No permission: not applicable. Limit reached: "+" opens the third trip paywall (6.27, trigger `third_trip`) with the free path "Archive a trip" first.
 **Copy.** Limit line "You have 2 active trips. Archive one to make room, or upgrade."
-**Events.** `trips_home_viewed {trips, active}`, `trip_opened {source}`, `trip_archived`.
+**Events.** `trips_home_viewed {trip_count_bucket, active_count}`, `trip_opened {source}`, `trip_archived`.
 **Accessibility.** Each card is one link with a combined label ("Lisbon, 12 to 19 March, 2 travelers, planning"); swipe actions have a custom-actions alternative; sections are headings.
 
 ### 6.6 Create trip
@@ -496,7 +498,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 **Interactions.** Create makes the trip, plays the guilloche draw-on once and opens Overview. Dates optional. Back keeps entries. A traveler can be typed or chosen from saved travelers.
 **States.** Loading: suggestions skeleton. Empty search: "Try a city, region or country." Error (lookup): "We could not search places right now. Type the name and continue, we will look it up later." Offline: free-text destination accepted, resolved later. Limit reached: Free with 2 active trips shows the third trip paywall on "Create". Guests: one trip limit (6.2).
 **Copy.** "Dates are optional. You can add them later."
-**Events.** `trip_create_started`, `trip_created {destinations, has_dates, travelers, template}`.
+**Events.** `trip_create_started`, `trip_created {source, destination_count, has_dates}`.
 **Accessibility.** Step label is announced; destination results are a listbox with arrow navigation; date picker has a text entry alternative ("12 Mar 2027").
 
 ### 6.7 Trip overview
@@ -544,7 +546,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 **Recipient flow.** The link opens the app (or the App Store with an "Enter code" fallback, or a web landing page on desktop). Landing: "Sam invited you to Lisbon, 12 to 19 March" with the guilloche band, member avatars, and "Join trip" (primary). No sign-in wall before seeing the trip title and dates. After sign-in a banner "You were added by Sam" and a one-time sheet "Which traveler are you?" listing travelers with a "None of these" option that adds a new one.
 **Interactions.** Owner can change role, resend, revoke a pending invite, and remove a member (access ends immediately). Links expire in 7 days (owner can regenerate).
 **States.** Loading: member list skeleton. Error: "We could not create the link. Try again." Invite expired: "This invite expired. Ask Sam to send a new one." Invite used or revoked: "This invite is no longer valid." Already a member: opens the trip. Offline: "Connect to send an invite." No permission: editors can invite viewers only if the owner allows it; else the button is hidden and a line reads "Only Sam can invite people." Limit: 20 pending invites, "You have 20 pending invites. Cancel one to send another."
-**Events.** `invite_sheet_opened`, `invite_sent {channel, role}`, `invite_opened`, `invite_accepted {new_user}`, `traveler_linked`.
+**Events.** `invite_sheet_opened`, `invite_sent {channel, role}`, `invite_opened {platform_before_install}`, `invite_accepted {role, minutes_to_accept_bucket}`, `traveler_linked`.
 **Accessibility.** Role control is a radio group; the share button announces "Share invite link"; the landing page is fully usable without the app.
 
 ### 6.9 Flights and alerts
@@ -572,7 +574,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 **Interactions.** Add route sheet: origins (up to 2 airports on Free, 4 on paid, per side), destinations, date window or exact dates, trip length, travelers. Tap a fare chip to open fare detail (6.10). Alert switch opens the alert sheet: "Notify me when the lowest fare drops by" (amount or percent) or "below $" with a push permission reason screen the first time ("We will only send alerts for routes you follow"). Edit or delete route in the "..." menu.
 **States.** Loading: route card skeleton with chart frame. Empty: "No routes yet", "Add where you fly from and to, and we will track fares for you.", [Add a route]. Error: "We could not load fares. Pull down to try again." Provider down: "Live fares are paused. Cached fares are still here." Offline: last saved fares with their age. No permission: viewers see fares without alert or live check controls. Limit reached: second route on Free opens `second_route`; live check with no credits opens `out_of_credits` with cached fares still shown.
 **Copy.** Alert confirmation "Alert on. We will tell you if the lowest fare drops by $30 or more." Stale "Fares may have changed. Check again (1 credit)."
-**Events.** `route_added`, `fare_chip_tapped`, `alert_created {kind}`, `live_check_started {credits}`, `live_check_served_from_cache`.
+**Events.** `flight_route_added {route_type, days_to_departure_bucket}`, `fare_chip_tapped {source}`, `fare_alert_created {kind}`, `ai_action_started {action: live_search, credits, from_cache}` for a live check (`from_cache: true` when a result under 6 hours old is served free).
 **Accessibility.** The chart has the text summary and data table (4.6); the date grid is a real table with row and column headers and heat values also printed as numbers; alert switch has a state label.
 
 ### 6.10 Fare detail and Book this fare
@@ -612,20 +614,20 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 **Interactions.** Book opens the partner link in the in-app Safari view through `/go/{click_id}`. After return: a sheet "Did you book it?" with "Yes, mark as booked", "Not yet", "I booked somewhere else". "Mark as booked" sets the chosen flight (which can set trip dates after confirmation), stamps the card and offers the soft next step "Plan your days" (no paywall, no partner card). "Explain this fare" (1 credit) gives a short Haiku answer with sources.
 **States.** Loading: figure and chart skeletons. Empty providers: only the airline route: "We do not have a partner price for this fare. You can search on the airline's site." Error: "We could not load this fare. Try again." Offline: shows the saved fare; Book buttons are disabled with "Connect to the internet to book." Stale (over 24 h): a warning-ink line "This price is 2 days old. Check again (1 credit)." Limit: Explain with no credits opens `out_of_credits`.
 **Copy.** Disclosure as in 4.13. No "best", "deal", "hurry" words.
-**Events.** `fare_detail_viewed {age_hours}`, `book_fare_tapped {provider, position}` (click id added server side), `fare_marked_booked`, `explain_started`.
+**Events.** `fare_detail_viewed {age_hours_bucket}`, `partner_link_tapped {program, placement: flight}` (the click id is added server side), `fare_marked_booked`, `ai_action_started {action: explain}`.
 **Accessibility.** Price change is announced as text, not color; each provider row is a labeled group ("Aviasales, 412 dollars, checked 3 hours ago, Book on Aviasales, opens in a browser").
 
 ### 6.11 Stays: shortlist, compare and vote
 
 **Purpose.** Collect places to stay, compare them fairly and decide as a group.
-**Layout.** Section header with "Add a stay" and a List or Compare segmented control. The list is sorted by a visible control (Hearts, Price, Added, Rating), default Hearts. Lodging cards (4.10). A sticky bottom bar appears when 2 to 4 are selected: "Compare (3)".
-**Add a stay sheet.** Three ways: Paste a link (Airbnb, Vrbo, Booking.com or any URL; the text below says "We never change your links and never load these pages."), Search (partner search results with the sort statement, "Save to shortlist" first and "View" second), Add by hand (name, link, price per night, notes). On web, the bookmarklet card imports from a page the user has open.
+**Layout.** Section header with "Add a stay" and a List or Compare segmented control. The list is sorted by a visible control (Hearts, Price, Added, Rating; the API `sort` values `votes`, `price`, `created`, `rating`), default Hearts. Lodging cards (4.10). A sticky bottom bar appears when 2 to 4 are selected: "Compare (3)".
+**Add a stay sheet.** Four ways: Paste a link (Airbnb, Vrbo, Booking.com or any URL; the text below says "We never change your links and never load these pages."), Search (partner search results with the sort statement, "Save to shortlist" first and "View" second), Add by hand (name, link, price per night, notes), and "Paste a booking" for a stay you already booked (1 credit, see 6.13). On web, the bookmarklet card imports from a page the user has open.
 **Compare.** 2 to 4 columns (Free compares 2): price per night, total, per person, bedrooms, area, cancellation note, votes, notes. Differences are highlighted with a pattern and text, not color alone. Sticky first column on phones with horizontal scroll.
-**Voting.** Heart toggle per person. Tap the count to see names. Owner and editors can mark a stay "Booked" (stamp) or "Rejected". A poll can be started from a stay pair ("Start a poll", see 6.21).
+**Voting.** A heart toggle per person (a `lodging_votes` row exists while the heart is on; 03 section 5.8). There is no down vote. Tap the count to see names. Owner and editors can mark a stay "Booked" (stamp) or "Rejected". A poll can be started from a stay pair ("Start a poll", see 6.21).
 **Partner surfaces.** A separate "Compare on other sites" link (labeled partner search) and, only for hosts with an approved program, a "Book via partner" button, all using 4.13 wording. Airbnb has plain links only. "Cheaper on <partner>" appears only with real dated price data.
 **States.** Loading: three card skeletons. Empty: "No stays yet", "Paste a link or search to start a shortlist.", [Add a stay]. Error: "We could not save this stay. Check the link and try again." Offline: list readable, adding allowed as a queued edit with a "Waiting to sync" chip. No permission: viewers can vote but not add or mark. Limit reached: saving the 9th stay on Free puts it in a locked "Later" list with `ninth_stay` paywall, free path "Keep in Later" and nothing is lost.
 **Copy.** Import helper "We never change your links." Vote summary "3 of 4 like this".
-**Events.** `stay_added {source}`, `stay_voted {vote}`, `stay_compare_opened {count}`, `stay_booked`, `partner_stay_clicked {partner}`.
+**Events.** `lodging_option_added {source}`, `lodging_voted {voted}`, `lodging_compare_opened {count}`, `lodging_booked`, `partner_link_tapped {program, placement: stay}`.
 **Accessibility.** Vote buttons use `aria-pressed` and name the person; the compare table is a real table with `th` scope; difference highlights are also announced ("Cheaper than the others by $40").
 
 ### 6.12 Plan: calendar and day view
@@ -633,20 +635,20 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 **Purpose.** Plan each day together.
 **Layout.** Section header with a segmented control (Days, Calendar, Map) and an "Ideas" button. **Days** is the default list of day cards (4.8) with a day chip strip pinned at the top (D1 to D7, today highlighted). Day detail is a push screen with the timeline (4.7) above the ideas tray.
 **Content.** Each day: items in order with times, travel time between items when known, and a summary. Ideas tray holds saved places not yet scheduled. "Draft this day" (1 credit) and "Draft the trip" (4 credits) live in the AI sheet (6.15). On the arrival day, a transfer card can appear (4.13, one per view), on a drive day a car card.
-**Interactions.** Tap an item to edit. Add with "+" (6.13). Reorder: drag handle (web, and long press on touch) or "Move to..." sheet. Swipe left on an item: Delete (undo toast); swipe right: Mark done. Pinch on map. Pull to refresh; polling every 15 to 30 s on shared trips, with a "Sam added Bairro Alto to Day 2" highlight for 6 s and an entry in Activity.
+**Interactions.** Tap an item to edit. Add with "+" (6.13). Reorder: drag handle (web, and long press on touch) or "Move to..." sheet; the new position is stored in `sort_order`. Swipe left on an item: Delete (undo toast); swipe right: Mark done. Pinch on map. Pull to refresh; polling every 15 to 30 s on shared trips, with a "Sam added Bairro Alto to Day 2" highlight for 6 s and an entry in Activity.
 **States.** Loading: day card skeletons. Empty trip: "Nothing planned yet", "Add a place, or ask for a draft to start from.", [Add a place] [Draft the trip, 4 credits]. Empty day: "Free day". Error: "We could not load your plan. Pull down to try again." Offline: readable, edits to notes and checkmarks queue, itinerary structure edits show the read-only banner "Offline. You can read your plan and check things off. Reconnect to rearrange." Conflict: 409 sheet with both versions and "Keep mine" or "Use theirs". No permission: viewers cannot edit, can comment. Limit reached: none on the plan itself (the calendar is never gated).
 **Copy.** Conflict "Sam changed this while you were editing."
-**Events.** `plan_viewed {mode}`, `item_moved`, `item_deleted`, `plan_conflict {resolution}`.
+**Events.** `plan_viewed {mode}`, `itinerary_item_moved {method}`, `itinerary_item_deleted`, `edit_conflict_shown {resolution}`.
 **Accessibility.** Drag has full keyboard and VoiceOver alternatives (Move up, Move down, Move to day); timeline blocks have text labels with time and duration; the day chip strip is a `tablist`.
 
 ### 6.13 Add item
 
 **Purpose.** Add a place, activity, transport leg, reservation or note to a day or to Ideas.
-**Layout.** Bottom sheet, large detent. Top: search field "Search places" with category chips (Food, Sights, Outdoors, Shopping, Getting around). Results (place cards) sorted by relevance then distance with the sort label. A "Custom item" row at the bottom.
-**Content.** A place result opens a detail view (photo, hours, website, Wikipedia summary with attribution, "Explain" 1 credit) with "Add to Day 2" (day picker), "Save to ideas", and optional time. The place detail may carry a "Tickets" or "Book a table" partner chip on the detail view only (4.13). Custom item: title, time, duration, cost, link, note, group (chooses a color and icon).
+**Layout.** Bottom sheet, large detent. Top: search field "Search places" with category chips (Sights, Museums, Food, Outdoors, Nightlife, Shopping, Getting around), which are the `item_category` values `sights`, `museum`, `food`, `nature`, `nightlife`, `shopping` and `travel`; an item that fits none is `other`. Results (place cards) sorted by relevance then distance with the sort label. A "Custom item" row at the bottom.
+**Content.** A place result opens a detail view (photo, hours, website, Wikipedia summary with attribution, "Explain" 1 credit) with "Add to Day 2" (day picker), "Save to ideas", and optional time. The place detail may carry a "Tickets" or "Book a table" partner chip on the detail view only (4.13). "Paste a booking" (1 credit) takes a confirmation email or text, shows a draft flight, stay or activity for confirmation (names and booking references are replaced with placeholders before anything is sent to the AI provider, and nothing is fetched from any link in the text), and "Add to plan" creates the item or stay. Custom item: title, time, duration, cost, link, note, category (one of the eight above; it chooses the color group and icon) and status (Idea, Planned or Booked, `item_status`).
 **Interactions.** Add closes the sheet with a toast "Added to Day 2. Undo" and scrolls to the item. Adding while offline queues the edit.
 **States.** Loading: result row skeletons. Empty: "No results. Try a different name, or add it yourself." Error: "Place search is not working right now. Add it by hand and we will match it later." Limit: places search is capped per day on Free (30); at the cap: "You have reached today's 30 place searches. Saved places still work. Searches reset at midnight." with "Add by hand".
-**Events.** `item_added {source, category}`, `place_search {results}`.
+**Events.** `itinerary_item_added {category, source}`, `place_searched {result_count_bucket}`.
 **Accessibility.** Result list is a listbox; the day picker is a native select on iOS; "Add" buttons include the place name in their label.
 
 ### 6.14 Plan map
@@ -666,6 +668,8 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 | Action | Credits | Where else it appears |
 |---|---|---|
 | Explain (short answer about a fare, place or plan) | 1 | Fare detail, place detail |
+| Suggest a packing list (from the weather and your plans) | 1 | Before you go, Packing |
+| Paste a booking (turn a confirmation email into a draft) | 1 | Flights, Stays, Add item |
 | Live check (flight or rental) | 1 | Flights, Stays |
 | Draft this day | 1 | Day card |
 | Draft the trip (up to 14 days) | 4 | Plan empty state |
@@ -673,11 +677,11 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 | Deep agent run (fare hunt or research) | 40, or 8 from shared cache | Flights, Overview |
 
 **Content and flow.** Choosing an action asks for the minimum input (a question, or which day). A confirm step appears at 6 credits or more: "Research this question? Costs 8 credits. You have 27, so 19 left." with [Start research] and [Cancel]. A shared cache hit is stated before spend: "Someone already researched Lisbon in March this week. Use that for 1 credit?" with [Use it, 1 credit] and [Research fresh, 8 credits].
-**Drafts.** Output appears as a preview the person edits before anything is added; "Add to plan" is explicit. Drafts carry "Drafted by AI from your dates and places. Check hours and prices." and sources when a web search was used. AI output never contains partner links or partner names.
+**Drafts.** Output (including a packing list or a parsed booking) appears as a preview the person edits before anything is added; "Add to plan" is explicit. Drafts carry "Drafted by AI from your dates and places. Check hours and prices." and sources when a web search was used. AI output never contains partner links or partner names.
 **First use.** The AI consent screen (once per account): "Wayfold sends your destination, dates and what you type to Anthropic to answer. We do not send your name, email or other travelers' names, and it is not used to train models." [Allow] [Not now]. Revoking is in Account, Privacy.
 **Interactions.** Cancel works during a wait; a failed or empty action refunds automatically and says so ("No charge. That did not finish."). An agent run is stoppable and billed by turns used (minimum 8 credits) and the sheet says it before stopping.
 **States.** Loading: streaming text with a stop button. Empty: n/a. Error: "That did not work, and you were not charged. Try again." Rate limited (10 AI actions a minute): "Slow down a little. Try again in a few seconds." Offline: actions disabled, "AI needs a connection." No permission: viewers cannot run AI; the owner may turn AI off for the trip ("AI is off for this trip. Ask Sam to turn it on."). Limit: out of credits opens `out_of_credits_draft` or `out_of_credits_research` (6.27), monthly provider ceiling reached shows "AI is paused until 1 Nov. Saved data and cached fares still work."
-**Events.** `ai_sheet_opened`, `ai_action_confirmed {action, credits, cached}`, `ai_action_completed {action, credits, duration_ms}`, `ai_action_refunded {action, reason}`, `ai_consent {granted}`.
+**Events.** `ai_sheet_opened`, `ai_action_started {action, feature, credits, from_cache}` (fired when the person confirms), `ai_action_completed {action, feature, outcome, duration_seconds_bucket}` (a refund is `outcome: refunded`), `ai_consent_shown`, `ai_consent_granted`, `ai_consent_declined`.
 **Accessibility.** Cost chips are read as part of the button name; streaming text is in a polite live region updated per sentence, not per token; Stop is always the first focusable control while running.
 
 ### 6.16 Agent run: live progress and evidence
@@ -709,7 +713,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 **Content.** Only findings with a source page and a capture date are shown as findings; rejected items go to a collapsed "Not saved (2)" list with the reason ("No page link", "Page did not show that fare"). Fares are labeled "Seen on a page during this run. Prices can change." Final stamp presses in with `stamp-press` and a summary: "Done. 2 fares and 3 notes saved. 31 credits used."
 **Interactions.** The run continues if the app is backgrounded; a push and an Activity item announce completion. "Save to trip" on a finding adds it to fares or notes with its evidence attached; "Dismiss" removes it from view. Stop asks "Stop this run? You will be billed 14 credits for the work done." with [Stop run] and [Keep running].
 **States.** Loading (queued): "In the queue. About 1 minute." with Cancel and no charge. Empty result: "Nothing saved. You were not charged." Error: "The run stopped because the price check service is down. You were not charged." Offline: progress is on the server and resumes when online, banner "You are offline. The run keeps going." No permission: only the starter can stop; others can read findings. Limit reached: one run at a time, "A run is already in progress for your account. Wait for it to finish or stop it."
-**Events.** `agent_run_started {kind, credits_reserved, cached}`, `agent_finding_saved {kind}`, `agent_run_stopped {turns, credits}`, `agent_run_finished {saved, rejected, credits}`.
+**Events.** `ai_action_started {action: agent_run, feature, credits, from_cache}`, `agent_finding_saved {kind}`, `ai_action_completed {action: agent_run, outcome}` (a run the person stops is `outcome: partial`).
 **Accessibility.** Timeline is an ordered list with the current step marked "current"; status changes are polite announcements ("Checking a fare"); the stamp carries text, not only color; evidence links say "Open source, theflightsite.com, opens in a browser".
 
 ### 6.17 Taster run
@@ -718,7 +722,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 **Layout.** An entry card on Flights or Overview for accounts whose taster is unused: "Try a deep run, free once", a two-line explainer, and a **Start free run** button with a chip "Free, one time". The confirm step reads the normal confirm copy with "Free taster" in place of the cost.
 **Content.** Same run screen as 6.16 with a "Taster" stamp. Runs with the same caps (20 turns, 10 searches, 10 fetches, $0.80 hard stop). At the end, a soft card "That was your free run. Runs cost 40 credits (8 when someone already researched it). Plus includes 60 credits a month." with "See plans" and "Done" (equal weight). It is a result-moment offer, not a paywall sheet, and it follows the one-per-session and 7-day mute rules.
 **States.** Used: the entry card is replaced by the normal "Deep run, 40 credits" action. Offline: disabled. Error or empty result: the taster is not consumed ("That did not finish, so your free run is still available.").
-**Events.** `taster_offered`, `taster_started`, `taster_completed {saved}`, `taster_upsell_shown`.
+**Events.** `taster_offered`, `ai_action_started {action: agent_run, taster: true}`, `ai_action_completed {action: agent_run, taster: true, outcome}`, `taster_upsell_shown`.
 **Accessibility.** The one-time nature is stated in text, not only a badge.
 
 ### 6.18 Notes and evidence
@@ -734,22 +738,23 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 
 **Purpose.** Walk the group through the plan on a phone, a TV or AirPlay, and print or share it.
 **Layout.** Outside the app shell, full screen, `deck-*` type utilities so text scales by container size. Slides: Title (destination, dates, travelers, guilloche), one per Destination, Flights per route, Stays shortlist, one per Day (map plus items), and Closing "Trip at a glance" (existing slide kinds). An optional last slide "Book the plan" lists partner links with the disclosure line, off by default for the owner to turn on. Chrome (hidden after 3 s of no input): close, slide counter, overview grid, share, print.
-**Interactions.** Phones in portrait: swipe up and down between slides in a story layout, tall slides scroll. Landscape and iPad: swipe or arrow keys, tap right or left third. Overview grid shows thumbnails. Screen stays awake (wake lock). Share creates a read-only link with redaction switches (hide addresses, prices, notes; default hidden). Print or PDF one slide per 16:9 page, links live, checklist without partner buttons. Free shares carry a small "Made with Wayfold" footer and the PDF a footer mark; paid tiers do not.
+**Interactions.** Phones in portrait: swipe up and down between slides in a story layout, tall slides scroll. Landscape and iPad: swipe or arrow keys, tap right or left third. Overview grid shows thumbnails. Screen stays awake (wake lock). Share creates a read-only link with redaction switches (hide addresses, prices, notes and traveler names, which show as "Traveler 1"; all hidden by default; the link expires after 90 days unless the owner picks another length up to a year). Print or PDF one slide per 16:9 page, links live, checklist without partner buttons. Free shares carry a small "Made with Wayfold" footer and the PDF a footer mark; paid tiers do not.
 **No partner content during playback.** No cards, no logos, no interstitials on any normal slide.
 **States.** Loading: title slide appears first, others stream in. Empty trip: "There is nothing to present yet. Add a day to your plan." Error: "We could not build the presentation. Try again." Offline: works from the offline copy, map slides use the static route plot. No permission: viewers can present. Limit: none (the footer is the only difference).
 **Copy.** Footer "Made with Wayfold".
-**Events.** `present_started {slides}`, `present_shared {redactions}`, `present_printed`.
+**Events.** `present_mode_started {slide_count_bucket}`, `share_link_created {redaction_level}` (sharing from present mode), `present_mode_printed`.
 **Accessibility.** Each slide has a heading and is navigable with arrow keys and VoiceOver swipe; auto-advance is never used; slide counter is announced ("Slide 3 of 9"); text stays at least 16 px.
 
 ### 6.20 Before you go checklist
 
 **Purpose.** Help the group finish the practical things before leaving. Free on every tier.
 **Layout.** Card on Overview (top three open items) and a full screen grouped by **Bookings, Getting around, Connectivity, Safety, Documents, Luggage, Money, Home, Packing**. It appears once there is a chosen flight or a saved stay, or 45 days before departure.
+**Packing.** The Packing group starts as one row. "Suggest a packing list" (1 credit, `ai/packing-list`, from the weather numbers and the activity categories of the plan) opens a preview grouped as clothing, toiletries, documents, electronics, health and other; "Add to checklist" saves the lines the person keeps as tick-off rows (`kind` packing, source AI) and "Discard" saves nothing. No product links appear in it.
 **Content.** Each row: a check, the title, the reason from the trip's data ("You land in Lisbon at 21:40"), a cost range if known, and three actions: **Get it** (affiliate, where one exists), **I have this**, **Not needed**. At least half the rows have no partner (documents, money, home, packing). Visa and entry rows link to the official government site first. Insurance rows appear only once a flight is booked, use insurer approved wording only, and never include AI advice. eSIM is not shown for domestic trips.
 **Interactions.** Done and dismissed persist per trip and sync across members. One optional push seven days before departure. Partner rows follow 4.13 with the disclosure line on each button row. A "Hide booking links" setting collapses them.
 **States.** Loading: row skeletons. Empty (nothing applies): "You are all set. Nothing to do before you go." Error: "We could not load your checklist. Try again." Offline: fully usable, partner buttons hidden with "Connect to see booking links." No permission: viewers can tick their own rows only. Limit: none.
 **Copy.** Row "eSIM for Portugal. You will be abroad for 7 days. Plans start around $5." [Get it] [I have this] [Not needed]. Disclosure: "We earn a commission if you book here."
-**Events.** `checklist_item_shown {kind}`, `checklist_item_clicked {kind, partner}` (through `/go`), `checklist_item_done {kind}`, `checklist_item_dismissed {kind}`.
+**Events.** `checklist_item_shown {kind}`, `partner_link_tapped {program, placement: checklist}` (through `/go`), `checklist_item_updated {kind, status}` (done, skipped, not needed).
 **Accessibility.** Checkboxes are real inputs with the title as the label; the three actions are a labeled group per row; progress "4 of 9 done" is text.
 
 ### 6.21 Group tools: polls, expenses, settle up
@@ -759,10 +764,10 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 **People.** Traveler list with avatars, roles, home airports (visible to members only), "Invite" (6.8), "Which traveler are you?" link if unclaimed. Travelers without accounts are first names with a color.
 **Polls.** A poll card: question, options (stays, dates, restaurants, free text), votes as avatar chips, a deadline, and a result line ("Alfama loft leads, 3 of 5 voted"). Create from a stay or from "New poll". Vote is a single or multiple choice; change allowed until it closes; owner closes. A poll never implies a purchase.
 **Expenses.** List of expenses with payer, amount in mono (currency and converted trip currency), who shares it, and category; "Add expense": title, amount, paid by, split (equally, by share, by amount, or exclude people), date, receipt photo. Totals: "Trip total $3,480, $870 each." Offline add is queued.
-**Settle up.** A plain list of "who pays whom" reduced to the fewest transfers ("Ana pays Sam $120"), each row with "Mark as paid" (manual, available wherever cost splitting is). From Phase 4, "Collect payments" (Stripe, shown only on Group Trip Pass and Pro trips when the `group_payments` flag is on; real-world costs only, never for app features) starts a payment request with a clear fee line and opens a web checkout view; it is labeled "Payments are handled by Stripe. Wayfold does not hold your money." In app purchases are never used here.
+**Settle up.** A plain list of "who pays whom" reduced to the fewest transfers ("Ana pays Sam $120"), each row with "Mark as paid" (manual, available wherever cost splitting is). A payment carries the `settlements.status` as a text chip: Waiting for confirmation (`pending`, until the person paid confirms), Paid (`recorded`, or `succeeded` for a Stripe payment), Failed (`failed`), Refunded (`refunded`) and In dispute (`disputed`, Phase 4); only Paid rows reduce the balances. From Phase 4, "Collect payments" (Stripe, shown only on Group Trip Pass and Pro trips when the `group_payments` flag is on; real-world costs only, never for app features) starts a payment request with a clear fee line and opens a web checkout view; it is labeled "Payments are handled by Stripe. Wayfold does not hold your money." In app purchases are never used here.
 **States.** Loading: skeleton rows. Empty polls: "No polls yet", "Ask the group to choose between two stays or a date.", [New poll]. Empty expenses: "No expenses yet", "Add what you pay for and we will work out who owes whom.", [Add expense]. Error: "We could not save this expense. Check the amount and try again." Offline: queued edits with "Waiting to sync". No permission: viewers can vote in polls and see expenses, not add. Limit: on a trip whose owner is on Free with no pass, Polls and Expenses show a locked preview and the `group_tools` paywall (Trip Pass or Plus; free path: view what others add, and a free read-only balance); the room-block request and more than 8 travelers show the `group_pass` paywall (Group Trip Pass); "Collect payments" on a trip without Group Trip Pass or Pro shows the `collect_payments` paywall (Phase 4); expense viewing stays free.
-**Copy.** "Split equally among 4 people, $27.50 each." "Mark as paid" confirmation "Marked as paid. Sam will see it."
-**Events.** `poll_created {options}`, `poll_voted`, `expense_added {split}`, `settle_viewed`, `payment_request_created`.
+**Copy.** "Split equally among 4 people, $27.50 each." "Mark as paid" confirmation "Marked as paid. Sam will see it." and, for the payee, "Ana says she paid you $120. Confirm?" (confirming moves the status from `pending` to `recorded`).
+**Events.** `poll_created {option_count, subject}`, `poll_voted {selection}`, `expense_added {split_type, member_count_bucket}`, `settle_up_viewed`, `settlement_started {method}` (a Stripe payment request from Phase 4 is `method: stripe`).
 **Accessibility.** Money is read with currency ("one hundred twenty US dollars"); split controls are a labeled radio group; "who owes whom" is a list, not only a chart.
 
 ### 6.22 Concierge request
@@ -772,7 +777,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 **Content.** A disclosure block in plain words: "A travel advisor at our partner agency will book this for you and is paid a commission by the suppliers. You pay the same price. You can say no at any time." Perks, if any, are listed as facts, never as urgency. The advisor relationship is clearly separate from AI ("A person replies, not AI.").
 **Interactions.** Submit creates a request (`concierge_requests`). Status: Received, In progress, Options ready, Closed. Replies arrive in Activity and by email. Cancel any time.
 **States.** Loading: form skeleton. Empty (no requests): entry card only. Error: "We could not send your request. Your answers are saved. Try again." Offline: the form saves as a draft. No permission: owner and editors can request; viewers see the card without the button. Limit: none. Not available in the region: "Concierge is not available where you are yet. Join the waitlist."
-**Events.** `concierge_card_shown {surface}`, `concierge_requested {type}`, `concierge_closed {outcome}`.
+**Events.** `concierge_card_shown {surface}`, `concierge_requested {kind, region}`, `concierge_status_changed {kind, status}` (a cancel by the requester is `status: cancelled`).
 **Accessibility.** The disclosure is body text above the submit button and is read before it; the form uses standard labels and errors.
 
 ### 6.23 Discover
@@ -781,7 +786,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 **Layout.** Large title "Discover", a search field, and sections: **Cheap fares from your airport** (cached fares by destination, sorted by price, with source and age), **Destinations** (Wikipedia summary, photo, best months, local currency), **Saved places**. A chip row filters (Beach, City, Mountains, Food).
 **Content.** Every list states its sort. Fares are cached (Aviasales) and labeled. No partner cards. A destination page has "Start a trip here" and, when dates exist, the one quiet "Places to stay" card per 4.13.
 **States.** Loading: card skeletons. Empty: "Add your home airport to see fares from there.", [Add home airport]. Error: "We could not load ideas. Pull down to try again." Offline: saved destinations only. Limit: none.
-**Events.** `discover_viewed`, `destination_opened`, `trip_started_from_discover`.
+**Events.** `discover_viewed`, `destination_opened {country_code}`, `trip_started_from_discover`.
 **Accessibility.** Cards are links with price and age in the name; sort control is a labeled menu.
 
 ### 6.24 Activity
@@ -790,7 +795,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 **Layout.** Large title "Activity", a filter row (All, Alerts, Group, AI), a reverse-chronological list grouped by day. Items: fare alerts ("Fare fell $42 since Tuesday. View fare"), changes by others ("Sam added Bairro Alto to Day 2"), votes and polls, agent run results, invites, concierge replies, expense requests. Unread items have a brand dot.
 **Interactions.** Tap opens the exact place (fare detail, day, poll). Swipe to mark read. "Mark all as read". Owner can revert an edit within 7 days from the item ("Undo this change").
 **States.** Loading: row skeletons. Empty: "Nothing new", "Price alerts, changes from your group and finished AI runs show up here." Error: retry. Offline: cached list. Limit: none. Signed-out guest: "Sign in to get alerts and see changes from your group."
-**Events.** `activity_viewed {unread}`, `activity_item_opened {kind}`.
+**Events.** `activity_viewed {unread_bucket}`, `activity_item_opened {kind}`.
 **Accessibility.** Unread is text ("Unread") plus dot; each row is one link; the tab badge has an accessible count.
 
 ### 6.25 Account and settings
@@ -843,12 +848,12 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 Pro appears in this table only after it launches ($11.99 a month or $99 a year, 240 credits, 6 live routes, scheduled routines, priority queue). The table says "Plans include generous limits, listed above. Live tracking and AI use real services, so they have fair limits."
 **Interactions.** Purchases use the native sheet (RevenueCat over StoreKit 2). "Restore purchases" is on this screen and every paywall. Downgrade or lapse never deletes or hides data: a line says so ("Your trips stay yours. If a plan ends, you can still read and export everything.").
 **States.** Loading: skeletons. Offline: "Connect to see your plan." Error: "We could not load your plan. Your access has not changed. Try again." Pending purchase: "Your purchase is waiting for approval." Refunded credits: ledger row "Refund, 8 credits returned". Family: pooled balance with "Spent by Ana: 12" attribution.
-**Events.** `plan_screen_viewed`, `restore_purchases_tapped {result}`, `credit_pack_selected {pack}`, `manage_subscription_tapped`.
+**Events.** `screen_viewed {screen: subscription}`, `restore_tapped {result}`, `purchase_started {product}` for a credit pack tap, `manage_subscription_tapped`.
 **Accessibility.** The comparison table is a real table; the balance is text with the unit; price lines include period and the true monthly equivalent as plain text.
 
 ### 6.27 Paywalls for each trigger
 
-All paywalls use the sheet in 4.14 and the rules in section 8. The trigger id is sent in `paywall_shown {trigger}`.
+All paywalls use the sheet in 4.14 and the rules in section 8. The trigger id is sent in `paywall_viewed {placement}`.
 
 | Trigger id | When it fires | Headline | What it gives on this trip | Free path (equal weight) | Leading offer |
 |---|---|---|---|---|---|
@@ -865,13 +870,16 @@ All paywalls use the sheet in 4.14 and the rules in section 8. The trigger id is
 | `group_pass` | Open the room-block request, or add a ninth traveler, without a Group Trip Pass | "Plan for a bigger group" | Up to 12 travelers, the room-block request, 80 credits | "Keep to 8 travelers" or "Skip the room block" | Group Trip Pass |
 | `collect_payments` | Phase 4: tap "Collect payments" on a trip without Group Trip Pass or Pro (hidden until `group_payments` is on) | "Collect what everyone owes" | Payment requests through Stripe for real-world costs | "Mark as paid" | Group Trip Pass |
 | `export_footer` | Share or export a Free presentation | "Share without the footer" | No footer or watermark | "Share with the footer" | Trip Pass |
+| `out_of_credits_agent` | Deep agent run or fare hunt with fewer than 40 credits (taster already used) | "Run a deep search" | One deep agent run for 40 credits | "Not now" or use the cached result if one exists | Credit pack (150 credits) or Plus |
+| `lifecycle_14d` | 14 days before departure on a Free trip with dates (push or email, at most once per trip) | "Your fares moved this week" | Live checks and alerts for the last two weeks | Dismiss | Trip Pass |
+| `household` | Invite a second household member, or signals of a shared household | "Plan as a household" | Plus for up to 6 people, 150 pooled credits | Invite them to this trip for free | Family |
 | `lifecycle_14d` | Message, not a sheet, 14 days before departure on a Free trip | "Your fares moved this week" | Live checks until you fly | Open the route | Trip Pass |
 
 There is **no paywall** after an affiliate booking (only the soft "Plan your days" prompt), at first launch, inside present playback, during an agent run, on the taster result (it is a card, not a sheet), or on Account unless the person opens it. Default offer order when the trigger does not decide: Trip Pass first when the trip has dates within 120 days, annual Plus first when the person has two or more active trips.
 
 ### 6.28 Export and delete account
 
-**Export.** Account, Export my data. Explains "We will email you a link to a zip with your trips as JSON, plus a readable PDF per trip. The link works for 7 days." Re-authentication (Apple, Google or code), a single [Export my data] button, then a progress row ("Preparing, usually under a day") and a notification when ready. Per-trip export (JSON, ICS, PDF) is also in Trip settings and is free on every tier. Limit: one export a day ("You asked for an export today. The link was sent to a***@gmail.com."). Error: "We could not start your export. Try again." Events: `export_requested {scope}`, `export_ready`.
+**Export.** Account, Export my data. Explains "We will email you a link to a zip with your trips as JSON, plus a readable PDF per trip. The link works for 7 days." Re-authentication (Apple, Google or code), a single [Export my data] button, then a progress row ("Preparing, usually under a day") and a notification when ready. Per-trip export (JSON, ICS, PDF) is also in Trip settings and is free on every tier. Limit: one export a day ("You asked for an export today. The link was sent to a***@gmail.com."). Error: "We could not start your export. Try again." Events: `export_requested`, `export_ready`.
 **Delete account.** Account, Delete account (in app, no email or web only path). A full screen with a plain list of effects:
 
 ```
@@ -900,7 +908,7 @@ There is **no paywall** after an affiliate booking (only the soft "Plan your day
 +------------------------------+
 ```
 
-Flow: list effects, choose what to do with trips others share (transfer to a member, or delete; if unchosen, deleted after 30 days unless a member accepts), re-authenticate, type "delete" or confirm with a destructive button, then a confirmation: "Your account is scheduled for deletion on 14 Nov. Sign in before then to restore it." The Apple Sign in token is revoked. Subscriptions are not cancelled by deletion and the screen links to the system subscriptions page without blocking. States: offline ("Connect to delete your account."), error ("We could not schedule deletion. Nothing was changed. Try again."). Events: `delete_account_started`, `delete_account_confirmed`, `delete_account_restored`. Accessibility: the destructive button is last in order, labeled with the consequence, and never the default focus.
+Flow: list effects, choose what to do with trips others share (transfer to a member, or delete; if unchosen, deleted after 30 days unless a member accepts), re-authenticate, type "delete" or confirm with a destructive button, then a confirmation: "Your account is scheduled for deletion on 14 Nov. Sign in before then to restore it." The Apple Sign in token is revoked. Subscriptions are not cancelled by deletion and the screen links to the system subscriptions page without blocking. States: offline ("Connect to delete your account."), error ("We could not schedule deletion. Nothing was changed. Try again."). Events: `screen_viewed {screen: delete_account}`, `account_deletion_requested {had_subscription}`, `account_deletion_cancelled`. Accessibility: the destructive button is last in order, labeled with the consequence, and never the default focus.
 
 ### 6.29 Notifications
 
@@ -910,7 +918,7 @@ Flow: list effects, choose what to do with trips others share (transfer to a mem
 **Settings.** Account, Notifications: a switch per type, a quiet hours control (default 22:00 to 08:00 local), and per-trip mute. Email has its own list with one-click unsubscribe; marketing email is a separate opt-in.
 **Copy.** Push titles are facts: "Lisbon: fare fell $42", "Ana joined Lisbon", "Research finished: 3 notes saved". No exclamation marks, no emoji.
 **States.** Permission denied: row shows "Notifications are off in Settings" with "Open Settings". Offline: local notifications still fire.
-**Events.** `push_permission_shown`, `push_permission_result {granted}`, `notification_opened {type}`.
+**Events.** `push_prompt_shown {context}`, `push_permission_result {result}`, `notification_opened {type}`.
 **Accessibility.** Notification text stands alone without the icon; in-app switches describe the event, not the mechanism.
 
 ## 7. Microcopy rules
@@ -990,7 +998,7 @@ An error message has three parts, in order: what happened, why if known, and how
 13. **Confirm credit spends, do not paywall them.** Spending credits is a confirm sheet (6.15), not a paywall; it appears for 6 credits or more and always shows the balance after.
 14. **Resume the task.** After a purchase the sheet closes with a stamp, the blocked action resumes (the route is added, the invite sheet opens) and the plan or pass is bound to the trip when it applies ("Apply to Lisbon?" picker for a Trip Pass).
 15. **Downgrades never take data.** Copy and behavior follow `limited_trip`. Archived trips stay readable and exportable forever on Free.
-16. **Measure without manipulating:** events `paywall_shown {trigger, offer_order}`, `paywall_dismissed {trigger, action: not_now|scrim|swipe}`, `paywall_option_selected {product}`, `purchase_started`, `purchase_succeeded {product}`, `purchase_cancelled`, `restore_purchases_tapped`.
+16. **Measure without manipulating:** events `paywall_viewed {placement, offer_shown}` (the trigger id from 6.27 is the `placement`), `paywall_dismissed {placement}`, `purchase_started {product, period}` (choosing an option and tapping the purchase button are one event), `purchase_completed {product, period, is_trial}`, `purchase_failed {product, reason}` (a cancelled sheet is `reason: cancelled`), `restore_tapped {result}`.
 
 ```
 +------------------------------+
@@ -1083,4 +1091,4 @@ Rules: the ground is deep navy `#0d1527`, cards `#141e35`, not black; shadows gi
 
 ## 13. Analytics conventions
 
-Product analytics uses PostHog with no ad or attribution SDKs and no ATT prompt. Event names are `object_action` in snake_case (`paywall_shown`, `stay_voted`). Properties are coarse and never contain free text, names, emails, addresses, exact dates of trips or note content. Every event carries `platform`, `app_version`, `tier`, `is_guest` and a random session id; user id is the account UUID. Outbound partner clicks are logged server side through `/go/{click_id}`, with a random per-click sub-id that is never the user id. Each screen in section 6 lists its events; the full catalog and retention are in [10-quality-security-launch.md](10-quality-security-launch.md), section 4. Where an event name listed on a screen differs from that catalog, the catalog name is the one implemented; add any missing event there before building the screen.
+Product analytics uses PostHog with no ad or attribution SDKs and no ATT prompt. Event names are `object_action` in snake_case, past tense (`paywall_viewed`, `lodging_voted`). Properties are coarse and never contain free text, names, emails, addresses, exact dates of trips or note content. Every event carries `platform`, `app_version`, `tier`, `is_guest`, `locale`, `env` and a random session id; user id is the account UUID. Outbound partner clicks are logged server side through `/go/{click_id}`, with a random per-click sub-id that is never the user id. Each screen in section 6 lists its events by the names in the catalog; the full catalog, the property values and retention are in [10-quality-security-launch.md](10-quality-security-launch.md), section 4. A screen that needs an event the catalog lacks gets it added there first.

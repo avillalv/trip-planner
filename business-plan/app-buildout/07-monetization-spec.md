@@ -60,7 +60,7 @@ The entitlement service resolves to this table, which mirrors the `plans.limits`
 
 | Capability key (`plans.limits`) | `free` | `plus` | `family` | `pro` | `trip_pass` (on its trip) | `group_trip_pass` (on its trip) |
 |---|---|---|---|---|---|---|
-| `active_trips` | 2 | unlimited (fair use 25) | unlimited (fair use 25 each member) | unlimited (fair use 50) | raises the owner's limit by 1 (the passed trip) | same |
+| `active_trips` | 2 | unlimited (fair use 25) | unlimited (fair use 25 each member) | unlimited (fair use 50) | `active_trips_bonus` 1: the passed trip does not count toward the owner's limit | same |
 | `routes_per_trip` (cached-fare routes) | 1 | 5 | 5 | 8 | 3 | 3 |
 | `live_routes` (checked daily, within 120 days of departure, `live_window_days`) | 0 | 3 | 5 | 6 | 2, at most 60 checks (`live_checks_max`) | 2, at most 60 checks |
 | Credits: `monthly_credits` for tiers, `credits_granted` for passes | 12 a month | 60 a month | 150 a month, pooled | 240 a month | 40 once | 80 once |
@@ -68,12 +68,12 @@ The entitlement service resolves to this table, which mirrors the `plans.limits`
 | `travelers_per_trip` | 2 | 8 | 8 | 12 | 8 | 12 |
 | `price_alerts` (`live_alerts` false on Free) | 1 cached-fare | 3 | 3 | 6 | 2 | 2 |
 | `polls`, `cost_splitting` (manual splitting, no money moves) | no on its own trips; joins trips that have them | yes | yes | yes | yes | yes |
-| Collect money through Stripe (Phase 4, flag `group_payments`) | no | no | no | yes | no | yes |
+| `group_payments` (collect money through Stripe; Phase 4, also needs the flag `group_payments`) | no | no | no | yes | no | yes |
 | `room_block_request` | no | no | no | no | no | yes |
 | `scheduled_routines` | no | no | no | yes (3 per trip) | no | no |
 | `priority_queue` | no | no | no | yes | no | no |
 | `credit_rollover_cap` | 0 | 0 | 0 | 240 | n/a | n/a |
-| `presentation_footer` (Made with Wayfold footer and PDF watermark) | shown | hidden | hidden | hidden | hidden | hidden |
+| `hide_presentation_footer` (true removes the Made with Wayfold footer and PDF watermark) | false (shown) | true | true | true | true | true |
 
 Free taster: one lifetime deep agent run per user (`plans.limits.taster_agent_runs = 1` on `free`), held as a one-time `promo` row in `credit_grants` with `restricted_action = 'agent_run'` and `period_key = 'taster'`, so it is outside the monthly allowance and usable once ([06-ai-agents-spec.md](06-ai-agents-spec.md) section 5.9).
 
@@ -103,7 +103,7 @@ An offering is what the paywall shows. The server chooses the offering (section 
 | `default` | `$rc_annual` = `wayfold_plus_annual` (highlighted, trial), `$rc_monthly` = `wayfold_plus_monthly` (under "More options"), `trip_pass` = `wayfold_trip_pass` | Generic upgrade |
 | `trip_first` | `trip_pass` = `wayfold_trip_pass` (lead), `$rc_annual` = `wayfold_plus_annual`, `$rc_monthly` = `wayfold_plus_monthly` | A trip with dates inside 120 days; live tracking and invite triggers |
 | `plus_first` | `$rc_annual` = `wayfold_plus_annual` (highlighted), `trip_pass`, `$rc_monthly` | Two or more active trips; third-trip limit |
-| `group` | `group_pass` = `wayfold_group_trip_pass` (lead), `trip_pass`, `$rc_annual` | Polls or splitting on a trip without them, room block, more than 8 travelers |
+| `group` | `group_pass` = `wayfold_group_trip_pass` (lead), `trip_pass`, `$rc_annual` | `group_pass` and `collect_payments` triggers: room-block request, more than 8 travelers, collecting payments |
 | `family` | `$rc_annual` = `wayfold_family_annual` (highlighted), `$rc_monthly` = `wayfold_family_monthly`, `$rc_annual` of Plus | Household signals (section 6.4) |
 | `credits` | `wayfold_credits_50`, `wayfold_credits_150`, `wayfold_credits_400` | Out of credits |
 | `pro` | `$rc_annual` = `wayfold_pro_annual`, `$rc_monthly` = `wayfold_pro_monthly`, `credits` | Only when `tier_pro` is on |
@@ -149,10 +149,10 @@ Each handler runs in one database transaction with the ledger writes, so a half-
 ### 4.1 Data
 
 - `subscriptions`: one row per store subscription: `user_id` (or `household_id` for Family), `store` (`apple`, `stripe`, `google`), `product_id`, `plan_code` (`plus`, `family`, `pro`), `status` (`active`, `in_trial`, `in_grace`, `billing_retry`, `paused`, `expired`, `refunded`, `revoked`), `period_start`, `period_end`, `auto_renew`, `is_trial`, `original_transaction_id`.
-- `entitlements`: a materialized, per-user result of the algorithm below: `user_id`, `tier_code` (the user's own best, including household), `source` (`none`, `subscription`, `household`, `comp`), `subscription_id`, `household_id`, `in_grace`, `valid_until`, `limits` (snapshot of `plans.limits`), `computed_at`. It is a cache that can always be recomputed; it is rewritten on every relevant event and by a nightly sweep.
-- `trip_passes`: `id`, `trip_id`, `purchaser_user_id`, `plan_code` (`trip_pass`, `group_trip_pass`), `store_transaction_id`, `original_transaction_id`, `starts_at`, `expires_at`, `live_routes_max`, `live_checks_max`, `live_checks_used`, `collaborators_max`, `travelers_max`, `credits_granted`, `status` (`active`, `expired`, `refunded`), `move_count`. A row exists only once the pass has a trip; a paid pass with no trip yet is a `store_transactions` row (`kind = 'pass'`, `trip_id` null) and is shown to the client as "unapplied". At most one pass is active per trip.
+- `entitlements`: a materialized, per-user result of the algorithm below: `user_id`, `tier_code` (the user's own best, including household), `source` (`none`, `subscription`, `household`, `comp`, `advisor`), `subscription_id`, `household_id`, `in_grace`, `valid_until`, `limits` (snapshot of `plans.limits`), `computed_at`. It is a cache that can always be recomputed; it is rewritten on every relevant event and by a nightly sweep.
+- `trip_passes`: `id`, `trip_id`, `purchaser_user_id`, `plan_code` (`trip_pass`, `group_trip_pass`), `store_transaction_id`, `original_transaction_id`, `starts_at`, `expires_at`, `live_routes_max`, `live_checks_max`, `live_checks_used`, `collaborators_max`, `travelers_max`, `credits_granted`, `status` (`active`, `expired`, `refunded`, `upgraded`), `move_count`, `upgraded_from_id`. A row exists only once the pass has a trip; a paid pass with no trip yet is a `store_transactions` row (`kind = 'pass'`, `trip_id` null) and is shown to the client as "unapplied". At most one pass is active per trip.
 - `households`, `household_members` ([03-database-schema.md](03-database-schema.md)): the owner is the Family subscriber; up to 6 members including the owner.
-- Advisor seats (`advisor_seats`) grant `pro`-level capabilities to an advisor user on client trips only (section 11.4; see Schema notes).
+- Advisor seats (`advisor_seats`) grant `pro`-level capabilities to an advisor user on client trips only (section 11.4). A user whose only paid source is a seat has `entitlements.source = 'advisor'` and `tier_code = 'advisor_seat'`; on their own non-client trips they resolve as Free. 03 section 7.1 adds the seat as a third candidate (`advisor`) on a trip that has an `advisor_clients` row.
 
 Tier rank: `free` 0, `plus` 1, `family` 2, `pro` 3. A trip pass is an overlay on one trip, not a tier.
 
@@ -205,7 +205,7 @@ def actor_context(actor, trip) -> ActorContext:
 
 Rules that the algorithm encodes:
 
-1. **Best-of on a trip.** Capabilities on a trip are the per-capability best of the owner's tier and the active pass on the trip (03 allows one active pass per trip, `uq_trip_passes_one_active`; `merge_best` stays generic). Live check budgets are the maximum, not the sum, because they are a cost cap. This is the same merge as 03 section 7.1.
+1. **Best-of on a trip.** Capabilities on a trip are the per-capability best of the owner's tier, the active pass on the trip (03 allows one active pass per trip, `uq_trip_passes_one_active`; `merge_best` stays generic) and, on a client trip, the owner's advisor seat. Live check budgets are the maximum, not the sum, because they are a cost cap. This is the same merge as 03 section 7.1.
 2. **Invitees.** Collaborators and viewers get the trip's capabilities on that trip only. They do not gain tier benefits elsewhere. They do not pay and cannot buy passes for a trip they do not own (they can buy their own membership).
 3. **Personal limits follow the person.** Active trips (the count a user may own), personal alerts and personal credits depend on `user_tier(actor)`, not on the trip.
 4. **Owner lapse.** If the owner's tier drops, the trip keeps its data; capabilities recompute. Existing live routes beyond the new limit are paused (not deleted), oldest first kept; collaborators above the limit stay as viewers; AI on the trip continues to draw from whoever acts.
@@ -279,7 +279,7 @@ A reservation that spans pools records each draw (`credit_ledger` rows with `gra
 
 | Event | Action |
 |---|---|
-| Refund of a pack | Remove the unspent part of that pack's pool (`credit_ledger` `entry_type = 'clawback'`, negative `delta`, `remaining` set to 0). If some credits were already spent, the shortfall is recorded as a `clawback` ledger row with no `grant_id` (03 never lets `credit_grants.remaining` go below 0; see Schema notes) and all paid AI actions are blocked until later grants cover it; show "Your balance is below zero after a refund. Buy credits or wait for your next monthly credits." Repeated refund abuse (3 refunds in 90 days, counted from `store_transactions` with `status = 'refunded'`; default) blocks pack purchases for 180 days and flags the account for review. |
+| Refund of a pack | Remove the unspent part of that pack's pool (`credit_ledger` `entry_type = 'clawback'`, negative `delta`, `remaining` set to 0). If some credits were already spent, the billing service calls `record_credit_debt` (03 section 5.13): the shortfall is a `clawback` ledger row with no `grant_id` plus a `credit_debts` row (`credit_grants.remaining` never goes below 0). `reserve_credits` refuses while `credit_debts.amount > 0`, `settle_credit_debt` pays it down from the user's next grants (monthly, pack or pass), and `CreditBalance.blocked` tells the client; show "Your balance is below zero after a refund. Buy credits or wait for your next monthly credits." Repeated refund abuse (3 refunds in 90 days, counted from `store_transactions` with `status = 'refunded'`; default) blocks pack purchases for 180 days (`users.pack_purchases_blocked_until`, written by the billing service; the admin console lists accounts with an active block) and flags the account for review. |
 | Refund of a subscription period | Revoke the entitlement now; remove the unspent part of that period's allowance pool; leave the credits of earlier periods. Spent allowance credits are not recovered (the cost is ours). |
 | Refund of a trip pass | Status `refunded`; the trip drops to the owner's tier capabilities; remaining pass credits are removed; live checks stop. |
 | AI action failed, refused, timed out or saved nothing | Automatic refund to the same pools ([06-ai-agents-spec.md](06-ai-agents-spec.md) section 6.3), never a support task. |
@@ -307,10 +307,10 @@ The engine behind `GET /v1/paywall/offer?reason={code}&trip_id={id}&surface={sur
 {
   "show": true,
   "reason": "limit_reached",
-  "trigger": "live_track",
+  "trigger": "track_live",
   "offering": "trip_first",
   "highlight": "wayfold_plus_annual",
-  "copy_key": "paywall.live_track.trip",
+  "copy_key": "paywall.track_live.trip",
   "trip_summary": "Live prices for Lisbon in April, checked daily until you fly",
   "free_path": {"label": "Not now", "action": "dismiss"},
   "credit_option": {"credits": 1, "label": "Check once for 1 credit"},
@@ -319,38 +319,42 @@ The engine behind `GET /v1/paywall/offer?reason={code}&trip_id={id}&surface={sur
 }
 ```
 
-When `show` is false, `reason` says why (`session_cap`, `muted`, `first_session`, `recent_purchase`, `presentation`, `not_needed`), so the client can log and do nothing. `POST /v1/paywall/events` records `paywall_shown`, `paywall_dismissed`, `paywall_cta_tapped`, `purchase_started`, `purchase_completed`, `purchase_failed`, `restore_tapped` with the trigger, offering, variant and trip; these go to PostHog; the few per-user facts the frequency caps need (recent view times, muted triggers) are kept in `users.prefs` under `paywall`, because 03 creates no `analytics_events` table.
+When `show` is false, `reason` says why (`session_cap`, `muted`, `first_session`, `recent_purchase`, `presentation`, `not_needed`), so the client can log and do nothing. `POST /v1/paywall/events` records `paywall_viewed`, `paywall_dismissed`, `purchase_started`, `purchase_completed`, `purchase_failed`, `restore_tapped` (the catalogue in [10-quality-security-launch.md](10-quality-security-launch.md) section 4; the `cta_tapped` event of the API is `purchase_started`) with the trigger as `placement`, offering, variant and trip; these go to PostHog; the few per-user facts the frequency caps need (recent view times, muted triggers) are kept in `users.prefs` under `paywall`, because 03 creates no `analytics_events` table.
 
 ### 6.2 Triggers
+
+Trigger ids are the same as in [05-ui-ux-spec.md](05-ui-ux-spec.md) section 6.27 and the `paywall_viewed` event in [10-quality-security-launch.md](10-quality-security-launch.md).
 
 | Trigger code | Moment | Shown when | Default offering | Free path |
 |---|---|---|---|---|
 | `third_trip` | Create a third active trip | Free limit reached | `plus_first` | Archive a trip |
 | `second_route` | Add a second flight route | Free: 1 route per trip | `trip_first` (preview of cached fares first) | Keep one route |
-| `live_track` | Tap "Track live" or "Refresh now" | No live access | `trip_first`, with "1 credit" option | Use 1 credit or cached fares |
+| `track_live` | Tap "Track live" or "Refresh now" | No live access | `trip_first`, with "1 credit" option | Use 1 credit or cached fares |
 | `alert_limit` | Price alert beyond the free one | Free alert used | `trip_first` | Keep the cached-fare alert |
-| `invite_collab` | Invite a collaborator | Free owner | `trip_first` ("Plan together: they join free") | Share a read-only link |
-| `draft_no_credits` | "Draft my itinerary" | Out of credits | `credits` or `plus_first`; blurred preview of day one | Plan manually |
-| `research_no_credits` | "Research this" or "Ask" | Out of credits | `credits` (small pack first) | Skip |
-| `agent_no_credits` | Deep agent run or fare hunt | Fewer than 40 credits | `credits` (400 pack highlighted when short by more than 50) or `plus_first` | Use a research question |
-| `routine_locked` | Start a scheduled routine | Not Pro | Sample result from cache; one manual run for credits; Pro once launched | Run once manually |
-| `group_feature` | Open polls or cost splitting on a trip that lacks them (Free owner), ask for a room block, or add more than 8 travelers | Trip lacks `polls` or `cost_splitting`, lacks `room_block_request`, or is at `travelers_per_trip` | `group` | Use notes; join trips that have them |
-| `footer_export` | Export or share with the Made with footer | Free export | Soft line at export, never a modal | Export with footer |
-| `lodging_limit` | Save the 9th lodging option | Free limit | `trip_first`; keep saving to a "later" list | Later list |
+| `invite` | Invite a collaborator | Free owner | `trip_first` ("Plan together: they join free") | Share a read-only link |
+| `out_of_credits_draft` | "Draft my itinerary" | Out of credits | `credits` or `plus_first`; blurred preview of day one | Plan manually |
+| `out_of_credits_research` | "Research this" or "Ask" | Out of credits | `credits` (small pack first) | Skip |
+| `out_of_credits_agent` | Deep agent run or fare hunt | Fewer than 40 credits | `credits` (400 pack highlighted when short by more than 50) or `plus_first` | Use a research question |
+| `routine` | Start a scheduled routine | Not Pro | Sample result from cache; one manual run for credits; Pro once launched | Run once manually |
+| `group_tools` | Open polls or cost splitting on a trip that lacks them (Free owner) | Trip lacks `polls` or `cost_splitting` | `trip_first` (`plus_first` when the person has two or more active trips) | View what others add; join trips that have them |
+| `group_pass` | Open the room-block request, or add a ninth traveler | No Group Trip Pass on the trip | `group` | Keep to 8 travelers, skip the room block |
+| `collect_payments` | Tap "Collect payments" (Phase 4, flag `group_payments`) | No Group Trip Pass or Pro | `group` | Mark as paid by hand |
+| `export_footer` | Export or share with the Made with footer | Free export | Soft line at export, never a modal | Export with footer |
+| `ninth_stay` | Save the 9th lodging option | Free limit | `trip_first`; keep saving to a "later" list | Later list |
 | `lifecycle_14d` | 14 days before departure | Free trip with dates | `trip_first` via email or in-app card, not a modal | Dismiss |
 | `household` | Invite a second household member | Household signals (6.4) | `family` | Invite as collaborator |
 
-No trigger exists for the first session, for presentation playback, or for actions after an affiliate booking. Hard limits (third trip) are a block with the free alternative, not a nag. The API `reason` for each trigger ([04-api-spec.md](04-api-spec.md) section 2.2): `third_trip` is `trip_limit`; `second_route`, `live_track` and `alert_limit` are `live_routes`; `invite_collab` is `sharing`; the three `*_no_credits` triggers are `credits` (the taster is `agent_taster_used`); `routine_locked` is `routines`; `group_feature` is `group_tools` (`traveler_limit` above 8 travelers); `household` is `family_members`. `footer_export`, `lodging_limit` and `lifecycle_14d` are client-initiated and are sent as `reason` by their trigger code.
+No trigger exists for the first session, for presentation playback, or for actions after an affiliate booking. Hard limits (third trip) are a block with the free alternative, not a nag. The API `reason` for each trigger ([04-api-spec.md](04-api-spec.md) section 2.2): `third_trip` is `trip_limit`; `second_route`, `track_live` and `alert_limit` are `live_routes`; `invite` is `sharing`; the three `out_of_credits_*` triggers are `credits` (the taster is `agent_taster_used`); `routine` is `routines`; `group_tools` is `group_tools`; `group_pass` is `traveler_limit` (above 8 travelers) or `room_block`; `collect_payments` is `group_payments`; `household` is `family_members`. `export_footer`, `ninth_stay` and `lifecycle_14d` are client-initiated and are sent as `reason` by their trigger code.
 
 ### 6.3 Which offer to show
 
 ```python
 def choose_offering(ctx, trigger):
-    if not ctx.pro_enabled and trigger == "routine_locked":
+    if not ctx.pro_enabled and trigger == "routine":
         return "credits"                                   # manual run via credits, no Pro
     if trigger in CREDIT_TRIGGERS:                         # draft, research, agent out of credits
         return "credits" if ctx.tier != "free" or ctx.recent_pack_buyer else "plus_first"
-    if trigger == "group_feature" or ctx.trip.travelers > 8:
+    if trigger == "group_tools" or ctx.trip.travelers > 8:
         return "group"
     if ctx.household_signal:
         return "family"
@@ -383,7 +387,7 @@ Defaults from the plan: best-converting first is Trip Pass, then annual Plus, th
 | Hard-limit blocks (third trip) always show their block, but the offer section is subject to the mute rules | always |
 | Lifecycle prompts go by email or an in-app card, never a modal, and at most one per trip per 14 days | 14 days |
 
-Counters are read server-side from `users.prefs` (`paywall`: the times of recent `paywall_shown` and `paywall_dismissed` events and the muted triggers), so they hold across devices.
+Counters are read server-side from `users.prefs` (`paywall`: the times of recent `paywall_viewed` and `paywall_dismissed` events and the muted triggers), so they hold across devices.
 
 ### 6.6 Paywall content rules
 
@@ -401,7 +405,7 @@ Server-side assignment: `variant = hash(user_id || experiment_key) mod 100` agai
 | 1 | Trip Pass price | $9.99, $7.99, $12.99 | Revenue per paywall view | Trip Pass to Plus cannibalization, refunds |
 | 2 | Plus annual price | $39.99, $34.99 | Net revenue per view at 60 days | Trial start rate |
 | 3 | Annual pre-selection | Annual pre-selected vs none | Annual share of purchases | Refund rate in 14 days |
-| 4 | Lead offer on `live_track` | Trip Pass lead vs annual lead | Purchases per view | Plus churn at 60 days |
+| 4 | Lead offer on `track_live` | Trip Pass lead vs annual lead | Purchases per view | Plus churn at 60 days |
 | 5 | Trial length | 7 days vs 3 days (annual only) | Trial to paid | Complaints |
 | 6 | Credit pack order | 50 first vs 150 highlighted | Revenue per credit-out view | Pack refunds |
 | 7 | Family visibility | Family as a row in `default` vs household trigger only | Family share | Plus downgrades |
@@ -429,7 +433,7 @@ Plus to Family or Pro, Family to Pro, monthly to annual of a higher tier: Apple 
 1. Switch the tier now; recompute entitlements and household capabilities.
 2. Grant the new tier's allowance for the current period now, minus any allowance already granted and unspent in this period: the old allowance pool stays valid for spending (never reduce a pool the user already has), and the new grant is the difference up to the new amount (Plus 60 to Family 150: grant 90). The grant's `period_key` includes the product change date.
 3. Family gains the household pool: existing household members gain benefits immediately.
-4. Analytics `upgrade_completed` with from and to tier.
+4. Analytics `subscription_changed` with `direction: upgrade` and the from and to products.
 
 ### 7.4 Downgrades
 
@@ -456,14 +460,14 @@ Refunds happen through Apple (reportaproblem.apple.com); we cannot issue them. O
 | Subscription | Status `refunded`, revoke now, claw back the unspent allowance of that period (5.6), count refunds per user from `store_transactions` (`status = 'refunded'`) |
 | Trip pass or Group Trip Pass | Status `refunded`; the pass stops granting capabilities; its unspent credits are removed; live checks stop. The trip and its data stay. |
 | Credit pack | Clawback (5.6); negative balance blocks paid AI until positive |
-| Pattern | 3 refunds in 90 days: block purchases for that user for 180 days and flag for review (default) |
+| Pattern | 3 refunds in 90 days: block pack purchases for that user for 180 days (`users.pack_purchases_blocked_until`) and flag for review (default) |
 
 Support can grant goodwill credits (an `adjustment` grant) but never reverse a refund into a free pass.
 
 ### 7.7 Trip pass binding and expiry
 
 1. On purchase the store transaction is written (`store_transactions`, `kind = 'pass'`). If the purchase started from a trip, the app sent its `trip_id` and the `trip_passes` row is written at once. Otherwise the app asks "Which trip is this for?" and lists the owner's trips; until then the pass is unapplied (a `store_transactions` row with `trip_id` null and no `trip_passes` row) and waits in Settings, Purchases, for 12 months (default), then lapses.
-2. Binding (`trip_id` on `POST /v1/purchases/sync`, or `POST /v1/me/passes/{pass_id}/bind`) inserts `trip_passes` with `starts_at = now()` and `expires_at = starts_at + 90 days`, sets `store_transactions.trip_id`, copies `live_routes_max`, `live_checks_max`, `collaborators_max`, `travelers_max` and `credits_granted` from `plans.limits` of the purchased plan, writes the `trip_pass` credit grant (40 or 80, with `trip_id`) and recomputes the trip's capabilities. Only the trip owner may bind, and the purchaser must be the owner. A trip holds one active pass (`uq_trip_passes_one_active`); binding a second is refused with `409 state_conflict`.
+2. Binding (`trip_id` on `POST /v1/purchases/sync`, or `POST /v1/me/passes/{pass_id}/bind`) inserts `trip_passes` with `starts_at = now()` and `expires_at = starts_at + 90 days`, sets `store_transactions.trip_id`, copies `live_routes_max`, `live_checks_max`, `collaborators_max`, `travelers_max` and `credits_granted` from `plans.limits` of the purchased plan, writes the `trip_pass` credit grant (40 or 80, with `trip_id`) and recomputes the trip's capabilities. Only the trip owner may bind, and the purchaser must be the owner. A trip holds one active pass (`uq_trip_passes_one_active`); binding a second of the same plan is refused with `409 state_conflict`. Binding a Group Trip Pass to a trip that has an active Trip Pass is the upgrade in 7.9.
 3. A pass can be moved once (`move_count` 0 to 1, `POST /v1/me/passes/{pass_id}/move`) to another trip that the same owner owns; moving keeps the original `expires_at`, changes `trip_id` on the pass and on its unspent `trip_pass` grant, and pauses live routes on the old trip. A second move is refused.
 4. Live check counters (`live_checks_used` against `live_checks_max`) belong to the pass and move with it.
 5. Expiry at `expires_at`: `status` becomes `expired`, capabilities drop to the owner's tier, unspent pass credits expire, the trip stays. The app shows the pass status and expiry date in the trip's settings, a notice 7 days before, and offers renewal by buying a new pass (a new pass starts a new 90 days).
@@ -486,7 +490,7 @@ Support can grant goodwill credits (an `adjustment` grant) but never reverse a r
 - Bound to one trip, 90 days from binding, purchased by the trip owner only ($19.99).
 - Raises the trip to up to 12 travelers (owner plus up to 11 collaborators), 80 credits (the `trip_pass` grant), and the room-block request form (`room_block_requests`, a lead form that goes to the concierge advisor; no payment). Polls and manual cost splitting are not exclusive to it: every paid plan and both passes include them (section 2.2). With `pro` it is the only way to collect money through Stripe (Phase 4, section 10).
 - Capabilities for live routes are 2 routes and at most 60 checks, like Trip Pass.
-- One pass per trip at a time (`uq_trip_passes_one_active`); it is best-of with the owner's tier. Upgrading a trip from Trip Pass to Group Trip Pass is not modeled (see Schema notes).
+- One pass per trip at a time (`uq_trip_passes_one_active`); it is best-of with the owner's tier. **Upgrade from Trip Pass.** The owner buys a Group Trip Pass and binds it to the same trip. The Trip Pass row becomes `upgraded` (which frees the unique index), the new row records `upgraded_from_id`, runs a full 90 days from binding, and copies `live_checks_used` so the 60-check cap is not reset. Unspent Trip Pass credits stay spendable until their own expiry, and the Group Trip Pass grants its 80 credits. Nothing is refunded by us; Apple refund rules (7.6) apply to each purchase.
 - Guests in the group need no subscription; they join free and see polls and splits. Those who want to start AI actions draw from their own allowance, then the trip's pass pool.
 - Expiry: if the owner's tier does not also grant them, polls and splits become read-only; past polls and recorded expenses remain readable and exportable; open Stripe collections (Phase 4) continue to completion on Stripe (they are not an app feature, section 10). The owner sees a notice 7 days before expiry.
 - Not refundable by us; Apple refund rules (7.6) apply.
@@ -507,7 +511,7 @@ Affiliate income is the Free tier's revenue. It is earned on every tier in the s
 |---|---|---|---|---|
 | `travelpayouts_aviasales` | Travelpayouts | flights | active | Cached-fare data API is open; "Book" opens an Aviasales search with our marker |
 | `travelpayouts_kiwi` | Travelpayouts | flights | active | Label self-transfer fares |
-| `travelpayouts_tripcom_flights` | Travelpayouts | flights | active | Not yet a seed row in 03 (see Schema notes) |
+| `travelpayouts_tripcom_flights` | Travelpayouts | flights | active | Trip.com flights; the lodging program is `travelpayouts_trip` |
 | `travelpayouts_booking` | Travelpayouts | lodging | active | Show Booking's required disclosure line next to the link |
 | `travelpayouts_agoda` | Travelpayouts | lodging | active | |
 | `travelpayouts_trip` | Travelpayouts | lodging | active | |
@@ -515,7 +519,7 @@ Affiliate income is the Free tier's revenue. It is earned on every tier in the s
 | `stay22` | Stay22 | lodging | active (challenger) | Maps widget and Link Swap for pasted listing hosts that have approved programs |
 | `travelpayouts_discovercars` | Travelpayouts | cars | active | |
 | `travelpayouts_localrent` | Travelpayouts | cars | active | |
-| `travelpayouts_omio` | Travelpayouts | trains | active | Not yet a seed row in 03 (see Schema notes) |
+| `travelpayouts_omio` | Travelpayouts | trains | active | Train and bus search |
 | `travelpayouts_welcome` | Travelpayouts | transfers | active | |
 | `travelpayouts_kiwitaxi` | Travelpayouts | transfers | active | |
 | `viator` | Viator partner API | tours | active | Basic access is self-service; weekly payout, $50 minimum |
@@ -609,7 +613,7 @@ Revenue is attributed along the chain conversion, click, (user, trip, surface, p
 - **Recognition.** Show three numbers: pending (expected), approved, paid. Expected revenue for pending rows uses the program's trailing 90-day approved-to-pending ratio. Reported revenue for accounting is paid; management revenue is approved plus expected pending.
 - **Per trip.** Sum of conversions whose click has that `trip_id`, in USD, by category. "Real trips" are trips with dates in the next 12 months and at least a chosen flight, a shortlisted stay or two itinerary items.
 - **Per surface.** Conversions grouped by the click's `surface` and `checklist_item_kind`.
-- **Per user and tier.** Joined to the user's tier at click time (`link_clicks` has no tier column, so it is resolved from `subscriptions` and `trip_passes` at the click time; see Schema notes) so Free versus paid earnings are reportable.
+- **Per user and tier.** Joined to the clicker's tier at click time (`link_clicks.tier_code`, stamped when the click is minted from the effective tier or pass, so no later join to `subscriptions` or `trip_passes` is needed) so Free versus paid earnings are reportable.
 - **Overlap.** When Viator and GetYourGuide both show the same item, only the booked one is counted; never count two commissions for one booking.
 - **Dedupe of self-purchase.** Conversions from accounts on the internal list (`admin_users` and test accounts) are excluded.
 
@@ -672,11 +676,11 @@ Polls and manual cost splitting are in every paid plan and both passes (section 
 
 ### 10.2 Collection
 
-1. **Organizer setup (Phase 4).** The trip owner or a named organizer connects a Stripe Connect Express account (Stripe-hosted onboarding; Wayfold stores the account id only, never bank details). Without it, the app offers "Mark as paid" (cash, bank transfer or app of your choice) but no card collection.
-2. **Collect.** The organizer creates a collection for a real-world cost ("Villa deposit, $2,400") and picks a split. The app generates one payment link per traveler (Stripe Checkout, reachable in the app browser or on the web; Apple Pay and Google Pay appear where available). Each traveler pays their own share.
+1. **Organizer setup (Phase 4).** The trip owner or a named organizer connects a Stripe Connect Express account (Stripe-hosted onboarding; Wayfold stores the account id only, in `users.stripe_connect_account_id`, with `stripe_connect_ready` set from the `account.updated` webhook; never bank details). Without it, the app offers "Mark as paid" (cash, bank transfer or app of your choice) but no card collection.
+2. **Collect.** The organizer creates a collection for a real-world cost ("Villa deposit, $2,400"; a `payment_collections` row with the total, currency, `split_method`, `fee_mode`, due date and a snapshot of the connected account id) and picks a split. The app generates one payment link per traveler (Stripe Checkout, reachable in the app browser or on the web; Apple Pay and Google Pay appear where available). Each traveler pays their own share, recorded as a `settlements` row with `collection_id` and `method = 'stripe'`.
 3. **Destination charges.** Each payment is a Stripe destination charge to the organizer's connected account, so funds settle to the organizer and Wayfold never holds traveler money (the structure is reviewed with counsel for money transmission, pre-launch item).
-4. **Fees.** Stripe's processing fee (about 2.9% plus $0.30 for US cards, verify) is shown to the payer as a separate line before paying, or absorbed by the organizer when they choose "I cover fees". Connect and payout fees (verify) are charged to the organizer's connected account. Wayfold's application fee is 0 at launch (default `fee_bps` in the `rules` of the `group_payments` feature flag); the lane is a driver of Group Trip Pass sales, not a margin. A later fee, if any, is disclosed before payment and is never a percentage of a digital purchase.
-5. **Settle.** Webhooks (`payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.refunded`, `charge.dispute.created`, `account.updated`, `payout.paid`) update `settlements` and the collection's progress: `status` `pending`, `succeeded`, `failed`, `refunded` (a dispute is tracked in `raw` on the webhook event until 03 gets a status for it; see Schema notes). A collection closes when every share is `paid` or the organizer closes it; open balances remain tracked. Idempotency keys on every Stripe call are `settlement:{id}:{attempt}`.
+4. **Fees.** Stripe's processing fee (about 2.9% plus $0.30 for US cards, verify) is shown to the payer as a separate line before paying, or absorbed by the organizer when they choose "I cover fees". Connect and payout fees (verify) are charged to the organizer's connected account. Wayfold's application fee is 0 at launch (default `fee_bps` in the `rules` of the `group_payments` feature flag, copied to `payment_collections.application_fee_bps` when the collection is created); the lane is a driver of Group Trip Pass sales, not a margin. A later fee, if any, is disclosed before payment and is never a percentage of a digital purchase.
+5. **Settle.** Webhooks (`payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.refunded`, `charge.dispute.created`, `account.updated`, `payout.paid`) update `settlements` and the collection's progress: `status` `pending`, `succeeded`, `failed`, `refunded` and `disputed` (from `charge.dispute.created` until Stripe resolves it; a won dispute returns to `succeeded`, a lost one becomes `refunded`). A collection closes (`payment_collections.status = 'closed'`) when every share is `succeeded` or the organizer closes it; open balances remain tracked. Idempotency keys on every Stripe call are `settlement:{id}:{attempt}`.
 6. **Refunds.** The organizer refunds through the app (a Stripe refund on the connected account); Wayfold's fee (none at launch) would be refunded with it. A refunded share reopens the balance. Disputes are handled by the organizer as the merchant on the connected account; the app shows status and instructions and Wayfold support assists. Wayfold cannot refund money it never held.
 7. **Receipts and privacy.** Stripe emails receipts. We store Stripe ids and amounts, not card data. Payer names shown to the organizer are the trip's people names.
 
@@ -701,14 +705,14 @@ Each lane is behind a `feature_flags` key (default off; 03 section 11.5 seeds `g
 
 ### 11.2 Partner guides (year 2 and later)
 
-- Tourism boards and hotel brands sponsor labeled destination guides stored in `partner_guides` (`partner_name`, `partner_url`, `destination_name`, `title`, `summary`, `body_md`, `cover_image_url`, `is_sponsored`, `disclosure_text`, `status`, `published_at`, `program_id`; sponsorship dates, price and invoice reference are not in 03, see Schema notes). Sold as flat-fee sponsorships invoiced outside the app (Stripe invoices or bank transfer).
+- Tourism boards and hotel brands sponsor labeled destination guides stored in `partner_guides` (`partner_name`, `partner_url`, `destination_name`, `title`, `summary`, `body_md`, `cover_image_url`, `is_sponsored`, `disclosure_text`, `status`, `published_at`, `program_id`, plus `entries` (the places a reader can copy into an itinerary), the review fields `review_state`, `reviewed_by` and `reviewed_at`, and the sponsorship terms `sponsor_starts_on`, `sponsor_ends_on`, `sponsor_fee_minor`, `sponsor_fee_currency` and `sponsor_invoice_ref`, which are finance data the app role can never read). Sold as flat-fee sponsorships invoiced outside the app (Stripe invoices or bank transfer).
 - Rules: every guide carries a visible "Sponsored by {partner}" label, lives in its own section, is never mixed into search, lists, rankings or AI answers, never gets a push, and is never cited by an agent. A sponsored guide cannot change a place's rating or position anywhere. FTC and UK ASA labeling: "Ad" or "Sponsored" in text.
 - Reporting: impressions and taps (first-party events, no third-party SDK) go into a monthly sponsor report.
 
 ### 11.3 Printed trip books (year 2)
 
 - Print-on-demand trip books and posters generated from presentation mode, ordered on the web (not in the iOS app; a link from the app opens the web order page in the in-app browser). Stripe Checkout takes payment; the print vendor's API (for example Prodigi or Printful, vendor chosen at that phase) receives the print job and ships.
-- `print_orders`: `user_id`, `trip_id`, `product`, `format` (`softcover`, `hardcover`), `page_count`, `copies`, `pdf_key` (R2 key to the PDF), `amount_minor`, `shipping_minor`, `currency`, `stripe_payment_intent_id`, `printer`, `printer_order_id`, `status` (`draft`, `awaiting_payment`, `paid`, `submitted`, `printing`, `shipped`, `delivered`, `cancelled`, `refunded`), `carrier`, `tracking_number`, `shipping_address` (jsonb), `created_at`. Tax (Stripe Tax) has no column in 03; see Schema notes.
+- `print_orders`: `user_id`, `trip_id`, `product`, `format` (`softcover`, `hardcover`), `page_count`, `copies`, `pdf_key` (R2 key to the PDF), `amount_minor`, `shipping_minor`, `currency`, `stripe_payment_intent_id`, `printer`, `printer_order_id`, `status` (`draft`, `awaiting_payment`, `paid`, `submitted`, `printing`, `shipped`, `delivered`, `cancelled`, `refunded`), `carrier`, `tracking_number`, `shipping_address` (jsonb), `tax_minor` (the Stripe Tax result), `quote_expires_at` (a `draft` row is the quote, 04 5.23), `created_at`.
 - Margin target 35 to 45% after vendor cost, shipping and Stripe fees. Sales tax or VAT through Stripe Tax (verify). Physical goods consumed outside the app are outside In-App Purchase. Affiliate and sponsor content is excluded from printed books unless the user adds it; the commission sentence is printed wherever a partner link is shown.
 - Refunds for misprints and damage per vendor policy; data retention for addresses is 90 days after delivery.
 
@@ -717,7 +721,7 @@ Each lane is behind a `feature_flags` key (default off; 03 section 11.5 seeds `g
 - Web SaaS for independent travel advisors: client trip workspaces, branded presentation mode, proposals, and commission tracking. Sold on the web through Stripe Billing, not through the App Store. The iOS app does not sell it and does not link to its purchase page (Guideline 3.1.1); advisors sign in on the web.
 - Pricing: $29 a seat a month, or $24 a seat a month on annual billing ($288 a seat a year). Stripe Checkout and Customer Portal; per-seat quantity subscription; 14-day trial without a card is not offered (default: card required, cancel anytime).
 - Tables: `advisor_orgs` (`name`, `slug`, `host_agency_name`, `billing_email`, `stripe_customer_id`, `commission_split_bps`, `status`), `advisor_seats` (`advisor_org_id`, `user_id`, `role`, `billing_period`, `stripe_subscription_item_id`, `status`), `advisor_clients` (`advisor_org_id`, `advisor_user_id`, `client_name`, `client_user_id` nullable, `trip_id`, `commission_expected_minor`, `status`). Seeds: plan `advisor_seat`, products `advisor_seat_monthly` and `advisor_seat_annual`, flag `advisor_workspaces`.
-- Entitlement: an active seat gives the advisor `pro`-level capabilities on trips in their org's client workspaces only (resolved in 4.2; see Schema notes for the `entitlements.source` value), no personal AI allowance beyond a seat allowance that is a default of 150 credits a month as a `monthly` grant (`plans.monthly_credits` of `advisor_seat`, default, configurable) so advisor AI spend is covered by seat revenue against the $0.40 daily and a seat ceiling of $3.40 (default). Client guests join free.
+- Entitlement: an active seat gives the advisor `pro`-level capabilities on trips in their org's client workspaces only (resolved in 4.2 and 03 section 7.1; the `advisor_seat` plan row carries the pro-level limits, `entitlements.source` is `advisor`), no personal AI allowance beyond a seat allowance that is a default of 150 credits a month as a `monthly` grant (`plans.monthly_credits` of `advisor_seat`, written by the daily grant job for `advisor` entitlements) so advisor AI spend is covered by seat revenue against the $0.40 daily budget and a seat ceiling of $3.40 (`plans.limits` of `advisor_seat`, defaults). Client guests join free.
 - Dunning: Stripe smart retries for 14 days; seats go read-only after that, never deleted; client data is exportable at all times.
 - Commission tracking: advisors record bookings and expected commission per client trip (`advisor_clients` and a per-booking JSON), with monthly totals and CSV export. Wayfold takes no commission on an advisor's bookings.
 - Webhooks: `customer.subscription.created`, `.updated`, `.deleted`, `invoice.paid`, `invoice.payment_failed`, `checkout.session.completed`; handler writes `webhook_events` (`provider = 'stripe'`) and follows the same idempotent pattern as 3.4.
@@ -787,19 +791,4 @@ Weekly Monday review uses the same tiles: installs, activation, trial starts, pa
 
 ### 12.4 Events (first-party, sent to PostHog)
 
-`paywall_shown`, `paywall_dismissed`, `paywall_cta_tapped`, `purchase_started`, `purchase_completed`, `purchase_failed`, `restore_tapped`, `trial_started`, `trial_converted`, `subscription_cancelled`, `upgrade_completed`, `downgrade_scheduled`, `pass_bound`, `pass_moved`, `pass_expired`, `credits_reserved`, `credits_settled`, `credits_refunded`, `credits_expired`, `pack_purchased`, `outbound_clicked`, `concierge_requested`, `concierge_status_changed`, `collection_created`, `collection_paid`. No event carries names, emails or free text; session replay is off or masked.
-
-## Schema notes
-
-Things this file needs that 03-database-schema.md does not have yet. Nothing here is assumed above; each item names where the text works around it.
-
-- `entitlements.source` allows `none`, `subscription`, `household`, `comp`. Advisor seat entitlements (4.1, 11.4) need `advisor` added to `ck_entitlements_source`, or seats map to `comp`.
-- `plans.limits` has no keys for `presentation_footer`, Stripe collection (`group_payments`), or the pass rule that raises `active_trips` by 1 (2.2). Add them to the seed or keep them in code.
-- Negative balance after a pack refund (5.6): `credit_grants.remaining` cannot go below 0, and `reserve_credits` does not read `clawback` rows that have no `grant_id`. The API must check for that debt before it reserves, or 03 needs a debt column.
-- Refund-abuse purchase blocks (5.6, 7.6) and the paywall frequency state (6.5) live in `users.prefs` (jsonb). A column or table is needed if they must be queried across users.
-- Upgrading a trip from Trip Pass to Group Trip Pass (7.9): `uq_trip_passes_one_active` allows one active pass per trip, so the upgrade (replace the pass, keep `expires_at`) is not modeled.
-- Advisor seats (11.4): the `advisor_seat` plan seed has `monthly_credits = 0` and empty `limits`, so the 150-credit seat allowance and the $3.40 seat ceiling need plan values.
-- Affiliate seeds: 03 section 11.4 has no rows for `travelpayouts_tripcom_flights` or `travelpayouts_omio` (8.1). `link_clicks` has no tier column (8.7).
-- Group payments (Phase 4, section 10): 03 has no collection table, no column for the organizer's Stripe Connect account id, and no `disputed` status on `settlements`.
-- Partner guide sponsorship terms (start and end dates, price, invoice reference) and print order tax have no columns (11.2, 11.3).
-- 03 section 11.1 seeds `polls` and `cost_splitting` as false for `trip_pass`, which contradicts the README group-tools rule (and 2.2 above). The seed needs `true` for `trip_pass`, and `group_payments` (Phase 4) added for `pro` and `group_trip_pass`.
+`paywall_viewed`, `paywall_dismissed`, `purchase_started`, `purchase_completed` (with `is_trial` for a trial start), `purchase_failed`, `restore_tapped`, `subscription_started`, `subscription_renewed`, `trial_converted`, `subscription_canceled`, `subscription_changed` (upgrade and downgrade), `trip_pass_applied`, `trip_pass_moved`, `trip_pass_expired`, `ai_action_started` and `ai_action_completed` (credit reserve, settle and refund, with `outcome: refunded`), `credits_expired`, `purchase_completed` with a `credits_*` product (a pack), `partner_link_tapped` (an outbound click), `concierge_requested`, `concierge_status_changed`, `payment_collection_created`, `payment_collection_paid`. These are the names in 10 section 4. No event carries names, emails or free text; session replay is off or masked.

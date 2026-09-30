@@ -111,7 +111,7 @@ Two to three Claude Code sessions can run in parallel when their tickets touch d
 | 11 | Solo bus factor and burnout | High | High | Strict gates; cut Android, widgets and Phase 4 before cutting quality; runbooks | WF-098 |
 | 12 | Policy churn (external links, AI disclosure, age assurance) | High | Medium | In-app purchase only at launch, re-read guidelines before each submission | WF-097, WF-100 |
 | 13 | Provider or Supabase Auth outage | Medium | Medium | Stale-data banners, queue and retry, breaker half-open probes, runbooks | WF-023, WF-098 |
-| 14 | Personal mode regresses while hosted mode is built | Low | Low | Keep personal-mode tests in CI until hosted mode is stable | WF-006 |
+| 14 | The owner's current Trip Planner breaks while Wayfold is built | Low | Low | Wayfold is a new repository with hosted-only code (02 section 1.1); the existing app keeps running from its own repository until the one-off data import (WF-072, 03 section 12) | WF-004 |
 
 ## 5. Backlog
 
@@ -153,9 +153,9 @@ Conventions for every ticket:
 ### E1 Repository, CI, Docker and environments
 
 #### WF-004 Scaffold the repository [P0, M, needs WF-003]
-- Description: create the Wayfold monorepo with the tree in [02-architecture.md](02-architecture.md) section 2: `apps/api` (Python 3.13, uv, FastAPI), `apps/worker`, `apps/web` (Vite, React 19, TanStack Query, Tailwind 4), `packages/shared`, `packages/tokens`, `packages/eslint-config`, `infra/`, `docs/` (`apps/ios` arrives in WF-080), a uv workspace and npm workspaces, root `package.json` scripts (`setup`, `start`, `dev`, `test`, `lint`, `format`, `gen:api`), `.env.example`, a project `CLAUDE.md` and `.claude/rules/` stubs (database migrations, agent routines, frontend).
+- Description: create the Wayfold monorepo with the tree in [02-architecture.md](02-architecture.md) section 2: `apps/api` (Python 3.13, uv, FastAPI), `apps/worker`, `apps/web` (Vite, React 19, TanStack Query, Tailwind 4), `packages/shared`, `packages/tokens`, `packages/eslint-config`, `infra/`, `.github/` (workflows and Dependabot), `docs/` (`apps/ios` arrives in WF-080), a uv workspace and npm workspaces, root `package.json` scripts (`setup`, `start`, `dev`, `test`, `lint`, `format`, `gen:api`), `.env.example`, a project `CLAUDE.md` and `.claude/rules/` stubs (database migrations, agent routines, frontend).
 - Accept: `npm run setup && npm test && npm run lint` pass on a clean clone on Linux and Windows; `GET /health/live` returns 200.
-- Touches: repo root (`package.json`, `pyproject.toml`), `apps/api/pyproject.toml`, `apps/web/package.json`, `packages/`, `infra/`, `.claude/`.
+- Touches: repo root (`package.json`, `pyproject.toml`), `apps/api/pyproject.toml`, `apps/web/package.json`, `packages/`, `infra/`, `.github/`, `.claude/`.
 - Tests: one pytest for the health route, one vitest smoke render.
 - Done: DoD plus the README explains setup in under 10 lines.
 
@@ -166,17 +166,17 @@ Conventions for every ticket:
 - Tests: the original tests for each ported module, adapted; a test that greps for forbidden imports (`subprocess` Claude CLI, `apscheduler`).
 - Done: DoD plus the porting map reviewed.
 
-#### WF-006 Hosted and personal mode configuration [P0, M, needs WF-004]
-- Description: a settings module with `ENVIRONMENT` (`local`, `test`, `staging`, `production`) and `MODE` (`personal`, `hosted`). Hosted mode refuses startup without required secrets, disables scheduled agents, and refuses to run tests when `ENVIRONMENT=production`. Keep the personal-mode path so the owner's local install keeps working until hosted is stable.
-- Accept: settings load from env with typed validation; missing hosted secrets fail fast with a clear message; personal mode tests still pass; `.env.example` lists every variable.
+#### WF-006 Typed configuration and environments [P0, M, needs WF-004]
+- Description: a settings module (`config.py`, the only place environment variables are read) with `ENVIRONMENT` (`local`, `ci`, `preview`, `staging`, `production`) as in 02 section 7. The app refuses to start without the required secrets for its environment, keeps scheduled agents off until the `scheduled_agent_routines` flag is on, and tests refuse to run when `ENVIRONMENT=production`. There is no personal or single-household mode: the Windows-only and passcode paths of the old Trip Planner are not carried over (02 section 1.1).
+- Accept: settings load from env with typed validation; missing required secrets fail fast with a clear message listing names only; `.env.example` lists every variable.
 - Touches: `apps/api/wayfold/config.py`, `.env.example`, `apps/api/tests/test_config.py`.
-- Tests: settings matrix (each environment and mode), refusal when production, required-secret errors.
-- Done: DoD plus personal mode tests kept in CI.
+- Tests: settings matrix (each environment), refusal when production, required-secret errors.
+- Done: DoD plus `.env.example` checked against `config.py` in CI.
 
 #### WF-007 CI pipeline [P0, M, needs WF-004]
-- Description: GitHub Actions `ci.yml` (kept under `infra/github/workflows/` per 02; GitHub only runs `.github/workflows/`, so WF-004 links one to the other with a symlink or a sync step): lint, tests with a `postgres:18` service, OpenAPI drift check, migration test from empty and from the previous release, image build; `e2e.yml` for the Playwright smoke test.
+- Description: GitHub Actions `ci.yml` in `.github/workflows/` (the only place GitHub runs workflows from; the 02 repository tree puts them there): lint, tests with a `postgres:18` service, OpenAPI drift check, migration test from empty and from the previous release, image build; `e2e.yml` for the Playwright smoke test.
 - Accept: a PR with a failing test, lint error, API drift or two Alembic heads turns CI red; a clean PR is green in under 10 minutes.
-- Touches: `infra/github/workflows/ci.yml`, `infra/github/workflows/e2e.yml`.
+- Touches: `.github/workflows/ci.yml`, `.github/workflows/e2e.yml`.
 - Tests: a deliberately broken branch for each check (recorded in the PR).
 - Done: DoD plus branch protection requires CI on `main`.
 
@@ -190,14 +190,14 @@ Conventions for every ticket:
 #### WF-009 Render and Cloudflare environments and deploy workflows [P0, L, needs WF-008]
 - Description: `infra/render/render.yaml` for API, worker and Postgres 18 (PITR) for staging and production; pre-deploy migration command with an advisory lock; Cloudflare DNS, TLS and WAF, Pages for the web build; `deploy-staging.yml` (on merge) and `deploy-prod.yml` (manual approval, promote the same image digest, rollback on failed health check). Spec: [02-architecture.md](02-architecture.md).
 - Accept: a merge to `main` reaches staging with migrations applied in under 10 minutes; production deploy needs approval; secrets live only in platform env groups.
-- Touches: `infra/render/render.yaml`, `infra/github/workflows/deploy-*.yml`, `infra/cloudflare/`.
+- Touches: `infra/render/render.yaml`, `.github/workflows/deploy-*.yml`, `infra/cloudflare/`.
 - Tests: post-deploy smoke test script; a forced failing health check triggers rollback (recorded).
 - Done: DoD plus separate Anthropic workspace keys for staging and production.
 
 #### WF-010 Security scanning workflows [P0, S, needs WF-007]
 - Description: `security.yml` (pip-audit, npm audit, gitleaks, CodeQL, Trivy), Dependabot grouped weekly, GitHub secret scanning and push protection.
 - Accept: a planted fake secret is caught by gitleaks in a test branch; workflows run weekly and on PR.
-- Touches: `infra/github/workflows/security.yml`, `infra/github/dependabot.yml`.
+- Touches: `.github/workflows/security.yml`, `.github/dependabot.yml`.
 - Tests: the planted-secret branch (not merged).
 - Done: DoD plus findings triaged.
 
@@ -211,21 +211,21 @@ Conventions for every ticket:
 - Done: DoD plus the rules file updated.
 
 #### WF-012 Identity and trips schema [P0, M, needs WF-011]
-- Description: migration for `users`, `auth_identities`, `devices`, `households`, `household_members`, `trips`, `trip_members`, `trip_invites`, `trip_share_links`, `trip_destinations`, `people` (with `owner_user_id`, `linked_user_id`), `trip_people`, `activity_log`, `support_tickets`. UUIDv7 public ids, `timestamptz`, money as integer minor units. DDL in [03-database-schema.md](03-database-schema.md).
+- Description: migration for `users`, `auth_identities`, `devices`, `households`, `household_members`, `trips`, `trip_members`, `trip_invites`, `trip_share_links`, `trip_destinations`, `people` (with `owner_user_id`, `linked_user_id`), `trip_people`, `activity_log`, `support_tickets`, `idempotency_keys` (the 24 hour replay store for `Idempotency-Key`). `trips` carries `version`, `editors_can_invite` and `calendar_token_hash`; `users` carries the `suspended` status and the column-level update grant of 03 section 6.1. UUIDv7 public ids, `timestamptz`, money as integer minor units. DDL in [03-database-schema.md](03-database-schema.md).
 - Accept: migration applies cleanly; constraints and indexes match 03; models and Pydantic schemas exist.
 - Touches: `apps/api/wayfold/migrations/versions/`, `apps/api/wayfold/modules/{auth,trips,collaboration,billing}/models.py`.
 - Tests: constraint tests (unique member per trip, valid roles), schema-vs-DDL comparison test.
 - Done: DoD plus seed data for two test users and a shared trip.
 
 #### WF-013 AI, credit and run schema [P0, M, needs WF-012]
-- Description: migration for `routines` (with `next_run_at`), `runs`, `run_events`, `ai_usage`, `credit_ledger`, `credit_grants`, `credit_action_prices`, `provider_calls`, `provider_call_rollups`, `shared_research_cache`; the partial index `ix_runs_active_user` behind the one-agent-run-per-account admission check; `idempotency_key` uniques.
-- Accept: migration applies; a second concurrent agent run for one account is refused at admission using `ix_runs_active_user`; ledger idempotency key unique.
+- Description: migration for `routines` (with `next_run_at`), `runs`, `run_events`, `ai_usage`, `credit_ledger`, `credit_grants`, `credit_debts`, `credit_action_prices`, `provider_calls`, `provider_call_rollups`, `shared_research_cache`; the unique partial index `uq_runs_one_active_agent` behind the one-agent-run-per-account admission check; `idempotency_key` uniques; the credit functions of 03 section 5.13 (`reserve_credits`, `settle_credits`, `record_credit_debt`, `settle_credit_debt`, `ensure_free_monthly_grant`, `ensure_taster_grant`).
+- Accept: migration applies; a second concurrent agent run for one account is refused at admission by `uq_runs_one_active_agent` (409 `run_already_active`); ledger idempotency key unique; `reserve_credits` refuses an account with a credit debt.
 - Touches: `apps/api/wayfold/migrations/versions/`, `apps/api/wayfold/modules/ai/models.py`, `modules/credits/models.py`.
 - Tests: concurrency test for the one-run-per-account admission check; duplicate idempotency key rejected.
 - Done: DoD plus costs stored as micro-dollars.
 
 #### WF-014 Feature flags and kill switches [P0, M, needs WF-012]
-- Description: migration for `feature_flags` (`key`, `enabled`, `rollout_pct`, `rules`, `variants`) and `kill_switches` (`key`, `engaged`, `reason`, `engaged_by`, `engaged_at`, `auto_rule`); a runtime that evaluates flags (cached 15 seconds per process, invalidated by `NOTIFY`) and **fails closed** for paid calls if the tables cannot be read. Seed keys are in [03-database-schema.md](03-database-schema.md) section 11.5; the console that edits them is in [08-admin-control-center.md](08-admin-control-center.md).
+- Description: migration for `feature_flags` (`key`, `kind`, `enabled`, `rollout_pct`, `rules`, `variants`) and `kill_switches` (`key`, `engaged`, `reason`, `engaged_by`, `engaged_at`, `expires_at`, `expiry_notified_at`, `auto_rule`; admin-set switches must carry an expiry, `user:<id>` keys are per-account holds); a runtime that evaluates flags (cached 5 seconds per process, invalidated by `NOTIFY`) and **fails closed** for paid calls if the tables cannot be read. Seed keys are in [03-database-schema.md](03-database-schema.md) section 11.5; the console that edits them is in [08-admin-control-center.md](08-admin-control-center.md).
 - Accept: flipping `ai.all` blocks AI calls within 5 seconds; engaging or clearing a switch writes `audit_log`; unreadable table blocks paid calls.
 - Touches: `apps/api/wayfold/modules/admin/flags.py`, `apps/api/wayfold/migrations/versions/`, `packages/shared/src/flags.ts`.
 - Tests: evaluation rules (percent, tier, platform), fail-closed test, audit test.
@@ -234,9 +234,9 @@ Conventions for every ticket:
 ### E3 AI metering and agents (Phase 0 gate)
 
 #### WF-015 AI metering and price table [P0, M, needs WF-013]
-- Description: a versioned `model_prices` config (Claude Haiku 4.5 `claude-haiku-4-5`, Claude Sonnet 5.5 `claude-sonnet-5-5`, web search per use) and a metering wrapper that converts `response.usage` (input, output, cache read and write, web searches) into micro-dollars and writes an `ai_usage` row in the same transaction as the run event. Spec: [06-ai-agents-spec.md](06-ai-agents-spec.md).
+- Description: a versioned price constant in `ai/pricing.py` (06 section 6.1; not a database table) holding the model prices (Claude Haiku 4.5 `claude-haiku-4-5`, Claude Sonnet 5.5 `claude-sonnet-5-5`, web search per use) and a metering wrapper that converts `response.usage` (input, output, cache read and write, web searches) into micro-dollars and writes an `ai_usage` row in the same transaction as the run event. Spec: [06-ai-agents-spec.md](06-ai-agents-spec.md).
 - Accept: cost matches a hand calculation for 5 sample responses; Batch calls are halved on tokens; `provider_calls` records SerpApi and Geoapify spend with account and trip.
-- Touches: `apps/api/wayfold/modules/ai/metering.py`, `modules/ai/prices.py`.
+- Touches: `apps/api/wayfold/modules/ai/metering.py`, `modules/ai/pricing.py`.
 - Tests: table-driven cost tests, rollback test (no usage row if the event insert fails).
 - Done: DoD plus price table never edited in place.
 
@@ -262,10 +262,10 @@ Conventions for every ticket:
 - Done: DoD plus queue depth and oldest job age exposed to health endpoints.
 
 #### WF-019 Claude client and single-call features [P0, M, needs WF-015, WF-016]
-- Description: a Messages API client with prompt caching layout (tools, system, task, volatile tail), model allowlist, `max_tokens` per feature, and the single-call actions `explain` (Haiku), `draft_day`, `draft_trip` (Sonnet) with schema-validated output and source links.
+- Description: a Messages API client with prompt caching layout (tools, system, task, volatile tail), model allowlist, `max_tokens` per feature, and the single-call actions `explain` (Haiku), `packing_list` and `booking_import` (Haiku, 1 credit each in the `explain` price class, run kinds `packing_list` and `booking_import`, endpoints `POST /trips/{id}/ai/packing-list` and `/ai/booking-import`, personal data redacted before the call), `draft_day`, `draft_trip` (Sonnet) with schema-validated output and source links.
 - Accept: each action reserves, calls, meters, settles; outputs fail validation closed; AI output is labeled as a suggestion; the kill switch blocks calls.
 - Touches: `apps/api/wayfold/modules/ai/client.py`, `modules/ai/features/`.
-- Tests: recorded-response tests with a fake client; hard-stop tests ($0.01, $0.03, $0.10); kill switch test.
+- Tests: recorded-response tests with a fake client; hard-stop tests ($0.01, $0.03, $0.10); kill switch tests (`ai.all`, `ai.explain`, `ai.packing`, `ai.import`, `ai.draft`); booking import sends placeholders, never names or references.
 - Done: DoD plus prompt cache read ratio logged.
 
 #### WF-020 Agent loop [P0, L, needs WF-019, WF-017]
@@ -306,7 +306,7 @@ Conventions for every ticket:
 ### E4 Schema completion
 
 #### WF-025 Planning schema [P1, M, needs WF-012]
-- Description: migration for `flight_routes`, `fare_observations`, `trip_fare_links`, `chosen_flights`, `price_alerts`, `itinerary_days`, `itinerary_items`, `places_cache`, `saved_places`, `lodging_options`, `lodging_votes`, `polls`, `poll_votes`, `expenses`, `expense_shares`, `settlements`, `checklist_items`, `notes`, `route_price_insights`.
+- Description: migration for `flight_routes`, `fare_observations`, `trip_fare_links`, `chosen_flights`, `price_alerts`, `itinerary_days`, `itinerary_items`, `places_cache`, `saved_places`, `lodging_options`, `lodging_votes`, `polls`, `poll_votes`, `expenses`, `expense_shares`, `payment_collections` (used from Phase 4), `settlements`, `checklist_items`, `notes`, `route_price_insights`. Rows that two people edit carry `version` (03 convention 11).
 - Accept: migration applies; every trip-scoped table has `trip_id` for RLS; indexes on common lookups.
 - Touches: `apps/api/wayfold/migrations/versions/`, `apps/api/wayfold/modules/{flights,itinerary,places,lodging,trips,collaboration,groups}/models.py`.
 - Tests: schema-vs-DDL test; foreign key and cascade tests.
@@ -320,7 +320,7 @@ Conventions for every ticket:
 - Done: DoD.
 
 #### WF-027 Operations schema and seed data [P1, M, needs WF-012]
-- Description: migration for `admin_users`, `audit_log` (append only, update and delete rejected by trigger), `support_tickets`, `consents`, `data_exports`, `deletion_requests`, `rate_limit_counters`, `airports`, `fx_rates`; seed airports and the default plans, store products, credit prices, flags and kill switches (03 section 11). Product analytics stay in PostHog, so there is no `analytics_events` table.
+- Description: migration for `admin_users`, `audit_log` (append only, update and delete rejected by trigger; `retention_class` of 03 section 8), `content_reports`, `support_tickets`, `consents`, `data_exports`, `deletion_requests`, `rate_limit_counters`, `airports`, `fx_rates`; seed airports and the default plans, store products, credit prices, flags and kill switches (03 section 11). Product analytics stay in PostHog, so there is no `analytics_events` table.
 - Accept: `audit_log` rejects `UPDATE` and `DELETE`; seeds are idempotent.
 - Touches: `apps/api/wayfold/migrations/versions/`, `apps/api/wayfold/modules/{admin,auth,flights}/models.py`, `apps/api/wayfold/seed/`.
 - Tests: trigger test, seed idempotency test.
@@ -679,10 +679,10 @@ Conventions for every ticket:
 - Done: DoD.
 
 #### WF-076 Trip Pass binding [P2, M, needs WF-074]
-- Description: `trip_pass` non-renewing subscription handling, buy then pick a trip, transaction recorded in `trip_passes`, 90 days from activation, unapplied pass waiting in Settings, movable once; limits (2 live routes, 60 live checks, 40 credits, 6 collaborators, polls and manual cost splitting).
+- Description: `trip_pass` non-renewing subscription handling, buy then pick a trip, transaction recorded in `store_transactions` (`kind = 'pass'`) and, once a trip is known, in `trip_passes`, 90 days from binding, an unapplied pass waiting in Settings (`GET /v1/me/passes`), `POST /v1/me/passes/{pass_id}/bind` and `POST /v1/me/passes/{pass_id}/move` (once, `move_count`); limits (2 live routes, 60 live checks, 40 credits, 6 collaborators, polls and manual cost splitting).
 - Accept: a pass binds to exactly one trip; expiry handled on the server; pass shown in trip settings; a second apply attempt is refused.
 - Touches: `apps/api/wayfold/modules/billing/passes.py`, `apps/web/src/routes/trip-settings/`.
-- Tests: bind, expire, move-once tests.
+- Tests: bind, expire, move-once tests; a Group Trip Pass bound over an active Trip Pass marks the old pass `upgraded` (07 section 7.9).
 - Done: DoD.
 
 #### WF-077 Family plan [P2, L, needs WF-038, WF-075]

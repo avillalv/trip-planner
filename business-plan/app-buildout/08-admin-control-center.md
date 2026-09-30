@@ -8,7 +8,7 @@ The admin control center is an internal web console at `admin.wayfold.app`. It i
 
 1. **Control, not convenience.** Every screen exists to answer a question the founder asks weekly or to stop a loss. Nothing is added "because we can".
 2. **Every write is audited.** Each action writes one `audit_log` row with before and after values and a reason. No exceptions, including system actions such as auto-expiring a kill switch.
-3. **Least privilege.** Five roles (four are `admin_role` values in 03, see Schema notes for `content`), each with the smallest useful permission set. Destructive and money actions have limits and confirmations.
+3. **Least privilege.** Five roles (the five `admin_role` values in 03), each with the smallest useful permission set. Destructive and money actions have limits and confirmations.
 4. **No raw personal data in lists.** Emails and names are masked until an admin reveals them on a single record, and every reveal is audited.
 5. **Fail closed.** If the admin API cannot read a kill switch, ledger or role, it refuses the action and says why.
 6. **No second source of truth.** The console reads and writes the same tables as the product (`users`, `entitlements`, `credit_ledger`, `kill_switches`, and so on). It adds no parallel billing or spend data. The only new table names are the ones already in the README and 03; config values that have no table of their own use `feature_flags` rows whose key starts with `setting_` and whose `rules` holds the value (section 6.16).
@@ -61,7 +61,7 @@ The audit insert and the action commit together or not at all.
 | `engineer` | Engineer or trusted helper | Runs the system: kill switches, flags, jobs, providers, replays (`admin_role` value `engineer`) |
 | `support` | Support helper | Helps users: tickets, small credit grants, read-only impersonation |
 | `finance` | Bookkeeper or accountant | Revenue, fees, cost and margin reports, commission records, refunds on web payments |
-| `content` | Editor | Partner guides and moderation of AI and shared content (not yet an `admin_role` value, see Schema notes) |
+| `content` | Editor | Partner guides and moderation of AI and shared content |
 
 Legend: `R` read, `r` read with fields removed or aggregated (noted), `W` write with a reason, `X` write with a reason, step-up 2FA and typed confirmation, `-` no access. Limits in the notes column are enforced by the API, not the UI.
 
@@ -119,12 +119,16 @@ Every admin write, reveal, export and sign-in writes one `audit_log` row. Reads 
 | `before`, `after` | JSON of the changed fields only; secrets and raw PII masked (see 4.2) |
 | `reason` | Free text, required for writes |
 | `request_id`, `ip_hash` | Correlation and context; IP stored hashed with a monthly salt |
-| `ctx` (inside `after`) | `actor_role` at the time of the action, `impersonation_id` on every row written during an impersonation session, `result` (`ok`, `denied` or `error`, with an error code) and the user agent; 03 has no columns for these (see Schema notes) |
+| `actor_role` | The admin's `admin_role` at the time of the action |
+| `impersonation_id` | Set on every row written during an impersonation session |
+| `result`, `error_code` | `ok`, `denied` or `error`, with an error code for the last two |
+| `user_agent` | The admin browser's user agent |
+| `retention_class` | `extended` for money, security and control actions (prefixes `credits.`, `refund.`, `comp.`, `admin_user.`, `killswitch.`, `impersonation.`, `deletion.`, `settings.`), otherwise `standard` (4.2) |
 
 ### 4.2 Rules
 
 - **Before and after are mandatory** for updates. For creates `before` is null; for deletes `after` is null. A credit grant records the balance before and after as well as the amount.
-- **Append only.** The application database role for admin has `INSERT` and `SELECT` on `audit_log` only; a trigger rejects `UPDATE` and `DELETE`. The table is purged only by the retention job (13 months in 03 section 8; the nightly digests below are kept longer, and a longer table retention is a 03 change, see Schema notes).
+- **Append only.** The application database role for admin has `INSERT` and `SELECT` on `audit_log` only; a trigger rejects `UPDATE` and `DELETE`. The table is purged only by the retention job: `standard` rows after 13 months, `extended` rows (the money, security and control prefixes in 4.1) after 7 years, and the nightly hash-chain digests below for 7 years (03 section 8).
 - **Redaction.** PII fields in `before` and `after` are stored masked (`a***@g***.com`) or as a salted hash. Secrets (API keys, webhook secrets, tokens) are never stored, even encrypted.
 - **Denied attempts are logged** with `ctx.result = 'denied'`; 5 denials in 10 minutes by one admin raises an alert.
 - **Tamper evidence.** A nightly job computes a hash chain over the day's rows and stores the digest in R2 object storage with object lock.
@@ -168,7 +172,7 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
 
 - **Purpose:** find one person fast, see everything that affects their experience, and fix it with a small, audited action.
 - **Search:** exact email (matched by a salted hash, so the search box itself never returns partial matches on PII), user id, RevenueCat app user id, Stripe customer id, device token suffix, trip id, support ticket id. No free-text name search.
-- **List columns (masked):** short id, masked email, tier, country, signup date, last seen, status (`active`, `pending_deletion`, `deleted`).
+- **List columns (masked):** short id, masked email, tier, country, signup date, last seen, status (`active`, `suspended`, `pending_deletion`, `deleted`).
 - **Filters:** tier, platform, country, signup range, status, has open ticket, deletion pending, AI held.
 - **Profile (detail) tabs:**
   - Summary: tier, sign-in providers (`auth_identities` provider names only), locale, created, last seen, consents (`consents`: AI consent timestamp, marketing opt-in), flags that apply.
@@ -187,7 +191,7 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
   - *Start export*: creates a `data_exports` row and job; the download link is emailed to the user only.
   - *Process deletion*: lists the `deletion_requests` row; "process now" is owner only and shows what will be removed, the Apple subscription warning (deleting an account does not cancel an Apple subscription) and any shared trips that will transfer or be deleted.
   - *Impersonate read-only*: see below.
-  - *Hold AI for this user*: a `kill_switches` row with a user-scoped key (`user:<id>`, see Schema notes), for abuse or a runaway (engineer and owner).
+  - *Hold AI for this user*: a `kill_switches` row with the user-scoped key `user:<users.id>` (created on demand, never seeded, with the same mandatory expiry as any manual switch), for abuse or a runaway (engineer and owner).
 - **Impersonation, read-only, with consent:**
   1. Support opens the request and picks a reason category; the user gets an in-app prompt and an email: "Wayfold support asks to view your account to help with ticket 4821. They cannot change anything." with Approve and Decline.
   2. On approval the API mints a 15 minute impersonation token bound to that admin and user, carrying an `imp` claim. The API rejects every non-GET request with that token and hides secrets, payment details and notes bodies.
@@ -240,23 +244,24 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
 | `ai.free_tier` | AI actions for the Free tier | Paid tiers, cached answers |
 | `ai.all_but_paid` | AI actions for every tier except paid ones (the 95 percent breaker) | Paid tiers, cached answers |
 | `provider.serpapi` | Live flight and rental search (SerpApi, the live provider) | Travelpayouts cached fares, saved fares, alerts on cached fares |
-| `provider.travelpayouts`, `provider.geoapify`, `provider.anthropic` (`provider.stripe` is not seeded, see Schema notes) | All calls to that provider; the dependent feature shows a stale-data banner | Everything that does not need it |
+| `provider.travelpayouts`, `provider.geoapify`, `provider.anthropic`, `provider.viator`, `provider.stay22`, `provider.frankfurter`, `provider.stripe` | All calls to that provider; the dependent feature shows a stale-data banner | Everything that does not need it |
+| `ai.explain`, `ai.draft`, `ai.research`, `ai.taster`, `ai.import`, `ai.packing`, `ai.web_search`, `ai.web_fetch`, `ai.model.sonnet`, `ai.model.haiku`, `ai.force_haiku`, `ai.batch`, `ai.shared_cache_write` | That AI feature, tool, model route or lane (06 section 6.6) | Everything else |
 | `ai.agent_runs` | Starting new agent runs (running ones finish or are cancelled) | Single-call AI, research from cache |
-| `user:<id>` (scope; not a 03 seed) | AI and live actions for one account | Everything else for that account |
+| `user:<users.id>` (a per-account hold; created on demand, never seeded) | AI and live actions for one account | Everything else for that account |
 | `affiliate.all`, `affiliate.{program code}` | Partner links (plain links only) | Everything else |
 | `signups`, `purchases` | New account creation; paywalls and purchase buttons | Existing accounts and restores |
 
 - **Breakers (automatic):** the system flips switches itself and records them with `actor_type = system`: at 80 percent of the daily global Anthropic budget `ai.free_tier` engages; at 95 percent `ai.all_but_paid` engages (the `auto_rule` values in 03); at 90 percent of the SerpApi monthly quota `provider.serpapi` narrows live checks to top-value routes (a chosen flight or an active alert), then cached only; any provider error rate over 50 percent for 5 minutes trips that provider's switch to "half-open" (one probe a minute) until it recovers. Automatic trips page the owner.
 - **Data shown:** each switch with state (on, off manual, off automatic), who set it, reason, set time, expiry countdown, the effect on users (count of requests blocked in the last hour), and history of the last 20 changes.
 - **Actions:** set or clear a switch. The dialog requires: reason, typed confirmation of the switch key, step-up 2FA, and an expiry.
-- **Auto-expiry:** every manual "off" must have an expiry: 1 hour, 4 hours (default), 24 hours or 72 hours. Only the owner may choose "until cleared", and only for provider switches during a provider incident. A scheduler job clears expired switches and writes an `audit_log` row as `system`; the owner gets a notification 15 minutes before expiry so a live incident is not silently re-enabled.
-- **Guardrails:** the API reads switches with a 5 second cache and fails closed (paid calls refused) if the table cannot be read; switching `ai.all` off posts to the on-call channel; a runbook link is shown beside each switch; a "test in staging" toggle lets an engineer practice without touching production. Users see plain copy ("Live prices are paused. Saved prices still work.") with no blame on a provider.
+- **Auto-expiry:** every manual "off" must have an expiry (`kill_switches.expires_at`; the check constraint `ck_kill_switches_expiry` in 03 rejects an admin-set switch without one, except a provider switch left "until cleared" by the owner): 1 hour, 4 hours (default), 24 hours or 72 hours. Only the owner may choose "until cleared", and only for provider switches during a provider incident. A scheduler job clears expired switches and writes an `audit_log` row as `system`; the owner gets a notification 15 minutes before expiry (`expiry_notified_at` records it) so a live incident is not silently re-enabled.
+- **Guardrails:** the API reads switches through a 5 second in-process cache (refreshed at once by `NOTIFY` on a change) and fails closed (paid calls refused) if the table cannot be read; switching `ai.all` off posts to the on-call channel; a runbook link is shown beside each switch; a "test in staging" toggle lets an engineer practice without touching production. Users see plain copy ("Live prices are paused. Saved prices still work.") with no blame on a provider.
 
 ### 6.6 Feature flags and experiments
 
 - **Purpose:** roll features out gradually and test paywall and onboarding changes without a release.
-- **Data shown:** `feature_flags` rows with key, kind (derived from the key prefix: `exp_` experiment, `setting_` setting, anything else a flag; 03 has no `kind` column), `enabled`, `rollout_pct`, `rules` (`tiers`, `platforms`, `countries`, `user_ids`), `variants`, `updated_by`, created and changed times, and a stale-flag warning (unchanged 90 days at 100 percent or 0 percent).
-- **Flags at launch** (03 section 11.5): `tier_pro` (off), `serpapi_live_fares` (on behind legal review), `scheduled_agent_routines` (off), `group_tools` (on), `group_payments` (off until Phase 4), `concierge_requests`, `room_block_requests`, `partner_guides`, `print_orders` and `advisor_workspaces` (off), `guest_mode`, `shared_research_cache`, `passkeys`. There is deliberately no flag that turns affiliate links or their disclosure off for a tier.
+- **Data shown:** `feature_flags` rows with key, `kind` (`flag`, `experiment` for `exp_` keys, `setting` for `setting_` keys; a check constraint keeps it in step with the prefix), `enabled`, `rollout_pct`, `rules` (`tiers`, `platforms`, `countries`, `user_ids`, `min_app_version`, `max_app_version`), `variants`, `updated_by`, created and changed times, and a stale-flag warning (unchanged 90 days at 100 percent or 0 percent).
+- **Flags at launch** (03 section 11.5): `tier_pro` (off), `serpapi_live_fares` (on behind legal review), `scheduled_agent_routines` (off), `group_tools` (on), `group_payments` (off until Phase 4), `concierge_requests`, `partner_guides`, `print_orders`, `advisor_workspaces`, `poll_comments`, `inapp_hotel_booking`, `insurance_cards`, `visa_assist` and `passkeys` (all off), `room_block_requests` (on, for Group Trip Pass trips), `guest_mode`, `shared_research_cache`, `link_preview`, `affiliate_lodging_test` and `min_app_version` (on). There is deliberately no flag that turns affiliate links or their disclosure off for a tier.
 - **Experiments:** name, hypothesis, variants with allocation, primary metric, guardrail metrics, start and end dates, status (draft, running, stopped, concluded). Results table per variant: exposures, conversions, conversion rate, relative lift, probability to beat control (Bayesian), minimum detectable effect, and guardrails (refund rate, AI cost per user, 7-day retention). Exposure and conversion events come from PostHog (03 has no `analytics_events` table); revenue figures come from `store_transactions`.
 - **Paywall experiments** in the roadmap: Trip Pass price points, annual-first versus pass-first ordering, trial copy. A price test uses separate store products or RevenueCat offerings (the console cannot change App Store prices); the console only assigns users to offerings.
 - **Filters:** kind, state, owner, tier, stale.
@@ -312,7 +317,7 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
 ### 6.10 Partner guides
 
 - **Purpose:** manage labeled destination guides from tourism boards and hotel brands without ever mixing them into rankings.
-- **Data shown** (`partner_guides`): `title`, `destination_name`, `partner_name` (sponsor), `disclosure_text` (label text), `is_sponsored`, `status` (`draft`, `published`, `archived`; the review steps below are console workflow state, see Schema notes), `created_by` (author), `published_at`, views and outbound clicks, disclosure check result.
+- **Data shown** (`partner_guides`): `title`, `destination_name`, `partner_name` (sponsor), `disclosure_text` (label text), `is_sponsored`, `status` (`draft`, `published`, `archived`), `review_state` (`none`, `in_review`, `changes_requested`, `approved`), `reviewed_by`, `created_by` (author), `published_at`, sponsorship terms (`sponsor_starts_on`, `sponsor_ends_on`, `sponsor_fee_minor`, `sponsor_invoice_ref`; finance only), outbound clicks from `link_clicks`, views from first-party analytics events, disclosure check result.
 - **Editor:** structured content blocks (overview, neighborhoods, sample days, practical notes), sources list, images with alt text and credits, sponsor block, a mandatory label field that renders "Sponsored guide from {sponsor}" on every guide page and card. Side-by-side preview in the app's guide layout and a diff view between versions.
 - **Filters:** status, destination, sponsor, author, expiring in 14 days.
 - **Workflow:** author (`content` or owner) drafts, submits for review; a different admin reviews against the checklist (label present, sources cited, no claim that AI wrote it, no insurance, visa or legal advice beyond official links, affiliate links labeled, no paid placement in search results); the owner approves and publishes. Approval and publish are `X` actions. Publishing schedules an end date.
@@ -322,7 +327,7 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
 ### 6.11 Support inbox
 
 - **Purpose:** answer users within 2 business days (the commitment in the plan) with full context.
-- **Data shown** (`support_tickets`): ticket id, `source` (`in_app` with `app_version` and `platform` attached, `email` to support@wayfold.app, or `admin`), `subject`, `category`, `status` (`open`, `pending`, `resolved`, `closed`), `priority` (`low`, `normal`, `high`, `urgent`), `assigned_admin_id`, SLA timer, linked user (card with tier, entitlements, recent errors), thread (`messages`), internal notes and tags (03 has no columns for these, see Schema notes).
+- **Data shown** (`support_tickets`): ticket id, `source` (`in_app` with `app_version` and `platform` attached, `email` to support@wayfold.app, or `admin`), `subject`, `category`, `status` (`open`, `pending`, `resolved`, `closed`), `priority` (`low`, `normal`, `high`, `urgent`), `assigned_admin_id`, SLA timer, linked user (card with tier, entitlements, recent errors), thread (`messages`), `internal_notes` and `tags`.
 - **Filters:** status, assignee, priority, tag, source, tier, overdue, linked to concierge, contains refund.
 - **Actions:** reply (email via Resend), internal note, assign, tag, merge duplicates, link or unlink user, set priority, close, insert a macro, jump to the user screen actions (grant credits, extend pass) with the ticket id prefilled as the reason.
 - **Macros:** versioned templates with variables (`{first_name}`, `{ticket_id}`, `{product}`), kept as markdown files in the repo (`admin/macros/*.md`) and loaded at deploy, so changes are reviewed in pull requests and no new table is needed. Launch set: refund guidance (refunds go through Apple at reportaproblem.apple.com, we can reverse credits), cancellation help (Manage Subscriptions link), deletion does not cancel an Apple subscription, how to restore purchases, credits explained, data export ready, affiliate disclosure explained, report received, concierge follow-up, outage apology.
@@ -332,11 +337,11 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
 
 - **Purpose:** satisfy App Review Guideline 1.2 and protect users: act on reports of shared trips and AI content quickly.
 - **Queues:**
-  - Reported shared trips (`trip_share_links` with reports; 03 has no reports table, see Schema notes): link, reason, reporter count, content preview (titles and text with notes bodies hidden until opened), owner (masked).
-  - AI content reports (thumbs-down and "report a problem" on AI answers; reports on `shared_research_cache` entries and saved notes from runs): content, sources cited, report reason, run id, model, prompt version.
+  - Reported shared trips (`content_reports` with `target_type = 'shared_trip'`, joined to `trip_share_links`): link, reason, reporter count, content preview (titles and text with notes bodies hidden until opened), owner (masked).
+  - AI content reports (`content_reports` with `target_type` `agent_note`, `ai_answer` or `research_cache`: "report a problem" on AI answers, saved notes from runs and shared research entries; thumbs-down is feedback only): content, sources cited, report reason, run id, model, prompt version.
 - **Filters:** queue, reason (spam, harmful, wrong info, copyright, privacy), age, status, repeat offender.
-- **Actions:** dismiss with reason; disable a share link (sets `trip_share_links.revoked_at`); hide content; flag a shared research cache entry (sets `stale_until` to now so it is purged, re-run and not served); ask the user to edit; warn; suspend sharing for a user; escalate to owner. Content role can act on AI content only.
-- **Guardrails:** reports are answered within 24 hours (the dashboard alerts at 12); reporter identity is never revealed to the reported user; the console shows the source URL of every AI fact so a wrong fact can be traced to a page; every action is audited; repeat violations (3 in 30 days) queue a suspension for owner review.
+- **Actions:** dismiss with reason; disable a share link (sets `trip_share_links.revoked_at`); hide content; flag a shared research cache entry (sets `stale_until` to now so it is purged, re-run and not served); ask the user to edit; warn; suspend sharing for a user (`users.sharing_suspended_at`); escalate to owner (the owner may then set `users.status = 'suspended'`, which the API answers with `403 account_inactive`). Content role can act on AI content only.
+- **Guardrails:** reports are answered within 24 hours (the dashboard alerts at 12); reporter identity is never revealed to the reported user; the console shows the source URL of every AI fact so a wrong fact can be traced to a page; every action is audited; repeat violations (3 in 30 days, counted from `content_reports`) queue a suspension for owner review.
 
 ### 6.13 Provider health
 
@@ -374,7 +379,7 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
 - **Data shown and editable.** Each group is stored where 03 already keeps it, so an edit is an audited `UPDATE` and never a migration (03 section 11):
   - Prices display: `store_products.price_minor` for Plus, Family, Pro, Trip Pass, Group Trip Pass and credit packs, used on the web pricing page and paywall fallback. The real prices live in App Store Connect and Stripe; the screen shows a check that these values match the store prices (from RevenueCat offerings) and flags a mismatch.
   - Credit prices per action in `credit_action_prices` (`explain` 1, `live_search` 1, `draft_day` 1, `draft_trip` 4, `research` 8 with `credits_cached` 1, `agent_run` 40 with `credits_cached` 8, plus `hard_stop_micros`, `max_turns`, `max_searches`, `max_fetches`) and monthly allowances in `plans.monthly_credits` and `plans.credits_granted` (Free 12, Plus 60, Family 150, Pro 240, Trip Pass 40, Group Trip Pass 80).
-  - Ceilings: `plans.limits` keys `monthly_ceiling_micros` and `daily_ceiling_micros` per tier and pass. The global daily Anthropic budget, per-provider quotas (SerpApi monthly) and alert thresholds are `setting_` rows in `feature_flags`.
+  - Ceilings: `plans.limits` keys `monthly_ceiling_micros` and `daily_ceiling_micros` per tier and pass. The global daily Anthropic budget (`setting_ai_global_daily_usd`, seeded at $50), per-provider quotas (`setting_serpapi_monthly_quota`, seeded at 5,000) and alert thresholds are `setting_` rows in `feature_flags` (03 section 11.5 seeds these and `setting_ai_warm_daily_usd`; the console creates the others).
   - Admin limits used in section 3 (grant caps, extension caps), also `setting_` rows.
 - **Filters:** group, changed in the last 30 days.
 - **Actions:** edit a value with reason (engineer within plus or minus 20 percent of the current value, owner beyond), schedule a change for a future time, revert to a previous value from history.
@@ -537,7 +542,7 @@ Base path `/v1/admin`. All routes require an admin session (section 2). Conventi
 | `GET /tickets` | Support inbox | support |
 | `GET /tickets/{id}` | Thread and user card | support |
 | `POST /tickets/{id}/reply` | Reply with optional macro | support |
-| `PATCH /tickets/{id}` | Status, `assigned_admin_id`, priority, link user (tags need a column, see Schema notes) | support |
+| `PATCH /tickets/{id}` | Status, `assigned_admin_id`, priority, `tags`, link user | support |
 | `GET /macros` | Macro list (read only, from the repo) | support |
 | `GET /moderation/queue` | Reported shared trips and AI reports | content |
 | `POST /moderation/{id}/action` | Dismiss, hide, disable link (`revoked_at`), flag (`stale_until`), warn, escalate | content |
@@ -561,7 +566,7 @@ Base path `/v1/admin`. All routes require an admin session (section 2). Conventi
 
 1. **Network gate.** Cloudflare Access with an IP allowlist (founder's fixed addresses or a WARP device posture check) in front of the host and path. The origin accepts admin traffic only from Cloudflare (authenticated origin pulls). A request that reaches the origin without a valid Access JWT is dropped and alerted.
 2. **Separate identity.** Admin sessions are not customer sessions; different token audience (`wayfold-admin`), different cookie scope, different code path, separate rate limit bucket.
-3. **Least privilege in the database.** Admin routes use the database role `wayfold_admin` (03 section 6.1, `BYPASSRLS`, used by the admin console only). The grants in 03 give it all DML on every table; the narrowing this section wants (`INSERT` and `SELECT` only on `audit_log`, no `DELETE` on money tables such as `credit_ledger` and `store_transactions`) is an extra `REVOKE` step, see Schema notes. `wayfold_app` cannot read `audit_log` or `admin_users`.
+3. **Least privilege in the database.** Admin routes use the database role `wayfold_admin` (03 section 6.1, `BYPASSRLS`, used by the admin console only). The grants in 03 give it all DML on every table before that block narrows them; the narrowing this section wants (`INSERT` and `SELECT` only on `audit_log`, no `DELETE` on money tables such as `credit_ledger` and `store_transactions`) is the `REVOKE` block at the end of 03 section 6.1. `wayfold_app` cannot read `audit_log` or `admin_users`.
 4. **No raw PII in lists.** Masking is done in the API serializer, not the UI, so a raw response never carries it. Emails are searchable only by hash. Reveal is per record, reasoned, rate limited and audited. No passport, document, payment card or note text is ever exposed. Logs and Sentry events from admin routes are scrubbed of masked fields.
 5. **Rate limits** (per admin, Postgres token bucket plus a Cloudflare rule): 120 requests a minute on reads, 20 a minute on writes, 5 a minute on `X` actions, 30 reveals an hour, 5 exports an hour, 10 step-up attempts an hour with lockout and alert.
 6. **Step-up and confirmation** on every money, destructive, reveal and control action (section 2.2); typed confirmation on `X` actions.
@@ -617,17 +622,3 @@ Tests required for the console as a whole:
 - Kill switches are read with the fail-closed default; expiry clears a switch and logs a `system` row.
 - No list endpoint response contains a raw email or name (a serializer test scans for the patterns).
 - A test fails the build if any ranking or ordering code for affiliate placements reads payout or commission fields.
-
-## Schema notes
-
-Things this file needs that 03-database-schema.md does not have yet. The text above maps each to the nearest 03 name and says so.
-
-- `admin_role` has `owner`, `support`, `finance` and `engineer`. This file also uses a `content` role (partner guides, moderation). Add `content` to the enum, or fold those permissions into `support`.
-- `users.status` (`user_status`) has no `suspended` value. The console never suspends an account (only force sign-out, AI hold and pending deletion); moderation "suspend sharing" and "queue a suspension for owner review" (6.12) need a column or a flag in `users.prefs`.
-- `kill_switches` has no expiry column and no scope for one user. The mandatory expiry (6.5) and the per-user hold (`user:<id>`) need `expires_at` and a documented key convention, or a small table. `provider.stripe` is not in the 03 seed.
-- `audit_log` has no `actor_role`, `impersonation_id`, `result` or user agent columns; 4.1 stores them in `after.ctx`. Its retention in 03 is 13 months; 4.2 would like longer (financial and security actions), which is a 03 retention change.
-- `feature_flags` has no `kind` column; kind comes from the key prefix (`exp_`, `setting_`). Targeting by minimum app version (6.6) is not in `rules`.
-- `support_tickets` has no tags and no internal notes (6.11); `messages` holds the thread only. A reply from the console is a `messages` entry with `from: admin`.
-- `partner_guides.status` is `draft`, `published` or `archived`; the in-review and approved steps and the reviewer and version (6.10) are console workflow state, not columns. Sponsor dates and views are also not in 03.
-- There is no table for content reports on shared trips or AI answers (6.12).
-- `wayfold_admin` is granted every DML privilege in 03; the money-table and `audit_log` narrowing in section 9 is an extra `REVOKE`.

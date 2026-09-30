@@ -81,6 +81,9 @@ One monorepo, one Git history. JS workspaces (npm) for the TypeScript packages, 
 
 ```
 wayfold/
+  .github/                        GitHub reads workflows only from here
+    workflows/                    ci.yml, e2e.yml, evals.yml, security.yml, deploy-staging.yml, deploy-prod.yml, ios.yml
+    dependabot.yml                weekly grouped updates (not a workflow)
   apps/
     api/                          FastAPI service and all backend modules
       pyproject.toml
@@ -136,8 +139,6 @@ wayfold/
     cloudflare/
       rules.md                    WAF and rate rules as reviewed text
       aasa.json                   apple-app-site-association
-    github/
-      workflows/                  ci.yml, e2e.yml, deploy-*.yml, security.yml, ios.yml
     scripts/
       restore-drill.sh  rotate-keys.md  seed-staging.py
   docs/
@@ -172,15 +173,15 @@ Each module under `apps/api/wayfold/modules/<name>/` has the same five files: `r
 | `places` | `places_cache`, `saved_places` | Geoapify search and details, Wikipedia summaries, map data, cache expiry per provider terms | `providers` |
 | `ai` | `routines`, `runs`, `run_events`, `ai_usage`, `provider_calls`, `shared_research_cache` | `AgentLoop`, tool definitions, prompts, evidence rules, run lifecycle, metering, shared research cache, AI consent check, kill switches for AI | `credits`, `flights`, `trips`, `providers.anthropic` |
 | `billing` | `plans`, `store_products`, `subscriptions`, `entitlements`, `trip_passes`, `store_transactions`, `webhook_events`, `households`, `household_members` | RevenueCat and Stripe webhooks, entitlement computation, Trip Pass binding, Family household, restore and reconcile | `credits` |
-| `credits` | `credit_ledger`, `credit_grants`, `credit_action_prices` | The only writer of credits: grants, reserve, settle, refund, expiry, pooled Family balance, spend ceilings | none (leaf) |
+| `credits` | `credit_ledger`, `credit_grants`, `credit_debts`, `credit_action_prices` | The only writer of credits: grants, reserve, settle, refund, expiry, pooled Family balance, spend ceilings | none (leaf) |
 | `affiliate` | `affiliate_programs`, `affiliate_link_templates`, `link_clicks`, `affiliate_conversions`, `affiliate_payouts`, `partner_guides` | Link building from stored templates, the `/go/{click_id}` redirect, disclosure flags, conversion import, revenue reports | `providers` |
 | `concierge` | `concierge_requests`, `room_block_requests` | "Have a human book this" requests, advisor assignment, status, consent and disclosure, seller-of-travel gating by region | `notifications`, `advisors` |
-| `groups` | `expenses`, `expense_shares`, `settlements` | Manual cost splitting and balances (every paid tier and both passes, plus Free users on trips that have them), currency handling; settle-up through Stripe only for `group_trip_pass` and `pro`, Phase 4 (never In-App Purchase) | `billing` (Stripe), `trips` |
+| `groups` | `expenses`, `expense_shares`, `payment_collections`, `settlements` | Manual cost splitting and balances (every paid tier and both passes, plus Free users on trips that have them), currency handling; settle-up through Stripe only for `group_trip_pass` and `pro`, Phase 4 (never In-App Purchase) | `billing` (Stripe), `trips` |
 | `notifications` | `devices` (read), notification preference and delivery rows | Push, email, digest building, preference checks, quiet hours, collapse ids, unsubscribe | `providers.apns`, `providers.resend` |
-| `admin` | `admin_users`, `feature_flags`, `kill_switches`, `audit_log`, `support_tickets` | Admin console API, feature flags, kill switches, support tools, audit writes | every service (through audited functions) |
+| `admin` | `admin_users`, `feature_flags`, `kill_switches`, `audit_log`, `support_tickets`, `content_reports` | Admin console API, feature flags, kill switches, support tools, audit writes | every service (through audited functions) |
 | `advisors` | `advisor_orgs`, `advisor_seats`, `advisor_clients`, `print_orders` | Advisor workspaces, client trips, proposals, seat billing on Stripe, commission tracking | `trips`, `billing`, `affiliate` |
 
-Cross-cutting code (not modules): `security/` (owns `rate_limit_counters`), `deps.py`, `errors.py`, `logging.py`, `providers/`. The analytics helper `analytics.capture(event, props)` lives in `wayfold/analytics.py` and validates names against `packages/shared/src/events.ts`.
+Cross-cutting code (not modules): `security/` (owns `rate_limit_counters` and `idempotency_keys`), `deps.py`, `errors.py`, `logging.py`, `providers/`. The analytics helper `analytics.capture(event, props)` lives in `wayfold/analytics.py` and validates names against `packages/shared/src/events.ts`.
 
 Boundary rules that tests enforce:
 
@@ -195,7 +196,7 @@ Boundary rules that tests enforce:
 
 1. **Edge.** Cloudflare terminates TLS, applies WAF and per-IP rate rules, and forwards to Render. The origin accepts traffic only from Cloudflare (authenticated origin pulls). `TRUSTED_PROXY_CIDRS` makes `X-Forwarded-For` trustworthy.
 2. **Middleware order.** Request id (`X-Request-Id`, generated if absent) then access log start, CORS (explicit origins, including `capacitor://localhost`), body size limit (1 MB JSON, uploads go to R2 by signed URL), kill-switch check for maintenance mode, then the route.
-3. **Authentication.** Dependency `CurrentUser` reads `Authorization: Bearer <jwt>` (web also accepts the `wf_session` cookie set by `POST /auth/session`). It verifies the Supabase JWT: signature against the cached JWKS (selected by `kid`, refreshed on unknown `kid` at most once per minute), `iss` equals `SUPABASE_JWT_ISSUER`, `aud` equals `SUPABASE_JWT_AUDIENCE`, `exp` and `nbf` with 30 seconds of skew. It then maps `sub` through `auth_identities` to a `users` row, creating the user and the "Me" person on first sight in one transaction. A user whose status is not `active` gets 401 (`pending_deletion` gets a specific code so the app can offer recovery).
+3. **Authentication.** Dependency `CurrentUser` reads `Authorization: Bearer <jwt>` (web also accepts the `wf_session` cookie set by `POST /auth/session`). It verifies the Supabase JWT: signature against the cached JWKS (selected by `kid`, refreshed on unknown `kid` at most once per minute), `iss` equals `SUPABASE_JWT_ISSUER`, `aud` equals `SUPABASE_JWT_AUDIENCE`, `exp` and `nbf` with 30 seconds of skew. It then maps `sub` through `auth_identities` to a `users` row, creating the user and the "Me" person on first sight in one transaction. A user whose status is not `active` gets 403 `account_inactive` (`suspended` or `deleted`), and `pending_deletion` gets 403 `account_pending_deletion` so the app can offer recovery (04 section 1.2).
 4. **Session variable.** `DbSession` opens a transaction and runs `SELECT set_config('app.user_id', :uuid, true)` (transaction-local). Row-level security policies on trip-owned tables read `current_setting('app.user_id')`. The API database role has no `BYPASSRLS`. Jobs that act for a user set the same variable; system jobs use a separate role `wayfold_worker` with `BYPASSRLS` (see [03-database-schema.md](03-database-schema.md) section 6.1).
 5. **Tenant check.** Every route with a `trip_id` depends on `require_trip(trip_id, min_role)`. It returns a `TripAccess(trip, member, role, capabilities)` object, or raises `NotFound` (404, never 403) when the user is not a member or the trip is in trash. `min_role` is one of `viewer`, `editor`, `owner`. Routes that take a child id (an itinerary item, a lodging option) resolve the child, join up to its trip and then call the same function. No route calls `session.get(Model, id)` on a tenant table. A CI test walks `app.routes` and fails if a path with an id parameter does not resolve through `require_trip` or is not on the public allowlist.
 6. **Entitlement and credit checks.** Routes that cost money call `entitlements.require(capability, trip)` first (402 with a `paywall` body naming the upsell, never a bare error), then `credits.reserve(user, action, trip)` for AI actions. Both are service calls, not decorators, so the order is visible in the code.
@@ -209,7 +210,7 @@ Boundary rules that tests enforce:
 |---|---|---|
 | `GET /health/live`, `/health/ready` | none | Ready checks database, migration head, queue reachability |
 | `GET /go/{click_id}` | none | Never takes a URL from the request. Looks up a `link_clicks` row created by an authenticated call, builds the destination from `affiliate_link_templates`, logs, and 302s. Unknown or expired id goes to the trip page, never elsewhere |
-| `GET /share/{token}` | token | Read-only trip view with redaction flags, per-token throttle |
+| `GET /shared/{token}` | token | Read-only trip view with redaction flags, per-token throttle |
 | `POST /webhooks/revenuecat`, `/webhooks/stripe`, `/webhooks/resend`, `/webhooks/supabase-auth` | signature | Verify, insert into `webhook_events` by provider event id, return 200 fast, process in a job (section 5.1) |
 | `POST /auth/session`, `GET /me` | JWT | Session bootstrap |
 | `/admin/*` | admin session | Separate middleware: SSO, 2FA, IP allowlist optional, every call writes `audit_log` |
@@ -217,7 +218,7 @@ Boundary rules that tests enforce:
 
 ### 4.3 Row-level security in detail
 
-RLS is the second lock, not the first. Policies exist on: `trips`, `trip_members`, `trip_destinations`, `trip_people`, `flight_routes`, `chosen_flights`, `price_alerts`, `itinerary_days`, `itinerary_items`, `saved_places`, `lodging_options`, `lodging_votes`, `polls`, `poll_votes`, `expenses`, `expense_shares`, `settlements`, `checklist_items`, `notes`, `routines`, `runs`, `run_events`. The standard policy is `EXISTS (SELECT 1 FROM trip_members m WHERE m.trip_id = <table>.trip_id AND m.user_id = current_setting('app.user_id')::uuid)`. User-owned tables (`devices`, `people` by `owner_user_id`, `consents`, `credit_ledger`) use a direct `user_id = current_setting(...)` policy. A test connects as the API role with no variable set and expects zero rows from every table with a policy. DDL is in [03-database-schema.md](03-database-schema.md).
+RLS is the second lock, not the first. Policies exist on: `trips`, `trip_members`, `trip_destinations`, `trip_people`, `flight_routes`, `chosen_flights`, `price_alerts`, `itinerary_days`, `itinerary_items`, `saved_places`, `lodging_options`, `lodging_votes`, `polls`, `poll_votes`, `expenses`, `expense_shares`, `payment_collections`, `settlements`, `checklist_items`, `notes`, `routines`, `runs`, `run_events`. The standard policy is `EXISTS (SELECT 1 FROM trip_members m WHERE m.trip_id = <table>.trip_id AND m.user_id = current_setting('app.user_id')::uuid)`. User-owned tables (`devices`, `people` by `owner_user_id`, `consents`, `credit_ledger`, `credit_debts`, `idempotency_keys`) use a direct `user_id = current_setting(...)` policy; `content_reports` (insert and read your own) and `partner_guides` (published rows only) have their own policies. A test connects as the API role with no variable set and expects zero rows from every table with a policy. DDL is in [03-database-schema.md](03-database-schema.md).
 
 ### 4.4 Web and iOS differences
 
@@ -261,7 +262,7 @@ Times are UTC unless marked local. "Key" is the idempotency key: a second run wi
 | `reap_stale_jobs` | batch | Scheduler | Every minute | none (idempotent by nature) | none |
 | `process_webhook_event` | api | Row inserted in `webhook_events` | Event | `(provider, provider_event_id)` unique | transient x10 over 24 hours |
 | `reconcile_entitlements` | api | Scheduler | Every 6 hours, plus on demand from admin; calls RevenueCat REST for users with recent activity | `(user_id, day)` | transient x5 |
-| `grant_monthly_credits` | api | Scheduler | Every hour; grants at each user's anniversary (subscribers) or calendar month start (Free) | `(user_id, period_start, source)` unique on `credit_grants` | transient x5 |
+| `grant_monthly_credits` | api | Scheduler | Every hour; grants at each subscriber's monthly anniversary (annual plans) and at calendar month start for comped and advisor entitlements. Free accounts are not in this job: their 12 credits are written lazily on first use (`ensure_free_monthly_grant`, 03 section 5.13) | `(user_id, kind, period_key)` unique on `credit_grants` | transient x5 |
 | `expire_credits` | api | Scheduler | Daily 02:00 | `(credit_grant_id)` | transient x3 |
 | `expire_trip_passes` | api | Scheduler | Every 15 minutes | `(trip_pass_id, 'expired')` | transient x3 |
 | `send_push` | notify | Event | Event | `(user_id, alert_id_or_event_id, channel)` unique | transient x5, 410 deletes the `devices` token |
@@ -274,7 +275,9 @@ Times are UTC unless marked local. "Key" is the idempotency key: a second run wi
 | `export_user_data` | batch | `POST /me/export` | Event; max 1 per day per user | `data_exports.id` | transient x3; 7 day link |
 | `delete_account` | batch | `POST /me/delete` then 30 day timer | Event then day 30 | `deletion_requests.id` and a checklist row per step | transient x10, each step idempotent |
 | `purge_trash` | batch | Scheduler | Daily 04:30; hard deletes trips deleted more than 30 days ago | `(trip_id)` | transient x3 |
-| `retention_sweep` | batch | Scheduler | Daily 05:30; invites older than 30 days, IP hashing after 30 days, prompt content older than 30 days, `run_events` payloads older than 14 days, analytics older than 90 days | `(table, day)` | transient x3 |
+| `retention_sweep` | batch | Scheduler | Daily 05:30; invites older than 30 days, IP hashing after 30 days, prompt content older than 30 days, `run_events` payloads older than 14 days, analytics older than 90 days, audit rows by `retention_class` (03 section 8) | `(table, day)` | transient x3 |
+| `purge_idempotency_keys` | api | Scheduler | Hourly; deletes `idempotency_keys` past `expires_at` | none | none |
+| `expire_kill_switches` | api | Scheduler | Every minute; disengages switches past `kill_switches.expires_at`, writes `audit_log` as `system`, and warns the owner 15 minutes before expiry (08 section 6.5) | `(key, expires_at)` | none |
 | `ai_spend_guard` | api | Scheduler | Every 5 minutes; sums `ai_usage`, trips the global circuit breaker, raises alerts | `(bucket_5m)` | none |
 | `reconcile_anthropic_usage` | batch | Scheduler | Daily 06:30; pulls the Anthropic usage and cost admin API and compares it with `ai_usage` (alert above 3 percent) | `(date)` | transient x3 |
 | `provider_quota_check` | api | Scheduler | Every 30 minutes (SerpApi account API, Geoapify, Travelpayouts rate limits) | `(provider, bucket_30m)` | none |
@@ -288,7 +291,7 @@ Times are UTC unless marked local. "Key" is the idempotency key: a second run wi
 The scheduler is a loop inside `wayfold_worker/scheduler.py`. It enqueues work; it never runs it.
 
 1. **Leader election.** On start it tries `pg_try_advisory_lock(0x57415946)` on a dedicated connection. The holder is the leader; others sleep 10 seconds and retry. If the leader's connection drops, the lock frees and a standby takes over within 10 seconds.
-2. **Routine scan.** Every 30 seconds the leader runs `SELECT id FROM routines WHERE enabled AND next_run_at <= now() ORDER BY next_run_at LIMIT 500 FOR UPDATE SKIP LOCKED`. For each row it checks the kill switch for the routine's kind, checks the account's budget (reserve in the same transaction), inserts a `runs` row with `slot_at`, defers the job, and advances `next_run_at` to the next cron slot after now (never stacking missed slots). An outage of a day fires one check, not many.
+2. **Routine scan.** Every 30 seconds the leader runs `SELECT id FROM routines WHERE enabled AND next_run_at <= now() ORDER BY next_run_at LIMIT 500 FOR UPDATE SKIP LOCKED`. For each row it checks the kill switch for the routine's kind, checks the account's budget (reserve in the same transaction), inserts a `runs` row (`trigger = 'schedule'`), defers the job, and advances `next_run_at` to the next cron slot after now (never stacking missed slots). An outage of a day fires one check, not many.
 3. **Jitter.** `next_run_at` = cron slot plus `hash(routine_id) mod window`, window 60 minutes for daily checks. This spreads load and is stable per routine.
 4. **Periodic jobs.** Fixed-schedule jobs in section 5.1 use Procrastinate periodic tasks registered on the leader only, so they never double-fire. Each has the `slot` timestamp as its lock key.
 5. **Live-route eligibility.** A route is scheduled only if the trip's best capability allows it (Plus 3, Family 5, Pro 6, Trip Pass 2 per trip, Group Trip Pass 2 per trip), the departure is within 120 days, and the trip pass has live checks left (60 max). When eligibility ends, `next_run_at` is cleared and the route keeps its last fares.
@@ -315,7 +318,7 @@ There is no Redis at launch. Every layer below is in Postgres, in process memory
 | Edge API | Public GETs only: `GET /share/{token}` JSON, AASA file, partner guides | Cloudflare | URL | 60 seconds, `stale-while-revalidate` 5 minutes | Purge by tag on share link revoke |
 | Client query cache | Trip data | TanStack Query, persisted to IndexedDB (SQLite in phase 2) | Query key prefixed by user id | `gcTime` 30 days, `staleTime` 30 seconds on shared trips | Sign-out clears; `updated_since` poll merges |
 | JWKS | Supabase signing keys | Process memory | `kid` | 1 hour, refresh on unknown `kid` (max 1 per minute) | Key rotation |
-| Feature flags and kill switches | `feature_flags`, `kill_switches` | Process memory per instance | Flag key | 15 seconds | `NOTIFY flags_changed` from admin writes refreshes at once |
+| Feature flags and kill switches | `feature_flags`, `kill_switches` | Process memory per instance | Flag key | 5 seconds | `NOTIFY flags_changed` from admin writes refreshes at once |
 | Entitlement cache | Computed tier and capabilities | `entitlements` table (`tier_code`, `limits`) plus per-request memo | `user_id` | Recomputed on each webhook and on `reconcile_entitlements` | Webhook processing |
 | Fare and lodging provider results | Provider responses | `provider_calls` (`request_hash`, `cached`) plus `fare_observations` and `places_cache` | `sha256(provider, endpoint, normalized_params, time_bucket)` | Flights 6 hours, lodging and places 24 hours, FX 24 hours | Expiry sweep |
 | Places | Geoapify and Wikipedia results | `places_cache` | provider id | Per provider terms (`expires_at`) | Sweep job |
@@ -491,7 +494,7 @@ Rules: staging and production have separate Supabase projects, R2 buckets, Sentr
 
 ## 10. CI/CD pipeline
 
-GitHub Actions, one workflow per concern. Production deploys use OIDC, never stored cloud keys.
+GitHub Actions, one workflow per concern, all in `.github/workflows/` at the repository root (GitHub runs workflows from nowhere else). Production deploys use OIDC, never stored cloud keys.
 
 | Workflow | Trigger | Steps |
 |---|---|---|
@@ -502,7 +505,7 @@ GitHub Actions, one workflow per concern. Production deploys use OIDC, never sto
 | `deploy-staging.yml` | Merge to `main` | Build and push image tagged with the commit SHA, deploy staging (pre-deploy migration runs), smoke test, post result to chat |
 | `deploy-prod.yml` | Manual approval on a tag | Promote the same image digest (no rebuild), snapshot Postgres if the release has a migration, pre-deploy migration, rolling deploy, post-deploy smoke test, automatic rollback if `/health/ready` fails for 2 minutes |
 | `ios.yml` | Tag `ios-*` or manual | Mac runner or Xcode Cloud: `npm run build`, `cap sync ios`, archive, upload to TestFlight, upload dSYMs to Sentry |
-| `dependabot.yml` | Continuous | Weekly grouped updates |
+| `.github/dependabot.yml` (configuration, not a workflow) | Continuous | Weekly grouped updates |
 
 Branching: trunk based. Short-lived branches, squash merge, `main` is always deployable. Every merge to `main` deploys staging automatically. A production release is a tag `vYYYY.MM.DD.N`.
 
@@ -528,40 +531,59 @@ The image contains no secrets and no `.env`. Build arguments are limited to `REL
 
 ## 13. Feature flags and kill switches
 
-Both live in Postgres (`feature_flags`, `kill_switches`), are cached 15 seconds per process, and change instantly through `NOTIFY`. Only admins change them, through the admin console, and each change writes `audit_log`. A flag may target a percentage, a tier, a user list or an app version range. Clients read the enabled set from `GET /config`; the server always re-checks.
+Both live in Postgres (`feature_flags`, `kill_switches`), are cached 5 seconds per process, and change instantly through `NOTIFY`. Only admins change them, through the admin console, and each change writes `audit_log`. A flag may target a percentage, a tier, a user list, a country, a platform or an app version range (`rules`: `tiers`, `countries`, `user_ids`, `platforms`, `min_app_version`, `max_app_version`). Clients read the enabled set from `GET /config`; the server always re-checks. The keys and defaults below are exactly the seed in [03-database-schema.md](03-database-schema.md) section 11.5; if they ever differ, 03 wins and this table is corrected.
 
-**Feature flags** (release control, default in parentheses)
+**Feature flags** (release control; default in parentheses)
 
 | Key | Controls |
 |---|---|
-| `scheduled_agent_routines` (off) | Pro scheduled agent routines |
+| `serpapi_live_fares` (on) | Live fare and rental provider (legal risk is flagged; turn it off here if the terms audit goes badly) |
 | `tier_pro` (off) | Pro products visible and purchasable |
-| `serpapi_live_fares` (off until terms audit passes) | Live fare and rental provider |
+| `scheduled_agent_routines` (off) | Pro scheduled agent routines |
+| `guest_mode` (on) | Local-first guest mode before sign-in |
+| `group_tools` (on) | Polls, expenses and settlements |
+| `group_payments` (off; Phase 4) | Stripe collection for `group_trip_pass` and `pro` (`rules.fee_bps`, 0) |
 | `concierge_requests` (off until seller-of-travel registration is confirmed per region) | Concierge requests |
-| `group_payments` (off; Phase 4) | Stripe collection for `group_trip_pass` and `pro` |
-| `advisor_workspaces` (off) | Advisor seats and workspaces |
-| `inapp_hotel_booking` (off) | LiteAPI booking, later |
 | `room_block_requests` (on) | Room-block request on Group Trip Pass trips |
+| `poll_comments` (off) | Comments and mentions on polls |
+| `inapp_hotel_booking` (off) | LiteAPI booking, later |
+| `min_app_version` (on, `rules.min_version` 1.0.0) | Forces an update below a version |
+| `partner_guides` (off) | Labeled partner guides |
 | `print_orders` (off) | Printed trip books |
-| `poll_comments` (off) | Comments and mentions |
+| `advisor_workspaces` (off) | Advisor seats and workspaces |
+| `insurance_cards` (off until legal review) | Insurance referral cards |
+| `visa_assist` (off) | Third-party visa service links (the official link is always first) |
+| `affiliate_lodging_test` (on) | A/B: Travelpayouts Booking.com versus Stay22 on lodging |
+| `link_preview` (on) | User-initiated link preview; hosts on the denylist are never fetched |
 | `shared_research_cache` (on) | Shared research cache reads and writes |
-| `min_app_version` (value) | Forces update below a version |
+| `passkeys` (off) | Passkey sign-in |
 
-**Kill switches** (operational control, default off; turning one on disables the thing)
+Settings are flags with `kind = 'setting'` (keys starting `setting_`, the value in `rules`): `setting_ai_warm_daily_usd` (5), `setting_ai_global_daily_usd` (50) and `setting_serpapi_monthly_quota` (5000). Experiments start with `exp_`.
+
+**Kill switches** (operational control, all off by default; turning one on disables the thing; an admin-set switch always has an expiry, 08 section 6.5)
 
 | Key | Effect |
 |---|---|
 | `ai.all` | Pauses the `ai` lane; AI buttons show "AI is paused, your plans are safe" |
+| `ai.free_tier` | Blocks AI for Free accounts (automatic at 80 percent of the daily Anthropic budget) |
+| `ai.all_but_paid` | Blocks AI except for paid tiers (automatic at 95 percent) |
 | `ai.agent_runs` | Blocks `agent_run` only |
-| `ai.free_tier` | Blocks AI for Free accounts |
-| `ai.web_search` | Runs without server web search and fetch tools |
+| `ai.explain`, `ai.draft`, `ai.research`, `ai.taster`, `ai.import`, `ai.packing` | Stops that one AI feature |
+| `ai.web_search`, `ai.web_fetch` | Runs without the server web search or fetch tool |
+| `ai.model.sonnet`, `ai.model.haiku` | Routes to the other model where the feature allows it, else off |
 | `ai.force_haiku` | Uses the fast model for every feature that allows it |
-| `provider.<name>` | Disables one provider (`serpapi`, `travelpayouts`, `geoapify`, `viator`, `stay22`, `frankfurter`) |
-| `affiliate.<program_code>` | Hides one program's cards and stops new clicks for it |
+| `ai.batch` | Pauses scans, digests and cache warming |
+| `ai.shared_cache_write` | Stops writes to the shared research cache |
+| `provider.serpapi`, `provider.travelpayouts`, `provider.geoapify`, `provider.anthropic`, `provider.viator`, `provider.stay22`, `provider.frankfurter`, `provider.stripe` | Disables one provider |
+| `affiliate.all` | Turns every partner link off (plain links only) |
+| `affiliate.insurance` | Turns insurance referral cards off |
+| `affiliate.<program_code>` | Hides one program's cards and stops new clicks for it (one row per `affiliate_programs.code`, seeded from that table) |
 | `push.all`, `email.all` | Stops sending |
 | `signups` | Stops new account creation (existing users unaffected) |
+| `purchases` | Hides paywalls and purchase buttons |
 | `webhooks.process` | Keeps receiving webhooks but pauses processing, for a safe replay |
 | `maintenance` | Read-only mode: writes return 503 with a friendly body |
+| `user:<users.id>` | Per-account AI and live hold; created by an admin on demand, never seeded |
 
 Practice every switch in staging each quarter. Anthropic workspace spend limits are the backstop outside our code.
 
