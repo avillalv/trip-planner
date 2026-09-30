@@ -1,8 +1,8 @@
 # Pack 01: Family plan and households
 
 Part of [Phase 2: growth](README.md). Written 2026-09-30. Source definitions are in the full specs
-([03 section 5.2](../03-database-schema.md), [04 section 5.3](../04-api-spec.md),
-[07 sections 4 and 7.8](../07-monetization-spec.md)); this file is self-contained for the build.
+([03 section 5.2](../reference-full-spec/03-database-schema.md), [04 section 5.3](../reference-full-spec/04-api-spec.md),
+[07 sections 4 and 7.8](../reference-full-spec/07-monetization-spec.md)); this file is self-contained for the build.
 
 | Item | Value |
 |---|---|
@@ -16,7 +16,7 @@ Part of [Phase 2: growth](README.md). Written 2026-09-30. Source definitions are
 
 **Goal.** Let one payer cover up to six people in a household: each member gets Plus capabilities on
 their own trips, 5 live routes, and all of them draw from one pool of 150 credits a month. Persona P3
-("Priya, two kids, her parents joining for one week") from [the product spec](../01-product-spec.md)
+("Priya, two kids, her parents joining for one week") from [the product spec](../reference-full-spec/01-product-spec.md)
 is the buyer: four adults in the household share 150 credits and 5 live routes, and use read-only share
 links for grandparents.
 
@@ -69,10 +69,11 @@ owner), Apple Family Sharing, more than one household per person.
 
 ## 3. Database additions
 
-Migration `0101_households_family`. If the Phase 1 migration already created any of these objects,
-keep it and apply only what is missing (all statements below are safe to re-run except the `CREATE
-TABLE` lines, which are guarded by `IF NOT EXISTS` in the real migration). The tables and trigger are
-reused from [the full 03 section 5.2](../03-database-schema.md).
+Migration `0016_households_family` (Phase 1 ends at `0015_seed`). Phase 1 deliberately has none of
+this: [Phase 1 03 section 1.1](../phase-1-launch/03-database-schema.md) lists `households` and
+`household_members`, the three `household_id` columns, the `household_monthly` credit kind and the
+`family` plan row as dropped, and its section 14 lists what this pack adds. The tables, trigger and
+policies are reused from [the full 03 section 5.2](../reference-full-spec/03-database-schema.md).
 
 A household only pools credits and covers the Family subscription (up to 6 members). It grants no
 trip access; trips are shared through `trip_members`.
@@ -128,36 +129,104 @@ BEGIN
 END $$;
 CREATE TRIGGER trg_household_size BEFORE INSERT OR UPDATE OF status ON household_members
   FOR EACH ROW EXECUTE FUNCTION enforce_household_size();
-```
 
-Columns that let a household carry a subscription, an entitlement and a credit pool (added with
-`ADD COLUMN IF NOT EXISTS` if Phase 1 did not create them):
-
-```sql
-ALTER TABLE subscriptions  ADD COLUMN IF NOT EXISTS household_id uuid REFERENCES households (id) ON DELETE SET NULL;   -- set for Family: covers all active members
-ALTER TABLE entitlements   ADD COLUMN IF NOT EXISTS household_id uuid REFERENCES households (id) ON DELETE SET NULL;   -- Family members inherit the tier through here
-ALTER TABLE credit_grants  ADD COLUMN IF NOT EXISTS household_id uuid REFERENCES households (id) ON DELETE SET NULL;   -- Family pooled credits
-ALTER TABLE credit_grants  ADD CONSTRAINT ck_credit_grants_one_owner CHECK (NOT (user_id IS NOT NULL AND household_id IS NOT NULL));
-ALTER TABLE credit_grants  ADD CONSTRAINT ck_credit_grants_household CHECK (kind <> 'household_monthly' OR household_id IS NOT NULL);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_credit_grants_household_period ON credit_grants (household_id, kind, period_key) WHERE household_id IS NOT NULL AND period_key IS NOT NULL;
-CREATE INDEX IF NOT EXISTS ix_credit_grants_household_spend ON credit_grants (household_id, expires_at) WHERE remaining > 0;
-CREATE INDEX IF NOT EXISTS ix_subscriptions_household ON subscriptions (household_id) WHERE household_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS ix_entitlements_household ON entitlements (household_id) WHERE household_id IS NOT NULL;
-ALTER TYPE credit_grant_kind ADD VALUE IF NOT EXISTS 'household_monthly';
-```
-
-Row-level security (a new table must include its own `GRANT`, `ENABLE ROW LEVEL SECURITY` and policies
-in the same migration; the test in 03 section 6.5 fails otherwise):
-
-```sql
 CREATE FUNCTION in_my_household(p_household uuid) RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT EXISTS (SELECT 1 FROM household_members
                   WHERE household_id = p_household AND user_id = app_user_id() AND status = 'active')
 $$;
+```
 
--- Pooled balances and Family: readable by the owner user or by any active member of the household.
--- (credit_grants and credit_ledger policies from Phase 1 already include: user_id = app_user_id() OR in_my_household(household_id).)
+Columns, enum values and constraint swaps on Phase 1 tables (expand steps; each is cheap):
+
+```sql
+ALTER TABLE subscriptions ADD COLUMN household_id uuid REFERENCES households (id) ON DELETE SET NULL;   -- set for Family: covers all active members
+ALTER TABLE entitlements  ADD COLUMN household_id uuid REFERENCES households (id) ON DELETE SET NULL;   -- Family members inherit the tier through here
+ALTER TABLE credit_grants ADD COLUMN household_id uuid REFERENCES households (id) ON DELETE SET NULL;   -- Family pooled credits
+CREATE INDEX ix_subscriptions_household ON subscriptions (household_id) WHERE household_id IS NOT NULL;
+CREATE INDEX ix_entitlements_household ON entitlements (household_id) WHERE household_id IS NOT NULL;
+
+ALTER TYPE credit_grant_kind ADD VALUE 'household_monthly';              -- own migration step; it cannot be used in the same transaction
+-- After that step:
+ALTER TABLE credit_grants ADD CONSTRAINT ck_credit_grants_one_owner CHECK (NOT (user_id IS NOT NULL AND household_id IS NOT NULL)) NOT VALID;
+ALTER TABLE credit_grants ADD CONSTRAINT ck_credit_grants_household CHECK (kind <> 'household_monthly' OR household_id IS NOT NULL) NOT VALID;
+ALTER TABLE credit_grants VALIDATE CONSTRAINT ck_credit_grants_one_owner;
+ALTER TABLE credit_grants VALIDATE CONSTRAINT ck_credit_grants_household;
+CREATE UNIQUE INDEX uq_credit_grants_household_period ON credit_grants (household_id, kind, period_key) WHERE household_id IS NOT NULL AND period_key IS NOT NULL;
+CREATE INDEX ix_credit_grants_household_spend ON credit_grants (household_id, expires_at) WHERE remaining > 0;
+
+ALTER TABLE entitlements DROP CONSTRAINT ck_entitlements_source;
+ALTER TABLE entitlements ADD CONSTRAINT ck_entitlements_source CHECK (source IN ('none', 'subscription', 'household', 'comp'));   -- Phase 3 adds 'advisor'
+```
+
+Household pool in the credit functions. Phase 1's `credit_balances` view and `reserve_credits()` have no
+household branch; this migration replaces them with the versions from
+[the full 03 section 5.13](../reference-full-spec/03-database-schema.md) (only the marked lines differ from Phase 1).
+`settle_credits()`, expiry and refund functions need no change because they work per grant.
+
+```sql
+DROP VIEW credit_balances;
+CREATE VIEW credit_balances WITH (security_invoker = true) AS
+SELECT user_id,
+       household_id,                                                                          -- new
+       trip_id,
+       sum(remaining)::integer AS remaining,
+       (sum(remaining) FILTER (WHERE kind IN ('monthly', 'household_monthly')))::integer AS allowance_remaining,   -- changed
+       (sum(remaining) FILTER (WHERE kind = 'purchase'))::integer AS purchased_remaining,
+       min(expires_at) FILTER (WHERE remaining > 0) AS next_expiry
+  FROM credit_grants
+ WHERE remaining > 0 AND (expires_at IS NULL OR expires_at > now())
+ GROUP BY user_id, household_id, trip_id;                                                       -- changed
+
+CREATE OR REPLACE FUNCTION reserve_credits(
+  p_user uuid, p_trip uuid, p_amount integer, p_action ai_action, p_run uuid, p_idem text
+) RETURNS uuid LANGUAGE plpgsql AS $$
+DECLARE
+  v_res uuid; v_household uuid; v_need integer := p_amount; v_take integer; g record;     -- v_household is new
+BEGIN
+  IF p_amount <= 0 THEN RAISE EXCEPTION 'amount must be positive'; END IF;
+  SELECT reservation_id INTO v_res FROM credit_ledger
+   WHERE idempotency_key = p_idem AND entry_type = 'reserve' LIMIT 1;
+  IF FOUND THEN RETURN v_res; END IF;
+  IF EXISTS (SELECT 1 FROM credit_debts WHERE user_id = p_user AND amount > 0) THEN
+    RAISE EXCEPTION 'credit_debt' USING ERRCODE = 'WF402';
+  END IF;
+
+  SELECT household_id INTO v_household FROM household_members WHERE user_id = p_user AND status = 'active';   -- new
+  v_res := uuidv7();
+
+  FOR g IN
+    SELECT id, remaining FROM credit_grants
+     WHERE remaining > 0
+       AND (expires_at IS NULL OR expires_at > now())
+       AND (user_id = p_user OR (household_id IS NOT NULL AND household_id = v_household))      -- changed
+       AND (trip_id IS NULL OR trip_id = p_trip)
+       AND (restricted_action IS NULL OR restricted_action = p_action)
+     ORDER BY CASE kind WHEN 'monthly' THEN 10 WHEN 'household_monthly' THEN 10 WHEN 'promo' THEN 20   -- changed
+                        WHEN 'trip_pass' THEN 30 WHEN 'adjustment' THEN 35 ELSE 40 END,
+              expires_at NULLS LAST, id
+       FOR UPDATE
+  LOOP
+    EXIT WHEN v_need = 0;
+    v_take := LEAST(g.remaining, v_need);
+    UPDATE credit_grants SET remaining = remaining - v_take WHERE id = g.id;
+    INSERT INTO credit_ledger (user_id, grant_id, entry_type, delta, reservation_id, action, run_id, trip_id, idempotency_key)
+    VALUES (p_user, g.id, 'reserve', -v_take, v_res, p_action, p_run, p_trip, p_idem);
+    v_need := v_need - v_take;
+  END LOOP;
+
+  IF v_need > 0 THEN
+    RAISE EXCEPTION 'insufficient_credits' USING ERRCODE = 'WF402';   -- rolls back the partial reserve
+  END IF;
+  RETURN v_res;
+END $$;
+```
+
+Row-level security (a new table includes its own `GRANT`, `ENABLE ROW LEVEL SECURITY` and policies in
+the same migration; the tenant-isolation test fails otherwise). Phase 1's `credit_grants_select` and
+`subscriptions_select` policies allow only the owning user; Family widens them to the household:
+
+```sql
 ALTER TABLE households ENABLE ROW LEVEL SECURITY;
 CREATE POLICY households_select ON households FOR SELECT USING (owner_user_id = (SELECT app_user_id()) OR in_my_household(id));
 CREATE POLICY households_update ON households FOR UPDATE USING (owner_user_id = (SELECT app_user_id()));
@@ -166,10 +235,25 @@ CREATE POLICY household_members_select ON household_members FOR SELECT USING (us
 CREATE POLICY household_members_write ON household_members FOR ALL
   USING (household_id IN (SELECT id FROM households WHERE owner_user_id = (SELECT app_user_id())))
   WITH CHECK (household_id IN (SELECT id FROM households WHERE owner_user_id = (SELECT app_user_id())));
+
+-- Pooled balances: readable by the owner user or by any active member of the household.
+DROP POLICY credit_grants_select ON credit_grants;
+CREATE POLICY credit_grants_select ON credit_grants FOR SELECT
+  USING (user_id = (SELECT app_user_id()) OR (household_id IS NOT NULL AND in_my_household(household_id)));
+DROP POLICY subscriptions_select ON subscriptions;
+CREATE POLICY subscriptions_select ON subscriptions FOR SELECT
+  USING (user_id = (SELECT app_user_id()) OR (household_id IS NOT NULL AND in_my_household(household_id)));
+-- credit_ledger stays per acting user (each member sees their own spend); per member spend for the owner is served by the API from the query below.
 ```
 
-Seed (idempotent; from [03 section 11.1 and 11.2](../03-database-schema.md)). The Family row carries
-the limits the entitlement merge reads, including `household_members_max`:
+The API role cannot read other members' ledger rows, so the owner's "Spent by Ana: 12" view is served by
+a `SECURITY DEFINER` function `household_usage(p_household uuid)` that checks the caller is the household
+owner and runs the query below.
+
+Seed (idempotent; from [03 section 11.1 and 11.2](../reference-full-spec/03-database-schema.md)). Phase 1 does not seed the
+`family` row at all, not even inactive, so this migration inserts it with the limits the entitlement merge
+reads, including `household_members_max`, and adds the keys Phase 1 dropped. The two Family products are
+inserted active:
 
 ```sql
 INSERT INTO plans (code, kind, name, rank, monthly_credits, credits_granted, credits_valid_days, duration_days, feature_flag_key, is_active, sort_order, limits) VALUES
@@ -179,18 +263,21 @@ INSERT INTO plans (code, kind, name, rank, monthly_credits, credits_granted, cre
    "places_searches_per_day":100,"polls":true,"cost_splitting":true,"room_block_request":false,"group_payments":false,
    "hide_presentation_footer":true,"scheduled_routines":false,"priority_queue":false,"credit_rollover_cap":0,"taster_agent_runs":0,
    "household_members_max":6,"monthly_ceiling_micros":3400000,"daily_ceiling_micros":400000}')
-ON CONFLICT (code) DO UPDATE SET is_active = true;
+ON CONFLICT (code) DO NOTHING;
 
 INSERT INTO store_products (product_id, store, plan_code, period, price_minor, currency, trial_days, is_active) VALUES
 ('wayfold_family_monthly', 'apple', 'family', 'month',  899, 'USD', 0, true),
 ('wayfold_family_annual',  'apple', 'family', 'year',  5999, 'USD', 0, true)      -- no trial: only wayfold_plus_annual has one
-ON CONFLICT (product_id) DO UPDATE SET is_active = true;
+ON CONFLICT (product_id) DO NOTHING;
+
+-- Phase 1 seeds serpapi_live_fares for plus and trip_pass only; Family gets live tracking too.
+UPDATE feature_flags SET rules = jsonb_set(rules, '{tiers}', '["plus","trip_pass","family"]'::jsonb) WHERE key = 'serpapi_live_fares';
 ```
 
 Queries this pack adds (not tables):
 
 ```sql
--- Per member spend this month, for "Spent by Ana: 12" (settled charges net of refunds).
+-- Per member spend this month, for "Spent by Ana: 12" (settled charges net of refunds); runs inside household_usage().
 SELECT l.user_id, -sum(l.delta) AS credits_spent
   FROM credit_ledger l JOIN credit_grants g ON g.id = l.grant_id
  WHERE g.household_id = :household_id
@@ -201,16 +288,25 @@ SELECT l.user_id, -sum(l.delta) AS credits_spent
 -- Churn guard: joins and leaves in the last 12 months for one person.
 SELECT count(*) FROM household_members
  WHERE user_id = :user_id AND (joined_at > now() - interval '12 months' OR removed_at > now() - interval '12 months');
+
+-- Pooled provider-spend ceiling (03 section 7.4 sums one user; a Family member is checked against the household).
+-- Replace ":user_id = user_id" in the spend CTEs of 7.4 with the member list below and compare with the $3.40 Family ceiling.
+SELECT user_id FROM household_members
+ WHERE household_id = (SELECT household_id FROM household_members WHERE user_id = :user_id AND status = 'active')
+   AND status = 'active';
 ```
 
-The entitlement algorithm, pool spend order and `credit_balances` view already exist from Phase 1
-(07 section 4.2 and 5.4). This pack turns on the `household` branch of `user_tier` (a member of a
-household whose owner has an active Family subscription resolves to `family` with
-`source = 'household'`).
+The entitlement algorithm already exists from Phase 1 (07 section 4.2); this pack turns on its
+`household` branch (a member of a household whose owner has an active Family subscription resolves to
+`family` with `source = 'household'`; the `Tier` type gains `family`, additive per
+[Phase 1 04 section 1.1](../phase-1-launch/04-api-spec.md)). Provider-spend ceilings for Family are
+pooled across active members: the ceiling function sums `ai_usage` and `provider_calls` over the member
+list above, which is the simplification this pack adopts (spend by a member who left during the month
+stays with the household for that month).
 
 ## 4. API additions
 
-From [04 section 5.3](../04-api-spec.md), verbatim. A household belongs to a Family subscriber and
+From [04 section 5.3](../reference-full-spec/04-api-spec.md), verbatim. A household belongs to a Family subscriber and
 shares the tier, the pooled 150 credits and 5 live routes across up to 6 members. Trips stay per-trip
 membership; the household only shares entitlements and the credit pool.
 
@@ -247,7 +343,7 @@ Errors: `403 limit_reached` (reason `family_members`) for the seventh seat, `409
 `409 state_conflict` when a person hits the churn guard (the body says when they can join again),
 `403 entitlement_required` when a non Family user calls `POST /households`.
 
-Webhook effects ([04 section 6](../04-api-spec.md)): "Family changes update household entitlements."
+Webhook effects ([04 section 6](../reference-full-spec/04-api-spec.md)): "Family changes update household entitlements."
 The RevenueCat handler recomputes `entitlements` for every household member on `INITIAL_PURCHASE`,
 `RENEWAL`, `PRODUCT_CHANGE`, `EXPIRATION` and `REFUND` of a `family` product. The
 `grant_monthly_credits` job writes one `household_monthly` grant of 150 (`period_key` of the period
@@ -286,7 +382,7 @@ Paywall triggers (the engine is Phase 1; this pack turns the `household` trigger
 | `household` | Invite a second household member, or household signals (07 section 6.4): invited or asked to invite two or more people to a household; 3 or more travelers who are also trip members on at least two different trips; tapped "Family" in the plan comparison | "Plan as a household" | Plus for up to 6 people, 150 pooled credits | "Invite them to this trip for free" | Family |
 
 The signal never uses names, ages or inferred relationships. Experiment 7 from
-[07 section 6.7](../07-monetization-spec.md) (Family as a row in `default` versus household trigger
+[07 section 6.7](../reference-full-spec/07-monetization-spec.md) (Family as a row in `default` versus household trigger
 only) runs after launch.
 
 ## 6. Monetization and App Store products
@@ -378,8 +474,9 @@ Conventions and the definition of done are in [the Phase 2 README](README.md) se
 Phase 1 capabilities or earlier Phase 2 tickets.
 
 #### P2-001 Household schema and RLS [M, needs Phase 1 schema]
-- Description: migration `0101_households_family` with the tables, size trigger, extra columns,
-  `in_my_household`, policies and seed rows above.
+- Description: migration `0016_households_family` with the tables, size trigger, extra columns and
+  constraint swaps, `in_my_household`, replacement `credit_balances` view and `reserve_credits()`,
+  widened `credit_grants` and `subscriptions` policies, `household_usage()` and seed rows above.
 - Accept: empty to head and previous revision to head both pass; cross-tenant suite includes
   households; seventh member raises `household_full`.
 - Touches: `apps/api/wayfold/migrations/versions/`, `apps/api/wayfold/modules/billing/models.py`.
@@ -403,8 +500,9 @@ Phase 1 capabilities or earlier Phase 2 tickets.
 
 #### P2-004 Pooled credits and monthly grant [M, needs P2-001, Phase 1 ledger]
 - Description: `household_monthly` grant (150) by `grant_monthly_credits` for monthly and annual
-  Family; `reserve_credits` draws from the household pool first; pooled ceiling $3.40 treated as one
-  account for ceiling math.
+  Family; the replacement `reserve_credits` draws from the household pool first; the pooled $3.40
+  ceiling sums spend over the active member list (the ceiling check in 03 section 7.4 gets the member
+  query); `credit_balances` and `GET /me/credits` report the pool.
 - Accept: pool spend is charged to the acting member in `credit_ledger`; grants are idempotent on
   (`household_id`, `kind`, `period_key`).
 - Touches: `apps/api/wayfold/modules/billing/credits.py`, worker `grant_monthly_credits`.

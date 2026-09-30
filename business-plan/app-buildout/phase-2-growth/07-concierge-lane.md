@@ -1,10 +1,10 @@
 # Pack 07: Concierge lane ("Have a human book this")
 
 Part of [Phase 2: growth](README.md). Written 2026-09-30. Source definitions:
-[01 section 4.12](../01-product-spec.md), [03 section 5.16](../03-database-schema.md),
-[04 section 5.18](../04-api-spec.md), [05 section 6.22](../05-ui-ux-spec.md),
-[07 section 9](../07-monetization-spec.md), [08 sections 6.8](../08-admin-control-center.md),
-[10 section 3.8](../10-quality-security-launch.md), WF-104 and WF-103 in [09](../09-build-roadmap.md),
+[01 section 4.12](../reference-full-spec/01-product-spec.md), [03 section 5.16](../reference-full-spec/03-database-schema.md),
+[04 section 5.18](../reference-full-spec/04-api-spec.md), [05 section 6.22](../reference-full-spec/05-ui-ux-spec.md),
+[07 section 9](../reference-full-spec/07-monetization-spec.md), [08 sections 6.8](../reference-full-spec/08-admin-control-center.md),
+[10 section 3.8](../reference-full-spec/10-quality-security-launch.md), WF-104 and WF-103 in [09](../reference-full-spec/09-build-roadmap.md),
 and the business case in [09 revenue expansion](../../09-revenue-expansion.md) section 3.1.
 
 | Item | Value |
@@ -61,7 +61,7 @@ share of the agency commission. It is always optional, always disclosed and neve
 - Edge cases: region not served shows "Not available in your area yet"; duplicate requests for
   the same item are merged.
 
-### Rules from the monetization spec ([07 section 9](../07-monetization-spec.md)), condensed
+### Rules from the monetization spec ([07 section 9](../reference-full-spec/07-monetization-spec.md)), condensed
 
 - Entry points: a card on a shortlisted stay ("Want a person to book this and handle changes?"), on a
   cruise idea, and on complex trips (more than 2 destinations, more than 8 travelers). Never inside AI
@@ -83,7 +83,7 @@ share of the agency commission. It is always optional, always disclosed and neve
 
 | ID | Story | Acceptance |
 |---|---|---|
-| CON-1 | As a user, I see who will book and under what registration. | The form, the confirmation email and the terms show "Booked by [host agency name], seller of travel registration [number]" with the state registrations that apply ([10 section 3.8](../10-quality-security-launch.md)). |
+| CON-1 | As a user, I see who will book and under what registration. | The form, the confirmation email and the terms show "Booked by [host agency name], seller of travel registration [number]" with the state registrations that apply ([10 section 3.8](../reference-full-spec/10-quality-security-launch.md)). |
 | CON-2 | As a user, I can only ask where it is lawful. | The form asks where the traveler lives (state or country); regions not in the flag's `regions` list show "Not available in your area yet. Join the waitlist." and create no request. |
 | CON-3 | As a user, I talk to a person, not AI. | A request thread (messages and proposal attachments) in the app and by email; the screen says "A person replies, not AI." The thread is never read by any AI feature. |
 | CON-4 | As a user, I can cancel or withdraw any time. | Cancel before booked; withdrawing `concierge_sharing` consent closes the request and starts the 30 day advisor-copy deletion. |
@@ -93,9 +93,13 @@ share of the agency commission. It is always optional, always disclosed and neve
 
 ## 3. Database additions
 
-Migration `0108_concierge`. Reused from [03 section 5.16](../03-database-schema.md) with three changes:
-`advisor_org_id` has no foreign key until Wayfold for Advisors (Phase 3), a `consumer_region` column
-supports the seller-of-travel gate, and two small tables carry the thread and commission lines.
+Migration `0023_concierge`. Phase 1 has no concierge objects ([Phase 1 03 section 1.1](../phase-1-launch/03-database-schema.md)
+lists `concierge_requests`, the `concierge_status` type, the `concierge_sharing` consent kind and the `concierge`
+support category as dropped; its section 14 lists what this pack adds). Reused from
+[03 section 5.16](../reference-full-spec/03-database-schema.md) with these changes: there is no `advisor_org_id` column (the
+[Phase 3 advisors pack](../phase-3-scale/02-wayfold-for-advisors.md) adds it with its foreign key), a
+`consumer_region` column supports the seller-of-travel gate, and two small tables carry the thread and
+commission lines.
 
 ```sql
 CREATE TYPE concierge_status AS ENUM ('submitted', 'triaged', 'assigned', 'quoted', 'booked', 'completed', 'cancelled', 'declined');
@@ -117,7 +121,6 @@ CREATE TABLE concierge_requests (
   contact_email                 citext NOT NULL,
   consumer_region               text NOT NULL,                             -- where the traveler lives, for example US-CA; checked against the flag's regions list
   share_consent_at              timestamptz NOT NULL,                      -- user agreed to share the brief with the agency
-  advisor_org_id                uuid,                                      -- FK added with advisor_orgs (Phase 3)
   assigned_to                   uuid REFERENCES users (id) ON DELETE SET NULL,
   agency_reference              text,
   perks                         jsonb NOT NULL DEFAULT '[]'::jsonb,
@@ -176,6 +179,12 @@ CREATE TABLE concierge_commission_lines (                              -- rows o
   CONSTRAINT uq_concierge_commission_lines UNIQUE (statement_month, agency_reference)
 );
 
+-- Support tickets can be linked to concierge requests, and the concierge consent kind is needed if pack 02 has not added it yet.
+ALTER TABLE support_tickets DROP CONSTRAINT ck_support_tickets_category;
+ALTER TABLE support_tickets ADD CONSTRAINT ck_support_tickets_category
+  CHECK (category IN ('billing', 'credits', 'account', 'bug', 'affiliate', 'privacy', 'other', 'concierge'));
+-- consents.kind: append 'concierge_sharing' to the current list (pack 02 adds it first; see there).
+
 -- Flags and settings (from 03 section 11.5; the two settings are new).
 INSERT INTO feature_flags (key, description, enabled, rollout_pct, rules, variants) VALUES
 ('concierge_requests', 'Have a human book this (disclosed, optional)', false, 100, '{"regions":[]}', '{}')
@@ -187,7 +196,7 @@ INSERT INTO feature_flags (key, kind, description, enabled, rollout_pct, rules, 
 ON CONFLICT (key) DO NOTHING;
 ```
 
-Row-level security (from [03 section 6.3](../03-database-schema.md), plus the new tables). A request is
+Row-level security (from [03 section 6.3](../reference-full-spec/03-database-schema.md), plus the new tables). A request is
 visible to the requester and, while the trip exists, to its members; only the requester inserts; status
 changes are written by the admin role.
 
@@ -207,6 +216,9 @@ CREATE POLICY concierge_messages_insert ON concierge_messages FOR INSERT
 -- concierge_commission_lines has no policies for the app role: admin and worker roles only.
 ```
 
+Notification kinds (swap `ck_notifications_kind` for the current list plus these): `concierge_update`,
+`concierge_message`. Dedupe keys: `concierge_update:<request_id>:<status>`.
+
 Retention: requests and messages are kept 24 months after completion for commission and dispute
 records (counsel to confirm), then deleted; on consent withdrawal the advisor-side copy is deleted within
 30 days and the in-app thread is anonymized; account deletion anonymizes `requested_by` and removes the
@@ -214,7 +226,7 @@ thread; commission totals stay without personal data.
 
 ## 4. API additions
 
-From [04 section 5.18](../04-api-spec.md), verbatim:
+From [04 section 5.18](../reference-full-spec/04-api-spec.md), verbatim:
 
 | Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
 |---|---|---|---|---|
@@ -243,7 +255,7 @@ Additions in this pack:
 | `GET /concierge-requests/{id}/messages` | requester | none | `?after=` to `ConciergeMessage[]` | The thread and status timeline. |
 | `POST /concierge-requests/{id}/messages` | requester | status not `cancelled`, `declined` or `completed` | `{ body: string }` with `Idempotency-Key` to 201 | Emails the advisor desk; attachments are sent by email, not uploaded, in this version. |
 | `DELETE /concierge-requests/{id}/consent` | requester | none | 204 | Withdraws `concierge_sharing`, closes the request (`cancelled`), schedules advisor-side deletion in 30 days, audited. |
-| Admin (see section 7) | | | `GET /concierge`, `PATCH /concierge/{id}`, `POST /concierge/{id}/commission`, `POST /concierge/commission-import` | [08 section 8](../08-admin-control-center.md). |
+| Admin (see section 7) | | | `GET /concierge`, `PATCH /concierge/{id}`, `POST /concierge/{id}/commission`, `POST /concierge/commission-import` | [08 section 8](../reference-full-spec/08-admin-control-center.md). |
 
 Duplicate requests for the same item (same `lodging_id` or same kind and dates on a trip within 30 days)
 return the existing request instead of a new one. Errors: `503 feature_disabled` when the flag or intake
@@ -257,7 +269,7 @@ the body.
 
 ## 5. UI screens and paywall triggers
 
-Screen 6.22 from [05](../05-ui-ux-spec.md), verbatim:
+Screen 6.22 from [05](../reference-full-spec/05-ui-ux-spec.md), verbatim:
 
 **Purpose.** Let a person ask a human advisor to book something, always optional and disclosed.
 **Layout.** Entry card on Stays and Overview: "Have a human book this", a two-line explainer and
@@ -340,7 +352,7 @@ the lane (reported, verify every split):
 
 ## 7. Admin additions
 
-From [08 section 6.8](../08-admin-control-center.md), verbatim and extended:
+From [08 section 6.8](../reference-full-spec/08-admin-control-center.md), verbatim and extended:
 
 - **Purpose:** run the optional "Have a human book this" lane with clear status and commission records
   (hosted under a host travel agency).
@@ -435,7 +447,7 @@ ask rate per trip is the headline metric (assumption: 2 percent opt in, 50 perce
 - Gate: no production request before this is done.
 
 #### P2-066 Schema, RLS, flags and settings [M, needs Phase 1 schema]
-- Description: migration `0108_concierge`, policies, flag and settings seeds, foreign key from pack 02.
+- Description: migration `0023_concierge`, policies, flag and settings seeds, foreign key from pack 02.
 - Accept: empty to head and previous to head pass; cross-tenant suite covers the new tables.
 
 #### P2-067 Concierge API, availability and messages [M, needs P2-066]

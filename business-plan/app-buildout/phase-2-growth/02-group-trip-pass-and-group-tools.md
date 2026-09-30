@@ -1,14 +1,14 @@
 # Pack 02: Group Trip Pass and group tools
 
 Part of [Phase 2: growth](README.md). Written 2026-09-30. Source definitions:
-[01 section 4.11](../01-product-spec.md), [03 sections 5.9 and 5.16](../03-database-schema.md),
-[04 sections 5.17 and 5.18](../04-api-spec.md), [05 section 6.21](../05-ui-ux-spec.md),
-[07 sections 7.9 and 10](../07-monetization-spec.md).
+[01 section 4.11](../reference-full-spec/01-product-spec.md), [03 sections 5.9 and 5.16](../reference-full-spec/03-database-schema.md),
+[04 sections 5.17 and 5.18](../reference-full-spec/04-api-spec.md), [05 section 6.21](../reference-full-spec/05-ui-ux-spec.md),
+[07 sections 7.9 and 10](../reference-full-spec/07-monetization-spec.md).
 
 | Item | Value |
 |---|---|
 | Build order | 2 (months 7 to 8, after Family starts) |
-| Flags | `group_tools` (on), `room_block_requests` (on, tier `group_trip_pass`), `group_payments` (stays off: Stripe collection is Phase 3) |
+| Flags | `group_tools` (on), `room_block_requests` (on, tier `group_trip_pass`), `group_payments` (created off; Stripe collection is Phase 3) |
 | Needs from Phase 1 | Trips, `people` and `trip_people`, roles, Trip Pass binding and expiry, entitlement merge, `fx_rates`, notifications, offline queue, activity log |
 | Soft link | Pack 07 (the room-block request is emailed to the concierge desk until the admin queue exists) |
 | Tickets | P2-011 to P2-024 |
@@ -96,7 +96,7 @@ is through Stripe, never Apple In-App Purchase, and never for digital features.
     ("Pay with card or bank through Stripe") ships in Phase 3 behind flag `group_payments`.
   - Status (`settlements.status`): pending (waiting for the payee to confirm, or for Stripe),
     recorded (confirmed manual payment), succeeded (Stripe paid), failed, refunded, disputed.
-    Recorded and succeeded settlements reduce balances.
+    Recorded and succeeded settlements reduce balances; in Phase 2 only pending and recorded occur.
   - Payment is only for real-world trip costs; nothing digital is sold through it.
 - Tier: manual marking is in every F-GRP-2 tier.
 - Edge cases: a member leaves with a balance: the balance stays and the owner can write it off
@@ -146,12 +146,17 @@ is through Stripe, never Apple In-App Purchase, and never for digital features.
 
 ## 3. Database additions
 
-Migration `0102_group_tools` (polls, expenses, settlements) and `0103_room_block_requests`. The
-definitions are reused from [03 section 5.9 and 5.16](../03-database-schema.md). Two deliberate
-differences from the full 03: `payment_collections` is not created in Phase 2 (it arrives with Stripe
-collection in Phase 3), so `settlements.collection_id` is a plain nullable column with no foreign key
-yet; and `room_block_requests.concierge_request_id` has no foreign key until pack 07 creates
-`concierge_requests`.
+Migrations `0017_group_tools` (polls, expenses, settlements) and `0018_room_block_requests`. Phase 1 has
+none of these tables: [Phase 1 03 section 1.1](../phase-1-launch/03-database-schema.md) lists `polls`,
+`poll_votes`, `expenses`, `expense_shares`, `settlements`, `payment_collections` and `room_block_requests`
+as dropped, plus the plan limit keys for polls, cost splitting and room blocks, `trip_passes.upgraded_from_id`
+and the `upgraded` pass status; its section 14 lists what this pack adds. Definitions are reused from
+[the full 03 sections 5.9 and 5.16](../reference-full-spec/03-database-schema.md) with two deliberate differences: `payment_collections`
+is not created (Stripe collection is Phase 3, which creates it and attaches the foreign key to
+`settlements.collection_id`, a plain nullable column here; see
+[Phase 3 pack 01](../phase-3-scale/01-stripe-group-payments.md) section 4.1, which relies on exactly this state), and
+`room_block_requests.concierge_request_id` has no foreign key until pack 07 creates `concierge_requests`. The
+room-block table also gets two hotel columns the form needs.
 
 Polls keep their options inside the row (`options` is an array of
 `{"key": "...", "label": "...", "ref_type": null, "ref_id": null}`), because options are always read
@@ -277,7 +282,7 @@ CREATE TABLE settlements (                                   -- a payment from o
   currency                    currency_code NOT NULL,
   method                      text NOT NULL DEFAULT 'manual',
   status                      text NOT NULL DEFAULT 'recorded',   -- manual methods are inserted as 'pending' until the payee confirms (04 5.17)
-  collection_id               uuid,                               -- Phase 3: foreign key to payment_collections is added by the Stripe migration
+  collection_id               uuid,                               -- Phase 3: the foreign key to payment_collections is added by the Stripe pack
   stripe_payment_intent_id    text,
   note                        text NOT NULL DEFAULT '',
   settled_at                  timestamptz NOT NULL DEFAULT now(),
@@ -287,10 +292,11 @@ CREATE TABLE settlements (                                   -- a payment from o
   FOREIGN KEY (trip_id, to_person_id) REFERENCES trip_people (trip_id, person_id) ON DELETE RESTRICT,
   CONSTRAINT ck_settlements_distinct CHECK (from_person_id <> to_person_id),
   CONSTRAINT ck_settlements_method CHECK (method IN ('manual', 'cash', 'bank_transfer', 'stripe')),
-  CONSTRAINT ck_settlements_status CHECK (status IN ('recorded', 'pending', 'succeeded', 'failed', 'refunded', 'disputed')),
+  CONSTRAINT ck_settlements_status CHECK (status IN ('recorded', 'pending', 'succeeded', 'failed', 'refunded', 'disputed')),   -- disputed: charge.dispute.created, until Stripe resolves it
   CONSTRAINT ck_settlements_collection_stripe CHECK (collection_id IS NULL OR method = 'stripe')
 );
 CREATE INDEX ix_settlements_trip ON settlements (trip_id, settled_at DESC);
+CREATE INDEX ix_settlements_collection ON settlements (collection_id) WHERE collection_id IS NOT NULL;
 CREATE UNIQUE INDEX uq_settlements_stripe_pi ON settlements (stripe_payment_intent_id) WHERE stripe_payment_intent_id IS NOT NULL;
 ```
 
@@ -338,14 +344,21 @@ CREATE POLICY poll_votes_insert ON poll_votes FOR INSERT
 CREATE POLICY poll_votes_delete ON poll_votes FOR DELETE USING (user_id = (SELECT app_user_id()));
 ```
 
-Pass and plan changes (from 03 section 5.14 and 11.1, 11.2). Skip anything Phase 1 already created:
+Pass, plan and flag changes on Phase 1 objects (from [03 section 5.14 and 11.1, 11.2](../reference-full-spec/03-database-schema.md)):
 
 ```sql
-ALTER TYPE pass_status ADD VALUE IF NOT EXISTS 'upgraded';        -- replaced by a Group Trip Pass on the same trip (07 7.9)
-ALTER TABLE trip_passes ADD COLUMN IF NOT EXISTS upgraded_from_id uuid REFERENCES trip_passes (id) ON DELETE SET NULL;
+ALTER TYPE pass_status ADD VALUE 'upgraded';        -- in its own migration step; used when a Group Trip Pass replaces a Trip Pass on the same trip (07 7.9)
+ALTER TABLE trip_passes ADD COLUMN upgraded_from_id uuid REFERENCES trip_passes (id) ON DELETE SET NULL;   -- the Trip Pass this Group Trip Pass replaced
+ALTER TABLE trip_passes DROP CONSTRAINT ck_trip_passes_plan;
+ALTER TABLE trip_passes ADD CONSTRAINT ck_trip_passes_plan CHECK (plan_code IN ('trip_pass', 'group_trip_pass'));
 ALTER TABLE trip_passes ADD CONSTRAINT ck_trip_passes_upgrade CHECK (upgraded_from_id IS NULL OR plan_code = 'group_trip_pass');
-CREATE INDEX IF NOT EXISTS ix_trip_passes_upgraded_from ON trip_passes (upgraded_from_id) WHERE upgraded_from_id IS NOT NULL;
--- uq_trip_passes_one_active (one active pass per trip) is a Phase 1 index; 'upgraded' rows fall outside it.
+CREATE INDEX ix_trip_passes_upgraded_from ON trip_passes (upgraded_from_id) WHERE upgraded_from_id IS NOT NULL;
+-- uq_trip_passes_one_active (one active pass per trip) is a Phase 1 index; 'upgraded' rows fall outside it, which is what lets the new pass be inserted.
+
+-- Phase 1 plan rows have no group keys. A missing key means "not granted", so add them explicitly (true is always the better value).
+UPDATE plans SET limits = limits || '{"polls":false,"cost_splitting":false,"room_block_request":false}'::jsonb WHERE code = 'free';
+UPDATE plans SET limits = limits || '{"polls":true,"cost_splitting":true,"room_block_request":false}'::jsonb  WHERE code IN ('plus', 'trip_pass');
+-- The family and pro rows are inserted by packs 01 and 06 with polls and cost_splitting already true.
 
 INSERT INTO plans (code, kind, name, rank, monthly_credits, credits_granted, credits_valid_days, duration_days, feature_flag_key, is_active, sort_order, limits) VALUES
 ('group_trip_pass', 'pass', 'Group Trip Pass', 26, 0, 80, 90, 90, NULL, true, 50,
@@ -354,20 +367,30 @@ INSERT INTO plans (code, kind, name, rank, monthly_credits, credits_granted, cre
    "places_searches_per_day":100,"polls":true,"cost_splitting":true,"room_block_request":true,"group_payments":true,
    "hide_presentation_footer":true,
    "monthly_ceiling_micros":3600000,"daily_ceiling_micros":400000}')
-ON CONFLICT (code) DO UPDATE SET is_active = true;
--- Trip Pass, Plus, Family and Pro rows: polls and cost_splitting are true, room_block_request is false (set any row Phase 1 seeded as false).
--- "group_payments": true on this row only takes effect with the group_payments flag (Phase 3); the flag stays off.
+ON CONFLICT (code) DO NOTHING;
+-- "group_payments": true only takes effect when the group_payments flag (created off below) is turned on in Phase 3.
 
 INSERT INTO store_products (product_id, store, plan_code, period, price_minor, currency, trial_days, is_active) VALUES
 ('wayfold_group_trip_pass', 'apple', 'group_trip_pass', 'once', 1999, 'USD', 0, true)
-ON CONFLICT (product_id) DO UPDATE SET is_active = true;
+ON CONFLICT (product_id) DO NOTHING;
+
+-- Room-block requests share the concierge consent (added here because this pack ships first; pack 07 reuses it).
+ALTER TABLE consents DROP CONSTRAINT ck_consents_kind;
+ALTER TABLE consents ADD CONSTRAINT ck_consents_kind
+  CHECK (kind IN ('terms', 'privacy', 'ai_processing', 'marketing_email', 'push_notifications', 'analytics', 'concierge_sharing'));   -- append to whatever list is current
 
 INSERT INTO feature_flags (key, description, enabled, rollout_pct, rules, variants) VALUES
-('group_tools',         'Polls, expenses and settlements',                              true, 100, '{}', '{}'),
-('room_block_requests', 'Room-block request on Group Trip Pass trips',                  true, 100, '{"tiers":["group_trip_pass"]}', '{}'),
-('group_payments',      'Collect settlements through Stripe (Group Trip Pass and Pro; Phase 3)', false, 100, '{"fee_bps":0}', '{}')
+('group_tools',         'Polls, expenses and settlements',                              true,  100, '{}', '{}'),
+('room_block_requests', 'Room-block request on Group Trip Pass trips',                  true,  100, '{"tiers":["group_trip_pass"]}', '{}'),
+('group_payments',      'Collect settlements through Stripe (Group Trip Pass and Pro; Phase 3). rules.fee_bps is the application fee', false, 100, '{"fee_bps":0}', '{}')
 ON CONFLICT (key) DO NOTHING;
+UPDATE feature_flags SET rules = jsonb_set(rules, '{tiers}', rules -> 'tiers' || '["group_trip_pass"]'::jsonb) WHERE key = 'serpapi_live_fares';
 ```
+
+Notification kinds (Phase 1 has a `notifications` outbox and inbox with a named check on `kind`; each pack that
+adds kinds swaps `ck_notifications_kind` for the current list plus its own values): `poll_opened`,
+`poll_closed`, `poll_reminder`, `expense_added`, `settlement_requested`, `settlement_confirmed`,
+`room_block_update`. Dedupe keys follow the Phase 1 pattern, for example `poll_reminder:<poll_id>:<date>`.
 
 Balance and settle-up algorithm (application code, `apps/api/wayfold/modules/groups/balances.py`):
 
@@ -387,8 +410,8 @@ Balance and settle-up algorithm (application code, `apps/api/wayfold/modules/gro
    (the last published date on or before `incurred_on`), stores `fx_rate` and `amount_trip_minor`, and
    shows the original beside the converted amount. The rate is fixed at entry.
 
-Decision for an inconsistency in the full specs: [04 section 5.17](../04-api-spec.md) says leftover
-cents go to the payer, [01 F-GRP-3](../01-product-spec.md) says deterministic by traveler order. This
+Decision for an inconsistency in the full specs: [04 section 5.17](../reference-full-spec/04-api-spec.md) says leftover
+cents go to the payer, [01 F-GRP-3](../reference-full-spec/01-product-spec.md) says deterministic by traveler order. This
 pack follows the product spec (traveler order).
 
 Edit rule for expenses: the spec says an expense is blocked once a settlement that includes it is
@@ -398,7 +421,7 @@ trip are locked (`409 state_conflict`); description, category, note and receipt 
 
 ## 4. API additions
 
-All routes below are in [04 sections 5.17 and 5.18](../04-api-spec.md). Gate for the group tool routes:
+All routes below are in [04 sections 5.17 and 5.18](../reference-full-spec/04-api-spec.md). Gate for the group tool routes:
 `group_tools` (the trip's merged limits have `polls` and `cost_splitting`). Wayfold records who owes
 whom; any real money moves outside the app.
 
@@ -414,7 +437,7 @@ whom; any real money moves outside the app.
 | `PATCH /expenses/{expense_id}` | author or owner | versioned | `Partial<ExpenseIn>` to `Expense` | Locked fields per the edit rule above (`409 state_conflict`). |
 | `DELETE /expenses/{expense_id}` | author or owner | none | 204 | Writes an `activity_log` audit line (verb `removed`, summary with description and amount). |
 | `GET /trips/{trip_id}/balances` | viewer | none | none to `Balances` | Net per person and the minimal suggested transfers, in the trip home currency (FX from `fx_rates`, date shown). |
-| `POST /trips/{trip_id}/settlements` | editor | `group_tools` | `{ from_person_id, to_person_id, amount: Money, method: "manual" \| "cash" \| "bank_transfer" }` with `Idempotency-Key` to 201 `Settlement` | Records a payment. The methods start `pending` and the recipient confirms them (status `recorded`). `method: "stripe"` returns `503 feature_disabled` while flag `group_payments` is off (Phase 3). |
+| `POST /trips/{trip_id}/settlements` | editor | `group_tools` | `{ from_person_id, to_person_id, amount: Money, method: "manual" \| "cash" \| "bank_transfer" }` with `Idempotency-Key` to 201 `Settlement` | Records a payment. The methods start `pending` and the recipient confirms them (status `recorded`). `method: "stripe"` returns `503 feature_disabled` while flag `group_payments` is off; Stripe collection ships in Phase 3. |
 | `POST /settlements/{settlement_id}/confirm` | recipient | status `pending` | none to `Settlement` | Recipient confirms receipt; status becomes `recorded`. |
 | `GET /trips/{trip_id}/settlements` | viewer | none | none to `Settlement[]` | |
 
@@ -472,7 +495,7 @@ Capability errors: `403 entitlement_required` with reason `group_tools` (Free ow
 reason `traveler_limit` (above 8 travelers without the pass, above 12 with it). `PaywallHint.reason`
 values `group_tools`, `traveler_limit` and `room_block` already exist in the full spec. The room-block
 route is also hidden and returns `503 feature_disabled` in regions where concierge is not confirmed
-(seller-of-travel gate, [10 section 3.8](../10-quality-security-launch.md)).
+(seller-of-travel gate, [10 section 3.8](../reference-full-spec/10-quality-security-launch.md)).
 
 Jobs (worker): `send_poll_reminders` (notify lane, daily at 15:00 local, key
 `(poll_id, user_id, date)`), `close_due_polls` (api lane, every 5 minutes, closes polls past
@@ -486,7 +509,7 @@ one per hour per trip.
 
 ## 5. UI screens and paywall triggers
 
-Screen 6.21 "Group tools: polls, expenses, settle up" from [05](../05-ui-ux-spec.md), verbatim:
+Screen 6.21 "Group tools: polls, expenses, settle up" from [05](../reference-full-spec/05-ui-ux-spec.md), verbatim:
 
 **Purpose.** Decide together and split real costs fairly. Polls and manual cost splitting are in Plus,
 Family, Pro, Trip Pass and Group Trip Pass, and Free users have them on any trip that has them; the
@@ -505,9 +528,9 @@ exclude people), date, receipt photo. Totals: "Trip total $3,480, $870 each." Of
 **Settle up.** A plain list of "who pays whom" reduced to the fewest transfers ("Ana pays Sam $120"),
 each row with "Mark as paid" (manual, available wherever cost splitting is). A payment carries the
 `settlements.status` as a text chip: Waiting for confirmation (`pending`, until the person paid
-confirms), Paid (`recorded`, or `succeeded` for a Stripe payment), Failed (`failed`), Refunded
-(`refunded`) and In dispute (`disputed`, Phase 3); only Paid rows reduce the balances. The "Collect
-payments" button (Stripe) is not built in Phase 2 and is not shown.
+confirms) and Paid (`recorded`, or `succeeded` for a Stripe payment); Failed, Refunded and In dispute
+appear only with Phase 3; only Paid rows reduce the balances. The "Collect payments" button (Stripe)
+is not built in Phase 2 and is not shown.
 **States.** Loading: skeleton rows. Empty polls: "No polls yet", "Ask the group to choose between two
 stays or a date.", [New poll]. Empty expenses: "No expenses yet", "Add what you pay for and we will work
 out who owes whom.", [Add expense]. Error: "We could not save this expense. Check the amount and try
@@ -581,7 +604,7 @@ affiliate booking, or during presentation playback.
   "extend pass" (audited, existing).
 - **Group payments and settlements (08 section 6.9).** In Phase 2 this screen lists manual `recorded`
   settlements read-only (as the full spec defines for launch); Stripe state, refunds and disputes arrive
-  with Phase 3.
+  with Phase 3 ([../phase-3-scale/01-stripe-group-payments.md](../phase-3-scale/01-stripe-group-payments.md)).
 - **Concierge queue (08 section 6.8).** Room-block requests appear with kind "room block" (they come
   from `room_block_requests`); until pack 07 builds the queue, each submission emails the concierge
   desk inbox and is listed in a simple read-only Room blocks table (status, dates, rooms, age) with
@@ -628,7 +651,7 @@ Existing events from the full catalogue: `poll_created {option_count, subject}`,
   more than n minus 1 transfers; the exact partition beats or equals greedy on crafted cases; output is
   stable.
 - Settlement lifecycle: `pending` until the payee confirms; only `recorded` and `succeeded` reduce
-  balances; the payer cannot confirm their own payment; `stripe` method refused while the flag is off.
+  balances; the payer cannot confirm their own payment; the `stripe` method is refused while `group_payments` is off.
 - Polls: single versus multiple enforcement (DB trigger and API), option key validation, closing with
   ties, apply winner per subject, deadline job, viewers can vote but not create, closed polls reject
   votes.
@@ -652,8 +675,9 @@ Existing events from the full catalogue: `poll_created {option_count, subject}`,
 ## 11. Tickets
 
 #### P2-011 Group tables, RLS and seeds [L, needs Phase 1 schema]
-- Description: migrations `0102_group_tools` and `0103_room_block_requests`, policies, `plans`,
-  `store_products` and flag seeds above.
+- Description: migrations `0017_group_tools` and `0018_room_block_requests`, policies, pass and plan changes
+  (enum value, constraint swaps, limit keys on the Free, Plus and Trip Pass rows), `plans`, `store_products`,
+  consent kind and flag seeds above.
 - Accept: empty to head and previous to head pass; shares-sum trigger rejects mismatches; cross-tenant
   suite covers the new tables.
 - Touches: `apps/api/wayfold/migrations/versions/`, `modules/groups/models.py`.

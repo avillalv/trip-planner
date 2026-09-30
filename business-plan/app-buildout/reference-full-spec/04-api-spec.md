@@ -1,6 +1,6 @@
 # 04. API specification
 
-Part of the [Wayfold build specification](README.md). The README decisions (tiers, credit action codes, table names, non-negotiable rules) are final and this file follows them. Table, column, enum and limit-key names come from [03-database-schema.md](03-database-schema.md) (the database), the agents behind the AI endpoints in [06-ai-agents-spec.md](06-ai-agents-spec.md), purchases and paywall logic in [07-monetization-spec.md](07-monetization-spec.md), and the admin console in [08-admin-control-center.md](08-admin-control-center.md).
+Part of the [Wayfold build specification](../README.md). The README decisions (tiers, credit action codes, table names, non-negotiable rules) are final and this file follows them. Table, column, enum and limit-key names come from [03-database-schema.md](03-database-schema.md) (the database), the agents behind the AI endpoints in [06-ai-agents-spec.md](06-ai-agents-spec.md), purchases and paywall logic in [07-monetization-spec.md](07-monetization-spec.md), and the admin console in [08-admin-control-center.md](08-admin-control-center.md).
 
 Written 2026-09-30. This file defines every HTTP endpoint the web and iOS clients and the partner systems call. It is written so the route modules can be built one per section, in FastAPI, and the TypeScript client generated from the result.
 

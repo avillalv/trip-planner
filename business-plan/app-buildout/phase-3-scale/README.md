@@ -6,7 +6,7 @@ Phase 1 is the launch app ([phase-1-launch/](../phase-1-launch/README.md)). Phas
 
 Scope is final: a feature is in Phase 3 because the "Not in Phase 1" table in the [Phase 1 README](../phase-1-launch/README.md) says so (Stripe group payments, Wayfold for Advisors, partner guides, printed trip books, in-app hotel booking, white-label and API, card and loyalty offers). The revenue numbers come from [09-revenue-expansion.md](../../09-revenue-expansion.md) and the affiliate lanes from [08-affiliate-revenue.md](../../08-affiliate-revenue.md).
 
-**Naming.** The Phase 1 spec files call this work "year 2 and later" or "Phase 4" (tickets WF-101 to WF-113 in the full [09-build-roadmap.md](../09-build-roadmap.md), listed as moved in [Phase 1 section 7](../phase-1-launch/09-build-roadmap.md)). In this folder it is Phase 3, tickets are `P3-001` onward, and the pack files list which WF ticket each one replaces.
+**Naming.** The Phase 1 spec files call this work "year 2 and later" or "Phase 4" (tickets WF-101 to WF-113 in the full [09-build-roadmap.md](../reference-full-spec/09-build-roadmap.md), listed as moved in [Phase 1 section 7](../phase-1-launch/09-build-roadmap.md)). In this folder it is Phase 3, tickets are `P3-001` onward, and the pack files list which WF ticket each one replaces.
 
 **Links.** Links to `../phase-1-launch/` point at the Phase 1 edition of each spec, which is trimmed to Phase 1 and numbers some sections differently. Section citations that exist only in the full specs (the files in `../`, for example the DDL in full 03 section 5.17 or the payments rules in full 07 section 10) link there and are marked "full spec". Links to `../phase-2-growth/` point at the Phase 2 packs; the Phase 2 README was not yet written when this folder was.
 
@@ -148,7 +148,7 @@ Expected names, added by each pack's infrastructure ticket: `STRIPE_CONNECT_WEBH
 
 ## How each pack is laid out
 
-Every pack file has the same sections: goal and revenue case (with the 09 numbers and the worked arithmetic), design decisions, user stories with acceptance criteria, database additions (first the definitions reused verbatim from [03 (full spec)](../03-database-schema.md), then the new DDL), API additions, UI screens, billing, admin additions, legal and compliance, analytics, tests, tickets and risks.
+Every pack file has the same sections: goal and revenue case (with the 09 numbers and the worked arithmetic), design decisions, user stories with acceptance criteria, database additions (first the definitions reused verbatim from [03 (full spec)](../reference-full-spec/03-database-schema.md), then the new DDL), API additions, UI screens, billing, admin additions, legal and compliance, analytics, tests, tickets and risks.
 
 ### Ticket conventions
 

@@ -1134,7 +1134,7 @@ Conventions for every ticket:
 
 ## 7. Moved to Phase 2 or 3
 
-These tickets from the full build roadmap are out of scope for Phase 1. The "Old ID" column is the ticket number in the full [roadmap](../09-build-roadmap.md).
+These tickets from the full build roadmap are out of scope for Phase 1. The "Old ID" column is the ticket number in the full [roadmap](../reference-full-spec/09-build-roadmap.md).
 
 | Old ID | Title | Moves to | Note |
 |---|---|---|---|

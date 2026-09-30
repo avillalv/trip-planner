@@ -1,6 +1,6 @@
 # 10. Quality, security and launch
 
-Part of the [Wayfold build specification](README.md). Shared names, tiers, credit prices and the table list come from the README and win over anything here. Written 2026-09-30.
+Part of the [Wayfold build specification](../README.md). Shared names, tiers, credit prices and the table list come from the README and win over anything here. Written 2026-09-30.
 
 This file is the quality bar. It covers testing, security, privacy and compliance, the analytics event catalogue, observability, the App Store submission, the launch checklist and the runbooks. Architecture is in [02-architecture.md](02-architecture.md), the API in [04-api-spec.md](04-api-spec.md), AI evals in detail in [06-ai-agents-spec.md](06-ai-agents-spec.md), and money rules in [07-monetization-spec.md](07-monetization-spec.md).
 

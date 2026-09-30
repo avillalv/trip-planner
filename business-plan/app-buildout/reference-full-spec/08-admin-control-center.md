@@ -1,6 +1,6 @@
 # 08: Admin control center
 
-Part of the [Wayfold build specification](README.md). The README's shared decisions and table names override anything here; table, column, enum, flag and kill switch names come from [03-database-schema.md](03-database-schema.md).
+Part of the [Wayfold build specification](../README.md). The README's shared decisions and table names override anything here; table, column, enum, flag and kill switch names come from [03-database-schema.md](03-database-schema.md).
 
 The admin control center is an internal web console at `admin.wayfold.app`. It is how the founder (and later a few helpers) watch money, spend and health, answer support, and pull the brakes when something runs away. It is not a product feature and is never shown to customers. It ships in pieces across the roadmap (see section 11 and [09-build-roadmap.md](09-build-roadmap.md)); the first pieces (audit, users, kill switches, AI spend) must exist before the hosted web beta opens, because spend control is a launch safety requirement.
 

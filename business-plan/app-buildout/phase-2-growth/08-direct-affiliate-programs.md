@@ -1,9 +1,9 @@
 # Pack 08: Direct affiliate programs
 
 Part of [Phase 2: growth](README.md). Written 2026-09-30. Source definitions:
-[01 section 4.13](../01-product-spec.md), [03 sections 5.15 and 11.4](../03-database-schema.md),
-[04 section 5.21](../04-api-spec.md), [07 section 8](../07-monetization-spec.md),
-[08 section 6.7](../08-admin-control-center.md), WF-099 and WF-101 in [09](../09-build-roadmap.md), and
+[01 section 4.13](../reference-full-spec/01-product-spec.md), [03 sections 5.15 and 11.4](../reference-full-spec/03-database-schema.md),
+[04 section 5.21](../reference-full-spec/04-api-spec.md), [07 section 8](../reference-full-spec/07-monetization-spec.md),
+[08 section 6.7](../reference-full-spec/08-admin-control-center.md), WF-099 and WF-101 in [09](../reference-full-spec/09-build-roadmap.md), and
 the program research in [08 affiliate revenue](../../08-affiliate-revenue.md). Every commission rate,
 cookie window and eligibility rule in this pack is **reported, verify** until read on the network's own
 terms page after sign-up (the official partner sites were blocked from the research environment).
@@ -47,7 +47,7 @@ Booking.com pages.
 
 ## 2. User stories and acceptance criteria
 
-The global affiliate rules from [01 section 4.13](../01-product-spec.md) apply unchanged and each is a
+The global affiliate rules from [01 section 4.13](../reference-full-spec/01-product-spec.md) apply unchanged and each is a
 testable requirement: a label "We earn a commission if you book here." beside every partner button (UK
 and EU storefronts also show an "Ad" tag); lists state how they are sorted and nothing is ranked by
 commission; pasted listing links stay exactly as pasted; at most one affiliate card per screen view
@@ -85,13 +85,42 @@ sign-off; no cashback or incentive that changes a partner's terms; no credit car
 
 ## 3. Database additions
 
-Migration `0109_direct_affiliate`. The Phase 1 tables (`affiliate_programs`, `affiliate_link_templates`,
-`link_clicks`, `affiliate_conversions`, `affiliate_payouts`) already exist from
-[03 section 5.15](../03-database-schema.md) and the programs are already seeded as `planned` in
-[03 section 11.4](../03-database-schema.md). This pack adds an application tracker, corrects the sub-id
-fields for Impact, relaxes one template constraint and activates programs as they are approved.
+Migration `0024_direct_affiliate`. The Phase 1 tables (`affiliate_programs`, `affiliate_link_templates`,
+`link_clicks`, `affiliate_conversions`, `affiliate_payouts`) exist from
+[Phase 1 03 section 5.15](../phase-1-launch/03-database-schema.md), but Phase 1 seeds only Travelpayouts,
+Stay22 and Viator: its check on `affiliate_programs.network` allows only `travelpayouts`, `stay22` and
+`viator`, `webhook_events.provider` has no `impact`, and the direct programs, their link templates and their
+kill switches are not seeded ([Phase 1 03 section 1.1](../phase-1-launch/03-database-schema.md) and
+section 14). This pack widens the checks, seeds the programs as `planned` (rows from
+[03 section 11.4](../reference-full-spec/03-database-schema.md)), adds an application tracker, fills the Impact sub-id fields and
+relaxes one template constraint. The Booking.com direct, Expedia Group, Skyscanner, Airalo and GetYourGuide
+direct rows are the ones in this pack's scope; `airhelp` is seeded here too because pack 10 needs it.
 
 ```sql
+-- Widen the network check and the webhook provider check (swap the named constraints; keep every value other revisions allow).
+ALTER TABLE affiliate_programs DROP CONSTRAINT ck_affiliate_programs_network;
+ALTER TABLE affiliate_programs ADD CONSTRAINT ck_affiliate_programs_network
+  CHECK (network IN ('travelpayouts', 'stay22', 'viator', 'impact', 'direct'));
+ALTER TABLE webhook_events DROP CONSTRAINT ck_webhook_events_provider;
+ALTER TABLE webhook_events ADD CONSTRAINT ck_webhook_events_provider
+  CHECK (provider IN ('revenuecat', 'apple', 'stripe', 'travelpayouts', 'viator', 'stay22', 'impact', 'inbound_email', 'flight_status'));
+
+-- Seed the direct programs as planned (from 03 section 11.4). The Impact sub-id fields are filled here (the full 03 leaves them empty,
+-- while 07 section 8.2 puts the click id in subId1 and the surface in subId2).
+INSERT INTO affiliate_programs (code, network, name, category, status, hosts, cookie_days, subid_param, campaign_param, api_credentials_ref, extra_disclosure_text) VALUES
+('expedia_group',       'impact', 'Expedia Group (Vrbo, Expedia, Hotels.com)', 'lodging',      'planned', '{vrbo.com,expedia.com,hotels.com}', 7,  'subId1', 'subId2', 'IMPACT_EXPEDIA_TOKEN', NULL),
+('booking_direct',      'direct', 'Booking.com direct',                        'lodging',      'planned', '{booking.com}',                     1,  NULL,     NULL,     'BOOKING_AFFILIATE_ID', 'As a Booking.com Affiliate, we earn from qualifying transactions.'),
+('skyscanner',          'impact', 'Skyscanner',                                'flights',      'planned', '{skyscanner.com}',                  30, 'subId1', 'subId2', 'IMPACT_SKYSCANNER_TOKEN', NULL),
+('airalo',              'impact', 'Airalo',                                    'esim',         'planned', '{airalo.com}',                      30, 'subId1', 'subId2', 'IMPACT_AIRALO_TOKEN', NULL),
+('getyourguide_direct', 'direct', 'GetYourGuide direct',                       'tours',        'planned', '{getyourguide.com}',                30, NULL,     NULL,     'GETYOURGUIDE_PARTNER_ID', NULL),
+('airhelp',             'direct', 'AirHelp',                                   'compensation', 'planned', '{airhelp.com}',                     30, NULL,     NULL,     'AIRHELP_PARTNER_ID', NULL)
+ON CONFLICT (code) DO NOTHING;
+
+-- One kill switch per program, named affiliate.<code>, for the new programs (Phase 1 created them for its own programs only).
+INSERT INTO kill_switches (key, description)
+SELECT 'affiliate.' || code, 'Turn ' || name || ' links off (plain links only)' FROM affiliate_programs
+ON CONFLICT (key) DO NOTHING;
+
 -- Application tracker: one row per application attempt, with the evidence that was submitted.
 CREATE TABLE affiliate_applications (
   id                uuid PRIMARY KEY DEFAULT uuidv7(),
@@ -112,12 +141,9 @@ CREATE TABLE affiliate_applications (
 );
 CREATE INDEX ix_affiliate_applications_program ON affiliate_applications (program_id, created_at DESC);
 SELECT add_updated_at_trigger('affiliate_applications');
+-- No policy for the app role: admin and worker roles only.
 
--- The full 03 seed leaves the Impact sub-id fields empty, while 07 section 8.2 says the click id goes in subId1 and the surface in subId2.
-UPDATE affiliate_programs SET subid_param = 'subId1', campaign_param = 'subId2'
- WHERE network = 'impact' AND code IN ('expedia_group', 'skyscanner', 'airalo');
-
--- The full 03 check blocks "u=" in any template, but Impact and Travelpayouts deep links need it to carry the destination.
+-- The Phase 1 check blocks "u=" in any template, but Impact and Travelpayouts deep links need it to carry the destination.
 -- Keep redirect, url and next blocked, allow u only on deeplink templates, and validate the destination host in code (below).
 ALTER TABLE affiliate_link_templates DROP CONSTRAINT ck_affiliate_link_templates_no_url_param;
 ALTER TABLE affiliate_link_templates ADD CONSTRAINT ck_affiliate_link_templates_no_url_param
@@ -159,14 +185,16 @@ SELECT id, 'search', 'lodging_shortlist', 'default',
 ON CONFLICT DO NOTHING;
 ```
 
-The Booking.com template is the illustrative row from 03 section 11.4; verify its parameters in the
+The angle-bracket values are placeholders for ids the network issues; replace them before inserting (the
+`^https://[a-z0-9.-]+/` check rejects the placeholders). The Booking.com template is the illustrative row from 03 section 11.4; verify its parameters in the
 network's link tool before enabling. Program `hosts` for the Expedia Group row are
 `{vrbo.com,expedia.com,hotels.com}` (from the seed), Airalo `{airalo.com}`, Skyscanner `{skyscanner.com}`,
 GetYourGuide `{getyourguide.com}`, AirHelp `{airhelp.com}`.
 
 Experiment configuration (`feature_flags`, from the A/B queue in
-[07 section 8.9](../07-monetization-spec.md)): `affiliate_lodging_test` variants become
-`{"travelpayouts":34,"stay22":33,"direct":33}` once a direct lodging program is active; the metric is net
+[07 section 8.9](../reference-full-spec/07-monetization-spec.md)): Phase 1 seeds `affiliate_lodging_test` with variants
+`{"travelpayouts":50,"stay22":50}`; once a direct lodging program is active an `UPDATE` makes them
+`{"travelpayouts":34,"stay22":33,"direct":33}`; the metric is net
 commission per click with cancellation and reversal rate as the guardrail. Sample size note: detecting a
 3.0 percent to 3.6 percent lodging conversion needs about 20,000 clicks per arm, so early on test
 click-through and treat bookings as a slow aggregate.
@@ -185,7 +213,7 @@ the `api_credentials_ref` column holds the variable name):
 
 ## 4. API additions
 
-The outbound API and redirect are Phase 1 and are unchanged ([04 section 5.21](../04-api-spec.md)):
+The outbound API and redirect are Phase 1 and are unchanged ([04 section 5.21](../reference-full-spec/04-api-spec.md)):
 `POST /outbound`, `POST /shared/{token}/outbound`, `GET /go/{click_id}`, `GET /trips/{trip_id}/offers`,
 `GET /affiliate/disclosure`. The changes are data and adapters, not new public routes.
 
@@ -200,12 +228,12 @@ The outbound API and redirect are Phase 1 and are unchanged ([04 section 5.21](.
   "Search on the airline's site" and "Open your saved link".
 - **`GET /affiliate/disclosure`**: the program list (`{name, category}`) and the booking line update
   automatically from `affiliate_programs` where `status = 'active'`.
-- **`POST /webhooks/affiliate/impact`** ([04 section 6](../04-api-spec.md)): verifies the HMAC signature,
+- **`POST /webhooks/affiliate/impact`** ([04 section 6](../reference-full-spec/04-api-spec.md)): verifies the HMAC signature,
   writes `affiliate_conversions` upserted on `(program_id, network_txn_id)`, matches by sub-id
   (`subId1`), keeps a status history; an unmatched conversion is stored with `click_id = null` and counted
   toward the unmatched-share health metric. Postbacks are a supplement; the nightly pull is the source of
   truth. Unknown slugs return 404.
-- **Admin API** ([08 section 8](../08-admin-control-center.md)): add `GET /affiliate/applications`,
+- **Admin API** ([08 section 8](../reference-full-spec/08-admin-control-center.md)): add `GET /affiliate/applications`,
   `POST /affiliate/applications`, `PATCH /affiliate/applications/{id}` (roles: owner and finance write;
   content read) and `POST /affiliate/programs/{code}/status` (owner only, two-person approval for
   `active`).
@@ -230,7 +258,7 @@ import, zero rows for 3 days on a live program, reversed amounts above 25 percen
 ## 5. UI screens and paywall triggers
 
 No new screens. The changes are labels and partner names on existing surfaces from
-[05 section 4.13](../05-ui-ux-spec.md) and [01 section 4.13](../01-product-spec.md):
+[05 section 4.13](../reference-full-spec/05-ui-ux-spec.md) and [01 section 4.13](../reference-full-spec/01-product-spec.md):
 
 - **Stays** (lodging cards): "Open" (the user's link, unchanged) and a separate "Book via partner" button
   for pasted Vrbo, Expedia, Hotels.com (and Booking.com direct when active) hosts, with the commission
@@ -279,7 +307,7 @@ clauses checked (Wayfold offers none), disclosure wording agreed, country and ca
 
 ## 7. Admin additions
 
-From [08 section 6.7](../08-admin-control-center.md) (existing Phase 1 screen, extended):
+From [08 section 6.7](../reference-full-spec/08-admin-control-center.md) (existing Phase 1 screen, extended):
 
 - **Applications tab** (new): every program with its status, application history, submitted evidence
   (screenshots, traffic snapshot), terms notes, decision, next action date; buttons "Mark submitted",
@@ -355,7 +383,7 @@ The `placement` enum gains `after_trip` (pack 10) and `activity` already exists.
 - Accept: six packets ready in `docs/affiliate/applications/`; terms filed in `docs/affiliate/terms/`.
 
 #### P2-076 Applications tracker and submission [S, needs P2-075]
-- Description: migration `0109_direct_affiliate`, tracker table and admin tab, submit the applications
+- Description: migration `0024_direct_affiliate`, tracker table and admin tab, submit the applications
   (Booking.com only after confirming its current network), follow up weekly, record decisions.
 - Accept: every application has a status and next action date; approvals move programs to `active` with
   two-person approval.
@@ -395,9 +423,11 @@ The `placement` enum gains `after_trip` (pack 10) and `activity` already exists.
   overlap handling so one booking counts once.
 - Accept: side-by-side labeled options; sorted by the user's criteria; no double counting.
 
-#### P2-083 Reporting, experiments and runbook [M, needs P2-077]
-- Description: revenue views for new programs, direct versus aggregator comparison, experiment setup for
-  the lodging and container tests, alert rules, weekly review routine, program pause runbook.
+#### P2-083 Reporting, link checker, experiments and runbook [M, needs P2-077]
+- Description: revenue views for new programs, direct versus aggregator comparison, the admin link checker and
+  two-person template approval that Phase 1 moved to Phase 2 ([08 section 6.7](../reference-full-spec/08-admin-control-center.md),
+  roadmap WF-094 part), experiment setup for the lodging and container tests, alert rules, weekly review
+  routine, program pause runbook.
 - Accept: dashboards show measured EPC per program; alert rules fire in a drill.
 
 ## 12. Risks

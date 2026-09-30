@@ -1,6 +1,6 @@
 # 02. Architecture
 
-Part of the [Wayfold build specification](README.md). Shared names, tiers and the table list come from the README and win over anything here. Written 2026-09-30.
+Part of the [Wayfold build specification](../README.md). Shared names, tiers and the table list come from the README and win over anything here. Written 2026-09-30.
 
 This file says how Wayfold is put together: the services, the repository, the backend modules, how a request and a job flow through the system, every configuration value, every third-party service, and what to keep from the existing Trip Planner code. The database DDL is in [03-database-schema.md](03-database-schema.md), routes in [04-api-spec.md](04-api-spec.md), AI behavior in [06-ai-agents-spec.md](06-ai-agents-spec.md), money in [07-monetization-spec.md](07-monetization-spec.md), and testing and security in [10-quality-security-launch.md](10-quality-security-launch.md).
 

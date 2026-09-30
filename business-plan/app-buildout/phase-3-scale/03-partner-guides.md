@@ -7,7 +7,7 @@ Part of [Phase 3: scale](README.md). Tickets P3-035 to P3-044. Written 2026-09-3
 | Feature flag | `partner_guides` (created by this pack, off) |
 | Needs | Sales time (the real cost). A lawyer for a one-page sponsorship contract and disclosure terms (light review). An audience of about 50k MAU before the first paid deal. No funding, no engineering hire. |
 | Builds on | Phase 1: admin console and audit log, affiliate system (`/go`), disclosure component, itinerary items, first-party analytics. |
-| Source names | Phase 1 files call this "year 2 and later" and "Phase 4", ticket WF-106. Spec of record: [07 section 11.2 (full spec)](../07-monetization-spec.md), [08 section 6.10 (full spec)](../08-admin-control-center.md), [03 section 5.17 (full spec)](../03-database-schema.md), [04 section 5.22 (full spec)](../04-api-spec.md). |
+| Source names | Phase 1 files call this "year 2 and later" and "Phase 4", ticket WF-106. Spec of record: [07 section 11.2 (full spec)](../reference-full-spec/07-monetization-spec.md), [08 section 6.10 (full spec)](../reference-full-spec/08-admin-control-center.md), [03 section 5.17 (full spec)](../reference-full-spec/03-database-schema.md), [04 section 5.22 (full spec)](../reference-full-spec/04-api-spec.md). |
 
 ## 1. Goal and revenue case
 
@@ -243,7 +243,7 @@ User preference `hide_partner_guides` lives in `users.prefs` (no column). Retent
 
 ## 5. API additions
 
-Base `/v1`, behind the `partner_guides` flag. Reads extend [04 section 5.22 (full spec)](../04-api-spec.md); authoring is admin-only.
+Base `/v1`, behind the `partner_guides` flag. Reads extend [04 section 5.22 (full spec)](../reference-full-spec/04-api-spec.md); authoring is admin-only.
 
 | Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
 |---|---|---|---|---|
@@ -290,7 +290,7 @@ States, tokens and copy follow [05](../phase-1-launch/05-ui-ux-spec.md): sentenc
 
 ## 8. Admin additions
 
-Extends [08 section 6.10 (full spec)](../08-admin-control-center.md) (source ticket WF-106). Screens: Guides list (status, sponsor, destination, expiry, review state), editor, versions and diff, metrics, sponsor reports, finance tab. Roles: `content` edits and submits, a different admin reviews, the owner approves and publishes (08 section 3), finance edits sponsorship terms. Permissions: `guides.edit`, `guides.review`, `guides.publish`, `guides.sponsorship.write`, `guides.report.send`; the route-permission test covers them. Alerts: a guide expires in 14 days (notify), a published guide lacks a label or sources (page), any guide appears in a search or ranked response in the nightly audit (page), sponsor report unsent after the 5th (notify). Kill switch: `partner_guides` flag off hides every surface at once.
+Extends [08 section 6.10 (full spec)](../reference-full-spec/08-admin-control-center.md) (source ticket WF-106). Screens: Guides list (status, sponsor, destination, expiry, review state), editor, versions and diff, metrics, sponsor reports, finance tab. Roles: `content` edits and submits, a different admin reviews, the owner approves and publishes (08 section 3), finance edits sponsorship terms. Permissions: `guides.edit`, `guides.review`, `guides.publish`, `guides.sponsorship.write`, `guides.report.send`; the route-permission test covers them. Alerts: a guide expires in 14 days (notify), a published guide lacks a label or sources (page), any guide appears in a search or ranked response in the nightly audit (page), sponsor report unsent after the 5th (notify). Kill switch: `partner_guides` flag off hides every surface at once.
 
 ## 9. Legal and compliance
 

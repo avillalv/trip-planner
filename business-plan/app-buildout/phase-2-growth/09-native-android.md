@@ -1,7 +1,7 @@
 # Pack 09: Native Android app
 
 Part of [Phase 2: growth](README.md). Written 2026-09-30. The full specs mention Android only as later
-work ([01 section 7](../01-product-spec.md): "Android app (later)"; WF-111 in [09](../09-build-roadmap.md):
+work ([01 section 7](../reference-full-spec/01-product-spec.md): "Android app (later)"; WF-111 in [09](../reference-full-spec/09-build-roadmap.md):
 "Capacitor Android, Play Billing through RevenueCat, FCM push, App Links, Play listing"). Android users
 get the web app until this pack ships. Platform rules below come from web search results dated
 2026-09-30 and are **reported, verify** against the Google Play Console help pages at the time of
@@ -13,8 +13,8 @@ submission.
 | Flags | None per feature; the build is gated by `min_app_version` and Play track rollout percentages |
 | Needs from Phase 1 | The iOS Capacitor app (bundled web app, native plugins layer in `apps/web/src/lib/native/`), RevenueCat, push abstraction, deep links, offline SQLite, purchases, account deletion |
 | Needs from other packs | Products from packs 01, 02 and 06 exist in the stores; flight alerts (pack 05) and comments (pack 03) ride on the push layer |
-| Tickets | P2-084 to P2-094 |
-| Tier and products | Same ladder as iOS: Plus, Family, Pro (when launched), Trip Pass, Group Trip Pass, credit packs, sold through Google Play Billing |
+| Tickets | P2-084 to P2-094, and P2-105 (web billing) |
+| Tier and products | Same ladder as iOS: Plus, Family, Pro (when launched), Trip Pass, Group Trip Pass, credit packs, sold through Google Play Billing. The web app also starts selling Plus, Trip Pass and credit packs through RevenueCat Web Billing (Phase 1 says "web billing arrives with Android in Phase 2") |
 
 ## 1. Goal and why now
 
@@ -48,6 +48,7 @@ Play Billing via RevenueCat, and the same server rules and entitlements as iOS.
 | AND-7 | As an Android user, I can delete my account and my data. | In-app path Settings, Account, Delete account with the same flow and effects as iOS, and a public web page where a person can request deletion without the app (required by Google Play; reported). Deleting does not cancel a Play subscription; the screen says so and deep links to the Play subscriptions page. |
 | AND-8 | As the founder, I can ship and watch Android safely. | Internal, closed and production tracks; staged rollout percentages; crash-free sessions at least 99.5 percent and Play vitals within Google's bad-behavior thresholds (user-perceived ANR and crash rates; reported defaults 0.47 percent and 1.09 percent, verify); a device test matrix; Sentry for Android. |
 | AND-9 | As a user on both stores, I am not charged twice by mistake. | If one account has active subscriptions on Apple and Google, entitlements take the best tier, credits are granted once per period (idempotent), the app shows a notice "You have plans on two stores", and support has a macro. |
+| AND-10 | As a web user, I can buy on the web. | The browser web app shows the normal paywall with a purchase button for Plus (monthly, annual with the 7-day trial), Trip Pass and credit packs through RevenueCat Web Billing; the purchase unlocks through the same entitlement and ledger code; the iOS and Android apps never show or link to it. |
 
 Out of scope for this pack: Wear OS, Android widgets, tablets beyond responsive web layouts, Android
 Auto, an Android-specific redesign, Samsung or Huawei stores (Play only), web purchases of consumer
@@ -55,17 +56,27 @@ features.
 
 ## 3. Database additions
 
-Migration `0110_android`. Very little changes because the schema was written store-agnostic:
-`devices.platform` already allows `ios`, `android` and `web`, `store_products.store`,
-`store_transactions.store` and `subscriptions.store` already allow `google`, `link_clicks.opened_in`
-already allows `android_tab`, and `consents` and deletion are platform independent. The additions:
+Migration `0025_android`. Phase 1 already allows `devices.platform = 'android'`
+([Phase 1 03](../phase-1-launch/03-database-schema.md) `ck_devices_platform`) and `link_clicks.opened_in =
+'android_tab'`, and `entitlements.store` already allows `stripe` (RevenueCat Web Billing). It does not allow
+`google` in `store_products.store`, `store_transactions.store` or `subscriptions.store` (its section 14 lists
+"`store_transactions.store`, `subscriptions.store` value `google`; `devices.push_provider`" as this pack's
+changes), so the additions are constraint swaps plus the push provider:
 
 ```sql
+-- Play is a store: swap the named checks (keep every value earlier revisions allow).
+ALTER TABLE store_products     DROP CONSTRAINT ck_store_products_store;
+ALTER TABLE store_products     ADD CONSTRAINT ck_store_products_store     CHECK (store IN ('apple', 'stripe', 'google'));
+ALTER TABLE store_transactions DROP CONSTRAINT ck_store_transactions_store;
+ALTER TABLE store_transactions ADD CONSTRAINT ck_store_transactions_store CHECK (store IN ('apple', 'stripe', 'google'));
+ALTER TABLE subscriptions      DROP CONSTRAINT ck_subscriptions_store;
+ALTER TABLE subscriptions      ADD CONSTRAINT ck_subscriptions_store      CHECK (store IN ('apple', 'stripe', 'google'));
+
 -- Push provider: APNs for iOS, FCM for Android. The existing push_token column holds either token.
-ALTER TABLE devices ADD COLUMN IF NOT EXISTS push_provider text;
+ALTER TABLE devices ADD COLUMN push_provider text;
 UPDATE devices SET push_provider = 'apns' WHERE platform = 'ios' AND push_provider IS NULL;
 ALTER TABLE devices ADD CONSTRAINT ck_devices_push_provider CHECK (push_provider IS NULL OR push_provider IN ('apns', 'fcm'));
-ALTER TABLE devices ADD COLUMN IF NOT EXISTS attestation_kind text;             -- app_attest, play_integrity
+ALTER TABLE devices ADD COLUMN attestation_kind text;             -- app_attest, play_integrity
 ALTER TABLE devices ADD CONSTRAINT ck_devices_attestation_kind CHECK (attestation_kind IS NULL OR attestation_kind IN ('app_attest', 'play_integrity'));
 -- push_environment stays null for FCM (there is no sandbox token type); ck_devices_push_env already allows null.
 -- uq_devices_push_token on (platform, push_token) already keeps tokens unique per platform.
@@ -92,6 +103,31 @@ INSERT INTO store_products (product_id, store, plan_code, period, price_minor, c
 ('wayfold_credits_400_gp',     'google', 'credits_400',     'once',  1499, 'USD', 0, true)
 ON CONFLICT (product_id) DO NOTHING;
 ```
+
+Web billing rows (P2-105). The web app sells Plus, Trip Pass and credit packs through RevenueCat Web Billing
+(Stripe-backed; Phase 1 04 section 6 already describes its events arriving on the RevenueCat webhook, with
+`store = 'stripe'`). `store_products.product_id` is the Stripe price lookup key for these rows and must not
+collide with Apple ids, so they carry a `web_` prefix:
+
+```sql
+INSERT INTO store_products (product_id, store, plan_code, period, price_minor, currency, trial_days, is_active) VALUES
+('web_plus_monthly',   'stripe', 'plus',      'month',  599, 'USD', 0, true),
+('web_plus_annual',    'stripe', 'plus',      'year',  3999, 'USD', 7, true),
+('web_trip_pass',      'stripe', 'trip_pass', 'once',   999, 'USD', 0, true),
+('web_credits_50',     'stripe', 'credits_50',  'once',  299, 'USD', 0, true),
+('web_credits_150',    'stripe', 'credits_150', 'once',  699, 'USD', 0, true),
+('web_credits_400',    'stripe', 'credits_400', 'once', 1499, 'USD', 0, true)
+ON CONFLICT (product_id) DO NOTHING;
+-- Family, Group Trip Pass and Pro web rows follow the same pattern when those plans are sold on the web.
+```
+
+Rules for web billing: it is available only in the browser web app, never inside the iOS or Android app and
+never linked from them (Apple 3.1.1 and Google Play payments rules; the apps keep "Upgrade in the app" copy
+pointing at their own store), prices equal the app prices unless an experiment says otherwise, the paywall
+sheet and every free path are the same as in the app, Restore is an account sign-in rather than a store action,
+and the same best-of entitlement and idempotent credit grants apply across Apple, Google and web. Web tax
+collection is handled by the Web Billing setup (verify Stripe Tax settings); refunds are issued in the Web
+Billing or Stripe dashboard and arrive as cancellation events.
 
 Store differences the billing code must handle (RevenueCat carries most of it):
 
@@ -131,7 +167,7 @@ No new product routes. Changes to existing contracts:
   re-authentication; its URL is entered in Play Console. The in-app path remains.
 - Device trust: the Android equivalent of App Attest is the Play Integrity API; the server verifies the
   integrity token for sensitive routes where iOS uses App Attest (the same policy table,
-  [10 section 2.4](../10-quality-security-launch.md)), and never blocks a normal user on a failed check
+  [10 section 2.4](../reference-full-spec/10-quality-security-launch.md)), and never blocks a normal user on a failed check
   (degrade with extra rate limits and monitoring).
 - Analytics: the `platform` common property gains `android`; nothing else changes.
 
@@ -331,6 +367,18 @@ iOS ([README](README.md) section 7).
   percent with the vitals watch, support macros.
 - Accept: app live on Google Play; no P0 in the first 72 hours; Android share of new installs tracked.
 
+#### P2-105 Web billing with RevenueCat Web Billing [L, needs Phase 1 purchases and RevenueCat webhook]
+- Description: configure RevenueCat Web Billing (Stripe-backed) for Plus monthly and annual (7-day trial on
+  annual), Trip Pass and the three credit packs with the `web_` product rows above; web paywall purchase
+  flow on the browser web app only; `POST /purchases/sync` and the webhook handler for `store = 'stripe'`;
+  sign-in based restore; tax and receipts settings; hide every purchase path inside the iOS and Android
+  apps; refund and cancellation handling; admin store filter.
+- Accept: web purchases unlock within seconds and appear in `subscriptions`, `store_transactions`,
+  `trip_passes` and `credit_grants` exactly like app purchases; no web purchase link exists in any native
+  build (test scans the bundles); two-store and web-plus-app notice works; sandbox matrix adapted.
+- Touches: `apps/web/src/routes/paywall/`, `apps/api/wayfold/modules/billing/`.
+- Tests: sandbox purchase matrix on web, bundle scan for purchase URLs, idempotent grants across stores.
+
 ## 12. Risks
 
 | Risk | Mitigation |
@@ -339,7 +387,8 @@ iOS ([README](README.md) section 7).
 | WebView jank and memory pressure on low-end devices (risk register item 9) | Simplified phone calendar, marker clustering, profile early on a low-end device, performance budget |
 | Fragmentation (OEM skins, WebView versions) | Device matrix, Play pre-launch report, minimum WebView check at startup with an update prompt |
 | Billing differences (consumable passes are not store-restorable, grace versus hold) | Server list of passes is the source of truth, status mapping, fixtures, sandbox matrix |
-| Double billing across stores | Best-of entitlement, idempotent grants, notice and support macro |
+| Double billing across stores and web | Best-of entitlement, idempotent grants, notice and support macro |
+| Web billing link inside a native app breaks store rules | Web purchases exist only in the browser build; bundle scan test; apps keep store purchases only |
 | Play policy churn (target API level, account deletion web link, payments policy, data safety) | Re-read policies before each submission, keep review notes explicit, deletion page live |
 | Solo developer capacity (risk register item 11) | Android is the first cut if quality or schedule slips; it is scheduled last and independent |
 | Fewer affiliate and subscription conversions on Android at first | Report metrics by platform; do not assume iOS conversion rates |

@@ -1,7 +1,7 @@
 # Pack 10: After the trip, memories and "Year in travel"
 
 Part of [Phase 2: growth](README.md). Written 2026-09-30. Source definitions:
-[01 section 3.11 and F-AFT-1 and F-AFT-2](../01-product-spec.md), [01 F-AFF-5](../01-product-spec.md),
+[01 section 3.11 and F-AFT-1 and F-AFT-2](../reference-full-spec/01-product-spec.md), [01 F-AFF-5](../reference-full-spec/01-product-spec.md),
 the post-trip compensation section of [08 affiliate revenue](../../08-affiliate-revenue.md)
 (sections 3.12 and 6). The full specs define the delay prompt and the wrap-up card only; memories and the
 "Year in travel" card are new in this pack and follow the same conventions.
@@ -47,15 +47,18 @@ and at year end offer a shareable "Year in travel" card.
   with the commission sentence and a note that eligibility depends on route and rules and no
   result is promised; never a push; not shown without a chosen flight.
 
-### F-AFT-2 Wrap-up (verbatim from the full product spec)
+### F-AFT-2 Wrap-up (verbatim from the full product spec; Phase 1 builds the card and the archive offer)
 
 - Acceptance: "How was the trip?" card with a 1 to 5 rating and a note, no affiliate button; 14
   days after the end the trip is offered for archive; settlement reminders for unsettled
   expenses once.
 
-(Journey [3.11](../01-product-spec.md): the day after the last trip date the delay prompt; a "How was the
+(Journey [3.11](../reference-full-spec/01-product-spec.md): the day after the last trip date the delay prompt; a "How was the
 trip?" card and archive after 14 days while expenses settle; export, archive or start the next trip from a
-past one.)
+past one.) [Phase 1 01 section 4.17](../phase-1-launch/01-product-spec.md) keeps F-AFT-2 without the settlement
+reminder and defers the delay prompt, memories and the Year in travel card to this pack. Phase 1 has no table
+for the rating, so this pack adds `trip_reviews` to store it (if Phase 1 stored it elsewhere, map to that
+instead) and adds the once-only settle-up reminder.
 
 ### Stories added by this pack
 
@@ -65,7 +68,7 @@ past one.)
 | AFT-2 | As a traveler, official information comes first. | "Yes, check what I can claim" opens a sheet with official sources first (the European Commission and UK Civil Aviation Authority passenger rights pages and the US Department of Transportation air consumer page, maintained in a content config and covered by the link checker), the plain note that you can also ask the airline directly for free, and then one labeled partner option with the sentence "We earn a commission if you book here." (Compensair now, AirHelp when active, chosen by test cell, never both on one button). |
 | AFT-3 | As a traveler, I am not pestered. | Shown once per trip per person, never as a push (an in-app card on Trips home and the trip Overview, optional email only if the person opted into trip emails), dismissible, and not shown without a chosen or tracked flight. No paywall and no affiliate card appears beside the wrap-up card. |
 | AFT-4 | As a traveler, I rate the trip privately. | The 1 to 5 rating and note are stored per person, visible only to that person (and the owner sees an aggregate average only when at least 3 members rated); never used for ranking, marketing or AI. |
-| AFT-5 | As a trip owner, archiving is easy. | Fourteen days after the end date the trip is offered for archive once; archived trips stay readable and exportable; "Start a new trip from this one" duplicates it. |
+| AFT-5 | As a trip owner, archiving stays easy. | Unchanged from Phase 1: fourteen days after the end date the trip is offered for archive once; archived trips stay readable and exportable; "Start a new trip from this one" duplicates it. This pack only records the answer in `trip_after_prompts`. |
 | AFT-6 | As a member, I get one settle-up reminder. | If expenses are unsettled at the wrap-up, one reminder per person (notify lane, `send_group_settle_reminders`), opt-in respected. |
 | MEM-1 | As a member, I add photos and highlights to a finished trip. | A Memories tab appears when the trip has ended. Members add up to the tier limit of photos (Free 20, paid and passes 100, Pro 200; defaults, `plans.limits.memory_photos_per_trip`), captions up to 200 characters and a star on highlights. Uploads go to R2 by signed URL; the server resizes, strips all EXIF data including GPS, keeps only the capture date, and creates thumbnails. |
 | MEM-2 | As a member, I see a recap generated from the trip. | A recap card shows days, nights, cities, countries, flights (from chosen and tracked flights), the route on a map, the trip rating average (if shown), and the top highlights. It is computed from data already in the trip; no AI is used. |
@@ -78,7 +81,7 @@ past one.)
 
 ## 3. Database additions
 
-Migration `0111_after_trip`. New tables; conventions as in [03 section 2](../03-database-schema.md).
+Migration `0026_after_trip`. New tables; conventions as in [03 section 2](../reference-full-spec/03-database-schema.md).
 
 ```sql
 -- Which after-trip prompts were shown or answered, once per trip and person.
@@ -105,8 +108,9 @@ CREATE TABLE trip_reviews (                                        -- private ra
 );
 SELECT add_updated_at_trigger('trip_reviews');
 
-CREATE TABLE memory_photos (
+CREATE TABLE trip_memories (                                        -- the memory store: photos now, other kinds later (the photo store that Phase 3 printed books can map to)
   id              uuid PRIMARY KEY DEFAULT uuidv7(),
+  kind            text NOT NULL DEFAULT 'photo' CHECK (kind IN ('photo')),
   trip_id         uuid NOT NULL REFERENCES trips (id) ON DELETE CASCADE,
   uploader_id     uuid REFERENCES users (id) ON DELETE SET NULL,       -- null after account deletion, photo removed by the deletion job
   object_key      text NOT NULL,                                       -- R2 key of the processed image (EXIF stripped)
@@ -122,19 +126,21 @@ CREATE TABLE memory_photos (
   status          text NOT NULL DEFAULT 'processing',                  -- processing, ready, failed, removed
   created_at      timestamptz NOT NULL DEFAULT now(),
   updated_at      timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT ck_memory_photos_status CHECK (status IN ('processing', 'ready', 'failed', 'removed')),
-  CONSTRAINT uq_memory_photos_id_trip UNIQUE (id, trip_id)
+  CONSTRAINT ck_trip_memories_status CHECK (status IN ('processing', 'ready', 'failed', 'removed')),
+  CONSTRAINT uq_trip_memories_id_trip UNIQUE (id, trip_id)
 );
-CREATE INDEX ix_memory_photos_trip ON memory_photos (trip_id, sort_order) WHERE status = 'ready';
-CREATE INDEX ix_memory_photos_uploader ON memory_photos (uploader_id) WHERE uploader_id IS NOT NULL;
-SELECT add_updated_at_trigger('memory_photos');
+CREATE INDEX ix_trip_memories_trip ON trip_memories (trip_id, sort_order) WHERE status = 'ready';
+CREATE INDEX ix_trip_memories_uploader ON trip_memories (uploader_id) WHERE uploader_id IS NOT NULL;
+SELECT add_updated_at_trigger('trip_memories');
 
 -- A memory share is a share link of a different kind (03 section 5.3): same token, expiry and redaction flags.
 ALTER TABLE trip_share_links ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'plan';
 ALTER TABLE trip_share_links ADD CONSTRAINT ck_trip_share_links_kind CHECK (kind IN ('plan', 'memories'));
 
-CREATE TABLE year_in_travel (
+CREATE TABLE share_cards (                                         -- generated share cards; Phase 2 has one kind, year_in_travel (working name from Phase 1 03 section 14)
+  id             uuid PRIMARY KEY DEFAULT uuidv7(),
   user_id        uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  kind           text NOT NULL DEFAULT 'year_in_travel',
   year           smallint NOT NULL CHECK (year BETWEEN 2026 AND 2100),
   stats          jsonb NOT NULL,                                      -- trips, countries[], cities[], nights, km_flown, top_destination, longest_trip_nights, new_countries[]
   theme          text NOT NULL DEFAULT 'navy',                        -- navy, burgundy, paper
@@ -142,14 +148,29 @@ CREATE TABLE year_in_travel (
   image_key      text,                                                -- R2 key of the last rendered card (private)
   computed_at    timestamptz NOT NULL DEFAULT now(),
   shared_count   integer NOT NULL DEFAULT 0,
-  PRIMARY KEY (user_id, year),
-  CONSTRAINT ck_year_in_travel_theme CHECK (theme IN ('navy', 'burgundy', 'paper'))
+  CONSTRAINT uq_share_cards_user_kind_year UNIQUE (user_id, kind, year),
+  CONSTRAINT ck_share_cards_kind CHECK (kind IN ('year_in_travel')),
+  CONSTRAINT ck_share_cards_theme CHECK (theme IN ('navy', 'burgundy', 'paper'))
 );
 
 -- Tier limits (plans.limits), defaults tuned with measured storage cost.
 UPDATE plans SET limits = limits || '{"memory_photos_per_trip":20}'::jsonb  WHERE code = 'free';
 UPDATE plans SET limits = limits || '{"memory_photos_per_trip":100}'::jsonb WHERE code IN ('plus', 'family', 'trip_pass', 'group_trip_pass');
 UPDATE plans SET limits = limits || '{"memory_photos_per_trip":200}'::jsonb WHERE code = 'pro';
+
+-- Phase 1 03 section 14 names trips.completed_at: set by build_after_trip_prompts the day after the last trip date (null while the trip is planned or running).
+ALTER TABLE trips ADD COLUMN completed_at timestamptz;
+
+-- The Travelpayouts compensation program is used only by this pack, so Phase 1 does not seed it (03 section 11.4 row).
+INSERT INTO affiliate_programs (code, network, name, category, status, hosts, cookie_days, subid_param, campaign_param, api_credentials_ref, extra_disclosure_text) VALUES
+('travelpayouts_compensair', 'travelpayouts', 'Compensair', 'compensation', 'active', '{compensair.com,tp.media}', 30, 'sub_id', NULL, 'TRAVELPAYOUTS_TOKEN', NULL)
+ON CONFLICT (code) DO NOTHING;
+INSERT INTO kill_switches (key, description)
+SELECT 'affiliate.' || code, 'Turn ' || name || ' links off (plain links only)' FROM affiliate_programs WHERE code = 'travelpayouts_compensair'
+ON CONFLICT (key) DO NOTHING;
+-- AirHelp (code airhelp) is seeded by pack 08. A link template for each is added when the network's link format is confirmed.
+
+-- Notification kinds (swap ck_notifications_kind for the current list plus these): compensation_prompt (the in-app card and the opt-in email), year_in_travel_ready (opt-in email only, never push).
 
 -- Compensation delay hint (used by the prompt; see section 2, AFT-1).
 INSERT INTO feature_flags (key, kind, description, enabled, rollout_pct, rules, variants) VALUES
@@ -165,9 +186,9 @@ ON CONFLICT (key) DO NOTHING;
 ```
 
 Row-level security: `trip_after_prompts` and `trip_reviews` are personal (`user_id = app_user_id()`);
-`memory_photos` follow the trip-child policies (members read; owner and editors write; a member may
+`trip_memories` follow the trip-child policies (members read; owner and editors write; a member may
 delete their own photos), and images are never served directly: the API returns short-lived signed R2
-URLs only to members (or through a valid memory share token); `year_in_travel` is personal. Retention:
+URLs only to members (or through a valid memory share token); `share_cards` is personal. Retention:
 photos live with the trip (purged 30 days after the trip is deleted); the account deletion job removes the
 user's photos, reviews, prompts and year rows and the rendered card objects.
 
@@ -207,7 +228,7 @@ refine the list when a leg was changed; the figure is always labeled "about".
 | `PUT /trips/{trip_id}/review/me` | member | none | `{ rating: 1..5, note?: string }` to 204 | Upsert. `GET` returns the caller's own review only. |
 | `POST /trips/{trip_id}/after-trip/archive` | owner | none | `{ archive: boolean }` to `Trip` | Offers archive once; `later` dismisses. |
 | `GET /trips/{trip_id}/memories` | member | flag `trip_memories` | none to `Memories` | Recap, highlights, photos (signed URLs, 15 minutes). |
-| `POST /trips/{trip_id}/memories/photos` | member | flag, `memory_photos_per_trip`, 60 an hour | `{ content_type, bytes }` to 201 `{ photo_id, upload_url }` | Creates a `processing` row and a signed R2 upload URL (JPEG, PNG, WebP, HEIC up to 10 MB). `403 limit_reached` (reason `memory_photos`). |
+| `POST /trips/{trip_id}/memories/photos` | member | flag, `memory_photos_per_trip`, 60 an hour | `{ content_type, bytes }` to 201 `{ photo_id, upload_url }` | Creates a `processing` row and a signed R2 upload URL (JPEG, PNG, WebP, HEIC up to 10 MB). `403 limit_reached` (reason `trip_memories`). |
 | `POST /memories/photos/{photo_id}/complete` | uploader | none | none to `MemoryPhoto` | Enqueues processing: decode, resize to at most 2,048 px on the long side, strip metadata, thumbnail, content-type sniffing; status `ready` or `failed`. |
 | `PATCH /memories/photos/{photo_id}` | uploader or owner | versioned | `{ caption?, is_highlight?, sort_order? }` | |
 | `DELETE /memories/photos/{photo_id}` | uploader or owner | none | 204 | Removes the R2 objects. |
@@ -399,13 +420,13 @@ parameters on the card link.
   when active as cells of one experiment, `placement` value `after_trip`.
 - Accept: hint appears only with data; one partner per cell; revenue by surface shows `after_trip`.
 
-#### P2-097 Wrap-up, reviews, archive and settle reminder [M, needs P2-095]
-- Description: `trip_reviews`, rating card, archive offer after 14 days, single settle-up reminder using the
-  existing job, duplicate-as-next-trip action.
-- Accept: reviews private; archive and reminder once; no affiliate or paywall on the card.
+#### P2-097 Trip reviews storage and settle reminder [M, needs P2-095]
+- Description: `trip_reviews` behind the Phase 1 rating card (store and read the rating and note), record the
+  archive offer answer, single settle-up reminder using the `send_group_settle_reminders` job from pack 02.
+- Accept: reviews private; archive prompt and reminder once; no affiliate or paywall on the card.
 
 #### P2-098 Memories schema, storage and photo pipeline [L, needs Phase 1 R2 uploads]
-- Description: migration `0111_after_trip` photo tables and limits, signed upload flow, `process_memory_photo`
+- Description: migration `0026_after_trip` photo tables and limits, signed upload flow, `process_memory_photo`
   (decode, resize, strip all metadata, thumbnails, content sniffing), purge job, kill switch.
 - Accept: no metadata survives; limits by tier enforced; deletion removes objects.
 
@@ -420,7 +441,7 @@ parameters on the card link.
 - Accept: redaction defaults hold; revoked links return 410; admin can review reported photos with audit.
 
 #### P2-101 Year in travel statistics [M, needs Phase 1 chosen flights, airports]
-- Description: `year_in_travel`, `compute_year_in_travel` with the query above, new-countries logic,
+- Description: `share_cards` (kind `year_in_travel`), `compute_year_in_travel` with the query above, new-countries logic,
   refresh, date window rule, settings and email opt-in wiring.
 - Accept: golden fixtures pass; numbers labeled "about" where estimated.
 

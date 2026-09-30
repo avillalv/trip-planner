@@ -1,16 +1,19 @@
 # Pack 03: Comments on items
 
 Part of [Phase 2: growth](README.md). Written 2026-09-30. The full specs only reserve this feature:
-[01 F-COL-2](../01-product-spec.md) says viewers may "vote, react, comment", [01 section 7](../01-product-spec.md)
+[01 F-COL-2](../reference-full-spec/01-product-spec.md) says viewers may "vote, react, comment", [01 section 7](../reference-full-spec/01-product-spec.md)
 lists "comments with mentions" as out of the launch scope ("phase 4 of collaboration"),
-[03 section 6.4](../03-database-schema.md) notes "Viewers may vote and comment", and
-[03 section 11.5](../03-database-schema.md) seeds the flag `poll_comments` (off). There is no table,
-endpoint or screen in the full specs, so the design below is new and follows the same conventions.
+[03 section 6.4](../reference-full-spec/03-database-schema.md) notes "Viewers may vote and comment", and
+[03 section 11.5](../reference-full-spec/03-database-schema.md) seeds the flag `poll_comments` (off). There is no table,
+endpoint or screen in the full specs. [Phase 1 03 section 14](../phase-1-launch/03-database-schema.md) reserves
+the working names for this pack (a `comments` table, the flag `poll_comments`, and notification kinds for
+mentions and replies) and Phase 1 seeds none of them, so the design below is new and follows the same
+conventions.
 
 | Item | Value |
 |---|---|
 | Build order | 3 (month 8, right after group tools) |
-| Flag | `comments` (this pack supersedes the seeded `poll_comments`; keep it as an alias so nothing breaks) |
+| Flag | `comments` (created by this pack; it replaces the working name `poll_comments`, which Phase 1 does not seed, so there is no alias to keep) |
 | Needs | Phase 1 collaboration (roles, activity log, hearts), notifications and digests, offline queue, admin moderation queue; soft: pack 02 (comments on polls and expenses) |
 | Tickets | P2-025 to P2-031 |
 | Tier and products | All tiers, all roles that can view a trip. No new products, no credits |
@@ -55,8 +58,8 @@ Rate limit: 30 comments per hour per user per trip and 10 per minute overall (de
 
 ## 3. Database additions
 
-Migration `0104_comments`. New table definitions, following the conventions in
-[03 section 2](../03-database-schema.md) (UUIDv7 ids, `timestamptz`, versioned rows,
+Migration `0019_comments`. New table definitions, following the conventions in
+[03 section 2](../reference-full-spec/03-database-schema.md) (UUIDv7 ids, `timestamptz`, versioned rows,
 `add_updated_at_trigger`, RLS in the same migration).
 
 ```sql
@@ -149,7 +152,15 @@ ALTER TABLE content_reports ADD CONSTRAINT ck_content_reports_target_ref CHECK (
 INSERT INTO feature_flags (key, description, enabled, rollout_pct, rules, variants) VALUES
 ('comments', 'Comments on itinerary items, stays, polls, routes and expenses', false, 100, '{}', '{}')
 ON CONFLICT (key) DO NOTHING;
+INSERT INTO kill_switches (key, description) VALUES
+('comments.write', 'Stop new comments and edits; reads keep working')
+ON CONFLICT (key) DO NOTHING;
 ```
+
+Notification kinds (Phase 1 has a `notifications` outbox with a named check on `kind`; swap
+`ck_notifications_kind` for the current list plus these): `comment_reply`, `comment_mention`. Comment digests
+reuse the existing change-digest path and need no kind. Dedupe keys: `comment_reply:<comment_id>`,
+`comment_mention:<comment_id>:<user_id>`.
 
 Row-level security (viewers may comment; a comment row must be the caller's own; the author edits, the
 owner can delete or hide):
@@ -186,7 +197,7 @@ keep their text for moderation for 90 days, then the body is blanked. The accoun
 | `POST /trips/{trip_id}/comments` | viewer | flag `comments`, trip `comments_enabled`, 30 an hour per user per trip | `CommentIn` with `Idempotency-Key` to 201 `Comment` | Validates the entity belongs to the trip (404 otherwise). Writes an `activity_log` row (verb `commented`). Enqueues notification jobs. |
 | `PATCH /comments/{comment_id}` | author | versioned | `{ body: string, version: number }` to `Comment` | Sets `edited_at`. Others get 404 or `insufficient_role`. |
 | `DELETE /comments/{comment_id}` | author or owner | none | 204 | Soft delete when replies exist, hard delete otherwise. |
-| `POST /comments/{comment_id}/report` | viewer | one per person per comment | `{ reason: "spam" \| "harmful" \| "privacy" \| "other", detail?: string }` to 204 | Creates `content_reports` (`target_type = 'comment'`); three distinct reporters set `hidden_at`. |
+| `POST /comments/{comment_id}/report` | viewer | one per person per comment | `{ reason: "spam" \| "harmful" \| "privacy", detail?: string }` to 204 | Creates `content_reports` (`target_type = 'comment'`); three distinct reporters set `hidden_at`. |
 | `PUT /trips/{trip_id}/comment-reads` | viewer | none | `{ entity_type, entity_id }` to 204 | Upserts `comment_reads`. |
 | `PATCH /trips/{trip_id}` | owner | versioned | `{ comments_enabled?: boolean }` | Existing route gets the new field. |
 
@@ -297,7 +308,7 @@ signal for invitees.
 ## 11. Tickets
 
 #### P2-025 Comments schema, RLS and flag [M, needs Phase 1 collaboration schema]
-- Description: migration `0104_comments` with tables, triggers, policies, content_reports extension,
+- Description: migration `0019_comments` with tables, triggers, policies, content_reports extension,
   `trips.comments_enabled`, flag and kill switch rows.
 - Accept: empty to head and previous to head pass; cascade triggers remove comments with their entity.
 - Tests: migration, RLS and cascade tests.

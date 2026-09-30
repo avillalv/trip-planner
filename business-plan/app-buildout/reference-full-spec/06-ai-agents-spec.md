@@ -1,6 +1,6 @@
 # 06: AI agents specification
 
-Part of the [Wayfold build specification](README.md). The README's shared decisions (tier codes, credit action codes and prices, hard stops, ceilings, table names) are final and are not repeated with new numbers here. Table, column, enum, flag and kill switch names come from [03-database-schema.md](03-database-schema.md). Where this file needs a number the README does not give, it says so and marks it as a default that an admin can change in `feature_flags`.
+Part of the [Wayfold build specification](../README.md). The README's shared decisions (tier codes, credit action codes and prices, hard stops, ceilings, table names) are final and are not repeated with new numbers here. Table, column, enum, flag and kill switch names come from [03-database-schema.md](03-database-schema.md). Where this file needs a number the README does not give, it says so and marks it as a default that an admin can change in `feature_flags`.
 
 Written 2026-09-30. Prices used: Claude Sonnet 5.5 $2 input and $10 output per million tokens (cache read $0.20, 5-minute cache write $2.50, 1-hour write $4.00), Claude Haiku 4.5 $1 and $5 (read $0.10, 5-minute write $1.25, 1-hour write $2.00), web search $0.01 per search, Batch API 50% off tokens only. All dollar figures are planning estimates until 200 production agent runs are measured.
 

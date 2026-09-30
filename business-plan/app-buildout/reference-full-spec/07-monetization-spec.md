@@ -1,6 +1,6 @@
 # 07: Monetization specification
 
-Part of the [Wayfold build specification](README.md). Tier codes, prices, credit grants, credit action codes, ceilings and table names come from the README and are final; table, column, enum and limit-key names come from [03-database-schema.md](03-database-schema.md). Where this file needs a value the README does not give (for example a cap or a timer), it is marked "default" and lives in `feature_flags` so it can change without a release. Rates, cookie windows and program rules for affiliate partners are "reported, verify": read each on the network's own terms page after sign-up.
+Part of the [Wayfold build specification](../README.md). Tier codes, prices, credit grants, credit action codes, ceilings and table names come from the README and are final; table, column, enum and limit-key names come from [03-database-schema.md](03-database-schema.md). Where this file needs a value the README does not give (for example a cap or a timer), it is marked "default" and lives in `feature_flags` so it can change without a release. Rates, cookie windows and program rules for affiliate partners are "reported, verify": read each on the network's own terms page after sign-up.
 
 Written 2026-09-30.
 

@@ -1,6 +1,6 @@
 # Wayfold product specification
 
-Part of the [build specification](README.md). Written 2026-09-30. The shared decisions in the
+Part of the [build specification](../README.md). Written 2026-09-30. The shared decisions in the
 folder README (tiers, credit actions, entity names, rules) are final and are used here exactly.
 This file says what the product does. Architecture, schema, API, screens and AI internals are in
 the other files and are referenced where they matter.

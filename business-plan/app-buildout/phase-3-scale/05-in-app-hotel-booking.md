@@ -7,7 +7,7 @@ Part of [Phase 3: scale](README.md). Tickets P3-058 to P3-070. Written 2026-09-3
 | Feature flag | `inapp_hotel_booking` (created by this pack, off) |
 | Needs | A lawyer before building (seller-of-travel position, consumer law, terms of sale). A support process and probably a support hire, because Wayfold then owns every hotel problem. A contractor engineer is sensible; this is the highest-effort pack. No funding if Nuitee stays merchant of record. |
 | Builds on | Phase 1: lodging shortlist, stay comparison, affiliate system and disclosure component, itinerary, email, admin console. Phase 2: [concierge lane](../phase-2-growth/07-concierge-lane.md) and [direct affiliate programs](../phase-2-growth/08-direct-affiliate-programs.md) (the affiliate options this sits beside). |
-| Source names | Phase 1 files call this "year 2 and later" and "Phase 4", ticket WF-110. Spec of record: [07 section 11.1 (full spec)](../07-monetization-spec.md), [08-affiliate-revenue.md section 13.4](../../08-affiliate-revenue.md). |
+| Source names | Phase 1 files call this "year 2 and later" and "Phase 4", ticket WF-110. Spec of record: [07 section 11.1 (full spec)](../reference-full-spec/07-monetization-spec.md), [08-affiliate-revenue.md section 13.4](../../08-affiliate-revenue.md). |
 
 ## 1. Goal and revenue case
 
@@ -263,7 +263,7 @@ New screen and support tooling; extends [08](../phase-1-launch/08-admin-control-
 
 ## 9. Legal and compliance
 
-1. **Seller of travel.** As a seller rather than a referrer, Wayfold probably needs seller-of-travel registration in some states and must follow consumer-protection and refund rules (inference; counsel to confirm). California, Florida, Hawaii, Washington and Iowa regulate sellers of travel ([10 section 3.8 (full spec)](../10-quality-security-launch.md)). Do not launch in a state until counsel confirms the position; the flag's `countries` rule and a per-state block list enforce it.
+1. **Seller of travel.** As a seller rather than a referrer, Wayfold probably needs seller-of-travel registration in some states and must follow consumer-protection and refund rules (inference; counsel to confirm). California, Florida, Hawaii, Washington and Iowa regulate sellers of travel ([10 section 3.8 (full spec)](../reference-full-spec/10-quality-security-launch.md)). Do not launch in a state until counsel confirms the position; the flag's `countries` rule and a per-state block list enforce it.
 2. **Merchant of record.** Nuitee is the seller and processes the payment; Wayfold's terms of sale say it arranges the booking and earns a fee. Get Nuitee's API and reseller terms reviewed, including liability for supplier failure, rate parity obligations, and permitted marketing.
 3. **Price display and fees.** Show the total price including mandatory fees; list pay-at-property charges clearly. The FTC rule on unfair or deceptive fees covers short-term lodging (verify scope and effective date with counsel). EU and UK price-transparency and "drip pricing" rules apply to European users.
 4. **No ranking by margin.** Uniform margin, user-chosen sort, statement of the sort basis (EU Omnibus and the plan's non-negotiable rule 2). The ordering test in section 11 guards it.

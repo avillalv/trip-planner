@@ -1,16 +1,20 @@
 # Pack 05: Flight status alerts (delay, gate and cancellation)
 
 Part of [Phase 2: growth](README.md). Written 2026-09-30. The full specs have no flight status
-feature (Phase 1 has fare price alerts only, [01 F-FLT-6](../01-product-spec.md), and the
-"Leave for the airport" local notification in [05 section 6.29](../05-ui-ux-spec.md)), so the tables,
-jobs and screens below are new. Provider facts were gathered from web search results on 2026-09-30 and
+feature (Phase 1 has fare price alerts and the booked-fare drop alert only,
+[01 F-FLT-6](../reference-full-spec/01-product-spec.md), and the "Leave for the airport" local notification in
+[05 section 6.29](../reference-full-spec/05-ui-ux-spec.md)), so the jobs and screens below are new. Phase 1 03 section 14
+([Phase 1 03](../phase-1-launch/03-database-schema.md)) reserves the working names used here:
+`flight_status_subscriptions`, `flight_status_events`, `chosen_flights.flight_numbers`,
+`itinerary_items.flight_number`, the notification kinds `flight_delay` and `gate_change`, and the kill switch
+`provider.flight_status`; this pack adds one more table, `tracked_flights`, for per-leg state. Provider facts were gathered from web search results on 2026-09-30 and
 are all **reported, verify** until read on each vendor's own terms and pricing page after sign-up
 (the vendor sites themselves could not be fetched from the research environment).
 
 | Item | Value |
 |---|---|
 | Build order | 5 (months 9 to 10); the provider bake-off starts in month 7 |
-| Flags | `flight_status` (default off, staged rollout); kill switch `provider.flightstatus` (new) |
+| Flags | `flight_status` (default off, staged rollout); kill switch `provider.flight_status` (new) |
 | Needs from Phase 1 | Chosen flights, booking import, push and email notifications, calendar feed, provider interface pattern and `provider_calls`, admin provider health |
 | Soft link | Pack 04 (forwarded confirmations create tracked flights), pack 10 (delay data feeds the compensation prompt) |
 | Tickets | P2-043 to P2-054 |
@@ -46,7 +50,7 @@ fact in the product.
 | FLS-4 | As a traveler, I see status at a glance. | The flight card and the Today view show a chip (On time, Delayed 45 min, Gate B12, Cancelled, Landed), the times ("now 10:50, was 10:05"), the source and check time ("Status from AeroDataBox, checked 4 minutes ago" or the chosen provider), and a timeline of changes. |
 | FLS-5 | As a trip member, everyone who needs alerts gets them. | Every trip member is subscribed by default (owner and editors on, viewers opt in); each person can mute or change the threshold per flight. Quiet hours apply except for changes within 24 hours of departure ("Allow flight alerts during quiet hours", default on). |
 | FLS-6 | As a traveler, my calendar stays right. | The live calendar subscription feed updates event times and adds gate and terminal to the description when status changes. |
-| FLS-7 | As the business, cost is bounded. | Polling and provider spend follow the schedule below; a per leg spend cap (default $0.10) and a monthly provider budget setting degrade polling before they stop it; kill switch `provider.flightstatus` stops calls and the UI shows "Live status is paused. Times shown are the schedule." |
+| FLS-7 | As the business, cost is bounded. | Polling and provider spend follow the schedule below; a per leg spend cap (default $0.10) and a monthly provider budget setting degrade polling before they stop it; kill switch `provider.flight_status` stops calls and the UI shows "Live status is paused. Times shown are the schedule." |
 | FLS-8 | As a traveler, I know what this is and is not. | Copy says "Check with your airline for the latest information". There is no rebooking, compensation or insurance advice in alerts; after a cancellation the card shows a plain "Open the airline's site" link and, later, the after-trip prompt (pack 10) handles compensation. No affiliate card appears on or near a disruption alert. |
 
 Out of scope for this pack: iOS Live Activities and Dynamic Island, widgets, in-app rebooking, airport
@@ -55,10 +59,14 @@ members of a trip.
 
 ## 3. Database additions
 
-Migration `0106_flight_status`. New tables. `iata_code`, `currency_code` and the trigger helpers come
-from Phase 1 ([03 section 3](../03-database-schema.md)).
+Migration `0021_flight_status`. New tables and two columns on Phase 1 tables. `iata_code`, `currency_code` and the trigger helpers come
+from Phase 1 ([03 section 3](../reference-full-spec/03-database-schema.md)).
 
 ```sql
+-- Flight numbers as the input: the Phase 1 import and the chosen fare may carry them, cached fares usually do not.
+ALTER TABLE chosen_flights  ADD COLUMN flight_numbers text[] NOT NULL DEFAULT '{}';      -- for example {'TP1355'}
+ALTER TABLE itinerary_items ADD COLUMN flight_number text;                               -- set for travel items created by import or email
+
 CREATE TYPE flight_leg_status AS ENUM ('scheduled', 'active', 'landed', 'cancelled', 'diverted', 'unknown');
 CREATE TYPE flight_event_kind AS ENUM (
   'delay', 'gate_change', 'terminal_change', 'baggage_belt', 'cancelled', 'diverted',
@@ -124,7 +132,7 @@ CREATE TABLE flight_status_events (                                   -- append-
 );
 CREATE INDEX ix_flight_status_events_flight ON flight_status_events (tracked_flight_id, id DESC);
 
-CREATE TABLE flight_alert_subscriptions (                             -- who is told, and how
+CREATE TABLE flight_status_subscriptions (                             -- who is told, and how
   tracked_flight_id   uuid NOT NULL,
   trip_id             uuid NOT NULL,
   user_id             uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
@@ -151,22 +159,28 @@ INSERT INTO feature_flags (key, description, enabled, rollout_pct, rules, varian
 ('flight_status', 'Flight status tracking and alerts', false, 100, '{}', '{}')
 ON CONFLICT (key) DO NOTHING;
 INSERT INTO feature_flags (key, kind, description, enabled, rollout_pct, rules, variants) VALUES
-('setting_flightstatus_monthly_usd', 'setting', 'Monthly flight status provider budget in dollars; 80 and 90 percent raise alerts, 100 percent degrades to the free-tier poll schedule', true, 100, '{"usd":60}', '{}'),
-('setting_flightstatus_leg_cap_usd', 'setting', 'Provider spend cap per tracked leg in dollars', true, 100, '{"usd":0.10}', '{}')
+('setting_flight_status_monthly_usd', 'setting', 'Monthly flight status provider budget in dollars; 80 and 90 percent raise alerts, 100 percent degrades to the free-tier poll schedule', true, 100, '{"usd":60}', '{}'),
+('setting_flight_status_leg_cap_usd', 'setting', 'Provider spend cap per tracked leg in dollars', true, 100, '{"usd":0.10}', '{}')
 ON CONFLICT (key) DO NOTHING;
 INSERT INTO kill_switches (key, description, auto_rule) VALUES
-('provider.flightstatus', 'Stop flight status provider calls; stored status stays visible with the schedule', '{"metric":"flightstatus_month_pct_of_budget","gte":100}')
+('provider.flight_status', 'Stop flight status provider calls; stored status stays visible with the schedule', '{"metric":"flight_status_month_pct_of_budget","gte":100}')
 ON CONFLICT (key) DO NOTHING;
 
+-- Swap the named check and keep every value other revisions allow (Phase 1 list, plus inbound_email from pack 04 and impact from pack 08).
 ALTER TABLE webhook_events DROP CONSTRAINT ck_webhook_events_provider;
 ALTER TABLE webhook_events ADD CONSTRAINT ck_webhook_events_provider
-  CHECK (provider IN ('revenuecat', 'apple', 'stripe', 'travelpayouts', 'impact', 'viator', 'stay22', 'inbound_email', 'flightstatus'));
+  CHECK (provider IN ('revenuecat', 'apple', 'stripe', 'travelpayouts', 'viator', 'stay22', 'inbound_email', 'impact', 'flight_status'));
+
 ```
+
+Notification kinds (swap `ck_notifications_kind` for the current list plus these): `flight_delay`,
+`gate_change` (the two names Phase 1 reserves), `flight_cancelled`, `flight_diverted`, `flight_landed`.
+Dedupe keys follow the Phase 1 pattern: `flight:<tracked_flight_id>:<event dedupe_key>`.
 
 Numbers in the tier limits and the budget settings are defaults to tune with measured cost per tracked
 leg (ticket P2-043); they are `UPDATE`s in the admin console, not migrations. Row-level security: the
 three tables follow the trip-child policies (members read; owner and editors write
-`tracked_flights`); `flight_status_events` is written by the worker only; `flight_alert_subscriptions`
+`tracked_flights`); `flight_status_events` is written by the worker only; `flight_status_subscriptions`
 is personal (`user_id = app_user_id()`). `provider_calls.provider` accepts the flight status provider
 names. Retention: events and legs are kept with the trip; `poll` detail is in `provider_calls`
 (partitioned, rolled up).
@@ -182,7 +196,7 @@ names. Retention: events and legs are kept with the trip; `poll` detail is in `p
 | `PATCH /tracked-flights/{id}` | editor | versioned | `{ tracking_enabled? }` to `TrackedFlight` | Stop or resume tracking. |
 | `DELETE /tracked-flights/{id}` | editor | none | 204 | Removes tracking, keeps the itinerary item. |
 | `PUT /tracked-flights/{id}/subscription/me` | viewer | none | `{ min_delay_min?, push?, email?, muted? }` to `Subscription` | Personal alert settings. |
-| `POST /webhooks/flightstatus` | provider signature | none | provider payload to 200 | Verifies the signature in constant time, inserts `webhook_events` by provider event id, enqueues `apply_flight_status`. Unknown flights are acknowledged and ignored. |
+| `POST /webhooks/flight-status` | provider signature | none | provider payload to 200 | Verifies the signature in constant time, inserts `webhook_events` by provider event id, enqueues `apply_flight_status`. Unknown flights are acknowledged and ignored. |
 
 ```ts
 type TrackedFlight = {
@@ -289,7 +303,12 @@ outside the AI credit ceilings and is limited by legs and cadence per tier (defa
 | Trip Pass | 8 | 15 minutes | yes |
 | Group Trip Pass | 12 | 15 minutes | yes |
 
-Free gets delay and cancellation alerts on purpose: they are the feature TripIt users love and the
+The competitive win plan ([win-plan.md](../../competitive-analysis/win-plan.md), F19) suggests "free for chosen
+flights on Plus and Trip Pass; free tier gets the first alert only (decide after cost is known)". This pack
+starts more generously for Free (2 legs, delay and cancellation only, slower cadence) because the alerts are
+the trust moment for TripIt switchers; if the bake-off shows a leg costs more than about $0.10, fall back to
+the win plan's version by changing `flight_status_legs` for Free to 1 and removing push for delays under 60
+minutes. Free gets delay and cancellation alerts on purpose: they are the feature TripIt users love and the
 trust moment that makes Wayfold the place they keep trips. The upgrade reason is coverage (more legs,
 faster cadence, gate and belt), not the basic safety alert. Revisit after 60 days of measured cost.
 
@@ -335,7 +354,7 @@ Sources (search results, reported, verify):
   against the monthly budget and per leg cap, cache hit rate, webhook lag, error and empty-result rate,
   legs tracked and polled, alerts sent, and a provider accuracy sample (alerts later contradicted by an
   observation).
-- **Kill switches (08 section 6.5).** `provider.flightstatus` with its auto rule at 100 percent of the
+- **Kill switches (08 section 6.5).** `provider.flight_status` with its auto rule at 100 percent of the
   monthly budget; per tier degrade is automatic (Free cadence), not a switch.
 - **Feature flags.** `flight_status`, plus the two settings flags, editable with a reason.
 - **Users and trips.** Trip detail lists tracked legs, status and event log for support (status data,
@@ -400,7 +419,7 @@ D30 of users with at least one tracked leg versus without.
 - Touches: `apps/api/wayfold/providers/flightstatus/`, `docs/`.
 
 #### P2-044 Schema, RLS, settings and flags [M, needs P2-043]
-- Description: migration `0106_flight_status`, policies, limits, flags, kill switch, settings.
+- Description: migration `0021_flight_status`, policies, limits, flags, kill switch, settings.
 - Accept: empty to head and previous to head pass; cross-tenant suite covers the tables.
 
 #### P2-045 Lookup and tracked flights API [M, needs P2-044]
@@ -419,7 +438,7 @@ D30 of users with at least one tracked leg versus without.
 - Accept: schedule tests pass; spend never exceeds the cap in simulation.
 
 #### P2-048 Webhook receiver and event detection [M, needs P2-045]
-- Description: `POST /webhooks/flightstatus`, `apply_flight_status`, `flight_status_events` with dedupe
+- Description: `POST /webhooks/flight-status`, `apply_flight_status`, `flight_status_events` with dedupe
   and ordering, status transitions.
 - Accept: webhook and poll paths produce the same events; out-of-order handled.
 

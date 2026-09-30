@@ -7,7 +7,7 @@ Part of [Phase 3: scale](README.md). Tickets P3-071 to P3-081. Written 2026-09-3
 | Feature flags | `white_label` and `partner_api` (created by this pack, off). Both need `advisor_workspaces` on. |
 | Needs | A lawyer (master agreement, data-processing addendum, child-data rules before any school operator). An onboarding and support person: support per account is the real cost. A contractor engineer is sensible for custom domains. No funding. |
 | Builds on | **Pack 02 must be stable first** ([02-wayfold-for-advisors.md](02-wayfold-for-advisors.md)): this is the same code packaged for accounts rather than seats (09 section 3.7). Phase 1: presentation mode, share links, Resend, Cloudflare, Stripe webhook endpoint. |
-| Source names | Phase 1 files call this "year 3 and later". Spec of record: [07 section 11.5 (full spec)](../07-monetization-spec.md), which specifies only a direction ("a separate tenancy, API keys, annual contracts invoiced by Stripe"). This pack is the detailed contract. |
+| Source names | Phase 1 files call this "year 3 and later". Spec of record: [07 section 11.5 (full spec)](../reference-full-spec/07-monetization-spec.md), which specifies only a direction ("a separate tenancy, API keys, annual contracts invoiced by Stripe"). This pack is the detailed contract. |
 
 ## 1. Goal and revenue case
 
@@ -359,7 +359,7 @@ Design-system note: theming is token driven ([05 section 2](../phase-1-launch/05
 - **Net revenue.** Card payments net about 97%; bank transfer nets more. 09 counts $6,000 per account.
 - **Tax.** Stripe Tax on invoices; business VAT ids captured.
 - **Web only.** Never sold or linked in the iOS app (Guideline 3.1.1).
-- **Renewal.** Reminder email 60 days before the end; one-click cancel in the contract view (auto-renew rules, [10 section 3.10 (full spec)](../10-quality-security-launch.md)).
+- **Renewal.** Reminder email 60 days before the end; one-click cancel in the contract view (auto-renew rules, [10 section 3.10 (full spec)](../reference-full-spec/10-quality-security-launch.md)).
 - **Cost control.** Custom hostnames, email domains and storage have small per-account costs (Cloudflare for SaaS hostname pricing and Resend domains: verify); they are included in the fee.
 
 ## 8. Admin additions

@@ -1,17 +1,17 @@
 # Pack 06: Pro tier and scheduled agent routines
 
 Part of [Phase 2: growth](README.md). Written 2026-09-30. Source definitions:
-[01 F-AI-7](../01-product-spec.md), [03 sections 5.11 and 11.1](../03-database-schema.md),
-[04 section 5.13](../04-api-spec.md), [06 section 5.10](../06-ai-agents-spec.md),
-[07 sections 2.1, 5.5 and 7](../07-monetization-spec.md), [08 section 6.6](../08-admin-control-center.md),
-roadmap tickets WF-078 and WF-105 in [09](../09-build-roadmap.md).
+[01 F-AI-7](../reference-full-spec/01-product-spec.md), [03 sections 5.11 and 11.1](../reference-full-spec/03-database-schema.md),
+[04 section 5.13](../reference-full-spec/04-api-spec.md), [06 section 5.10](../reference-full-spec/06-ai-agents-spec.md),
+[07 sections 2.1, 5.5 and 7](../reference-full-spec/07-monetization-spec.md), [08 section 6.6](../reference-full-spec/08-admin-control-center.md),
+roadmap tickets WF-078 and WF-105 in [09](../reference-full-spec/09-build-roadmap.md).
 
 | Item | Value |
 |---|---|
 | Build order | 8 (build dark in month 11, sell in month 12 only if the gate is met) |
 | Flags | `tier_pro` (hides the tier and products), `scheduled_agent_routines` (scheduler skips agent kinds while off) |
 | Needs from Phase 1 | Agent runs (`fare_hunt`, `deep_research`), credits and ceilings, scheduler with `scan_due_routines`, shared research cache, price checks, feature flags, admin flags screen, RevenueCat, notifications |
-| Gate | Mean agent cost of $0.60 or less per run over 200 runs, or over 15 percent of Plus payers buying agent-run credits ([09 section 1](../09-build-roadmap.md), [08 section 6.6](../08-admin-control-center.md)) |
+| Gate | Mean agent cost of $0.60 or less per run over 200 runs, or over 15 percent of Plus payers buying agent-run credits ([09 section 1](../reference-full-spec/09-build-roadmap.md), [08 section 6.6](../reference-full-spec/08-admin-control-center.md)) |
 | Tickets | P2-055 to P2-064 |
 | Tier and products | `pro`, `wayfold_pro_monthly` ($11.99), `wayfold_pro_annual` ($99) |
 
@@ -75,14 +75,22 @@ Phase 3), monthly provider-spend ceiling $5.50 and daily budget $1.25.
 
 ## 3. Database additions
 
-Migration `0107_pro_routines`. The `routines` table and the `runs` columns it relies on are defined in
-[03 section 5.11](../03-database-schema.md). If Phase 1 already created them (the full schema creates
-them in the first migration), keep them; the statements below add only what this pack needs.
+Migration `0022_pro_routines`. Phase 1 has no
+`routines` table and no routine kinds: [Phase 1 03 section 1.1](../phase-1-launch/03-database-schema.md)
+lists `routines`, `runs.routine_id`, `runs.priority`, the `routine_kind` type, the run kinds `price_check`
+and `batch_scan`, the run triggers `schedule` and `catch_up`, the `pro` plan row, the Pro limit keys and the
+Pro flags as dropped; Phase 1's daily live-route checks are a worker job driven by `flight_routes`, not a
+routine, and `scan_due_routines` only enqueues those. Definitions are reused from
+[the full 03 section 5.11](../reference-full-spec/03-database-schema.md).
 
 ```sql
-CREATE TYPE routine_kind AS ENUM ('price_check', 'batch_scan', 'fare_hunt', 'deep_research');   -- skip if it exists
+CREATE TYPE routine_kind AS ENUM ('price_check', 'batch_scan', 'fare_hunt', 'deep_research');
+ALTER TYPE run_kind    ADD VALUE 'price_check';     -- each ADD VALUE is its own migration step
+ALTER TYPE run_kind    ADD VALUE 'batch_scan';
+ALTER TYPE run_trigger ADD VALUE 'schedule';
+ALTER TYPE run_trigger ADD VALUE 'catch_up';
 
-CREATE TABLE IF NOT EXISTS routines (
+CREATE TABLE routines (
   id              uuid PRIMARY KEY DEFAULT uuidv7(),
   trip_id         uuid NOT NULL REFERENCES trips (id) ON DELETE CASCADE,
   owner_user_id   uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,     -- who is billed for the checks
@@ -95,35 +103,42 @@ CREATE TABLE IF NOT EXISTS routines (
   config          jsonb NOT NULL DEFAULT '{}'::jsonb,
   last_slot_at    timestamptz,
   next_run_at     timestamptz,
+  paused_reason   text,                                                        -- added by this pack: why a routine is paused
+  paused_at       timestamptz,
+  last_digest_at  timestamptz,                                                 -- digest throttle: one per routine per day
+  last_run_id     uuid,
   version         integer NOT NULL DEFAULT 1,
   created_at      timestamptz NOT NULL DEFAULT now(),
-  updated_at      timestamptz NOT NULL DEFAULT now()
+  updated_at      timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT ck_routines_paused_reason
+    CHECK (paused_reason IS NULL OR paused_reason IN ('no_credits', 'ceiling', 'trip_past', 'owner_lapsed', 'kill_switch', 'user'))
 );
-CREATE INDEX IF NOT EXISTS ix_routines_due ON routines (next_run_at) WHERE enabled;
-CREATE INDEX IF NOT EXISTS ix_routines_trip ON routines (trip_id);
-CREATE INDEX IF NOT EXISTS ix_routines_owner ON routines (owner_user_id);
+CREATE INDEX ix_routines_due ON routines (next_run_at) WHERE enabled;
+CREATE INDEX ix_routines_trip ON routines (trip_id);
+CREATE INDEX ix_routines_owner ON routines (owner_user_id);
+SELECT add_version_trigger('routines');
+SELECT add_updated_at_trigger('routines');
 -- Agent kinds (fare_hunt, deep_research) are rejected by the API unless the owner's entitlement has scheduled_routines.
-
--- Added by this pack: why a routine is paused, and the digest throttle.
-ALTER TABLE routines ADD COLUMN IF NOT EXISTS paused_reason text;
-ALTER TABLE routines ADD COLUMN IF NOT EXISTS paused_at timestamptz;
-ALTER TABLE routines ADD COLUMN IF NOT EXISTS last_digest_at timestamptz;
-ALTER TABLE routines ADD COLUMN IF NOT EXISTS last_run_id uuid;
-ALTER TABLE routines ADD CONSTRAINT ck_routines_paused_reason
-  CHECK (paused_reason IS NULL OR paused_reason IN ('no_credits', 'ceiling', 'trip_past', 'owner_lapsed', 'kill_switch', 'user'));
 -- The 12 hour minimum gap between runs and the cron shape are validated by the API, not by a column constraint.
--- Up to 3 routines per trip is enforced by the API against plans.limits.scheduled_routines and a count query.
 
--- runs: columns the scheduler and priority queue use (from 03 section 5.11)
--- runs.routine_id uuid REFERENCES routines (id) ON DELETE SET NULL
--- runs.priority smallint NOT NULL DEFAULT 0            -- Pro jumps the queue
--- ix_runs_queue ON runs (priority DESC, queued_at) WHERE status = 'queued'
--- ix_runs_routine ON runs (routine_id, queued_at DESC) WHERE routine_id IS NOT NULL
--- uq_runs_one_active_agent ON runs (user_id) WHERE status IN ('queued','running') AND kind IN ('fare_hunt','deep_research')
+-- runs: the routine link and the Pro priority (03 section 5.11)
+ALTER TABLE runs ADD COLUMN routine_id uuid REFERENCES routines (id) ON DELETE SET NULL;
+ALTER TABLE runs ADD COLUMN priority smallint NOT NULL DEFAULT 0;                -- Pro jumps the queue
+DROP INDEX ix_runs_queue;
+CREATE INDEX ix_runs_queue ON runs (priority DESC, queued_at) WHERE status = 'queued';
+CREATE INDEX ix_runs_routine ON runs (routine_id, queued_at DESC) WHERE routine_id IS NOT NULL;
+-- uq_runs_one_active_agent (one agent run at a time per account, scheduled or manual) already exists from Phase 1 and needs no change.
+
+-- Row-level security: trip-child policies (members read; owner and editors write), added to the generated loop of 03 section 6.4.
+ALTER TABLE routines ENABLE ROW LEVEL SECURITY;
+CREATE POLICY routines_select ON routines FOR SELECT USING (trip_id IN (SELECT visible_trip_ids()));
+CREATE POLICY routines_insert ON routines FOR INSERT WITH CHECK (can_edit_trip(trip_id));
+CREATE POLICY routines_update ON routines FOR UPDATE USING (can_edit_trip(trip_id)) WITH CHECK (can_edit_trip(trip_id));
+CREATE POLICY routines_delete ON routines FOR DELETE USING (can_edit_trip(trip_id));
 ```
 
-Plan row and products (from [03 section 11.1 and 11.2](../03-database-schema.md); the row is seeded
-hidden behind `tier_pro` and this pack activates it at launch):
+Plan row and products (from [03 section 11.1 and 11.2](../reference-full-spec/03-database-schema.md)). Phase 1 does not seed
+the `pro` row at all, so this migration inserts it hidden behind `tier_pro`; the launch step activates it:
 
 ```sql
 INSERT INTO plans (code, kind, name, rank, monthly_credits, credits_granted, credits_valid_days, duration_days, feature_flag_key, is_active, sort_order, limits) VALUES
@@ -136,7 +151,7 @@ INSERT INTO plans (code, kind, name, rank, monthly_credits, credits_granted, cre
 ON CONFLICT (code) DO NOTHING;
 
 INSERT INTO store_products (product_id, store, plan_code, period, price_minor, currency, trial_days, is_active) VALUES
-('wayfold_pro_monthly', 'apple', 'pro', 'month', 1199, 'USD', 0, false),     -- set is_active = true at launch (WF-105 step)
+('wayfold_pro_monthly', 'apple', 'pro', 'month', 1199, 'USD', 0, false),     -- set is_active = true at the launch step
 ('wayfold_pro_annual',  'apple', 'pro', 'year',  9900, 'USD', 0, false)
 ON CONFLICT (product_id) DO NOTHING;
 
@@ -147,6 +162,9 @@ ON CONFLICT (key) DO NOTHING;
 INSERT INTO kill_switches (key, description) VALUES
 ('ai.routines', 'Stop scheduled routines only (manual agent runs keep working)')
 ON CONFLICT (key) DO NOTHING;
+-- Phase 1 seeds serpapi_live_fares for plus and trip_pass only; Pro gets live tracking too.
+UPDATE feature_flags SET rules = jsonb_set(rules, '{tiers}', rules -> 'tiers' || '["pro"]'::jsonb) WHERE key = 'serpapi_live_fares';
+-- Notification kinds added to the ck_notifications_kind swap: routine_digest, routine_paused.
 ```
 
 The launch step is a single audited change in the admin console: `plans.is_active = true` for `pro`,
@@ -183,7 +201,7 @@ rolled credits expire at the end of the new period. The `grant_monthly_credits` 
 
 ## 4. API additions
 
-From [04 section 5.13](../04-api-spec.md), verbatim:
+From [04 section 5.13](../reference-full-spec/04-api-spec.md), verbatim:
 
 | Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
 |---|---|---|---|---|
@@ -221,8 +239,8 @@ Validation: `schedule_cron` must produce at least 12 hours between slots; at mos
 `batch_scan` is reserved for the system. The entitlement error for non-Pro is `403 entitlement_required`
 with reason `routines` (the paywall trigger `routine`).
 
-**Scheduler and worker behavior** ([02 sections 5.1 and 5.2](../02-architecture.md), [06 section
-5.10](../06-ai-agents-spec.md)):
+**Scheduler and worker behavior** ([02 sections 5.1 and 5.2](../reference-full-spec/02-architecture.md), [06 section
+5.10](../reference-full-spec/06-ai-agents-spec.md)):
 
 - The leader scans `routines.next_run_at` every 30 seconds with `FOR UPDATE SKIP LOCKED`, checks the
   kill switches (`ai.routines`, `ai.agent_runs`, `ai.all`), checks the account budget (reserve in the
@@ -236,7 +254,7 @@ with reason `routines` (the paywall trigger `routine`).
   aging so nothing starves; per account concurrency cap Pro 8 (Free 2, Plus and Family 4).
 - A run is admitted when the month has $0.80 of headroom even if the daily budget is lower; its spend
   still counts toward the day. The daily allowance for scheduled jobs is the monthly headroom divided by
-  the days left ([06 section 6.5](../06-ai-agents-spec.md)); the app says which routines will run less
+  the days left ([06 section 6.5](../reference-full-spec/06-ai-agents-spec.md)); the app says which routines will run less
   often.
 - After a finished run: if results changed, enqueue one digest (throttled by `last_digest_at` to one per
   routine per day); a run that saved nothing and failed for Wayfold's reasons refunds its credits.
@@ -318,7 +336,7 @@ as the free path. Copy never says "unlimited AI" or "unlimited live tracking".
 
 ## 8. AI additions
 
-Scheduled work reuses the Phase 1 agents ([06 sections 5.7 and 5.8](../06-ai-agents-spec.md)) and adds the
+Scheduled work reuses the Phase 1 agents ([06 sections 5.7 and 5.8](../reference-full-spec/06-ai-agents-spec.md)) and adds the
 scan and the digest.
 
 - **Scan (`routine_scan`, Batch).** One request per route and window: server tools with 6 searches and 3
@@ -395,7 +413,7 @@ Existing events used: `paywall_viewed {placement: routine}`, `purchase_started {
 ## 11. Tickets
 
 #### P2-055 Routines schema additions and plan seed [S, needs Phase 1 schema]
-- Description: migration `0107_pro_routines` (additions above), `pro` plan row, dark products, flags,
+- Description: migration `0022_pro_routines` (additions above), `pro` plan row, dark products, flags,
   kill switch.
 - Accept: empty to head and previous to head pass; with flags off nothing is exposed.
 

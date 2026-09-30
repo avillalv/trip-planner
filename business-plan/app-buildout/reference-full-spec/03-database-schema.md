@@ -1,6 +1,6 @@
 # 03. Database schema
 
-Part of the [Wayfold build specification](README.md). The shared decisions in the README override anything here. Table names are the canonical list from the README; the API spec ([04-api-spec.md](04-api-spec.md)) and UI spec ([05-ui-ux-spec.md](05-ui-ux-spec.md)) use these names and column names exactly.
+Part of the [Wayfold build specification](../README.md). The shared decisions in the README override anything here. Table names are the canonical list from the README; the API spec ([04-api-spec.md](04-api-spec.md)) and UI spec ([05-ui-ux-spec.md](05-ui-ux-spec.md)) use these names and column names exactly.
 
 Target: PostgreSQL 18 (native `uuidv7()`), SQLAlchemy 2 models, Alembic migrations, Render managed Postgres with point-in-time recovery. Every statement below is written to run as-is on a fresh database, in the order given in section 10.
 

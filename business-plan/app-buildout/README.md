@@ -34,6 +34,7 @@ feature packs you add afterwards, one at a time.
 | [phase-2-growth/](phase-2-growth/README.md) | Months 7 to 12 | Feature packs: Family plan, Group Trip Pass with polls and cost splitting, comments, email-forward import, flight status alerts, Pro with scheduled agents, the concierge lane, direct affiliate programs, native Android, memories and sharing cards |
 | [phase-3-scale/](phase-3-scale/README.md) | Year 2 and later | Feature packs: Stripe group payments, Wayfold for Advisors, partner guides, printed trip books, in-app hotel booking (LiteAPI), white-label and API, card and loyalty offers |
 | [brand/](brand/BRAND.md) | Now | Logo files, colors, type, icon rules |
+| [reference-full-spec/](reference-full-spec/01-product-spec.md) | Reference only | The original all-phases specification the phase folders were cut from. Do not build from it; the phase folders are current. |
 
 Each feature pack says exactly what it adds to the Phase 1 database, API, screens, billing and admin,
 so it can be built on top without rereading everything.
@@ -150,7 +151,7 @@ Provider spend is stored in micro-dollars. All timestamps are `timestamptz` in U
 5. AI never gives insurance, visa or legal advice; it links to official sources.
 6. Account deletion in the app, data export on every tier, and no data held hostage on downgrade.
 7. Secrets only in environment variables, never in the repo.
-8. No UI copy with em dashes; sentence case; plain verbs (see [05-ui-ux-spec.md](05-ui-ux-spec.md)).
+8. No UI copy with em dashes; sentence case; plain verbs (see [phase-1-launch/05-ui-ux-spec.md](phase-1-launch/05-ui-ux-spec.md)).
 
 ## Reusing the existing Trip Planner code
 
@@ -159,4 +160,4 @@ carries over: flight route and fare logic, itinerary and lodging features, prese
 the passport design tokens, Travelpayouts, Geoapify, Wikipedia and Frankfurter providers, the
 evidence rules in `services/agent_ingest.py`, and the agent prompts. What does not carry over:
 passcode auth, the Claude Code CLI runner and MCP bridge, APScheduler, Windows-only scripts, and
-Tailscale sharing. [02-architecture.md](02-architecture.md) maps each module.
+Tailscale sharing. [phase-1-launch/02-architecture.md](phase-1-launch/02-architecture.md) maps each module.

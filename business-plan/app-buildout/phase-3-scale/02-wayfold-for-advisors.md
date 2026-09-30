@@ -7,7 +7,7 @@ Part of [Phase 3: scale](README.md). Tickets P3-015 to P3-034. Written 2026-09-3
 | Feature flag | `advisor_workspaces` (created by this pack, off) |
 | Needs | 15 advisor interviews before any code. Terms and a data-processing addendum reviewed by a lawyer (light review). A part-time support and advisor-success contractor at about 100 seats. No funding. |
 | Builds on | Phase 1: presentation mode, PDF export, share links, roles, Stripe webhook endpoint, entitlement resolver, admin console. Phase 2: the [concierge lane](../phase-2-growth/07-concierge-lane.md) (creates `concierge_requests`, which this pack links to organizations). |
-| Source names | Phase 1 files call this "year 2" and "Phase 4", tickets WF-107 and WF-108. Spec of record: [07 section 11.4 (full spec)](../07-monetization-spec.md), [01 section 4.18 (full spec)](../01-product-spec.md), [03 section 5.19 (full spec)](../03-database-schema.md), [04 section 5.24 (full spec)](../04-api-spec.md). Those are summary level; this pack is the detailed contract. |
+| Source names | Phase 1 files call this "year 2" and "Phase 4", tickets WF-107 and WF-108. Spec of record: [07 section 11.4 (full spec)](../reference-full-spec/07-monetization-spec.md), [01 section 4.18 (full spec)](../reference-full-spec/01-product-spec.md), [03 section 5.19 (full spec)](../reference-full-spec/03-database-schema.md), [04 section 5.24 (full spec)](../reference-full-spec/04-api-spec.md). Those are summary level; this pack is the detailed contract. |
 
 ## 1. Goal and revenue case
 
@@ -96,7 +96,7 @@ As an advisor, I want to reuse a trip skeleton, so that I am not retyping.
 As an org admin, I want clear billing states, so that I am not surprised.
 - Failed payment: banner and email at once, Stripe smart retries for 14 days, seats stay active during retries, then `read_only`.
 - Cancel in the Stripe customer portal; access runs to the period end, then read-only and export only.
-- Renewal reminder email before each annual renewal and one-click cancel (state auto-renew rules, [10 section 3.10 (full spec)](../10-quality-security-launch.md)).
+- Renewal reminder email before each annual renewal and one-click cancel (state auto-renew rules, [10 section 3.10 (full spec)](../reference-full-spec/10-quality-security-launch.md)).
 
 **A-8. Leave and export.**
 As an advisor or a client, I want to take my data, so that I am not locked in.
@@ -399,7 +399,7 @@ Retention (03 section 8): `advisor_clients` and its children 24 months after the
 
 ## 5. API additions
 
-Base `/v1`, all behind the `advisor_workspaces` flag (404 when off, [04 section 5.24 (full spec)](../04-api-spec.md)). Advisor routes require a seat in the org; write routes require `status` active or past_due and the org not read-only.
+Base `/v1`, all behind the `advisor_workspaces` flag (404 when off, [04 section 5.24 (full spec)](../reference-full-spec/04-api-spec.md)). Advisor routes require a seat in the org; write routes require `status` active or past_due and the org not read-only.
 
 | Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
 |---|---|---|---|---|
@@ -478,7 +478,7 @@ States, accessibility and copy follow Phase 1 rules: loading skeletons, offline 
 - **Entitlement.** An active or past-due seat gives pro-level limits on the org's client trips only, plus 150 credits a month (03 default; tune in P3-033).
 - **Web only.** The iOS app neither sells nor links to seat purchase. Reviewer notes state that advisor sign-up is a separate business product on the web.
 - **Design partners.** A Stripe coupon (100% for a stated period) on a real subscription, so the billing and dunning paths are exercised; track `advisor_subscriptions.coupon_code`.
-- **Auto-renew rules.** Renewal reminder email before each annual renewal and one-click cancel in the portal ([10 section 3.10 (full spec)](../10-quality-security-launch.md)).
+- **Auto-renew rules.** Renewal reminder email before each annual renewal and one-click cancel in the portal ([10 section 3.10 (full spec)](../reference-full-spec/10-quality-security-launch.md)).
 
 ## 8. Admin additions
 

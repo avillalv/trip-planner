@@ -1,6 +1,6 @@
 # 05. UI and UX specification
 
-Part of the [Wayfold build specification](README.md). The shared decisions in the README are final and override anything here. Brand files are in [brand/](brand/BRAND.md). API names are in [04-api-spec.md](04-api-spec.md), tables in [03-database-schema.md](03-database-schema.md), pricing and entitlement logic in [07-monetization-spec.md](07-monetization-spec.md), AI behavior in [06-ai-agents-spec.md](06-ai-agents-spec.md).
+Part of the [Wayfold build specification](../README.md). The shared decisions in the README are final and override anything here. Brand files are in [brand/](../brand/BRAND.md). API names are in [04-api-spec.md](04-api-spec.md), tables in [03-database-schema.md](03-database-schema.md), pricing and entitlement logic in [07-monetization-spec.md](07-monetization-spec.md), AI behavior in [06-ai-agents-spec.md](06-ai-agents-spec.md).
 
 Written 2026-09-30. This file is the source of truth for how Wayfold looks, moves and reads. It starts from the design system that already exists in the Trip Planner repository (`frontend/src/index.css`, `frontend/src/components/ui/`, `frontend/src/components/brand/`) and keeps every token name, so the existing passport theme carries over with no rename. Where this file adds something new (for example `--tp-edge`), it says so.
 
@@ -158,7 +158,7 @@ The guilloche (`components/brand/guilloche.tsx`, deterministic from a seed) is t
 
 ## 3. Logo usage
 
-Files live in `brand/` (see [brand/BRAND.md](brand/BRAND.md)): `wayfold-logo.svg` (mark plus wordmark on light), `wayfold-logo-dark.svg`, `wayfold-mark.svg` (the app-icon tile), `wayfold-wordmark.svg`, `wayfold-app-icon.svg` and `wayfold-app-icon-1024.png`.
+Files live in `brand/` (see [brand/BRAND.md](../brand/BRAND.md)): `wayfold-logo.svg` (mark plus wordmark on light), `wayfold-logo-dark.svg`, `wayfold-mark.svg` (the app-icon tile), `wayfold-wordmark.svg`, `wayfold-app-icon.svg` and `wayfold-app-icon-1024.png`.
 
 The mark is an open passport on a navy rounded tile (`#15203a`). A burgundy route (`#8c1d40`) zigzags across the two pages and folds at the spine into the letter W, with a hollow start circle and a filled destination circle. The wordmark is "Wayfold" in Archivo, wide, navy on light and `#dde4ef` on dark.
 
