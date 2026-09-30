@@ -24,7 +24,7 @@ until 200 production agent runs are measured.
   turns, 30 fetches) had a $2.36 tail.
 - Cost control is a stack: API-first data, a shared research cache, tight caps, medium effort, a credit ledger, a dollar stop
   per run, and monthly and daily ceilings per account covering all provider spend, not only AI.
-- Scheduled agents are off until Premium. Scheduled work is API price checks plus cheap Batch scans.
+- Scheduled agents are off until Pro. Scheduled work is API price checks plus cheap Batch scans.
 - Every Free user gets one deep run for life, a taster, served from the shared cache when possible. It costs about $0.11 to $0.17
   per new Free user (section 5.7).
 - At the mix in section 8, AI cost is $0.064 to $0.078 per MAU with Pro live (year 2) and $0.055 to $0.067 before it: 24% to
@@ -136,12 +136,12 @@ Phase 0, foundations (3 to 4 weeks; gate: agents run on the Claude API with mete
    install until the API path is proven; replace `tests/fake_claude.py` with recorded Messages fixtures and port the tests.
 2. Add `ai_usage_events`, the price table, a single-user ledger and the spend ceilings before any outside user can trigger AI.
 3. Pilot with the owner's key on 200 runs. Compare our computed cost with the Anthropic Usage and Cost Admin API and the CLI's
-   `total_cost_usd`; set final caps from measured p50 and p95. This also gates Premium (5.6).
+   `total_cost_usd`; set final caps from measured p50 and p95. This also gates Pro (5.6).
 
 Phase 1, hosted web beta (6 to 8 weeks): add `user_id` and `workspace` to `runs`, `routines`, `agent_notes` and enforce
 ownership in the client tool executor (the model never supplies a trip or user id); turn on per-user credits, ceilings and the
 shared research cache; remove `claude_cli.py`, the bridge, the `psutil` watchdog code and the sign-in messaging from the hosted
-build. Phase 4, growth: Premium goes live (scheduled routines, per-account Batch scans).
+build. Phase 4, growth: Pro goes live (scheduled routines, per-account Batch scans).
 
 ## 4. AI feature catalogue and credit prices
 
@@ -158,7 +158,7 @@ each fetched page (`max_content_tokens: 5000`) up to about 6k.
 | 6 | Itinerary, whole trip (up to 14 days) | Sonnet 5.5, medium | Single call, structured output | 4k / 4k | 0 | $0.048 | 4 |
 | 7 | Destination brief (research question) | Sonnet 5.5, medium | Workflow, 1 request | 20k / 1.5k | 3 | $0.085 | 8 (1 from shared cache) |
 | 8 | Events and closures (research question) | Sonnet 5.5, medium | Workflow, 2 to 3 requests | 35k fresh + 25k cached / 3k | 5 | $0.155 | 8 (1 from shared cache) |
-| 9 | Fare scan, one route and window | Sonnet 5.5 low or Haiku 4.5, Batch | Single shot, strict schema | 25k / 1.5k | 6 | $0.0925 | Not sold: scheduled Premium work inside its ceiling |
+| 9 | Fare scan, one route and window | Sonnet 5.5 low or Haiku 4.5, Batch | Single shot, strict schema | 25k / 1.5k | 6 | $0.0925 | Not sold: scheduled Pro work inside its ceiling |
 | 10 | Deep agent run | Sonnet 5.5, medium | Agent loop | see 4.1 | up to 10 | $0.56 typical, $0.72 at caps | 40 (hard stop $0.80) |
 | 11 | Trip digest, weekly | Haiku 4.5, Batch | Single call | 3k / 500 | 0 | $0.003 | Not sold: included with Plus and up |
 
@@ -259,7 +259,7 @@ written lazily at first use, so idle accounts cost no writes.
 | Deep agent run | 20 | 10 | 10 | medium | $0.80 | 8-minute deadline; one run at a time per account |
 | Free taster run | 20 | 10 | 10 | medium | $0.80 | Same caps; once per Apple ID; no free-text instructions; cache first |
 | Research question | 3 requests | 5 in total | 8 | medium | $0.16 | 60k task budget |
-| Fare scan (Batch) | 5 | 6 | 3 | low | $0.15 (internal) | Premium only, scheduled |
+| Fare scan (Batch) | 5 | 6 | 3 | low | $0.15 (internal) | Pro only, scheduled |
 | Single calls | 1 | 0 | 0 | low or medium | the credit budget ($0.02; draft $0.08) | `max_tokens` per feature |
 
 The stop is checked after every response using our price table. When hit: stop, keep what was saved (ingest saves as it goes),
@@ -279,9 +279,14 @@ mark the run `partial` with "Stopped at the spending limit", and settle credits 
 - The ceilings cover all provider spend attributed to the account (Claude, SerpApi, Geoapify). When one is hit, live and AI
   actions stop and cached data keeps working; the message says when it resets or offers a credit pack. Purchased credits raise
   the ceiling by their cost value.
-- The ceiling sits below the sum of the parts for heavy users: a Plus user with all 40 credits ($0.80) and 90 live checks
-  ($1.35) would reach $2.15 against $1.75; Premium with 240 credits ($4.80) plus 20 scans ($1.85) would reach $6.65 against
-  $5.50. Scheduled scans and tracking pause first, user-started actions last.
+- The ceiling sits below the sum of the parts for heavy users: a Plus user with all 60 credits ($1.20) and 90 live checks
+  ($1.35) would reach $2.55 against $2.25; a Family with 150 credits ($3.00) and 150 live checks ($2.25) would reach $5.25
+  against $3.40; Pro with 240 credits ($4.80) plus 20 scans ($1.85) would reach $6.65 against $5.50. A Group Trip Pass with 80
+  credits ($1.60) and 90 checks ($1.35) reaches $2.95 against $3.60, so its ceiling only guards against price drift. Scheduled
+  scans and tracking pause first, user-started actions last.
+- The taster is ledgered apart from the Free ceiling: it neither needs headroom under $0.25 nor is blocked by the $0.05 daily
+  budget. It is held by its own $0.80 stop, a global daily taster budget (assumption: $25 a day, then the taster queues) and the
+  global breakers in 6.1.
 - `serpapi_budget.py` is generalised into `budget.py`: a daily allowance is the monthly headroom divided by days left, and each
   scheduled job needs it to cover the job. The app tells the user which routes will be checked less often.
 - A deep run needs monthly headroom for its $0.80 stop when it starts. The daily ceiling should not block an admitted run (on
@@ -289,17 +294,39 @@ mark the run `partial` with "Stopped at the spending limit", and settle credits 
 
 ### 5.5 Scheduled work
 
-No agent runs on a schedule before Premium, and the `flight_agent` twice-a-day default is removed. Before Premium, scheduled work
+No agent runs on a schedule before Pro, and the `flight_agent` twice-a-day default is removed. Before Pro, scheduled work
 is API price checks (SerpApi live-tracked routes within tier limits, Travelpayouts cached fares), the weekly digest on Haiku Batch,
-and shared-cache warming for popular destinations on Batch. With Premium, per-account Batch fare scans (about 20 a month) join,
+and shared-cache warming for popular destinations on Batch. With Pro, per-account Batch fare scans (about 20 a month) join,
 plus up to 3 scheduled agent routines per trip, each at most once a day; deep runs stay capped and metered. Scans run when API
 prices moved by more than 5% or the window is under 45 days away, not on a fixed clock.
 
-### 5.6 Premium launch gate
+### 5.6 Pro launch gate
 
-Premium stays behind a flag until 200 measured API runs average $0.60 or less per deep run, or more than 15% of Plus payers buy
+Pro stays behind a flag until 200 measured API runs average $0.60 or less per deep run, or more than 15% of Plus payers buy
 agent-run credits. The estimate ($0.56) meets the first test; only measurement counts. A run costs 40 credits whatever it costs
-us, so a higher measured cost lowers Premium's margin, not its promise (8.4).
+us, so a higher measured cost lowers Pro's margin, not its promise (8.4).
+
+### 5.7 The free taster run
+
+Each Apple ID gets one deep agent run for life on its own trip, to see the feature do real work. It needs a trip with dates, runs
+with no free-text instructions (so the result can be cached and shared), is served from the shared cache first, and is not
+consumed if it fails or saves nothing. It has the deep-run caps (20 turns, 10 searches, 10 fetches, $0.80 stop), sits on its own
+ledger line outside the Free ceiling, and is limited by a global daily taster budget and the circuit breakers in 6.1. Policy and
+the paywall that follows it are in [02-pricing-tiers.md](02-pricing-tiers.md), 4.7 and 9.1.
+
+Cost per new Free user, with h the cache hit rate, $0.05 a cached run, $0.56 an uncached run and 30% of new Free users
+redeeming it (assumption):
+
+- Expected cost per run = h x $0.05 + (1 - h) x $0.56. At h = 35% (the 10k MAU assumption) that is $0.0175 + $0.364 = $0.3815.
+- Per new Free user = 0.30 x $0.3815 = $0.1145, about **$0.11**.
+- With no cache: 0.30 x $0.56 = **$0.17**. With every run at the $0.80 stop and no cache: 0.30 x $0.80 = $0.24.
+- At the scale hit rates: h = 15% (1k MAU) gives 0.30 x (0.0075 + 0.476) = $0.1451; h = 35% (10k) gives $0.1145; h = 50% (100k)
+  gives 0.30 x (0.025 + 0.28) = $0.0915.
+
+So the taster costs about $0.11 to $0.17 per new Free user, $0.09 to $0.15 across the scale range. If the pilot shows a run
+averaging $0.70 instead of $0.56 the uncached figure becomes 0.30 x $0.70 = $0.21. The taster pays for itself if it lifts paid
+conversion by 0.4 to 0.6 points ([02-pricing-tiers.md](02-pricing-tiers.md), 4.7): measure it with an A/B split and cut the
+taster to cache-only results if it does not.
 
 ## 6. Cost controls
 
@@ -311,8 +338,8 @@ task budgets of 150k (agent), 60k (research) and 40k (scan) tokens, which make t
 stop. Haiku page summaries before Sonnet are not planned (`web_fetch` results go straight into Sonnet's context, so it would need our
 own fetch tool with the same domain checks) unless the pilot shows fetch content dominating cost. Per run: 20 turns and 8 minutes for a deep run, 5 turns for a scan, and the dollar stops in 5.3. Per account: the ceilings
 in 5.4, one deep run at a time, up to 3 workflow runs. Globally: a daily spend breaker pauses scheduled work if org spend today
-exceeds 1.5x the trailing 7-day mean; at 80% of the daily Anthropic limit Free-tier AI is disabled, at 95% everything but
-Premium. Vendor side: separate Anthropic workspaces for prod, staging and evals, with a monthly limit at about 120% of forecast.
+exceeds 1.5x the trailing 7-day mean; at 80% of the daily Anthropic limit Free-tier AI is disabled and the taster queues, at 95% everything but
+Pro. Vendor side: separate Anthropic workspaces for prod, staging and evals, with a monthly limit at about 120% of forecast.
 If the ledger cannot be read, paid calls fail closed.
 
 ### 6.2 Logging usage from `response.usage`
@@ -322,7 +349,7 @@ Per response, cost = input tokens x input price + cache writes x write price + c
 The row is stored in the same transaction that appends the run event, with `response.id`, `stop_reason` and any
 `stop_details.category`. A daily job pulls the Anthropic Usage and Cost Admin API (admin key kept apart from the runtime key),
 compares it with our sum, and alerts if the gap exceeds 3%. A dashboard shows cost per feature, tier and user, cache hit ratio
-and refusal rate. Alert on cost per active payer above $2 (Plus) or $6 (Premium).
+and refusal rate. Alert on cost per active payer above $2.50 (Plus), $3.75 (Family) or $6 (Pro), each just above the ceiling-plus-infrastructure worst case.
 
 ### 6.3 Prompt caching layout
 
@@ -362,9 +389,12 @@ The same destination, window and topic is researched once and served to everyone
 - **Poisoning.** A hostile page could steer a brief everyone sees. Mitigate with ingest validators, a Haiku classifier pass for
   instruction-like text before caching, plain-text notes with domain-only link labels, and a "report a problem" flag that sets
   `flagged` and re-runs the entry.
-- **Credits.** A hit costs the user 1 credit; the first requester of a cold key pays 8.
+- **Credits.** A hit costs the user 1 credit; the first requester of a cold key pays 8. A deep-run key works the same way (8
+  credits from the cache, 40 cold). The taster is served from a fresh deep-run key when one exists (about $0.05) and otherwise
+  runs live; it carries no free-text instructions, so its result is written back to the cache for the next taster.
 - **Hit rates** (assumptions to measure): research 30% at 1k MAU, 55% at 10k, 75% at 100k; fare scans 10%, 25%, 40%, since their
-  keys are more specific and overlap is thin at low volume.
+  keys are more specific and overlap is thin at low volume; taster and other deep runs 15%, 35%, 50%, since a run is keyed on
+  exact origin, destination and dates.
 
 ### 6.6 Fallback when a budget is exhausted
 
@@ -426,23 +456,34 @@ Added for multi-tenant use:
 
 Every input is an assumption to be replaced by measurement in the first 60 days.
 
-- **Mix of MAU**, from [02-pricing-tiers.md](02-pricing-tiers.md) (5.5): 96% Free, 4% paying. Per 10,000 MAU: 9,600 Free; 150 Plus
-  annual and 100 Plus monthly; 120 Trip Pass purchases a month; 30 Premium; 60 credit packs a month. The 1k and 100k columns
-  scale this by 0.1 and 10. Year 1 has no Premium: its 30 users become Plus payers (165 annual, 115 monthly), so payers stay at 4%.
-- **Free:** $0.02 per MAU: about 3 short answers ($0.012) plus 5% of Free users spending their 8 credits on one uncached
+- **Mix of MAU**, from [02-pricing-tiers.md](02-pricing-tiers.md) (5.5): 96% Free, 4% paying. Per 10,000 MAU: 9,600 Free; 140
+  Plus annual and 80 Plus monthly; 30 Family (20 annual, 10 monthly); 100 Trip Pass and 20 Group Trip Pass purchases a month; 30
+  Pro; 60 credit packs a month; and 1,500 new Free accounts a month (15% of MAU), each eligible for the taster. The 1k and 100k
+  columns scale this by 0.1 and 10. Year 1 has no Pro: its 30 users become Plus payers (150 annual, 100 monthly), so payers stay
+  at 4%.
+- **Free:** $0.022 per MAU: about 4 short answers ($0.016) plus 5% of Free users spending 8 of their 12 credits on one uncached
   research question ($0.006).
+- **Taster:** 30% of new Free accounts redeem it. The cost per new Free account is 0.30 x (h x $0.05 + (1 - h) x $0.56), with
+  cache hit rate h of 15%, 35% and 50% at 1k, 10k and 100k: $0.1451, $0.1145 and $0.0915 (5.7).
 - **Research question:** $0.12 uncached (between the $0.085 brief and the $0.155 events question), about $0.003 from the shared
   cache: $0.12 x (1 - h) + $0.003 x h, which is $0.085 at 1k, $0.056 at 10k and $0.032 at 100k.
-- **Plus:** a typical month uses 15 of 40 credits: one whole-trip draft ($0.048), one research question, three short answers
-  ($0.012). 80% of payers are typical; 20% are heavy and spend all 40 credits on one uncached deep run ($0.56).
+- **Plus:** a typical month uses 25 of 60 credits: one whole-trip draft ($0.048), two research questions, five short answers
+  ($0.02), so $0.068 plus two research questions. 80% of payers are typical; 20% are heavy: one uncached deep run ($0.56), two
+  research questions and four short answers ($0.016), so $0.576 plus two research questions.
+- **Family** (pooled 150 credits): typical uses 50: one draft, four research questions and 14 short answers ($0.056), so $0.104
+  plus four research questions. Heavy: three uncached deep runs ($1.68), three research questions and six short answers
+  ($0.024), so $1.704 plus three research questions. 80% typical, 20% heavy.
 - **Trip Pass** (per purchase): 25 of 40 credits: one draft, 2 research questions, 5 short answers ($0.02).
-- **Premium** (year 2): typical is 2 deep runs ($1.12), 5 research questions, 2 drafts and 5 short answers ($0.116), a weekly
+- **Group Trip Pass** (per purchase): 45 of 80 credits: two drafts ($0.096), three research questions and 13 short answers
+  ($0.052), so $0.148 plus three research questions.
+- **Pro** (year 2): typical is 2 deep runs ($1.12), 5 research questions, 2 drafts and 5 short answers ($0.116), a weekly
   digest ($0.012) and 20 Batch scans at $0.0925 less the fare-cache hit rate. Heavy is 6 deep runs ($3.36), the scans and the
   digest. 70% typical, 30% heavy.
 - **Credit packs:** 60 a month per 10k MAU (30 small, 24 medium, 6 large, 7,500 credits), about $5.00 net a pack; credits are
   spent within the month at an average 75% of their $0.02 budget (mostly deep runs), so $1.88 a pack.
-- **Net revenue** after Apple's 15%: Plus annual $2.12 a month, Plus monthly $4.24, Trip Pass $8.49 a purchase, Premium blended
-  $8.00, packs about $5.00 (all from 02). Affiliate income is excluded.
+- **Net revenue** after Apple's 15%: Plus annual $2.83 a month, Plus monthly $5.09, Family annual $4.25 and monthly $7.64, Trip
+  Pass $8.49 a purchase, Group Trip Pass $16.99, Pro blended $8.00, packs about $5.00 (all from 02). Affiliate income is
+  excluded.
 - **Scope:** AI cost only (Claude tokens and search fees); SerpApi, Geoapify, infrastructure and support are in 02 and
   [05-infrastructure.md](05-infrastructure.md). No Anthropic volume discount; Batch cache warming is not counted separately.
 
@@ -450,61 +491,82 @@ Every input is an assumption to be replaced by measurement in the first 60 days.
 
 | User | 1k MAU | 10k MAU | 100k MAU |
 |---|---|---|---|
-| Free, per month | $0.020 | $0.020 | $0.020 |
-| Plus typical, per month | $0.145 | $0.116 | $0.092 |
-| Plus blended (80/20), per month | $0.228 | $0.205 | $0.186 |
+| Free, per month | $0.022 | $0.022 | $0.022 |
+| Taster, per new Free account (one time) | $0.1451 | $0.1145 | $0.0915 |
+| Plus typical, per month | $0.238 | $0.179 | $0.133 |
+| Plus heavy, per month | $0.746 | $0.687 | $0.641 |
+| Plus blended (80/20), per month | $0.339 | $0.281 | $0.234 |
+| Family typical, per month | $0.444 | $0.327 | $0.233 |
+| Family heavy, per month | $1.959 | $1.871 | $1.801 |
+| Family blended (80/20), per month | $0.747 | $0.636 | $0.547 |
 | Trip Pass, per purchase | $0.238 | $0.179 | $0.133 |
-| Premium typical, per month | $3.34 | $2.91 | $2.52 |
-| Premium heavy, per month | $5.04 | $4.76 | $4.48 |
-| Premium blended (70/30), per month | $3.85 | $3.47 | $3.11 |
+| Group Trip Pass, per purchase | $0.403 | $0.315 | $0.245 |
+| Pro typical, per month | $3.34 | $2.91 | $2.52 |
+| Pro heavy, per month | $5.04 | $4.76 | $4.48 |
+| Pro blended (70/30), per month | $3.85 | $3.47 | $3.11 |
 | Credit pack | $1.88 | $1.88 | $1.88 |
 
-Premium arithmetic (fixed part $1.248 = 2 deep runs $1.12 + drafts and answers $0.116 + digest $0.012; scans $1.85 before the
+Research question cost at the three scales: $0.0849, $0.0557 and $0.0323 (RQ). Plus typical = $0.068 + 2 RQ = $0.238, $0.179,
+$0.133; Plus heavy = $0.576 + 2 RQ = $0.746, $0.687, $0.641. Family typical = $0.104 + 4 RQ = $0.444, $0.327, $0.233; Family heavy
+= $1.704 + 3 RQ = $1.959, $1.871, $1.801. Group Trip Pass = $0.148 + 3 RQ = $0.403, $0.315, $0.245. Blends: Plus at 10k is 0.8 x
+$0.179 + 0.2 x $0.687 = $0.281; Family at 10k is 0.8 x $0.327 + 0.2 x $1.871 = $0.636.
+
+Pro arithmetic (fixed part $1.248 = 2 deep runs $1.12 + drafts and answers $0.116 + digest $0.012; scans $1.85 before the
 cache, so $1.665, $1.39 and $1.11 at fare hit rates 0.10, 0.25 and 0.40): typical = $1.248 + scans + 5 research questions
-($0.425, $0.28, $0.16) = $3.34, $2.91, $2.52; heavy = $3.36 + scans + $0.012 = $5.04, $4.76, $4.48. Heavy Premium AI cost is
-under the $5.50 ceiling, but the ceiling also has to hold live checks, so scans are cut first.
+($0.425, $0.28, $0.16) = $3.34, $2.91, $2.52; heavy = $3.36 + scans + $0.012 = $5.04, $4.76, $4.48. Heavy Pro AI cost is
+under the $5.50 ceiling, but the ceiling also has to hold live checks, so scans are cut first. A heavy Family (three deep runs,
+$1.87 at 10k) is under its $3.40 pooled ceiling the same way, with live checks cut first.
 
 ### 8.3 Blended monthly totals
 
-Year 2, Premium live:
+Year 2, Pro live:
 
-| MAU | Free | Plus | Trip Pass | Premium | Packs | Total AI cost | Per MAU | Net revenue | AI share |
-|---|---|---|---|---|---|---|---|---|---|
-| 1,000 | 960 x $0.02 = $19 | 25 x $0.228 = $6 | 12 x $0.238 = $3 | 3 x $3.85 = $12 | 6 x $1.88 = $11 | $51 | $0.051 | $230 | 22% |
-| 10,000 | 9,600 x $0.02 = $192 | 250 x $0.205 = $51 | 120 x $0.179 = $21 | 30 x $3.47 = $104 | 60 x $1.88 = $113 | $482 | $0.048 | $2,301 | 21% |
-| 100,000 | 96,000 x $0.02 = $1,920 | 2,500 x $0.186 = $464 | 1,200 x $0.133 = $160 | 300 x $3.11 = $932 | 600 x $1.88 = $1,128 | $4,606 | $0.046 | $23,008 | 20% |
+| MAU | Free | Taster | Plus | Family | Trip Pass | Group Trip Pass | Pro | Packs | Total AI cost | Per MAU | Net revenue | AI share |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1,000 | 960 x $0.022 = $21 | 150 x $0.1451 = $22 | 22 x $0.339 = $7 | 3 x $0.747 = $2 | 10 x $0.238 = $2 | 2 x $0.403 = $1 | 3 x $3.85 = $12 | 6 x $1.88 = $11 | $78 | $0.078 | $269 | 29% |
+| 10,000 | 9,600 x $0.022 = $211 | 1,500 x $0.1145 = $172 | 220 x $0.281 = $62 | 30 x $0.636 = $19 | 100 x $0.179 = $18 | 20 x $0.315 = $6 | 30 x $3.47 = $104 | 60 x $1.88 = $113 | $705 | $0.071 | $2,693 | 26% |
+| 100,000 | 96,000 x $0.022 = $2,112 | 15,000 x $0.0915 = $1,373 | 2,200 x $0.234 = $515 | 300 x $0.547 = $164 | 1,000 x $0.133 = $133 | 200 x $0.245 = $49 | 300 x $3.11 = $933 | 600 x $1.88 = $1,128 | $6,407 | $0.064 | $26,930 | 24% |
 
-Year 1, before Premium (280 Plus per 10k, no Premium):
+Year 1, before Pro (250 Plus per 10k: 150 annual, 100 monthly; Family, Trip Pass and Group Trip Pass as above):
 
 | MAU | Total AI cost | Per MAU | Net revenue | AI share |
 |---|---|---|---|---|
-| 1,000 | $40 | $0.040 | $216 | 18% |
-| 10,000 | $384 | $0.038 | $2,156 | 18% |
-| 100,000 | $3,728 | $0.037 | $21,562 | 17% |
+| 1,000 | $67 | $0.067 | $258 | 26% |
+| 10,000 | $609 | $0.061 | $2,584 | 24% |
+| 100,000 | $5,544 | $0.055 | $25,837 | 21% |
 
 Reading the tables:
 
-- Free users are 38% to 42% of year-2 AI cost and about half in year 1. The $0.02 average is the number to guard, which is why
-  Free gets 8 credits and a $0.25 ceiling. Premium is 0.3% of users but 20% to 23% of year-2 AI cost; the deep run is the lever.
-- The shared cache is why cost per MAU falls (about 9% from 1k to 100k in year 2, 6% in year 1). Packs cost about 38% of their
-  net revenue in AI, more than any tier except heavy Premium, but stay profitable.
-- AI is 20% to 22% of net revenue in year 2 and 17% to 18% in year 1, at the 20% target by 100k MAU. The earlier draft found
-  29% to 42% with $0.08 credits, larger allowances and a $1.00 run stop. Adding SerpApi, Geoapify and infrastructure from 02
-  keeps all-in variable cost near the 44% (56% gross margin) it shows at 10k.
+- Free answers are 27% to 33% of year-2 AI cost and the taster is 21% to 28%, together 54% to 55%. The $0.022 average and the
+  taster are the two numbers to guard, which is why Free gets 12 credits and a $0.25 ceiling, and why the taster is served from
+  the cache first. Pro is 0.3% of users but about 15% of year-2 AI cost; the deep run is the lever.
+- The shared cache is why cost per MAU falls (about 18% from 1k to 100k, in year 2 and in year 1). Packs cost about 38% of their
+  net revenue in AI, more than any tier except heavy Pro and heavy Family, but stay profitable.
+- AI is 24% to 29% of net revenue in year 2 and 21% to 26% in year 1. The taster accounts for 5 to 8 points of that (8.2
+  points at 1k, 6.4 at 10k, 5.1 at 100k); without it the shares are 19% to 21% in year 2 and 16% to 17% in year 1, close to
+  the 20% target. The earlier ladder (Plus 40 credits, no Family, no taster) gave 20% to 22% in year 2 and 17% to 18% in year 1.
+  The higher prices and the Family and Group Trip Pass lines raise net revenue 17% at 10k ($2,693 against $2,301), which pays
+  for the larger allowances. Adding SerpApi, Geoapify and infrastructure from 02 keeps all-in variable cost near the 46% (54%
+  gross margin) it shows at 10k.
 
 ### 8.4 Sensitivity at 10k MAU, year 2
 
 | Change | AI cost per month | AI share of net revenue |
 |---|---|---|
-| Base case | $482 | 20.9% |
-| Every deep run hits the $0.80 stop (typical $0.56 becomes $0.80) | $546 | 23.7% |
-| Deep run typical falls to $0.40 | $439 | 19.1% |
-| No shared cache (hit rates 0%) | $530 | 23.1% |
-| Scans not batched ($0.125 each) | $496 | 21.6% |
-| Paid conversion 3% instead of 4% (revenue falls 25%, AI cost 15%) | $411 | 23.8% |
+| Base case | $705 | 26.2% |
+| Taster removed | $533 | 19.8% |
+| Taster redeemed by 50% of new Free users instead of 30% | $820 | 30.4% |
+| Every deep run hits the $0.80 stop (typical $0.56 becomes $0.80) | $840 | 31.2% |
+| Deep run typical falls to $0.40 | $615 | 22.8% |
+| No shared cache (hit rates 0%) | $858 | 31.9% |
+| Scans not batched ($0.125 each) | $720 | 26.7% |
+| Paid conversion 3% instead of 4% (revenue falls 25%, AI cost 11%) | $624 | 30.9% |
 
-Packs are assumed 60% deep runs in the first two rows. Even with every run at the hard stop, AI stays under a quarter of net
-revenue, because credits, packs and ceilings bound each account. The bigger risk is low conversion.
+The deep-run rows count 563 runs a month: 44 from heavy Plus users, 18 from heavy Family households, 96 from Pro, 112 from packs
+(60% of pack credits assumed to go to deep runs) and 293 uncached tasters (450 redeemed, 65% uncached). Each $0.24 above typical
+adds $135; each $0.16 below takes off $90. Without the cache the tasters alone add 0.30 x 0.35 x ($0.56 - $0.05) x 1,500 = $80.
+Even with every run at the hard stop, AI stays under a third of net revenue, because credits, packs and ceilings bound each
+account. The bigger risks are low conversion and a taster that does not lift it.
 
 ## 9. Where this plan changed the initial idea
 
@@ -514,14 +576,15 @@ revenue, because credits, packs and ceilings bound each account. The bigger risk
    `web_fetch` puts page content into Sonnet's context, unlike the CLI's small-model summary, so API runs may cost more than the
    owner's subscription runs suggest: pull p50 and p95 from `runs.cost_usd_est`, then re-baseline on the pilot.
 2. **Scheduled agents.** "$60 to $180 per trip" was right for `flight_agent` at its default. Final: scheduled agents are off until
-   Premium; scheduled work is API checks plus Batch scans. The fix was to take the agent off the schedule, not run it less.
-3. **Premium allowance.** "10 to 15 agent runs a month" does not fit at $11.99: at $0.56 that is $5.60 to $8.40 of $10.19 net, and
+   Pro; scheduled work is API checks plus Batch scans. The fix was to take the agent off the schedule, not run it less.
+3. **Pro allowance.** "10 to 15 agent runs a month" does not fit at $11.99: at $0.56 that is $5.60 to $8.40 of $10.19 net, and
    at $1.00 it is 98% to 147%. Final: $11.99 a month or $99 a year with 240 credits (about 6 deep runs, $3.36 typical or $4.32 at
    the capped cost), launching later behind the measured-cost gate.
 4. **Credits and ceilings.** The earlier draft used a $0.08 credit, grants of 15 and 80, a 40-credit top-up at $4.99, count-limited
-   Free answers and AI-only ceilings ($0.10, $2.00, $6.00). Final: a credit is up to $0.02 of provider spend; allowances 8, 40 and
-   240; packs $2.99 for 50, $6.99 for 150 and $14.99 for 400; Free has credits (granted lazily); ceilings Free $0.25, Plus $1.75,
-   Trip Pass $1.80, Premium $5.50 a month on all provider spend, with daily ceilings.
+   Free answers and AI-only ceilings ($0.10, $2.00, $6.00). Final: a credit is up to $0.02 of provider spend; allowances 12 (Free,
+   plus one taster run), 60 (Plus), 150 pooled (Family), 40 (Trip Pass), 80 (Group Trip Pass) and 240 (Pro); packs $2.99 for 50,
+   $6.99 for 150 and $14.99 for 400; Free has credits (granted lazily); ceilings Free $0.25 plus the taster, Plus $2.25, Family
+   $3.40 pooled, Trip Pass $1.80, Group Trip Pass $3.60, Pro $5.50 a month on all provider spend, with daily ceilings.
 5. **Batch API.** "50% off" is not 50% off for research and scans: the discount is on tokens and the search fee dominates (a scan
    saves 26%). Batch cannot serve multi-turn agents; it is for cache warming, digests, scans and evals.
 6. **Effort and budgets.** Thinking cannot be turned off on Sonnet 5.5 and the default effort is `high`; forgetting `medium` or
@@ -530,13 +593,28 @@ revenue, because credits, packs and ceilings bound each account. The bigger risk
 7. **Shared cache scope.** It never holds names, notes or free-text instructions, and jobs with instructions skip it: some hit rate
    traded for privacy and poisoning protection. The hit rates are assumptions.
 8. **AI share of revenue.** The earlier draft found 29% to 42% and called it too high. With the README's allowances, the $0.80
-   stop and a year-1 mix without Premium it is 17% to 22%.
+   stop and a year-1 mix without Pro it was 17% to 22%. With the new ladder (larger Plus and Family allowances, the taster) it is
+   21% to 29%: 19% to 21% in year 2 and 16% to 17% in year 1 without the taster, which adds 5 to 8 points. Higher prices and the
+   new Family and Group Trip Pass lines raise net revenue enough that the all-in margin at 10k MAU is 54% (61% with affiliate),
+   against 56% (64%) before.
+9. **The free taster.** The README gives every Free user one deep agent run for life, served from the shared cache when
+   possible, in place of a monthly free run (which would cost $1.34 a year per Free MAU at 20% monthly redemption). It costs
+   about $0.11 to $0.17 per new Free user (5.7) and is the largest single lever in the AI budget after Free answers: 24% of AI
+   cost at 10k MAU. The A/B test at launch decides whether it stays.
+10. **Family and Group Trip Pass.** Pooled credits (150) and a pooled ceiling ($3.40) for up to 6 people, and 80 credits and a
+    $3.60 ceiling per group pass for up to 12 travelers, are new. Their AI cost is small (8.2) next to the live-check spend under
+    the same ceilings.
+11. **Product name and Pro.** The product is Wayfold. Pro is renamed Pro everywhere, with the same price, credits and launch
+    gate.
 
 ## 10. Open items
 
-- Measure 200 real API agent runs before Premium goes live (README open question 4); above $0.60 average, keep Premium behind
+- Measure 200 real API agent runs before Pro goes live (README open question 4); above $0.60 average, keep Pro behind
   its flag and revisit its price. SerpApi and Geoapify terms and prices (README questions 1 and 2) change every ceiling's
   live-check share.
+- Measure the taster: redemption (assumed 30%), cache hit rate (15% at 1k, 35% at 10k, 50% at 100k), cost per redeemed run, and
+  the paid-conversion lift against an untasted control (it needs 0.4 to 0.6 points to pay for itself). Measure Family pool usage
+  against the $3.00 alert and Group Trip Pass spend against its $3.10 limits-based worst case.
 - Settled: an admitted deep run is exempt from the daily budget but counts toward it (see [02-pricing-tiers.md](02-pricing-tiers.md)
   section 6.1), and a deep run served from the shared cache costs 8 credits.
 - Legal and privacy: what trip data leaves our servers to Anthropic (destination, dates, party size only; no names, no notes),

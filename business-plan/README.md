@@ -19,7 +19,7 @@ so in a closing section, so the reasoning stays visible.
 - **Can it be profitable?** Yes, if AI is a metered, capped extra on top of cheap API features,
   and if the plan is sold per trip, not per month. Open-ended agents on a schedule would lose money on
   every active user. With the guardrails here, the illustrative month at 10,000 users has about
-  56% gross margin from paid plans alone, 64% with affiliate income, and the base-case scenario
+  54% gross margin from paid plans alone, 61% with affiliate income, and the base-case scenario
   breaks even around month 18 to 22.
 - **Is it a big business?** The consumer app alone is a solid side income (base case about $99k
   revenue in year 3, about a third of it affiliate commissions). Going well past that needs more
@@ -58,7 +58,7 @@ Every file uses these. If a number changes, change it here first.
 | Plus | $5.99 a month or $39.99 a year (7-day trial on annual only; annual is pre-selected). Unlimited trips (fair use 25), 3 live-tracked routes checked daily within 120 days of departure, 60 credits a month (enough for one deep agent run plus extras), collaboration |
 | Family | $8.99 a month or $59.99 a year. Everything in Plus for up to 6 people in one household, 150 pooled credits a month, 5 live routes. Apple Family Sharing stays off; members are invited in the app. |
 | Trip Pass (lead offer) | $9.99 once. Upgrades one trip for 90 days: 2 live routes, at most 60 live checks, 40 credits, up to 6 collaborators. Sold as a non-renewing subscription in StoreKit, bound to the trip on the server. |
-| Group Trip Pass | $19.99 once. Like Trip Pass for groups: up to 12 travelers, 80 credits, polls and cost splitting, room-block request. Non-renewing subscription bound to the trip. |
+| Group Trip Pass | $19.99 once. Like Trip Pass for groups: up to 12 travelers, 3 live routes (at most 90 live checks), 80 credits, polls and cost splitting, room-block request. Non-renewing subscription bound to the trip. |
 | Pro (later; was "Premium") | $11.99 a month or $99 a year. 240 credits a month (about 6 deep agent runs), 6 live routes, scheduled agent routines, priority queue. Launches when measured agent cost is $0.60 or less per run over 200 runs, or when more than 15% of Plus payers buy agent-run credits. |
 | Credit packs | $2.99 for 50, $6.99 for 150, $14.99 for 400. Purchased credits last 12 months and are spent last. |
 | Collaboration | Only the trip owner pays. Invitees join free and get the owner's tier on that trip. AI credits are charged to the person who starts the action. |
