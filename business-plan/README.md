@@ -53,7 +53,7 @@ Every file uses these. If a number changes, change it here first.
 
 | Decision | Value |
 |---|---|
-| Launch tiers | Free, Plus, Family, Trip Pass, Group Trip Pass, credit packs. Pro is built behind a flag and launches later. |
+| Launch tiers | Free, Plus, Family, Trip Pass, Group Trip Pass, credit packs. Pro is built behind a flag and launches later. At launch the Group Trip Pass has polls and manual cost splitting; collecting money through Stripe comes in Phase 4. |
 | Free | $0. 2 active trips, 1 cached-fare route per trip, 12 AI credits a month, one lifetime deep agent run as a taster (served from the shared cache when possible), 1 price alert on cached fares, joins others' trips free, affiliate booking links, "Before you go" checklist |
 | Plus | $5.99 a month or $39.99 a year (7-day trial on annual only; annual is pre-selected). Unlimited trips (fair use 25), 3 live-tracked routes checked daily within 120 days of departure, 60 credits a month (enough for one deep agent run plus extras), collaboration |
 | Family | $8.99 a month or $59.99 a year. Everything in Plus for up to 6 people in one household, 150 pooled credits a month, 5 live routes. Apple Family Sharing stays off; members are invited in the app. |
