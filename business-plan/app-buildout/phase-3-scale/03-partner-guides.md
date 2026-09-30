@@ -294,7 +294,7 @@ Extends [08 section 6.10 (full spec)](../reference-full-spec/08-admin-control-ce
 
 ## 9. Legal and compliance
 
-1. **Advertising disclosure.** US: FTC endorsement rules (16 CFR Part 255) require a clear, adjacent disclosure; the label sits in the card and the page. UK: "Ad" on the card (ASA and CMA). EU: commercial intent and paid placement are material information; every list states its ordering basis (here: recency) and that payment plays no part. The rules are already collected in [08-affiliate-revenue.md section 7.4](../../08-affiliate-revenue.md).
+1. **Advertising disclosure.** US: FTC endorsement rules (16 CFR Part 255) require a clear, adjacent disclosure; the label sits in the card and the page. UK: "Ad" on the card (ASA and CMA). EU: commercial intent and paid placement are material information; every list states its ordering basis (here: recency) and that payment plays no part. The rules are already collected in [08-affiliate-revenue.md section 7.4](../context/business-plan/08-affiliate-revenue.md).
 2. **Contract terms (one page, counsel reviews once).** No ranking influence anywhere; Wayfold's editorial control over what publishes; sponsor supplies or approves facts but cannot edit the label; no user-level data; aggregate reporting only; term and end date; fees and invoicing; removal for policy breach; sponsor warrants licences for images and claims.
 3. **Accuracy and claims.** The reviewer checks claims against sources; no health, safety, visa or insurance advice beyond official links; no claim that AI wrote a guide.
 4. **Images.** Licensed or supplied with written permission; credit shown; alt text required.

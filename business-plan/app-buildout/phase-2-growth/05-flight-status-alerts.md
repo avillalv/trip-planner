@@ -30,7 +30,7 @@ fact in the product.
 **Why now.**
 
 - Competitive reasons. TripIt users love real-time flight alerts (TripIt Pro, $49 a year, reported,
-  verify; [business plan](../../01-business-plan.md)) and email forwarding (pack 04). Flight alerts are
+  verify; [business plan](../context/business-plan/01-business-plan.md)) and email forwarding (pack 04). Flight alerts are
   the main reason frequent travelers keep paying for TripIt, so a planner that wants TripIt switchers
   must match them on alerts. Wanderlog and Trippy are known for group planning rather than flight status (reported, verify), so
   alerts plus groups together is a position neither is known to hold.
@@ -303,7 +303,7 @@ outside the AI credit ceilings and is limited by legs and cadence per tier (defa
 | Trip Pass | 8 | 15 minutes | yes |
 | Group Trip Pass | 12 | 15 minutes | yes |
 
-The competitive win plan ([win-plan.md](../../competitive-analysis/win-plan.md), F19) suggests "free for chosen
+The competitive win plan ([win-plan.md](../context/competitive-analysis/win-plan.md), F19) suggests "free for chosen
 flights on Plus and Trip Pass; free tier gets the first alert only (decide after cost is known)". This pack
 starts more generously for Free (2 legs, delay and cancellation only, slower cadence) because the alerts are
 the trust moment for TripIt switchers; if the bake-off shows a leg costs more than about $0.10, fall back to

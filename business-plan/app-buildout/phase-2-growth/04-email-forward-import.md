@@ -33,9 +33,9 @@ paste. Nothing is saved until the person confirms, exactly as with every other i
   calendar import and a paste box ("Coming from TripIt or Wanderlog?"); email forwarding removes the last
   bit of friction and is the single feature most likely to decide a TripIt user's trial week. TripIt Pro
   costs $49 a year and basic organizing from email is in its free tier (reported, verify;
-  [business plan](../../01-business-plan.md)), so a planner that cannot take a forwarded email looks
+  [business plan](../context/business-plan/01-business-plan.md)), so a planner that cannot take a forwarded email looks
   incomplete to that user. The competitive analysis
-  ([win plan](../../competitive-analysis/win-plan.md)) also lists email-forward import as Phase 2.
+  ([win plan](../context/competitive-analysis/win-plan.md)) also lists email-forward import as Phase 2.
 - It makes the AI import path cheap and habitual: structured data in airline and hotel emails is parsed
   deterministically at no cost, and only the messy remainder uses 1 credit.
 - It feeds pack 05: a forwarded flight confirmation carries the flight number and dates that cached fares

@@ -30,7 +30,7 @@ unread markers and quiet notifications.
   separate chat thread to say "is the museum open Monday?", which is where the decision gets lost.
 - Competitive reasons. Wanderlog and Trippy have group tools for collaborating inside the plan
   (reported, verify), and TripIt users' complaint about group coordination is the
-  same gap ([business plan](../../01-business-plan.md): group coordination "is still clumsy in TripIt
+  same gap ([business plan](../context/business-plan/01-business-plan.md): group coordination "is still clumsy in TripIt
   and Google Docs"). Comments are table stakes for the friend-group persona and the cheapest feature in
   Phase 2 (about a week).
 - It is free for everyone, including viewers and Free invitees, which makes the invite loop more

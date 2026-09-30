@@ -316,7 +316,7 @@ Extends the console ([08](../phase-1-launch/08-admin-control-center.md); source 
 3. **Content rights.** The buyer warrants they own or may print the photos and text; terms and a checkbox at order. The vendor's content rules apply (for example nudity and hate content); a vendor rejection refunds the buyer.
 4. **Maps.** Printed maps must carry the data licence attribution (OpenStreetMap and the map provider). The Geoapify terms for static maps in print are an open item in the Phase 1 plan and must be confirmed before P3-047 ships; fall back to a self-rendered map from OSM data with attribution.
 5. **Privacy.** The shipping address goes to the print vendor as a processor and is scrubbed 90 days after delivery; add the vendor to the processor list and sign its data-processing terms. Children's photos and names are the buyer's responsibility; other travelers' names appear only as in presentation mode, with private notes excluded.
-6. **Affiliate and sponsored content.** Not printed by default; if a partner link is printed, the commission sentence is printed with it (FTC, UK and EU rules in [08-affiliate-revenue.md section 7.4](../../08-affiliate-revenue.md)). Partner guide content is never printed.
+6. **Affiliate and sponsored content.** Not printed by default; if a partner link is printed, the commission sentence is printed with it (FTC, UK and EU rules in [08-affiliate-revenue.md section 7.4](../context/business-plan/08-affiliate-revenue.md)). Partner guide content is never printed.
 7. **Apple.** Web-only checkout; the app only opens the page. No claim in the app that a purchase unlocks anything.
 8. **Product description.** Accurate size, page count, paper and shipping estimate; no quality claim the vendor cannot support.
 

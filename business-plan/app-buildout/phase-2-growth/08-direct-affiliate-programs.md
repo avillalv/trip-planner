@@ -4,7 +4,7 @@ Part of [Phase 2: growth](README.md). Written 2026-09-30. Source definitions:
 [01 section 4.13](../reference-full-spec/01-product-spec.md), [03 sections 5.15 and 11.4](../reference-full-spec/03-database-schema.md),
 [04 section 5.21](../reference-full-spec/04-api-spec.md), [07 section 8](../reference-full-spec/07-monetization-spec.md),
 [08 section 6.7](../reference-full-spec/08-admin-control-center.md), WF-099 and WF-101 in [09](../reference-full-spec/09-build-roadmap.md), and
-the program research in [08 affiliate revenue](../../08-affiliate-revenue.md). Every commission rate,
+the program research in [08 affiliate revenue](../context/business-plan/08-affiliate-revenue.md). Every commission rate,
 cookie window and eligibility rule in this pack is **reported, verify** until read on the network's own
 terms page after sign-up (the official partner sites were blocked from the research environment).
 
@@ -31,7 +31,7 @@ Booking.com pages.
 - Affiliate income is the free tier's revenue and most of the early business: $0.10, $0.60 and $1.50 per
   monthly user per year in the three scenarios, and the kill rule stops the project if annualized
   affiliate income is under $0.20 per monthly user at month 9 after launch
-  ([business plan](../../01-business-plan.md)). Phase 2 is when measured clicks replace the model's
+  ([business plan](../context/business-plan/01-business-plan.md)). Phase 2 is when measured clicks replace the model's
   assumptions, so better rates and better tracking matter.
 - Lodging is about 60 percent of affiliate income. Vrbo and Hotels.com exist only through the Expedia
   Group program (Impact); Stay22's Link Swap is a second route at a lower rate. Pasted Vrbo links are
@@ -40,7 +40,7 @@ Booking.com pages.
 - Approvals need live traffic and screenshots of disclosure and placement, which only exist after
   Phase 1 launches. Applications have lead times, so they start the first week of Phase 2.
 - Competitive reasons. TripIt sells subscriptions and Wanderlog is ad supported (reported, verify;
-  [business plan](../../01-business-plan.md)); Wayfold's public promise is "no ads, honest labels", so
+  [business plan](../context/business-plan/01-business-plan.md)); Wayfold's public promise is "no ads, honest labels", so
   better direct program rates are the way to earn more per click without adding any placement.
 - The Skyscanner relationship is also a hedge: the risk register lists SerpApi terms as a medium
   likelihood risk to live fares, and a licensed fare source would remove it.
@@ -292,7 +292,7 @@ Expected impact (assumptions; replace with measured numbers when available):
 | Lever | Reported rate | Effect |
 |---|---|---|
 | Vrbo and Hotels.com through Expedia Group (new route) | Vrbo $11 to $36 and Hotels.com 6 to 16 percent per booking | Adds a category Phase 1 could only link plainly |
-| Booking.com direct versus Travelpayouts (4 percent, about $24) | 4 percent or a tiered share; net lodging commission $19 to $24 | About $0.73 per monthly user per year against $0.63 modeled in the sensitivity table ([08 affiliate revenue](../../08-affiliate-revenue.md) section 9), if approved |
+| Booking.com direct versus Travelpayouts (4 percent, about $24) | 4 percent or a tiered share; net lodging commission $19 to $24 | About $0.73 per monthly user per year against $0.63 modeled in the sensitivity table ([08 affiliate revenue](../context/business-plan/08-affiliate-revenue.md) section 9), if approved |
 | Skyscanner | GBP 0.07 to 0.30 per flight click | Small cash; the value is licensed fare data |
 | Airalo | 10 to 12 percent, about $2 to $3 per sale | Small, clean tracking |
 | GetYourGuide direct | about 8 percent | Replaces the aggregator rate on a share of tours |

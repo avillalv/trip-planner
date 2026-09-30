@@ -5,9 +5,10 @@ planner for iOS and the web that earns money from subscriptions, trip passes, AI
 affiliate commissions and a concierge booking lane, without ads and without making the product
 worse for free users.
 
-It is written to be handed to a developer (or to Claude Code) with no other context. The parent
-folder, [../](../README.md), holds the business reasoning; you do not need it to build, but it
-explains why each decision was made.
+It is written to be handed to a developer (or to Claude Code) with no other context, and it is
+self-contained: copy this whole folder into a new repository and start with
+[prompts/KICKOFF.md](prompts/KICKOFF.md). The business reasoning behind each decision is in
+[context/](context/business-plan/README.md).
 
 ![Wayfold logo](brand/wayfold-logo-preview.png)
 
@@ -34,13 +35,15 @@ feature packs you add afterwards, one at a time.
 | [phase-2-growth/](phase-2-growth/README.md) | Months 7 to 12 | Feature packs: Family plan, Group Trip Pass with polls and cost splitting, comments, email-forward import, flight status alerts, Pro with scheduled agents, the concierge lane, direct affiliate programs, native Android, memories and sharing cards |
 | [phase-3-scale/](phase-3-scale/README.md) | Year 2 and later | Feature packs: Stripe group payments, Wayfold for Advisors, partner guides, printed trip books, in-app hotel booking (LiteAPI), white-label and API, card and loyalty offers |
 | [brand/](brand/BRAND.md) | Now | Logo files, colors, type, icon rules |
+| [prompts/](prompts/README.md) | Now | The 28 build prompts that build all of Phase 1 in order, the orchestrator rules, and the kickoff prompt ([prompts/KICKOFF.md](prompts/KICKOFF.md)) |
+| [context/](context/business-plan/README.md) | Background | The business plan and competitive analysis this build came from, so this folder stands alone in a new repository |
 | [reference-full-spec/](reference-full-spec/01-product-spec.md) | Reference only | The original all-phases specification the phase folders were cut from. Do not build from it; the phase folders are current. |
 
 Each feature pack says exactly what it adds to the Phase 1 database, API, screens, billing and admin,
 so it can be built on top without rereading everything.
 
 Competitive context for these choices (TripIt, Trippy, Wanderlog and others) is in
-[../competitive-analysis/](../competitive-analysis/README.md).
+[context/competitive-analysis/](context/competitive-analysis/README.md).
 
 ## Shared decisions (every file follows these)
 

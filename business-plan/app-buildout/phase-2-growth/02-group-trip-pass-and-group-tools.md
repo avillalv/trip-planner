@@ -28,10 +28,10 @@ splitting, no money moves), and, on the Group Trip Pass, up to 12 travelers and 
   expense splitting), so a collaborative planner without polls or costs looks incomplete to the
   friend-group buyer. Splitwise Pro (the cost-splitting anchor, $39.99 a year, reported) shows people
   will pay for splitting alone. The business plan calls group coordination "still clumsy in TripIt and
-  Google Docs" ([business plan](../../01-business-plan.md)). Wayfold's edge is that polls can vote on
+  Google Docs" ([business plan](../context/business-plan/01-business-plan.md)). Wayfold's edge is that polls can vote on
   real objects (a shortlisted stay, a date range) and the winner applies back to the plan.
 - Revenue. The Group Trip Pass is 8 percent of payers in the pricing model at $19.99 with a 78 to 92
-  percent margin ([09 revenue expansion](../../09-revenue-expansion.md) section 2.3). It is the clean
+  percent margin ([09 revenue expansion](../context/business-plan/09-revenue-expansion.md) section 2.3). It is the clean
   answer to "one trip, twelve people, no subscription".
 - The room-block request is a lead form routed to the host agency (see pack 07); it adds a reason to
   buy the pass for destination weddings and events.

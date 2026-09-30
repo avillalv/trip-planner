@@ -2,7 +2,7 @@
 
 Part of [Phase 2: growth](README.md). Written 2026-09-30. Source definitions:
 [01 section 3.11 and F-AFT-1 and F-AFT-2](../reference-full-spec/01-product-spec.md), [01 F-AFF-5](../reference-full-spec/01-product-spec.md),
-the post-trip compensation section of [08 affiliate revenue](../../08-affiliate-revenue.md)
+the post-trip compensation section of [08 affiliate revenue](../context/business-plan/08-affiliate-revenue.md)
 (sections 3.12 and 6). The full specs define the delay prompt and the wrap-up card only; memories and the
 "Year in travel" card are new in this pack and follow the same conventions.
 

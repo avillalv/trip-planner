@@ -13,7 +13,7 @@ Part of [Phase 3: scale](README.md). Tickets P3-001 to P3-014. Written 2026-09-3
 
 **Goal.** Let the organizer of a group trip collect each traveler's share of a real-world cost (a villa deposit, a tour, a dinner) by card, without Wayfold ever being the place the money sits, and sell an events workspace (up to 40 travelers) for offsites, destination weddings and similar. Both extend the group features that already drive Group Trip Pass sales. Payments are a growth driver first and a small margin second.
 
-The two layers come from [09 section 3.2](../../09-revenue-expansion.md) (layers 3 and 4):
+The two layers come from [09 section 3.2](../context/business-plan/09-revenue-expansion.md) (layers 3 and 4):
 
 | Layer | What | Price to the user | Channel |
 |---|---|---|---|
@@ -337,7 +337,7 @@ This pack is the most legally exposed lane in Phase 3. Nothing is built until P3
 4. **Tax.** Stripe issues tax forms for Express accounts where required (verify); counsel and an accountant confirm Wayfold's own reporting and whether the events workspace needs sales tax collection in more states.
 5. **Sanctions and fraud.** Stripe screens connected accounts; add Wayfold velocity caps (D6), a block on collections from suspended users, and a review queue for first collections above a threshold.
 6. **Stripe platform review.** Stripe must approve the use case; describe it accurately (group trip cost sharing) and do not describe Wayfold as a marketplace that sells trips.
-7. **Apple.** Real-world trip costs are outside In-App Purchase (3.1.3(e) as quoted in 07 section 10.3; re-read on the submission day). The events workspace is a digital feature: web only, no price or purchase link in the iOS app, reviewer notes explain it. If Apple's link-out rules change ([09 risk 7](../../09-revenue-expansion.md)), revisit.
+7. **Apple.** Real-world trip costs are outside In-App Purchase (3.1.3(e) as quoted in 07 section 10.3; re-read on the submission day). The events workspace is a digital feature: web only, no price or purchase link in the iOS app, reviewer notes explain it. If Apple's link-out rules change ([09 risk 7](../context/business-plan/09-revenue-expansion.md)), revisit.
 8. **Privacy.** We store Stripe ids, amounts and names from the trip's people, never card data. Payer emails for people without accounts are kept only until the settlement is final, then nulled. Add Stripe to the processor list already in the privacy policy.
 9. **Consumer law.** Show price, fees and refund terms before payment; keep the sentence "Payments are handled by Stripe" on every payment page; no dark patterns.
 

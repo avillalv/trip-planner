@@ -26,10 +26,10 @@ What Phase 2 adds:
 | Reach and retention | Native Android, memories, "Year in travel" card | Android invitees, off-season reasons to open the app, a shareable asset |
 
 Competitive context: the competitive analysis is in
-[../../competitive-analysis/](../../competitive-analysis/README.md) (see its
-[win plan](../../competitive-analysis/win-plan.md)), the business plan's competitor table and positioning in
-[../../01-business-plan.md](../../01-business-plan.md) and the pricing rationale in
-[../../02-pricing-tiers.md](../../02-pricing-tiers.md). Competitor facts in the packs are marked "reported,
+[../context/competitive-analysis/README.md](../context/competitive-analysis/README.md) (see its
+[win plan](../context/competitive-analysis/win-plan.md)), the business plan's competitor table and positioning in
+[../context/business-plan/01-business-plan.md](../context/business-plan/01-business-plan.md) and the pricing rationale in
+[../context/business-plan/02-pricing-tiers.md](../context/business-plan/02-pricing-tiers.md). Competitor facts in the packs are marked "reported,
 verify" where they come from those files or from search results.
 
 ## 2. The packs
@@ -430,7 +430,7 @@ tell me if you would rather move any of them out of Phase 2. Sizes and order of 
 
 #### P2-106 "Paste your group chat" to draft a plan [M, month 8, needs Phase 1 `draft_trip`, evidence rules, consent]
 - Source: Phase 1 README ("Early Phase 2: paste your group chat to draft a plan, answers Trippy") and
-  [win plan F6](../../competitive-analysis/win-plan.md).
+  [win plan F6](../context/competitive-analysis/win-plan.md).
 - Description: paste or share-sheet exported chat text into a `draft_trip`-style action (4 credits, Sonnet) that
   lists dates mentioned, candidate places, stays with links (kept as plain text, never fetched), who said what
   about each (first names only) and a "still undecided" list; the owner accepts items into the trip. Names are
@@ -441,7 +441,7 @@ tell me if you would rather move any of them out of Phase 2. Sizes and order of 
 - Tests: extraction evals, redaction, credit settle and refund, privacy assertions.
 
 #### P2-107 Repair-a-day [M, month 10, needs Phase 1 itinerary and places data, pack 05 for the proactive part]
-- Source: Phase 1 README ("repair-a-day when plans change") and [win plan F8](../../competitive-analysis/win-plan.md).
+- Source: Phase 1 README ("repair-a-day when plans change") and [win plan F8](../context/competitive-analysis/win-plan.md).
 - Description: on any day, "Repair this day" shows the reason (for example "closed Mondays, source, checked
   date"), proposes 2 swaps with travel times, and applies only after the user accepts; one tap undoes it;
   1 credit (`draft_day` price). The proactive version prompts on the trip when a tracked flight changes
@@ -512,10 +512,10 @@ widgets, a Wayfold MCP server, documents attached to items, and an "export to Ch
   [09](../phase-1-launch/09-build-roadmap.md) and
   [10](../phase-1-launch/10-quality-security-launch.md). Where a Phase 1 file does not define something a
   pack needs, the pack creates it with `IF NOT EXISTS` statements or says so.
-- Business reasoning: [../../01-business-plan.md](../../01-business-plan.md),
-  [../../02-pricing-tiers.md](../../02-pricing-tiers.md),
-  [../../08-affiliate-revenue.md](../../08-affiliate-revenue.md),
-  [../../09-revenue-expansion.md](../../09-revenue-expansion.md).
+- Business reasoning: [../context/business-plan/01-business-plan.md](../context/business-plan/01-business-plan.md),
+  [../context/business-plan/02-pricing-tiers.md](../context/business-plan/02-pricing-tiers.md),
+  [../context/business-plan/08-affiliate-revenue.md](../context/business-plan/08-affiliate-revenue.md),
+  [../context/business-plan/09-revenue-expansion.md](../context/business-plan/09-revenue-expansion.md).
 - Differences found between the full specs, the Phase 1 files and the Phase 3 packs, which the packs resolve (so the builder is not surprised):
   the full specs call Stripe group payments "Phase 4" while the README scope says Phase 3 (Phase 3 is
   used here); the full roadmap sells Family and the Group Trip Pass at launch while the Phase 1 scope puts

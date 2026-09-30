@@ -1807,7 +1807,7 @@ Only the page behavior is specified here; hosting and SEO plumbing are in
   - No affiliate links or partner cards, no competitor logos (names as plain text), no
     disparaging words and no "best" claims.
   - Content is reviewed text in the repository, written by people from
-    [../../competitive-analysis/README.md](../../competitive-analysis/README.md); nothing is scraped
+    [../context/competitive-analysis/README.md](../context/competitive-analysis/README.md); nothing is scraped
     or fetched from competitor sites by the server.
   - Pages are indexable, with a plain title ("Wayfold and TripIt"), a description and a canonical
     URL. The comparison basis statement shows on UK and EU storefronts (section 6.4).

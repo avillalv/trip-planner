@@ -5,7 +5,7 @@ Part of [Phase 2: growth](README.md). Written 2026-09-30. Source definitions:
 [04 section 5.18](../reference-full-spec/04-api-spec.md), [05 section 6.22](../reference-full-spec/05-ui-ux-spec.md),
 [07 section 9](../reference-full-spec/07-monetization-spec.md), [08 sections 6.8](../reference-full-spec/08-admin-control-center.md),
 [10 section 3.8](../reference-full-spec/10-quality-security-launch.md), WF-104 and WF-103 in [09](../reference-full-spec/09-build-roadmap.md),
-and the business case in [09 revenue expansion](../../09-revenue-expansion.md) section 3.1.
+and the business case in [09 revenue expansion](../context/business-plan/09-revenue-expansion.md) section 3.1.
 
 | Item | Value |
 |---|---|
@@ -28,7 +28,7 @@ share of the agency commission. It is always optional, always disclosed and neve
 - It is the highest value revenue stream per trip that does not depend on scale: the model assumes $90
   per completed booking on average (85 percent hotels at $55, 10 percent cruises at $290, 5 percent
   packages at $225), $1.6k in year 1 and $27k in year 3 at a cap of about 300 bookings a year solo
-  ([09 revenue expansion](../../09-revenue-expansion.md) section 3.1; reported, verify).
+  ([09 revenue expansion](../context/business-plan/09-revenue-expansion.md) section 3.1; reported, verify).
 - Competitive reasons. To our knowledge none of TripIt, Wanderlog or Trippy offers a human booking lane
   inside a planner (verify before launch copy); it is a differentiator for couples and families who are planning a honeymoon, a milestone
   trip or a cruise and would otherwise leave to book elsewhere. It also gives the room-block request
@@ -338,7 +338,7 @@ the lane (reported, verify every split):
 ### Long-lead checklist (start in month 7; none of it is engineering)
 
 1. Email Fora, Outside Agents and KHM and ask in writing whether app-routed leads are allowed
-   ([09 revenue expansion](../../09-revenue-expansion.md) open question 2).
+   ([09 revenue expansion](../context/business-plan/09-revenue-expansion.md) open question 2).
 2. Choose the host agency; sign the independent contractor agreement; confirm accreditation (IATA, ARC,
    CLIA or TRUE) through the host.
 3. Seller-of-travel: counsel confirms whether forwarding a request to a human advisor needs registration in

@@ -34,7 +34,7 @@ subscriptions, trip passes, credit packs and affiliate links. Everything else wa
 
 ### Added from the competitive analysis
 
-These come from [../../competitive-analysis/win-plan.md](../../competitive-analysis/win-plan.md)
+These come from [../context/competitive-analysis/win-plan.md](../context/competitive-analysis/win-plan.md)
 section 9 and are part of Phase 1:
 
 | Feature | Effort | Beats |

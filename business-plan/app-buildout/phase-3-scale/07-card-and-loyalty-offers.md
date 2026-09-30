@@ -9,7 +9,7 @@ Part of [Phase 3: scale](README.md). Tickets P3-082 to P3-091. Written 2026-09-3
 | Feature flags | `card_offers` and `loyalty_offers` (created by this pack, off) |
 | Needs | A lawyer on retainer (consumer finance advertising, per-offer copy review). A specialist publisher network that will accept the app, and issuer approval of every page of copy. A compliance owner: part of the founder's time at first, a part-time person later. No engineering hire, no funding. |
 | Builds on | Phase 1: Before you go checklist (the `money` item), affiliate system (`/go`, conversions, disclosure component, link checker), admin console and audit log. Phase 2: [direct affiliate programs](../phase-2-growth/08-direct-affiliate-programs.md) (adds the `direct` and `impact` networks). |
-| Source names | Phase 1 files say "credit cards, VPNs and Amazon product data" are out of scope and that cards are revisited at about 100k MAU with counsel ([01 section 7](../phase-1-launch/01-product-spec.md), [09 section 3.8](../../09-revenue-expansion.md), [08-affiliate-revenue.md section 4.3](../../08-affiliate-revenue.md)). No ticket existed; this pack is new detail. |
+| Source names | Phase 1 files say "credit cards, VPNs and Amazon product data" are out of scope and that cards are revisited at about 100k MAU with counsel ([01 section 7](../phase-1-launch/01-product-spec.md), [09 section 3.8](../context/business-plan/09-revenue-expansion.md), [08-affiliate-revenue.md section 4.3](../context/business-plan/08-affiliate-revenue.md)). No ticket existed; this pack is new detail. |
 
 ## 1. Goal and revenue case
 

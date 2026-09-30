@@ -29,11 +29,11 @@ links for grandparents.
   Couples who outgrow the free "invite 1 collaborator" rule and families with grandparents have a
   clear reason to upgrade without a pass per trip.
 - Competitive reasons. Wanderlog Pro ($39.99 a year) and TripIt Pro ($49 a year) are per person plans
-  (reported, verify; see [the business plan](../../01-business-plan.md) competitor table), so a
+  (reported, verify; see [the business plan](../context/business-plan/01-business-plan.md) competitor table), so a
   household that wants everyone to have offline, live tracking and AI pays once per person. A pooled
   household plan is a simple, honest price point against them.
 - Margin watch. The weakest cell in the pricing model is Family annual
-  ([09 revenue expansion](../../09-revenue-expansion.md) section 2): alert at $3.00 of pooled spend
+  ([09 revenue expansion](../context/business-plan/09-revenue-expansion.md) section 2): alert at $3.00 of pooled spend
   and reprice if more than 25 percent of families sit near the ceiling. This pack builds that alert.
 
 ## 2. User stories and acceptance criteria

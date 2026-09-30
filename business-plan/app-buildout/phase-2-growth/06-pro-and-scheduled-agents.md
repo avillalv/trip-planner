@@ -26,7 +26,7 @@ that watch fares or research a destination on a schedule and send one digest whe
 - Phase 1 agents are manual and cost 40 credits a run. Deal hunters (persona P4) run the same hunt
   again and again; a schedule is the natural upgrade and the reason for a higher price.
 - Pro is the anchor that makes Plus look fair. It is priced well above rivals' annual plans ($99 against
-  Wanderlog Pro $39.99 and TripIt Pro $49, reported, verify; [business plan](../../01-business-plan.md)
+  Wanderlog Pro $39.99 and TripIt Pro $49, reported, verify; [business plan](../context/business-plan/01-business-plan.md)
   open question 3), so it launches only when the economics are proven, not on a date.
 - Everything it needs already exists dark from Phase 1 (routines table, scheduler, priority on runs); this
   pack finishes, tests and sells it.
@@ -309,7 +309,7 @@ as the free path. Copy never says "unlimited AI" or "unlimited live tracking".
   (`owner_lapsed`) and keeps data.
 - Credits and economics: allowance 240 a month, rollover cap 240, ceiling $5.50 a month and $1.25 a day.
   The pricing model's margin for Pro is thin only if the ceiling is hit every month, which the usage
-  pattern makes unlikely ([09 revenue expansion](../../09-revenue-expansion.md) section 2). Scans are
+  pattern makes unlikely ([09 revenue expansion](../context/business-plan/09-revenue-expansion.md) section 2). Scans are
   not sold and run inside the Pro ceiling.
 - The launch gate is a business decision, not a date. Record the numbers in the admin flag screen at
   launch. If neither condition is met by the end of Phase 2, Pro stays dark and credit packs carry the
