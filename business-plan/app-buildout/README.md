@@ -55,6 +55,13 @@ below, so the database, API and screens line up.
 | `credits_50` / `credits_150` / `credits_400` | Credit packs | $2.99 / $6.99 / $14.99 | consumable | purchased credits last 12 months and are spent last |
 | `advisor_seat` | Wayfold for Advisors (year 2) | $29 a seat a month, $24 annual | Stripe on the web, not the App Store | client workspaces, branded presentations, proposals, commission tracking |
 
+Group tools: polls and manual cost splitting are in every paid plan (`plus`, `family`, `pro`) and
+both passes; Free users use them on trips that have them. The Group Trip Pass adds up to 12 travelers
+and the room-block request. Collecting money through Stripe (Phase 4) is for `group_trip_pass` and `pro`.
+
+Launch scope: `free`, `plus`, `family`, `trip_pass`, `group_trip_pass` and credit packs at launch;
+`pro` behind a flag until its launch gate; Stripe group payments, advisors, print and LiteAPI in Phase 4.
+
 Rules: a trip's capabilities are the best of its owner's tier and any pass on that trip.
 Invitees join free and get the trip's capabilities on that trip. AI credits are charged to the
 person who starts the action (Family draws from the household pool). Apple Family Sharing is off.
