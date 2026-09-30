@@ -1,6 +1,7 @@
 import type { Quote } from '@/lib/api/flights'
 import { daysBetween, parseDate } from '@/lib/dates'
 import { seriesFor } from '@/lib/price-sources'
+import { flightNumbersText } from './route-text'
 
 /** Total price for both travelers, in whichever currency it's known (home if converted, else quoted). */
 export function priceOf(q: Quote): number {
@@ -78,7 +79,8 @@ const COMPARATORS: Record<SortKey, (a: Quote, b: Quote, dir: SortDir) => number>
   flight: (a, b, dir) =>
     directional((q: Quote) => q.origin, text)(a, b, dir) ||
     directional((q: Quote) => q.destination, text)(a, b, dir) ||
-    directional((q: Quote) => q.depart_at_local?.slice(11, 16) ?? null, text)(a, b, dir),
+    directional((q: Quote) => q.depart_at_local?.slice(11, 16) ?? null, text)(a, b, dir) ||
+    directional(flightNumbersText, text)(a, b, dir),
   dates: (a, b, dir) =>
     directional((q: Quote) => q.depart_date, text)(a, b, dir) || directional((q: Quote) => q.return_date, text)(a, b, dir),
   nights: directional(nightsOf, numeric),

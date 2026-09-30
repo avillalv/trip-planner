@@ -20,7 +20,7 @@ import {
   type Sort,
   type SortKey,
 } from './options-view'
-import { quoteDateRange, quoteDates, stopsText } from './route-text'
+import { flightNumbersText, layoverText, quoteDateRange, quoteDates, stopsText } from './route-text'
 import { SourceTag } from './source-tag'
 
 type Props = {
@@ -59,6 +59,18 @@ function Price({ quote, currency }: { quote: Quote; currency: string }) {
     <>
       <span className="type-data text-base font-bold">{formatMoney(total, shown)}</span>
       <span className="type-data block text-xs text-ink-soft">{formatMoney(total / quote.passengers, shown)} each</span>
+    </>
+  )
+}
+
+/** Flight numbers and layovers, so connections that share a first flight can be told apart. */
+function Connection({ quote }: { quote: Quote }) {
+  const numbers = flightNumbersText(quote)
+  const layover = layoverText(quote.layovers)
+  return (
+    <>
+      {numbers && <span className="type-data block max-w-44 text-xs whitespace-normal text-ink-soft">{numbers}</span>}
+      {layover && <span className="block max-w-44 text-xs whitespace-normal text-ink-soft">{layover}</span>}
     </>
   )
 }
@@ -196,6 +208,7 @@ export function BestOptions({ quotes, currency, onHide, chosen, onChoose, dimmed
                   <p className="text-xs text-ink-soft">
                     {q.airlines.join(', ') || 'Airline unknown'} · {stopsText(q.stops_out)} · {timeAgo(q.observed_at)}
                   </p>
+                  <Connection quote={q} />
                   <SourceTag source={q.source} />
                   {q.suspect && <SuspectNote />}
                 </div>
@@ -249,6 +262,7 @@ export function BestOptions({ quotes, currency, onHide, chosen, onChoose, dimmed
                         {q.origin} → {q.destination}
                       </span>
                       {q.depart_at_local && <span className="type-data block text-xs text-ink-soft">{q.depart_at_local.slice(11)}</span>}
+                      <Connection quote={q} />
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">{quoteDateRange(q)}</td>
                     <td className="type-data px-3 py-3 whitespace-nowrap">{nightsOf(q) ?? '—'}</td>

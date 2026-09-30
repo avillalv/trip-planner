@@ -16,7 +16,7 @@ class UnknownAirport(ValueError):
     pass
 
 
-def _check_airports(db: Session, codes: list[str]) -> None:
+def check_airports(db: Session, codes: list[str]) -> None:
     known = set(db.scalars(select(Airport.iata).where(Airport.iata.in_(codes))))
     unknown = [c for c in codes if c not in known]
     if unknown:
@@ -42,7 +42,7 @@ def _apply(route: FlightRoute, data: RouteIn) -> None:
 
 
 def create_route(db: Session, trip: Trip, data: RouteIn) -> FlightRoute:
-    _check_airports(db, data.origin_codes + data.destination_codes)
+    check_airports(db, data.origin_codes + data.destination_codes)
     route = FlightRoute(trip_id=trip.id)
     _apply(route, data)
     db.add(route)
@@ -53,7 +53,7 @@ def create_route(db: Session, trip: Trip, data: RouteIn) -> FlightRoute:
 
 def update_route(db: Session, route_id: int, data: RouteIn) -> FlightRoute:
     route = get_route(db, route_id)
-    _check_airports(db, data.origin_codes + data.destination_codes)
+    check_airports(db, data.origin_codes + data.destination_codes)
     _apply(route, data)
     db.commit()
     return route

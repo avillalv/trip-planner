@@ -1,7 +1,8 @@
-import { Plane, Plus, RefreshCw } from 'lucide-react'
+import { Plane, Plus, RefreshCw, Ticket } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { BestOptions } from '@/components/flights/best-options'
+import { BookedFlightDialog } from '@/components/flights/booked-flight-dialog'
 import { ChooseFlightDialog, type FlightPick } from '@/components/flights/choose-flight-dialog'
 import { CheckStatus } from '@/components/flights/check-status'
 import { DateGrid } from '@/components/flights/date-grid'
@@ -145,6 +146,7 @@ export function TripFlights() {
   const [toggling, setToggling] = useState<FlightRoute | undefined>()
   const toggle = useSaveRoute(trip.id, toggling?.id)
   const [pick, setPick] = useState<FlightPick | null>(null)
+  const [bookingFor, setBookingFor] = useState<number | null>(null)
   const clear = useClearFlight()
   const chosenKeys = new Set(
     (summaries.data ?? []).flatMap((s) => [s.chosen, s.chosen_latest]).filter((q): q is Quote => Boolean(q)).map(flightKey),
@@ -184,7 +186,11 @@ export function TripFlights() {
           <p className="mt-1 text-sm text-ink-soft">Every price check is kept, so you can watch fares move.</p>
         </div>
         {all.length > 0 && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setBookingFor(all[0].id)}>
+              <Ticket aria-hidden="true" />
+              Add booked flight
+            </Button>
             <Button variant="outline" onClick={() => checkNow()} disabled={checking || refresh.isPending}>
               <RefreshCw aria-hidden="true" className={checking ? 'animate-spin' : undefined} />
               Check prices now
@@ -228,6 +234,7 @@ export function TripFlights() {
                 onToggleActive={() => toggleActive(route)}
                 onDelete={() => setDeleting(route)}
                 onClearChoice={() => clearChoice(route)}
+                onAddBooked={() => setBookingFor(route.id)}
               />
             ))}
           </section>
@@ -299,6 +306,7 @@ export function TripFlights() {
 
       <RouteEditor open={editorOpen} onOpenChange={setEditorOpen} trip={trip} route={editing} />
       <ChooseFlightDialog trip={trip} pick={pick} onClose={() => setPick(null)} />
+      <BookedFlightDialog routeId={bookingFor} routes={all} trip={trip} onClose={() => setBookingFor(null)} />
       <AlertDialog open={deleting !== null} onOpenChange={(open) => !open && setDeleting(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

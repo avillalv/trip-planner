@@ -1157,6 +1157,59 @@
         }
       }
     },
+    "/api/v1/routes/{route_id}/booked-flight": {
+      "post": {
+        "tags": [
+          "flights"
+        ],
+        "summary": "Record Booked Flight",
+        "description": "Record the flight you booked, leg by leg: it becomes the trip's flight and joins the itinerary.",
+        "operationId": "record_booked_flight",
+        "parameters": [
+          {
+            "name": "route_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Route Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookedFlightIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/flight-quotes/{quote_id}": {
       "patch": {
         "tags": [
@@ -4144,6 +4197,58 @@
         "title": "BackupStatus",
         "description": "Nightly database backups: where they go, the newest one, and the last problem, if any."
       },
+      "BookedFlightIn": {
+        "properties": {
+          "airline": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Airline"
+          },
+          "price_per_person": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,8}|(?=[\\d.]{1,11}0*$)\\d{0,8}\\.\\d{0,2}0*$)"
+              }
+            ],
+            "title": "Price Per Person"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "passengers": {
+            "type": "integer",
+            "maximum": 17.0,
+            "minimum": 1.0,
+            "title": "Passengers"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/FlightSegment-Input"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Segments"
+          }
+        },
+        "type": "object",
+        "required": [
+          "airline",
+          "price_per_person",
+          "currency",
+          "passengers",
+          "segments"
+        ],
+        "title": "BookedFlightIn",
+        "description": "A flight the travelers already booked, entered leg by leg as printed on the ticket."
+      },
       "ChosenFlight": {
         "properties": {
           "route_id": {
@@ -5552,6 +5657,102 @@
         "title": "FlightDates",
         "description": "The trip's dates when chosen flights set them: the first departure to the last return.\n\n`end` is None when no chosen flight sets it (a single one-way flight); then only `start` is fixed."
       },
+      "FlightSegment-Input": {
+        "properties": {
+          "direction": {
+            "type": "string",
+            "enum": [
+              "out",
+              "back"
+            ],
+            "title": "Direction"
+          },
+          "flight_number": {
+            "type": "string",
+            "maxLength": 10,
+            "minLength": 2,
+            "title": "Flight Number"
+          },
+          "origin": {
+            "type": "string",
+            "title": "Origin"
+          },
+          "destination": {
+            "type": "string",
+            "title": "Destination"
+          },
+          "depart_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Depart At"
+          },
+          "arrive_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Arrive At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "direction",
+          "flight_number",
+          "origin",
+          "destination",
+          "depart_at",
+          "arrive_at"
+        ],
+        "title": "FlightSegment",
+        "description": "One flight of a booked itinerary. Times are local wall-clock times at each airport."
+      },
+      "FlightSegment-Output": {
+        "properties": {
+          "direction": {
+            "type": "string",
+            "enum": [
+              "out",
+              "back"
+            ],
+            "title": "Direction"
+          },
+          "flight_number": {
+            "type": "string",
+            "maxLength": 10,
+            "minLength": 2,
+            "title": "Flight Number"
+          },
+          "origin": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$",
+            "title": "Origin"
+          },
+          "destination": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$",
+            "title": "Destination"
+          },
+          "depart_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Depart At"
+          },
+          "arrive_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Arrive At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "direction",
+          "flight_number",
+          "origin",
+          "destination",
+          "depart_at",
+          "arrive_at"
+        ],
+        "title": "FlightSegment",
+        "description": "One flight of a booked itinerary. Times are local wall-clock times at each airport."
+      },
       "GoogleHistoryPoint": {
         "properties": {
           "at": {
@@ -5691,6 +5892,29 @@
         ],
         "title": "IntegrationStatus",
         "description": "Which API keys are configured. Values are never exposed, only presence."
+      },
+      "Layover": {
+        "properties": {
+          "airport": {
+            "type": "string",
+            "title": "Airport"
+          },
+          "minutes": {
+            "type": "integer",
+            "title": "Minutes"
+          },
+          "overnight": {
+            "type": "boolean",
+            "title": "Overnight"
+          }
+        },
+        "type": "object",
+        "required": [
+          "airport",
+          "minutes",
+          "overnight"
+        ],
+        "title": "Layover"
       },
       "LinkPreview": {
         "properties": {
@@ -7402,6 +7626,20 @@
             ],
             "title": "Flight Numbers"
           },
+          "segments": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FlightSegment-Output"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segments"
+          },
           "booking_url": {
             "anyOf": [
               {
@@ -7436,6 +7674,14 @@
           "hidden": {
             "type": "boolean",
             "title": "Hidden"
+          },
+          "layovers": {
+            "items": {
+              "$ref": "#/components/schemas/Layover"
+            },
+            "type": "array",
+            "title": "Layovers",
+            "readOnly": true
           }
         },
         "type": "object",
@@ -7460,11 +7706,13 @@
           "duration_back_min",
           "depart_at_local",
           "flight_numbers",
+          "segments",
           "booking_url",
           "source_url",
           "observed_at",
           "suspect",
-          "hidden"
+          "hidden",
+          "layovers"
         ],
         "title": "QuoteOut"
       },

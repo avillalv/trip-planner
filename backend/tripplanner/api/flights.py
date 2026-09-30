@@ -7,6 +7,7 @@ from tripplanner.api.deps import DbSession
 from tripplanner.models import FlightQuote, Trip
 from tripplanner.schemas.automation import RefreshRequest, RunOut
 from tripplanner.schemas.flights import (
+    BookedFlightIn,
     DateGridCell,
     FlightChoiceIn,
     GoogleHistoryPoint,
@@ -19,7 +20,7 @@ from tripplanner.schemas.flights import (
     RouteSummary,
 )
 from tripplanner.schemas.trips import TripOut
-from tripplanner.services import flight_choice, quotes
+from tripplanner.services import booked_flight, flight_choice, quotes
 from tripplanner.services import routes as route_service
 from tripplanner.services import trips as trip_service
 from tripplanner.services.routines import ensure_flight_routine
@@ -170,6 +171,17 @@ def choose_flight(route_id: int, body: FlightChoiceIn, db: DbSession) -> TripOut
     try:
         trip = flight_choice.choose(db, route, body.quote_id, today=datetime.now(UTC).date())
     except flight_choice.ChoiceError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    return trip_service.to_out(trip_service.get_trip(db, trip.id))
+
+
+@router.post("/routes/{route_id}/booked-flight", response_model=TripOut)
+def record_booked_flight(route_id: int, body: BookedFlightIn, db: DbSession) -> TripOut:
+    """Record the flight you booked, leg by leg: it becomes the trip's flight and joins the itinerary."""
+    route = _route(db, route_id)
+    try:
+        trip = booked_flight.record(db, route, body, today=datetime.now(UTC).date())
+    except (route_service.UnknownAirport, flight_choice.ChoiceError) as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
     return trip_service.to_out(trip_service.get_trip(db, trip.id))
 

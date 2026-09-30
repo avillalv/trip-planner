@@ -77,3 +77,34 @@ describe('BestOptions sorting and filtering', () => {
     expect(within(table).getAllByRole('row')).toHaveLength(31)
   })
 })
+
+describe('BestOptions connections', () => {
+  it('shows flight numbers and the layover under the time, so connections on one first flight differ', () => {
+    const overnight = fare({
+      id: 1,
+      airlines: ['Copa Airlines'],
+      stops_out: 1,
+      depart_at_local: '2026-11-25 15:17',
+      flight_numbers: ['CM 467', 'CM 342'],
+      layovers: [{ airport: 'PTY', minutes: 1062, overnight: true }],
+    })
+    const sameEvening = fare({
+      id: 2,
+      airlines: ['Copa Airlines'],
+      stops_out: 1,
+      depart_at_local: '2026-11-25 15:17',
+      flight_numbers: ['CM 467', 'CM 162'],
+      layovers: [{ airport: 'PTY', minutes: 95, overnight: false }],
+    })
+    const plain = fare({ id: 3, airlines: ['ANA'] })
+    renderWithProviders(<BestOptions quotes={[overnight, sameEvening, plain]} currency="USD" onHide={() => {}} />)
+
+    const [, first, second, third] = within(screen.getByRole('table')).getAllByRole('row')
+
+    expect(first).toHaveTextContent('CM 467 · CM 342')
+    expect(first).toHaveTextContent('17h 42m in PTY (overnight)')
+    expect(second).toHaveTextContent('CM 467 · CM 162')
+    expect(second).toHaveTextContent('1h 35m in PTY')
+    expect(third).not.toHaveTextContent(/CM|in PTY/)
+  })
+})

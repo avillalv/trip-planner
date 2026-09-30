@@ -381,6 +381,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/routes/{route_id}/booked-flight": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record Booked Flight
+         * @description Record the flight you booked, leg by leg: it becomes the trip's flight and joins the itinerary.
+         */
+        post: operations["record_booked_flight"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/flight-quotes/{quote_id}": {
         parameters: {
             query?: never;
@@ -1228,6 +1248,22 @@ export interface components {
             /** Error */
             error: string | null;
         };
+        /**
+         * BookedFlightIn
+         * @description A flight the travelers already booked, entered leg by leg as printed on the ticket.
+         */
+        BookedFlightIn: {
+            /** Airline */
+            airline: string;
+            /** Price Per Person */
+            price_per_person: number | string;
+            /** Currency */
+            currency: string;
+            /** Passengers */
+            passengers: number;
+            /** Segments */
+            segments: components["schemas"]["FlightSegment-Input"][];
+        };
         /** ChosenFlight */
         ChosenFlight: {
             /** Route Id */
@@ -1601,6 +1637,60 @@ export interface components {
             /** Flights */
             flights: components["schemas"]["ChosenFlight"][];
         };
+        /**
+         * FlightSegment
+         * @description One flight of a booked itinerary. Times are local wall-clock times at each airport.
+         */
+        "FlightSegment-Input": {
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "out" | "back";
+            /** Flight Number */
+            flight_number: string;
+            /** Origin */
+            origin: string;
+            /** Destination */
+            destination: string;
+            /**
+             * Depart At
+             * Format: date-time
+             */
+            depart_at: string;
+            /**
+             * Arrive At
+             * Format: date-time
+             */
+            arrive_at: string;
+        };
+        /**
+         * FlightSegment
+         * @description One flight of a booked itinerary. Times are local wall-clock times at each airport.
+         */
+        "FlightSegment-Output": {
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "out" | "back";
+            /** Flight Number */
+            flight_number: string;
+            /** Origin */
+            origin: string;
+            /** Destination */
+            destination: string;
+            /**
+             * Depart At
+             * Format: date-time
+             */
+            depart_at: string;
+            /**
+             * Arrive At
+             * Format: date-time
+             */
+            arrive_at: string;
+        };
         /** GoogleHistoryPoint */
         GoogleHistoryPoint: {
             /**
@@ -1664,6 +1754,15 @@ export interface components {
             wikimedia: boolean;
             /** Agent Api */
             agent_api: boolean;
+        };
+        /** Layover */
+        Layover: {
+            /** Airport */
+            airport: string;
+            /** Minutes */
+            minutes: number;
+            /** Overnight */
+            overnight: boolean;
         };
         /** LinkPreview */
         LinkPreview: {
@@ -2128,6 +2227,8 @@ export interface components {
             depart_at_local: string | null;
             /** Flight Numbers */
             flight_numbers: string[] | null;
+            /** Segments */
+            segments: components["schemas"]["FlightSegment-Output"][] | null;
             /** Booking Url */
             booking_url: string | null;
             /** Source Url */
@@ -2141,6 +2242,8 @@ export interface components {
             suspect: boolean;
             /** Hidden */
             hidden: boolean;
+            /** Layovers */
+            readonly layovers: components["schemas"]["Layover"][];
         };
         /** QuoteUpdate */
         QuoteUpdate: {
@@ -3647,6 +3750,41 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TripOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_booked_flight: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                route_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookedFlightIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

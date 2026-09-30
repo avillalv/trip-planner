@@ -1,5 +1,7 @@
-import type { FlightRoute, Quote } from '@/lib/api/flights'
+import type { FlightRoute, Layover, Quote, QuoteSegment } from '@/lib/api/flights'
 import { daysBetween, parseDate } from '@/lib/dates'
+import { formatTime } from '@/lib/itinerary-time'
+import { formatDuration } from '@/lib/money'
 
 const shortDate = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' })
 const CABINS: Record<string, string> = {
@@ -49,4 +51,24 @@ export function quoteDates(quote: Pick<Quote, 'depart_date' | 'return_date'>): s
 export function quoteDateRange(quote: Pick<Quote, 'depart_date' | 'return_date'>): string {
   if (!quote.return_date) return `${formatShortDate(quote.depart_date)} · one way`
   return `${formatShortDate(quote.depart_date)} → ${formatShortDate(quote.return_date)}`
+}
+
+/** "CM 467 · CM 342", or null when the source gave no flight numbers. */
+export function flightNumbersText(quote: Pick<Quote, 'flight_numbers'>): string | null {
+  return quote.flight_numbers?.length ? quote.flight_numbers.join(' · ') : null
+}
+
+/** "17h 42m in PTY (overnight)", one per stop joined with " · "; null for a nonstop or when unknown. */
+export function layoverText(layovers: Layover[]): string | null {
+  if (layovers.length === 0) return null
+  return layovers.map((l) => `${formatDuration(l.minutes)} in ${l.airport}${l.overnight ? ' (overnight)' : ''}`).join(' · ')
+}
+
+/** "Nov 25, 3:17 PM → 7:46 PM": local times at each airport, with the arrival's date when it's another day. */
+export function segmentTimes(segment: Pick<QuoteSegment, 'depart_at' | 'arrive_at'>): string {
+  const clock = (iso: string) => formatTime(iso.slice(11, 16))
+  const departDay = segment.depart_at.slice(0, 10)
+  const arriveDay = segment.arrive_at.slice(0, 10)
+  const arrives = arriveDay === departDay ? '' : `${formatShortDate(arriveDay)}, `
+  return `${formatShortDate(departDay)}, ${clock(segment.depart_at)} → ${arrives}${clock(segment.arrive_at)}`
 }

@@ -7,6 +7,10 @@ import { tripKey, tripsKey, type Trip } from './trips'
 export type FlightRoute = components['schemas']['RouteOut']
 export type RouteInput = components['schemas']['RouteIn']
 export type Quote = components['schemas']['QuoteOut']
+export type Layover = components['schemas']['Layover']
+/** One flight of a booked itinerary; times are local at each airport ("2026-11-25T15:17:00"). */
+export type QuoteSegment = components['schemas']['FlightSegment-Output']
+export type BookedFlightInput = components['schemas']['BookedFlightIn']
 export type RouteSummary = components['schemas']['RouteSummary']
 export type RouteHistory = components['schemas']['RouteHistory']
 export type DateGridCell = components['schemas']['DateGridCell']
@@ -202,9 +206,11 @@ export function useSerpApiUsage() {
   })
 }
 
-/** Identifies a flight across price checks: same route, source, airports, dates, airlines, and stops. */
-export function flightKey(q: Pick<Quote, 'route_id' | 'source' | 'origin' | 'destination' | 'depart_date' | 'return_date' | 'airlines' | 'stops_out'>): string {
-  return [q.route_id, q.source, q.origin, q.destination, q.depart_date, q.return_date ?? '', q.airlines.join('+'), q.stops_out ?? ''].join('|')
+/** Identifies a flight across price checks: same route, source, airports, dates, airlines, stops, and flights. */
+export function flightKey(
+  q: Pick<Quote, 'route_id' | 'source' | 'origin' | 'destination' | 'depart_date' | 'return_date' | 'airlines' | 'stops_out' | 'flight_numbers'>,
+): string {
+  return [q.route_id, q.source, q.origin, q.destination, q.depart_date, q.return_date ?? '', q.airlines.join('+'), q.stops_out ?? '', (q.flight_numbers ?? []).join('+')].join('|')
 }
 
 // Choosing a flight moves the trip's dates, so the trip, its days, and its deck all refresh.
@@ -242,6 +248,16 @@ export function useClearFlight() {
   return useMutation({
     mutationFn: async (routeId: number): Promise<Trip> =>
       unwrap(await api.DELETE('/api/v1/routes/{route_id}/choice', { params: { path: { route_id: routeId } } })),
+    onSuccess: after,
+  })
+}
+
+/** Record the flight the travelers booked: it becomes the trip's flight, and its legs join the itinerary. */
+export function useRecordBookedFlight() {
+  const after = useAfterChoice()
+  return useMutation({
+    mutationFn: async ({ routeId, body }: { routeId: number; body: BookedFlightInput }): Promise<Trip> =>
+      unwrap(await api.POST('/api/v1/routes/{route_id}/booked-flight', { params: { path: { route_id: routeId } }, body })),
     onSuccess: after,
   })
 }

@@ -14,7 +14,7 @@ import {
 } from './options-view'
 import { priceStep } from './price-step'
 import { defaultRoute, returnMode, withReturnMode } from './route-form'
-import { quoteDates, routeDescription } from './route-text'
+import { flightNumbersText, layoverText, quoteDates, routeDescription, segmentTimes } from './route-text'
 
 describe('price grid steps', () => {
   const prices = [800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700]
@@ -248,5 +248,31 @@ describe('options table', () => {
       expect(choices.airlines).toEqual(['American', 'COPA', 'United'])
       expect(choices.stops).toEqual([0, 1])
     })
+  })
+})
+
+describe('connection text', () => {
+  const flat = (text: string | null) => text?.replace(/\s/g, ' ') ?? null
+
+  it('lists the flight numbers, or nothing when the source gave none', () => {
+    expect(flightNumbersText({ flight_numbers: ['CM 467', 'CM 342'] })).toBe('CM 467 · CM 342')
+    expect(flightNumbersText({ flight_numbers: [] })).toBeNull()
+    expect(flightNumbersText({ flight_numbers: null })).toBeNull()
+  })
+
+  it('says how long each layover is, and flags an overnight one', () => {
+    expect(layoverText([{ airport: 'PTY', minutes: 1062, overnight: true }])).toBe('17h 42m in PTY (overnight)')
+    expect(
+      layoverText([
+        { airport: 'MIA', minutes: 95, overnight: false },
+        { airport: 'JFK', minutes: 45, overnight: false },
+      ]),
+    ).toBe('1h 35m in MIA · 45m in JFK')
+    expect(layoverText([])).toBeNull()
+  })
+
+  it('shows a leg in local times, with the arrival date only when it lands on another day', () => {
+    expect(flat(segmentTimes({ depart_at: '2026-11-25T15:17:00', arrive_at: '2026-11-25T19:46:00' }))).toBe('Nov 25, 3:17 PM → 7:46 PM')
+    expect(flat(segmentTimes({ depart_at: '2026-11-25T23:10:00', arrive_at: '2026-11-26T02:05:00' }))).toBe('Nov 25, 11:10 PM → Nov 26, 2:05 AM')
   })
 })

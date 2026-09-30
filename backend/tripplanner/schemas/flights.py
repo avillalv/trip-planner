@@ -1,10 +1,11 @@
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Literal
+from itertools import pairwise
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, NaiveDatetime, computed_field, model_validator
 
-from tripplanner.schemas.common import IataCode, text
+from tripplanner.schemas.common import CurrencyCode, IataCode, text
 
 Cabin = Literal["economy", "premium_economy", "business", "first"]
 TripType = Literal["round_trip", "one_way"]
@@ -96,6 +97,32 @@ class RouteOut(BaseModel):
     updated_at: datetime
 
 
+class Layover(BaseModel):
+    airport: str
+    minutes: int
+    overnight: bool
+
+
+class FlightSegment(BaseModel):
+    """One flight of a booked itinerary. Times are local wall-clock times at each airport."""
+
+    direction: Literal["out", "back"]
+    flight_number: text(10, min_length=2)
+    origin: IataCode
+    destination: IataCode
+    depart_at: NaiveDatetime
+    arrive_at: NaiveDatetime
+
+
+def _layovers(raw: dict[str, Any] | None) -> list[Layover]:
+    """Layovers from a Google Flights itinerary (other sources have none)."""
+    return [
+        Layover(airport=item["id"], minutes=item["duration"], overnight=bool(item.get("overnight")))
+        for item in (raw or {}).get("layovers") or []
+        if item.get("id") and isinstance(item.get("duration"), int)
+    ]
+
+
 class QuoteOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -119,11 +146,19 @@ class QuoteOut(BaseModel):
     duration_back_min: int | None
     depart_at_local: str | None
     flight_numbers: list[str] | None
+    segments: list[FlightSegment] | None
     booking_url: str | None
     source_url: str | None
     observed_at: datetime
     suspect: bool
     hidden: bool
+    # Only read to work out `layovers`; the source's whole itinerary isn't sent.
+    raw: Any = Field(None, exclude=True)
+
+    @computed_field
+    @property
+    def layovers(self) -> list[Layover]:
+        return _layovers(self.raw)
 
 
 class QuoteUpdate(BaseModel):
@@ -175,3 +210,27 @@ class RouteSummary(BaseModel):
 
 class FlightChoiceIn(BaseModel):
     quote_id: int
+
+
+class BookedFlightIn(BaseModel):
+    """A flight the travelers already booked, entered leg by leg as printed on the ticket."""
+
+    airline: text(60, min_length=1)
+    price_per_person: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
+    currency: CurrencyCode
+    passengers: int = Field(ge=1, le=17)
+    segments: list[FlightSegment] = Field(min_length=1, max_length=8)
+
+    @model_validator(mode="after")
+    def check_legs(self) -> "BookedFlightIn":
+        out = [s for s in self.segments if s.direction == "out"]
+        back = [s for s in self.segments if s.direction == "back"]
+        if not out:
+            raise ValueError("Add at least one outbound flight.")
+        for legs in (out, back):
+            for earlier, later in pairwise(legs):
+                if later.depart_at.date() < earlier.depart_at.date():
+                    raise ValueError("List each direction's flights in the order you fly them.")
+        if back and back[0].depart_at.date() < out[-1].depart_at.date():
+            raise ValueError("The return must leave on or after the last outbound flight.")
+        return self

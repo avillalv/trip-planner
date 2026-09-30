@@ -116,6 +116,8 @@ export function fare(overrides: Partial<Fare> = {}): Fare {
     duration_back_min: null,
     depart_at_local: null,
     flight_numbers: null,
+    segments: null,
+    layovers: [],
     booking_url: null,
     source_url: null,
     observed_at: '2026-09-26T12:00:00Z',
