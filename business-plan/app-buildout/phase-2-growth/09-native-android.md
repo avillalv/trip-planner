@@ -9,7 +9,7 @@ submission.
 
 | Item | Value |
 |---|---|
-| Build order | 9 (months 11 to 12); Play Console enrollment and the closed-test clock start in month 9 or 10 |
+| Build order | 9 (shell, push and links from month 10, billing and tests in month 11, release in month 12); Play Console enrollment and the closed-test clock start in month 9 or 10 |
 | Flags | None per feature; the build is gated by `min_app_version` and Play track rollout percentages |
 | Needs from Phase 1 | The iOS Capacitor app (bundled web app, native plugins layer in `apps/web/src/lib/native/`), RevenueCat, push abstraction, deep links, offline SQLite, purchases, account deletion |
 | Needs from other packs | Products from packs 01, 02 and 06 exist in the stores; flight alerts (pack 05) and comments (pack 03) ride on the push layer |

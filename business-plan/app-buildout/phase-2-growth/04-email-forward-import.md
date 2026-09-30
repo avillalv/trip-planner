@@ -8,7 +8,7 @@ import schema, redaction and confirm path.
 
 | Item | Value |
 |---|---|
-| Build order | 4 (months 8 to 9) |
+| Build order | 4 (month 9) |
 | Flags | `email_forward_import` (default off, staged rollout), kill switch `email.inbound` (new) |
 | Needs from Phase 1 | Booking import (`booking_import`, redaction, confirm path), calendar import, Resend, R2, notifications, credits, consents, admin provider health |
 | Soft link | Pack 05 (confirmed flights become tracked flights) |

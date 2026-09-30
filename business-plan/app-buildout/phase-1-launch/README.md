@@ -32,6 +32,35 @@ subscriptions, trip passes, credit packs and affiliate links. Everything else wa
 | Platforms | Web app and iOS app (Capacitor, bundled). Android users get the web app until Phase 2. |
 | Growth basics | Public sample trips and shared-trip pages for search, honest comparison pages (`/vs/...`), referral credits, App Store listing |
 
+### Added from the competitive analysis
+
+These come from [../../competitive-analysis/win-plan.md](../../competitive-analysis/win-plan.md)
+section 9 and are part of Phase 1:
+
+| Feature | Effort | Beats |
+|---|---|---|
+| "Verify this plan": paste an itinerary from ChatGPT, Gemini, Layla or Mindtrip; Wayfold checks each place, opening hours and price with sources and marks what it could not confirm (`research` credits per checked item, capped per run) | M | Every AI planner |
+| Imports named for each rival: TripIt, Tripsy and Wanderlog entries on the import screen, and Google Maps saved-list import (pasted list link or exported file; never scraped) | S to M | TripIt, Tripsy, Wanderlog |
+| Evidence freshness: a "may be out of date" flag after 14 days and a one-tap recheck | S | AI planners |
+| Trust pages: "How we earn" (every affiliate partner and that nothing is ranked by commission), a plain billing page, and a one-tap cancel link in the app | S | Wanderlog, Layla, Tripsy |
+| Public status page and a "Synced N seconds ago" indicator | S | Wanderlog, Tripsy |
+| Android web-app install guide and testing on Android Chrome | S | Tripsy, TripIt Pro |
+
+Early Phase 2 (first items after launch): "paste your group chat" to draft a plan (answers Trippy),
+and repair-a-day when plans change. Email-forward import is decided at the month 4 review based on
+how pasted imports perform in the beta.
+
+### Settled values (all Phase 1 files use these)
+
+| Item | Value |
+|---|---|
+| Referral credits | 20 credits to each person after the new user's first trip with dates; expire after 12 months; referrer caps 5 per rolling 30 days and 10 per calendar year; referral credits do not raise the spend ceiling |
+| Booked-fare drop alert | Fires when the current fare is at least 5% and at least $10 (converted) below what the user paid; at most once per flight every 7 days; never includes a partner link |
+| First-import Trip Pass | Once per user; the import must add at least 3 items including a flight or a stay; verified email; the trip has no active pass and the user has no active Plus |
+| Calendar feed imports | Opt-in "Keep checking this calendar"; polled every 6 hours; changes are shown as a preview the user confirms, never applied automatically |
+| Web purchases | None in Phase 1: the web paywall says "Upgrade in the iOS app". Web billing arrives with Android in Phase 2. |
+| Free collaborators | 1 per trip; share links (read-only, with the "Made with Wayfold" footer) on every tier |
+
 ### Not in Phase 1
 
 | Feature | Phase |

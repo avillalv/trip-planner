@@ -8,7 +8,7 @@ roadmap tickets WF-078 and WF-105 in [09](../09-build-roadmap.md).
 
 | Item | Value |
 |---|---|
-| Build order | 8 (months 10 to 11); build dark early, sell only after the gate |
+| Build order | 8 (build dark in month 11, sell in month 12 only if the gate is met) |
 | Flags | `tier_pro` (hides the tier and products), `scheduled_agent_routines` (scheduler skips agent kinds while off) |
 | Needs from Phase 1 | Agent runs (`fare_hunt`, `deep_research`), credits and ceilings, scheduler with `scan_due_routines`, shared research cache, price checks, feature flags, admin flags screen, RevenueCat, notifications |
 | Gate | Mean agent cost of $0.60 or less per run over 200 runs, or over 15 percent of Plus payers buying agent-run credits ([09 section 1](../09-build-roadmap.md), [08 section 6.6](../08-admin-control-center.md)) |

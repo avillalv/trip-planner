@@ -9,7 +9,7 @@ and the business case in [09 revenue expansion](../../09-revenue-expansion.md) s
 
 | Item | Value |
 |---|---|
-| Build order | 7 (months 10 to 11); the legal and host agency work starts in month 7 |
+| Build order | 7 (build in month 11); the legal and host agency work starts in month 7 |
 | Flags | `concierge_requests` (off; enabled per region only after counsel confirms), settings `setting_concierge_open` and `setting_concierge_host` |
 | Needs from Phase 1 | Stays shortlist, trips, consents, Resend, R2, admin console with roles, support inbox, feature flags, notifications |
 | Soft link | Pack 02 (room-block requests flow into the same queue) |

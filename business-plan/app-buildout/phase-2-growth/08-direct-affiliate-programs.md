@@ -10,7 +10,7 @@ terms page after sign-up (the official partner sites were blocked from the resea
 
 | Item | Value |
 |---|---|
-| Build order | 6 in value terms, but the applications start in month 7 because approvals take weeks; adapters land as approvals arrive (months 9 to 11) |
+| Build order | 6, but the applications start in month 7 because approvals take weeks; adapters land as approvals arrive (months 9 to 10) |
 | Flags and switches | No feature flag. Each program has a kill switch `affiliate.<code>` and the global `affiliate.all`; program `status` (`planned`, `applied`, `active`, `paused`, `closed`) controls what is shown |
 | Needs from Phase 1 | `/v1/outbound` and `/go/{click_id}`, `affiliate_programs`, `affiliate_link_templates`, `link_clicks`, `affiliate_conversions`, nightly conversion import for Travelpayouts, Viator and Stay22, disclosure component, admin affiliate revenue screen, traffic numbers from the overview |
 | Feeds | Pack 10 (AirHelp for the compensation prompt) |

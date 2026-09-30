@@ -169,7 +169,7 @@ Row-level security: `trip_after_prompts` and `trip_reviews` are personal (`user_
 delete their own photos), and images are never served directly: the API returns short-lived signed R2
 URLs only to members (or through a valid memory share token); `year_in_travel` is personal. Retention:
 photos live with the trip (purged 30 days after the trip is deleted); the account deletion job removes the
-user's photos, reviews, prompts and year rows and the rendered card objects; `run` data is not involved.
+user's photos, reviews, prompts and year rows and the rendered card objects.
 
 Year in travel statistics (computed by the worker, `modules/memories/year_stats.py`):
 
