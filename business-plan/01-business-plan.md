@@ -358,7 +358,7 @@ Cost and quality:
 
 - Agent cost per run (Pro gate: $0.60 or less over 200 runs), cost per user, cost per trip; research cache hit rate (target above 50%).
 - Share of accounts hitting their monthly ceiling; live-check count per user; provider cost per MAU.
-- Gross margin, blended (the illustrative 10,000-user month in [02-pricing-tiers.md](02-pricing-tiers.md) is about 56%) and per tier.
+- Gross margin, blended (the illustrative 10,000-user month in [02-pricing-tiers.md](02-pricing-tiers.md) is about 54% before affiliate income and 61% with it) and per tier.
 - Fare quality: share of agent fares passing evidence checks; user reports of wrong prices.
 - Support tickets per 1,000 MAU, crash rate, App Store rating (target 4.5 or above).
 
