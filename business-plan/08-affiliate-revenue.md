@@ -2,13 +2,13 @@
 
 Part of the [business plan](README.md). The decisions of record in the README override anything here.
 
-Written 2026-09-30. Related files: [06-database-and-data-integrations.md](06-database-and-data-integrations.md) (schema, providers, section 6 affiliate integration), [07-local-to-app-store.md](07-local-to-app-store.md) (App Review, roadmap, feature flags), [02-pricing-tiers.md](02-pricing-tiers.md) (tiers), [01-business-plan.md](01-business-plan.md) (revenue scenarios).
+Written 2026-09-30. This file covers how Wayfold earns commissions. Related files: [09-revenue-expansion.md](09-revenue-expansion.md) (every other revenue stream and the five-year scenarios), [06-database-and-data-integrations.md](06-database-and-data-integrations.md) (schema, providers, section 6 affiliate integration), [07-local-to-app-store.md](07-local-to-app-store.md) (App Review, roadmap, feature flags), [02-pricing-tiers.md](02-pricing-tiers.md) (tiers), [01-business-plan.md](01-business-plan.md) (revenue scenarios).
 
 Evidence caveat: the official partner sites (Airbnb, Awin, Stay22, Travelpayouts, AirHelp, Viator, GetYourGuide, Airalo, ftc.gov and others) were blocked from the research environment. Every rate, cookie window and eligibility rule below came from third-party reports and search summaries. Every rate is "reported, verify" until it is read on the network's own terms page after sign-up. Attach rates and order values are estimates, not data. Month 3 click data replaces them.
 
 ## 1. Summary
 
-Affiliate commissions are the income of the Free tier (no banner ads, see the README). Free users cost up to $0.25 a month in provider spend, so the commission has to cover that cost and, over time, pay for infrastructure. It is a floor, not the growth plan.
+Affiliate commissions are the income of Wayfold's Free tier (no banner ads, see the README). Free users cost up to $0.25 a month in provider spend, so the commission has to cover that cost and, over time, pay for infrastructure. It is a floor, not the growth plan.
 
 Every tier sees the same links in the same places. Paid tiers never lose them and free results are never degraded.
 
@@ -17,8 +17,9 @@ Every tier sees the same links in the same places. Paid tiers never lose them an
 | Revenue per real trip (after attribution loss) | $0.12 | $1.04 | $3.09 |
 | Revenue per monthly user per year (modeled) | $0.04 | $0.63 | $2.47 |
 | Revenue per monthly user per year (rounded, decision of record) | $0.10 | $0.60 | $1.50 |
+| Stacked with the higher-commission lanes of section 13 (per real trip, a range to test) | not modeled | about $4 to $17, versus $1.04 with affiliate links only | not modeled |
 
-The rounded row is what the rest of the plan uses. It lifts the conservative case (the model gives $0.04) and trims the optimistic case (the model gives $2.47, which depends on the unproven sharing loop). The base case is within 5% of the model.
+The stacked row adds the concierge lane ($2 to $6 a trip), group room blocks ($1.50 to $8) and in-app hotel booking ($0.50 to $3); it depends on founder hours, on attach rates that have not been tested, and on eligibility rules that are unverified (section 13.8). It is not in the scenario totals of [09](09-revenue-expansion.md). The rounded row is what the rest of the plan uses. It lifts the conservative case (the model gives $0.04) and trims the optimistic case (the model gives $2.47, which depends on the unproven sharing loop). The base case is within 5% of the model.
 
 Share of base-case revenue per trip, by category:
 
@@ -37,7 +38,8 @@ What this means for the build:
 1. Build the placement map around lodging, tours and the "Before you go" checklist. Flights are a service feature (cached fares pay 1.1% to 1.5%), not a revenue line.
 2. The launch needs three integrations: Travelpayouts, Viator's self-service API and Stay22. Direct applications start at month 3, when there is traffic to show.
 3. Two new surfaces carry real value: the pre-trip checklist and the after-trip compensation prompt.
-4. Compliance is a product feature here, not paperwork. Insurance, visas, disclosure labels and the ranking rule protect both App Review and user trust.
+4. Higher-commission lanes (section 13) pay 5 to 20 times a link click per booking, but they need a human, a licence or a merchant setup, so they start after the launch integrations and are optional for the user.
+5. Compliance is a product feature here, not paperwork. Insurance, visas, disclosure labels and the ranking rule protect both App Review and user trust.
 
 ## 2. Direct answers to the owner's questions
 

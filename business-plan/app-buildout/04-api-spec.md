@@ -25,7 +25,7 @@ Written 2026-09-30. This file defines every HTTP endpoint the web and iOS client
 - Sign-in happens in Supabase Auth (Sign in with Apple, Google, email code). The client sends the Supabase access token on every call: `Authorization: Bearer <jwt>`. The web build may instead send the HttpOnly session cookie; cookie requests must also send `X-Wayfold-Client: web` and a same-origin `Origin` (CSRF guard carried over from `X-Trip-Planner: 1`).
 - One FastAPI dependency, `CurrentUser`, verifies signature (JWKS, cached 10 minutes), `iss`, `aud`, `exp` and `sub`, resolves `auth_identities(provider, subject)` to a `users` row, and rejects any status other than `active` with `403 account_inactive` (status `pending_deletion` gets `403 account_pending_deletion`, and only `POST /me/deletion/cancel` and `GET /me` work). A first-time valid JWT with no identity row is handled by `POST /me/bootstrap`, the only endpoint that accepts a JWT without a users row.
 - Agent workers do not use user tokens. The worker calls internal functions directly, not HTTP. The legacy `/api/agent/v1` bridge is removed.
-- Partner callers (webhooks) authenticate with signatures or shared secrets (section 6). Admin callers use the admin API (section 5.31).
+- Partner callers (webhooks) authenticate with signatures or shared secrets (section 6). Admin callers use the admin API (section 5.25).
 - Guest mode is local-first; a guest has no token and calls no endpoint until they tap "Save your trip". `POST /me/claim` merges guest data after sign-in (5.1).
 
 ### 1.3 Authorization: roles and 404 for non-members
@@ -38,7 +38,7 @@ Written 2026-09-30. This file defines every HTTP endpoint the web and iOS client
 
 Trip-scoped routes declare a minimum role through `require_trip(trip_id, min_role)`. A caller who is not a member gets `404 not_found`, never `403`, for every id in the path, so ids cannot be probed. A member whose role is too low gets `403 insufficient_role`. Routes that take a child id (for example `/lodging/{id}`) join up to the trip and apply the same rule. A CI test walks `app.routes` and fails if any route with an id parameter does not use the dependency. Request bodies never accept `owner`, `role` (except on invite and member-role routes), `tier` or `user_id`.
 
-Trip capabilities (what the trip can do) come from the better of the owner's tier and any active `trip_passes` row for that trip. Credits are charged to the acting user. Both are explained to the client through `capabilities` (2.3) and `GET /me/entitlements` (5.25).
+Trip capabilities (what the trip can do) come from the better of the owner's tier and any active `trip_passes` row for that trip. Credits are charged to the acting user. Both are explained to the client through `capabilities` (2.3) and `GET /me/entitlements` (5.19).
 
 ### 1.4 Errors: RFC 9457 problem+json
 
@@ -56,7 +56,7 @@ type Problem = {
   errors?: { field: string; code: string; message: string }[]   // validation only
   retry_after_seconds?: number
   current?: unknown         // 409 version_conflict: the latest resource
-  paywall?: PaywallHint     // 402 and 403 gate errors: see 5.26
+  paywall?: PaywallHint     // 402 and 403 gate errors: see 5.20
   credits?: { needed: number; balance: number }                  // insufficient_credits
 }
 ```
@@ -478,7 +478,7 @@ type NearbyAirport = Airport & { distance_km: number }
 | `POST /trips/{trip_id}/share-links` | owner | `can_invite` | `ShareLinkCreate` to 201 `ShareLink` | Read-only public link `https://wayfold.app/s/<token>`. Default expiry 90 days. Redaction flags hide hotel address, prices and notes by default. |
 | `PATCH /trips/{trip_id}/share-links/{link_id}` | owner | none | `Partial<ShareLinkCreate>` to `ShareLink` | |
 | `DELETE /trips/{trip_id}/share-links/{link_id}` | owner | none | 204 | Revokes; later views return `410 share_link_revoked`. |
-| `GET /shared/{token}` | none (per-IP and per-token limit) | none | none to `SharedTrip` | Public read of the redacted presentation data (5.17). `Cache-Control: public, max-age=60`. Never includes affiliate click ids; the "Book the plan" slide links come from `POST /shared/{token}/outbound` (5.28). |
+| `GET /shared/{token}` | none (per-IP and per-token limit) | none | none to `SharedTrip` | Public read of the redacted presentation data (5.15). `Cache-Control: public, max-age=60`. Never includes affiliate click ids; the "Book the plan" slide links come from `POST /shared/{token}/outbound` (5.21). |
 
 ```ts
 type Member = {
@@ -534,7 +534,7 @@ Flight data follows the existing route and quote model. A route is a search defi
 | `PUT /routes/{route_id}` | editor | versioned | `RouteIn` to `Route` | Switching `mode` to `live` re-checks the gate. Changing search fields clears nothing; old observations stay. |
 | `DELETE /routes/{route_id}` | editor | none | 204 | Frees the live slot. Observations kept 13 months for history. |
 | `POST /trips/{trip_id}/flights/refresh` | editor | none (cached only) | `{ route_ids?: Uuid[] }` to 202 `Job` | Refreshes cached fares for these routes (max 20). Does not call live providers. Per-trip limit 10 an hour. |
-| `POST /trips/{trip_id}/flights/live-search` | editor | `live_route` (route in `live` mode), `credits(1)`, `ai` not needed | `{ route_id: Uuid }` with `Idempotency-Key` to 202 `LiveSearchJob` | Reserves 1 credit (`live_search`), enqueues a SerpApi call, writes `provider_calls` and `fare_observations`. Settles on success; releases on `provider_error`. For Trip Pass trips, also decrements `live_checks_left` (60 cap). Returns `from_cache: true` and charges 0 when a fresh observation (under 6 hours) already exists in the shared cache. 402, 429 `provider_budget_exhausted`, 403 `limit_reached`. |
+| `POST /trips/{trip_id}/flights/live-search` | editor | `live_route` (route in `live` mode), `credits(1)` | `{ route_id: Uuid }` with `Idempotency-Key` to 202 `LiveSearchJob` | Reserves 1 credit (`live_search`), enqueues a SerpApi call, writes `provider_calls` and `fare_observations`. Settles on success; releases on `provider_error`. For Trip Pass trips, also decrements `live_checks_left` (60 cap). Returns `from_cache: true` and charges 0 when a fresh observation (under 6 hours) already exists in the shared cache. 402, 429 `provider_budget_exhausted`, 403 `limit_reached`. |
 | `GET /live-search/{job_id}` | the caller | none | none to `LiveSearchJob` | Poll until `done` or `failed`. |
 | `GET /trips/{trip_id}/flights/best` | viewer | none | `?route_id=&limit=20&include_hidden=false&sort=price` to `Fare[]` | Sorted by price ascending then observed time. `sort` accepts `price`, `duration`, `stops` only. |
 | `GET /trips/{trip_id}/flights/summary` | viewer | none | none to `RouteSummary[]` | Cheapest fare, last check time, fare count and chosen fare per route. `ETag`. |
@@ -580,7 +580,7 @@ type Fare = {
   airlines: string[]; stops_out: number | null; stops_back: number | null
   duration_out_min: number | null; duration_back_min: number | null
   depart_at_local: string | null; flight_numbers: string[] | null
-  book_offer: AffiliateOffer | null                          // partner "Book on <provider>" (5.28)
+  book_offer: AffiliateOffer | null                          // partner "Book on <provider>" (5.21)
   airline_search_url: string | null                          // non-affiliate route
   source_url: string | null; observed_at: string; age_label: string   // "cached 6 h ago"
   suspect: boolean; hidden: boolean
@@ -903,3 +903,367 @@ type ChecklistItem = {
 }
 type AfterTrip = { show: boolean; delayed: boolean | null; offer: AffiliateOffer | null; note: string }
 ```
+
+### 5.17 Group tools: polls, votes, expenses, shares, settlements
+
+Gate for all routes in this section: `group_tools` (Group Trip Pass on the trip, or a Family or Pro owner). Real money moves outside the app through Stripe only (never Apple In-App Purchase, never for digital features). Wayfold records who owes whom; collection is optional.
+
+| Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
+|---|---|---|---|---|
+| `GET /trips/{trip_id}/polls` | viewer | none (read allowed on any tier once created) | `?status=` to `Poll[]` | |
+| `POST /trips/{trip_id}/polls` | editor | `group_tools` | `PollIn` to 201 `Poll` | Options may reference `lodging_options`, `itinerary_items` or free text. |
+| `PATCH /polls/{poll_id}` | author or owner | versioned | `{ title?, closes_at?, status?: "open" \| "closed" }` to `Poll` | Closing computes the winner (ties are reported, not broken). |
+| `DELETE /polls/{poll_id}` | author or owner | none | 204 | |
+| `PUT /polls/{poll_id}/votes/me` | viewer | poll open | `{ option_ids: Uuid[] }` to `Poll` | Writes `poll_votes`. `single` polls accept one id, `multi` up to `max_choices`. Replaces the caller's previous vote. |
+| `GET /trips/{trip_id}/expenses` | viewer | none | `?limit&cursor` to `Page<Expense>` | |
+| `POST /trips/{trip_id}/expenses` | editor | `group_tools` | `ExpenseIn` with `Idempotency-Key` to 201 `Expense` | Writes `expenses` and `expense_shares`. Shares must sum to the amount (minor units, remainder to the payer). |
+| `PATCH /expenses/{expense_id}` | author or owner | versioned | `Partial<ExpenseIn>` to `Expense` | Blocked once a settlement that includes it is paid (`409 state_conflict`). |
+| `DELETE /expenses/{expense_id}` | author or owner | none | 204 | |
+| `GET /trips/{trip_id}/balances` | viewer | none | none to `Balances` | Net per person and the minimal suggested transfers, in the trip home currency (FX from `fx_rates`, date shown). |
+| `POST /trips/{trip_id}/settlements` | editor | `group_tools` | `{ from_person_id, to_person_id, amount: Money, method: "cash" \| "external" \| "stripe" }` with `Idempotency-Key` to 201 `Settlement` | Records a payment. `stripe` returns `payment_url` (Stripe Checkout or payment link); status becomes `paid` from the `checkout.session.completed` webhook. `cash` and `external` are marked by the recipient. |
+| `POST /settlements/{settlement_id}/confirm` | recipient | status `pending` | none to `Settlement` | Recipient confirms receipt. |
+| `GET /trips/{trip_id}/settlements` | viewer | none | none to `Settlement[]` | |
+
+```ts
+type PollIn = {
+  title: string; kind: "single" | "multi"; max_choices?: number; closes_at?: string | null
+  options: { label: string; lodging_id?: Uuid; item_id?: Uuid }[]          // 2 to 12
+}
+type Poll = {
+  id: Uuid; trip_id: Uuid; version: number; title: string; kind: "single" | "multi"
+  status: "open" | "closed"; closes_at: string | null; created_by: Attribution
+  options: { id: Uuid; label: string; lodging_id: Uuid | null; item_id: Uuid | null; votes: number }[]
+  my_vote: Uuid[]; winners: Uuid[] | null
+}
+type ExpenseIn = {
+  title: string; amount: Money; paid_by_person_id: Uuid; date: string
+  category?: string; split: "equal" | "exact" | "percent"
+  shares: { person_id: Uuid; amount?: Money; percent?: number }[]; version?: number
+}
+type Expense = Omit<ExpenseIn, "version" | "shares"> & { id: Uuid; version: number; shares: { person_id: Uuid; amount: Money }[]; created_by: Attribution }
+type Balances = { currency: string; fx_date: string; net: { person_id: Uuid; amount: Money }[]; transfers: { from: Uuid; to: Uuid; amount: Money }[] }
+type Settlement = {
+  id: Uuid; from_person_id: Uuid; to_person_id: Uuid; amount: Money
+  method: "cash" | "external" | "stripe"; status: "pending" | "paid" | "failed" | "refunded"
+  payment_url: string | null; paid_at: string | null
+}
+```
+
+### 5.18 Concierge and room-block requests
+
+Optional "Have a human book this" requests, fulfilled by an advisor under a host travel agency. Always disclosed and never required. Requests are free to send; the user perks and commission terms are in [07-monetization-spec.md](07-monetization-spec.md).
+
+| Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
+|---|---|---|---|---|
+| `POST /trips/{trip_id}/concierge-requests` | owner or editor | none | `ConciergeIn` with `Idempotency-Key` to 201 `ConciergeRequest` | Writes `concierge_requests` (status `new`), emails the advisor desk through Resend, and posts to the admin queue. Needs the `concierge_terms` consent (the disclosure text version). Only the listed fields are shared with the advisor; other travelers' names are sent only if the requester includes them. |
+| `GET /trips/{trip_id}/concierge-requests` | viewer | none | none to `ConciergeRequest[]` | |
+| `PATCH /concierge-requests/{id}` | requester | status `new` or `waiting_on_user` | `{ message?: string, cancel?: boolean }` to `ConciergeRequest` | |
+| `POST /trips/{trip_id}/room-block-requests` | owner | `group_tools`, at least 8 travelers | `RoomBlockIn` with `Idempotency-Key` to 201 `RoomBlockRequest` | Group Trip Pass feature. Writes `room_block_requests`, notifies the desk. |
+| `GET /trips/{trip_id}/room-block-requests` | viewer | none | none to `RoomBlockRequest[]` | |
+
+```ts
+type ConciergeIn = {
+  kind: "stay" | "cruise" | "complex_trip" | "other"
+  lodging_id?: Uuid; budget?: Money; notes: string; preferred_contact: "email" | "in_app"
+  disclosure_accepted: true                    // "A human advisor may book this and Wayfold earns a commission from the agency."
+}
+type ConciergeRequest = Omit<ConciergeIn, "disclosure_accepted"> & {
+  id: Uuid; trip_id: Uuid; status: "new" | "in_progress" | "waiting_on_user" | "booked" | "closed" | "cancelled"
+  advisor_name: string | null; created_at: string; updated_at: string; perks: string[]
+}
+type RoomBlockIn = { destination: string; check_in: string; check_out: string; rooms: number; guests: number; budget_per_room?: Money; notes?: string }
+type RoomBlockRequest = RoomBlockIn & { id: Uuid; trip_id: Uuid; status: "new" | "quoting" | "quoted" | "closed"; quote_url: string | null; created_at: string }
+```
+
+### 5.19 Entitlements and credits
+
+| Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
+|---|---|---|---|---|
+| `GET /me/entitlements` | user | none | none to `Entitlements` | The one source the client reads for what the account can do. Derived from `entitlements`, `subscriptions`, `trip_passes` and the household. Never calls Apple. `ETag`. |
+| `POST /purchases/sync` | user | none | `{ trip_id?: Uuid, product_id?: string }` with `Idempotency-Key` to `Entitlements` | Called after a purchase for instant unlock before the webhook lands. The server asks RevenueCat's REST API for the subscriber and applies the same code as the webhook. For a Trip Pass or Group Trip Pass, `trip_id` binds the pass (a pass cannot move to another trip). |
+| `POST /purchases/restore` | user | none | none to `Entitlements` | Re-pulls the subscriber after "Restore purchases". |
+| `GET /me/credits` | user | none | none to `CreditBalance` | Balance split by source, expiry dates and next monthly grant. Family members see the household pool. |
+| `GET /me/credits/ledger` | user | none | `?limit&cursor&kind=` to `Page<LedgerEntry>` | From `credit_ledger`, newest first. |
+| `GET /credits/packs` | user | none | none to `CreditPack[]` | `credits_50`, `credits_150`, `credits_400` with store product ids. The price is shown by StoreKit, not by us. |
+| `POST /credits/packs/claim` | user | none | `{ product_id: string, transaction_id: string }` with `Idempotency-Key` to `CreditBalance` | Verifies the transaction through RevenueCat, grants credits keyed by `transaction_id` (never twice). Usually already granted by the webhook; this returns the balance. `409 state_conflict` if the transaction belongs to another user. |
+| `GET /trips/{trip_id}/pass` | viewer | none | none to `TripPass \| null` | Pass status and expiry for the trip settings screen. |
+| `GET /me/passes` | user | none | none to `TripPass[]` | Includes an unapplied pass waiting to be bound to a trip. |
+
+```ts
+type Entitlements = {
+  tier: Tier; source: "none" | "subscription" | "household"
+  product_id: string | null; status: "none" | "active" | "in_grace" | "billing_retry" | "expired" | "refunded"
+  valid_until: string | null; auto_renew: boolean | null; store: "app_store" | "stripe" | null
+  manage_subscription_url: string | null
+  limits: { active_trips: number | null; live_routes: number; credits_per_month: number; alerts: number; collaborators: number }
+  usage: { active_trips: number }
+  trip_passes: TripPass[]
+  flags: { routines: boolean; agent_runs: boolean; taster_available: boolean; concierge: boolean; print_orders: boolean }
+  credits: CreditBalance
+}
+type CreditBalance = {
+  total: number; monthly: number; trip_pass: number; purchased: number
+  spend_order: ["monthly", "trip_pass", "purchased"]
+  grants: { kind: "monthly" | "trip_pass" | "purchase" | "promo"; remaining: number; expires_at: string | null; trip_id: Uuid | null }[]
+  next_monthly_grant_at: string | null; pooled: boolean; blocked: boolean   // blocked when a refund pushed the balance negative
+}
+type LedgerEntry = {
+  id: Uuid; at: string; kind: "grant" | "reserve" | "settle" | "release" | "refund" | "expire" | "adjust"
+  delta: number; balance_after: number; action: CreditAction | null
+  trip_id: Uuid | null; run_id: Uuid | null; note: string
+}
+type CreditPack = { product_id: "credits_50" | "credits_150" | "credits_400"; credits: number; valid_months: 12 }
+type TripPass = {
+  id: Uuid; product: "trip_pass" | "group_trip_pass"; trip_id: Uuid | null
+  starts_at: string | null; expires_at: string | null; status: "unapplied" | "active" | "expired" | "refunded"
+  live_checks_left: number | null; collaborators_max: number
+}
+```
+
+### 5.20 Paywall offers
+
+The server decides which offer to show and why, so the client never hard codes paywall logic. A paywall is shown only at a moment of value, always with the free path visible, and never with fake urgency.
+
+| Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
+|---|---|---|---|---|
+| `GET /paywall/offer` | user | none | `?reason=&trip_id=&surface=` to `PaywallOffer` | Logs `paywall_shown` (no experiment cell is shown twice in one session). Returns 200 with `offer: null` when nothing should be shown (for example when the user already has the capability). |
+| `POST /paywall/events` | user | none | `{ offer_id: Uuid, event: "viewed" \| "dismissed" \| "cta_tapped" \| "purchased" }` to 204 | Analytics and experiment accounting only. |
+
+```ts
+type PaywallOffer = {
+  offer_id: Uuid; reason: PaywallHint["reason"]
+  headline: string; body: string; why: string              // why this is shown now, plain words
+  lead: { product_id: string; label: string; trial_days: number | null }
+  alternatives: { product_id: string; label: string }[]     // at most 2
+  free_path: { label: string; action: string }              // always present: "Keep planning for free"
+  disclosure: string | null                                 // subscription terms line
+  experiment_cell: string | null
+} | null
+```
+
+Mapping (decision table the endpoint implements, detail in 07): `sharing` leads with Trip Pass for a one-trip group or Plus annual for repeat planners; `live_routes` and `agent_taster_used` lead with Plus annual; `credits` shows credit packs first for Plus and Family members and Plus for Free; `group_tools` leads with Group Trip Pass; `routines` shows Pro; `trip_limit` shows Plus and the option to archive. Credit packs are never shown beside an upsell on a trips home screen.
+
+### 5.21 Affiliate: outbound links, redirect and offers
+
+All outbound partner links go through `/go/{click_id}`. The server mints a click id only through an authenticated call, builds the destination only from a stored `affiliate_link_templates` row plus a validated destination for that program's own hosts, and never ranks anything by commission. The server never fetches Airbnb, Vrbo or Booking.com pages; pasted listing links open unchanged and are never rewritten.
+
+| Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
+|---|---|---|---|---|
+| `POST /outbound` | user (viewer on the trip) | 60 an hour per user | `OutboundIn` to 201 `OutboundLink` | Checks trip access, picks the program (feature flags, geography, A/B cell, kill switch per partner), inserts `link_clicks` with a random 128 bit base62 `click_id` (and `short_id` of 8 to 12 characters where a network limits sub-id length), returns `https://go.wayfold.app/go/<click_id>`. Repeat clicks for the same entity and surface within 30 seconds return the same link. `404 not_found` when no program applies (the client then shows the plain link). User id, trip id and email never appear in the URL. |
+| `POST /shared/{token}/outbound` | none (share token) | 30 an hour per IP | `{ offer_ref: string }` to 201 `OutboundLink` | For the "Book the plan" slide on share pages. No user is attached; the click row carries the share link id. |
+| `GET /go/{click_id}` | none | id must be fresh (under 10 minutes) and unused | none to `302 Location: <partner url>` | Sets `clicked_at`, `redirect_status`, `opened_in`, `country` and `platform` on `link_clicks`; marks the id used. Headers: `Cache-Control: no-store`, `Referrer-Policy: no-referrer`. Never renders a page, sets a cookie or runs a script. There is no `url=` parameter; unknown, expired or reused ids get `404` with an empty body and `X-Robots-Tag: noindex`. Partner kill switch on: 302 to the plain non-affiliate destination. |
+| `GET /trips/{trip_id}/offers` | viewer | none | `?context=&entity_id=` to `AffiliateOffer[]` | Offers per context: `destination`, `flight_chosen`, `lodging_shortlist`, `itinerary_day`, `place`, `checklist`, `after_trip`, `presentation`. At most one card per screen view except user-requested lists. Sorting is always stated and is never by commission. Returns `[]` when the user set `hide_booking_links` (the client then renders plain links), for domestic trips on eSIM items, and before a chosen flight or booking on insurance. |
+| `GET /affiliate/disclosure` | none | none | none to `{ sentence, eu_uk_label: "Ad", booking_line: string, programs: {name: string, category: string}[], ranking_rule: string }` | Static content for the "How we earn money" page. `Cache-Control: public, max-age=3600`. |
+
+```ts
+type OutboundIn = {
+  entity_type: "fare" | "lodging" | "item" | "place" | "checklist" | "offer" | "after_trip" | "thing_to_do"
+  entity_id: Uuid | string; surface: string           // "lodging-shortlist", "flight-chosen", "checklist-esim" ...
+  trip_id?: Uuid
+  opened_in?: "sfsvc" | "safari" | "web"
+}
+type OutboundLink = { click_id: string; url: string; expires_at: string }
+type AffiliateOffer = {
+  offer_ref: string                           // opaque, valid 24 hours, used with /outbound
+  category: "lodging" | "flight" | "tour" | "transfer" | "car" | "esim" | "insurance" | "train" | "luggage" | "compensation"
+  partner: string; label: string              // "Book on Agoda"
+  why: string                                 // "Your dates, 4 nights, 2 guests"
+  price: Money | null; price_observed_at: string | null; price_note: string | null   // "price at last check"
+  disclosure: "We earn a commission if you book here."
+  extra_disclosure: string | null             // Booking.com line, "Ad" on UK and EU storefronts
+  non_affiliate: { label: string; url: string } | null     // "Search on the airline's site", "Open your saved link"
+  sorted_by: string | null
+}
+```
+
+### 5.22 Partner guides
+
+Labeled partner guides (curated destination guides written by or with partners, clearly marked "Partner guide"). Read only; authoring is in the admin console.
+
+| Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
+|---|---|---|---|---|
+| `GET /partner-guides` | user | none | `?destination=&country=&limit&cursor` to `Page<GuideSummary>` | Sorted by recency; never by partner payment. |
+| `GET /partner-guides/{slug}` | user | none | none to `Guide` | `Cache-Control: private, max-age=300`. |
+| `POST /trips/{trip_id}/items/from-guide` | editor | none | `{ guide_slug: string, entry_id: string }` to 201 `Item` | Copies a guide entry into the itinerary pool, attribution "From <guide>". |
+
+```ts
+type GuideSummary = { slug: string; title: string; destination: string; partner: string; cover_url: string | null; label: "Partner guide"; disclosure: string }
+type Guide = GuideSummary & { body_md: string; entries: { id: string; title: string; lat: number | null; lon: number | null; url: string | null }[]; updated_at: string }
+```
+
+### 5.23 Print orders (web)
+
+Printed trip books are ordered on the web only (Stripe checkout; never Apple In-App Purchase because they are physical goods). iPhone clients open the web page in a browser.
+
+| Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
+|---|---|---|---|---|
+| `POST /print-orders/quote` | owner or editor | none | `{ trip_id, format: "softcover" \| "hardcover", pages: number, ship_to: Address }` to `PrintQuote` | Price and shipping from the print partner; valid 30 minutes. |
+| `POST /print-orders` | owner or editor | none | `{ quote_id: Uuid }` with `Idempotency-Key` to 201 `PrintOrder` | Creates `print_orders` (status `awaiting_payment`) and a Stripe Checkout Session; returns `checkout_url`. Status moves on Stripe webhooks. |
+| `GET /print-orders` | user | none | `?limit&cursor` to `Page<PrintOrder>` | |
+| `GET /print-orders/{id}` | requester | none | none to `PrintOrder` | Tracking link when shipped. |
+| `POST /print-orders/{id}/cancel` | requester | status before `in_production` | `Idempotency-Key` to `PrintOrder` | Cancels and refunds through Stripe. |
+
+```ts
+type Address = { name: string; line1: string; line2?: string; city: string; region?: string; postal_code: string; country_code: string }
+type PrintQuote = { id: Uuid; total: Money; items: Money; shipping: Money; tax: Money | null; expires_at: string }
+type PrintOrder = { id: Uuid; trip_id: Uuid; status: "awaiting_payment" | "paid" | "in_production" | "shipped" | "delivered" | "cancelled" | "refunded"; total: Money; checkout_url: string | null; tracking_url: string | null; created_at: string }
+```
+
+### 5.24 Advisors (year 2, outline)
+
+Wayfold for Advisors is a workspace product sold on the web through Stripe ($29 a seat a month, $24 annual), not through the App Store. Only outlined here; the detailed contract is written when the year 2 build starts. All routes are hidden behind the `advisors` flag and return `404` when it is off.
+
+| Endpoint | Auth | Notes |
+|---|---|---|
+| `POST /advisor-orgs` | user | Creates `advisor_orgs` and a Stripe customer. |
+| `GET/PATCH /advisor-orgs/{org_id}` | org admin | Branding (logo, colors, presentation footer). |
+| `POST /advisor-orgs/{org_id}/seats` | org admin | Adds or removes `advisor_seats`; quantity changes go to Stripe. |
+| `GET/POST /advisor-orgs/{org_id}/clients` | seat holder | `advisor_clients`: a client is a person or a trip shared with an advisor. |
+| `POST /advisor-orgs/{org_id}/clients/{client_id}/trips` | seat holder | Creates a trip owned by the advisor and shared with the client as editor or viewer; the trip uses the advisor's entitlements. |
+| `POST /trips/{trip_id}/proposals` | seat holder | Branded presentation plus a priced proposal; share link with the org's branding. |
+| `GET /advisor-orgs/{org_id}/commissions` | org admin | Bookings and commission tracking entered by the advisor or imported. |
+
+### 5.25 Admin API (outline)
+
+Base path `/v1/admin`, hidden from the public OpenAPI schema, reachable only from the admin console origin behind Cloudflare Access, with a separate admin Supabase project claim and `admin_users.role` of `support`, `finance`, `ops` or `superadmin`. Every mutating call needs a `reason` string and writes `audit_log` (actor, route, target, before and after). Routes return `404` to non-admins. Full detail lives in [08-admin-control-center.md](08-admin-control-center.md).
+
+| Area | Endpoints (all under `/v1/admin`) | Minimum role |
+|---|---|---|
+| Users | `GET /users`, `GET /users/{id}`, `POST /users/{id}/suspend`, `POST /users/{id}/revoke-sessions` | support |
+| Billing | `GET /users/{id}/subscriptions`, `POST /users/{id}/entitlement-override`, `GET /store-transactions` | finance |
+| Credits | `GET /users/{id}/credits`, `POST /users/{id}/credits/adjust`, `POST /credits/refund-run` | support |
+| AI spend | `GET /ai/spend`, `GET /ai/runs`, `GET /provider-calls` | ops |
+| Kill switches and flags | `GET/PUT /kill-switches/{key}`, `GET/PUT /feature-flags/{key}` | ops |
+| Affiliate | `GET /affiliate/programs`, `PATCH /affiliate/programs/{id}`, `GET /affiliate/revenue`, `GET /affiliate/conversions` | finance |
+| Support | `GET /support/tickets`, `PATCH /support/tickets/{id}`, `GET /concierge-requests`, `PATCH /concierge-requests/{id}`, `GET /room-block-requests` | support |
+| Content | `GET/POST/PATCH /partner-guides` | ops |
+| Audit | `GET /audit-log` | superadmin |
+
+## 6. Webhooks
+
+All webhook endpoints are public routes (no bearer token), excluded from the cross-tenant test by an explicit allow-list, and served under `/v1/webhooks`. Shared processing rules:
+
+1. Read the raw body, verify the signature with a constant-time compare before parsing. Invalid: `401 invalid_signature`, log, never process.
+2. Insert into `webhook_events (id, provider, received_at, payload)` where `id` is the provider event id (Stripe `evt_...`, RevenueCat `event.id`, Apple `notificationUUID`, network `txn` key). `INSERT ... ON CONFLICT DO NOTHING`. If the row already existed and `processed_at` is set, return `200` and stop. This is the idempotency guarantee.
+3. Process in one transaction, set `processed_at`, return `200`. Unknown event types are stored and acknowledged with `200`. A transient failure returns `500` so the sender retries; a permanent failure stores `error` and returns `200` and alerts (payment webhook failures page the on-call).
+4. Handlers are order independent: each applies the state carried in the event (and, for billing, re-reads the subscriber from RevenueCat) rather than assuming the previous event arrived.
+5. Payloads are untrusted data. Amounts come from our own `store_transactions`, never from a webhook field alone.
+
+| Endpoint | Sender | Verification | Events handled and effects |
+|---|---|---|---|
+| `POST /webhooks/revenuecat` | RevenueCat | `Authorization: Bearer <REVENUECAT_WEBHOOK_SECRET>` compared in constant time; `environment` field must match the deployment (sandbox events are accepted only in staging) | `INITIAL_PURCHASE`, `RENEWAL`, `PRODUCT_CHANGE`, `CANCELLATION`, `UNCANCELLATION`, `BILLING_ISSUE`, `EXPIRATION`, `REFUND` (as `CANCELLATION` with reason), `NON_RENEWING_PURCHASE`, `TRANSFER`, `SUBSCRIBER_ALIAS`. Upserts `subscriptions` and `store_transactions` (unique on `original_transaction_id`), recomputes `entitlements`, grants the monthly credit allowance on renewal, binds Trip Pass and Group Trip Pass to the trip (the purchase flow sent `trip_id` as a subscriber attribute; a pass with no trip stays `unapplied`), grants credit packs keyed by `transaction_id`, and reverses grants on refund (balance may go negative and blocks AI until positive). Family changes update household entitlements. `app_user_id` is our user UUID. Emits `subscription_started`, `subscription_renewed`, `subscription_cancelled`. |
+| `POST /webhooks/apple` | Apple App Store Server Notifications V2, only if used directly | Signed JWS (`signedPayload`); verify the x5c chain to Apple's root, check bundle id and environment, verify the nested `signedTransactionInfo` and `signedRenewalInfo` | `SUBSCRIBED`, `DID_RENEW`, `DID_FAIL_TO_RENEW`, `GRACE_PERIOD_EXPIRED`, `EXPIRED`, `REFUND`, `REVOKE`, `DID_CHANGE_RENEWAL_STATUS`, `CONSUMPTION_REQUEST` (answer through the App Store Server API). Runs the same entitlement code as the RevenueCat handler. Off by default while RevenueCat is the source; kept so a move to direct StoreKit needs no API change. |
+| `POST /webhooks/stripe` | Stripe | `Stripe-Signature` with the endpoint secret, 5 minute tolerance | `checkout.session.completed` and `payment_intent.succeeded` (settlements, print orders), `payment_intent.payment_failed`, `charge.refunded` (print orders, settlements), `customer.subscription.created/updated/deleted` and `invoice.paid`, `invoice.payment_failed` (advisor seats). Updates `settlements`, `print_orders`, `advisor_seats`. Stripe never grants app features for consumer digital goods. |
+| `POST /webhooks/affiliate/{network}` | Travelpayouts, Impact, Stay22, Viator (where a network offers postbacks); `{network}` is a stored slug | Per network: Travelpayouts shared token in a header or query parameter plus IP allow-list; Impact HMAC signature; Stay22 and Viator by token. Reject unknown slugs with `404`. | Writes `affiliate_conversions` upserted on `(program_id, network_txn_id)`, matched to `link_clicks` by sub-id, status history (`pending`, `approved`, `rejected`, `paid`). An unmatched conversion is stored with `click_id = null` and counted toward the unmatched-share health metric. Postbacks are a supplement: the nightly network pull job is the source of truth. Conversions never change any user-visible feature. |
+
+Replay protection: a webhook older than 7 days is stored and ignored unless it is a refund or revocation. `webhook_events` rows are kept 90 days, payload minimized after 30.
+
+## 7. Mapping from the existing Trip Planner API
+
+| Existing route (under `/api/v1`) | Wayfold route (under `/v1`) | Change |
+|---|---|---|
+| `/trips`, `/trips/{id}` | same | UUIDv7 ids, membership scoping, `version`, `capabilities` |
+| `/trips/{id}/activities`, `/activities/{id}` | `/trips/{id}/items`, `/items/{id}` | Renamed; adds `position`, reorder, move, `cost` |
+| `/trips/{id}/days/{day}` | same | `version` added |
+| `/trips/{id}/routes`, `/routes/{id}`, `/routes/{id}/choice`, `/routes/{id}/history`, `/routes/{id}/date-grid` | same, plus `mode`, `/price-history`, alerts | `history` renamed `price-history` |
+| `/trips/{id}/flights/refresh`, `/flights/best`, `/flights/summary`, `/flight-quotes/{id}` | same, `/fares/{id}` | "quote" becomes "fare"; `live-search` added |
+| `/trips/{id}/lodging`, `/lodging/{id}`, `/lodging/{id}/hearts/{person_id}` | same, `/votes/me` | Hearts become per-user votes; `/lodging/preview` becomes `/lodging/parse-link` (no fetching) |
+| `/trips/{id}/lodging/search-rentals` | `/trips/{id}/lodging/rental-search` | Metered, cached |
+| `/people` | same | Owner scoped |
+| `/places/search`, `/places/geoapify/{id}`, `/places/wiki` | `/places/search`, `/places/{id}` | Wiki folded into details |
+| `/runs`, `/runs/{id}`, `/runs/{id}/events`, `/runs/{id}/outputs`, `/runs/{id}/cancel` | `/agent-runs/...` plus `/stream` | SSE added; start endpoint is new |
+| `/routines` | `/trips/{id}/routines`, `/routines/{id}` | Pro only |
+| `/settings` | `/me/settings` | Per user |
+| `/api/auth/login`, `/session`, `/logout` | `/me/bootstrap`, `/me`, `/me/sign-out` | Passcode removed |
+| `/api/agent/v1/*` | removed | The worker calls services in process |
+| `/system/status`, `/system/backup`, `/usage/serpapi` | admin API | Ops only |
+
+## 8. OpenAPI generation
+
+FastAPI generates the OpenAPI 3.1 schema from the Pydantic 2 models and route declarations. The schema is the contract.
+
+- `GET /v1/openapi.json` is served in development and staging only; production disables `/docs` and `/openapi.json`. The admin and webhook routers are created with `include_in_schema=False` so they never enter the public schema (the admin console has its own generated client from a second schema, `/v1/admin/openapi.json`).
+- Give every route an explicit `operation_id` of the form `module_action` (`trips_create`, `flights_live_search`, `agent_runs_start`) so generated function names are stable, and a `tags` entry per module in section 5. Declare `responses={...}` with `Problem` for every documented error code so the client types include them. Mark credit-spending routes with the `x-credits: <action>` and `x-idempotency-required: true` extensions.
+- `npm run gen:api` runs `uv run python -m wayfold.tools.dump_openapi > frontend/src/lib/api/openapi.json` and then `openapi-typescript openapi.json -o src/lib/api/schema.d.ts`. Commit both files. CI fails if regenerating changes the committed `schema.d.ts` (drift check), and a contract test fails if a route is missing `operation_id` or a 4xx response model.
+- The web and iOS (Capacitor) clients use `openapi-fetch` on top of the generated `paths` type. `client.ts` sets `baseUrl` from `VITE_API_BASE_URL`, middleware adds `Authorization`, `X-Wayfold-Client`, `X-Client-Version` and `X-Request-Id`, adds an `Idempotency-Key` for routes marked `x-idempotency-required`, refreshes once on 401, maps `application/problem+json` to a typed `ApiError` keyed by `code`, and sends `If-Match` from the cached `ETag`.
+- SSE is not described by OpenAPI. The stream route is documented with a `text/event-stream` response and the event payloads in section 5.13; the client has a small hand-written reader (`lib/api/sse.ts`) that uses the generated `RunEvent` type.
+- Enums in this file are closed in the schema but clients treat unknown values as "other" (1.1).
+- Backend layout: one router module per section (`api/me.py`, `api/trips.py`, `api/flights.py`, `api/lodging.py`, `api/itinerary.py`, `api/places.py`, `api/ai.py`, `api/agent_runs.py`, `api/group.py`, `api/billing.py`, `api/affiliate.py`, `api/webhooks.py`, `api/admin/`), all using the shared dependencies `CurrentUser`, `require_trip(trip_id, min_role)`, `require_gate(...)` and `idempotent(...)`.
+- Tests: the cross-tenant suite (user B against user A's ids expects 404 for every route not on the public allow-list), a gate test per row of section 4, an idempotency replay test for every required route, and webhook fixtures with recorded signatures.
+
+## 9. Example flow: trip, invite, agent run, events, credits settled
+
+Maya (Plus, 60 credits left) plans Lisbon with Sam (Free). Headers `Authorization`, `X-Request-Id` omitted for brevity.
+
+**1. Create the trip.**
+
+```
+POST /v1/trips
+{ "name": "Lisbon in May", "start_date": "2026-05-12", "end_date": "2026-05-19", "home_currency": "USD",
+  "destinations": [{ "name": "Lisbon", "country_code": "PT", "lat": 38.72, "lon": -9.14 }] }
+-> 201 { "id": "0192a1f0-...-7c1", "version": 1, "my_role": "owner",
+         "capabilities": { "effective_tier": "plus", "can_invite": true, "live_routes_max": 3, "max_collaborators": 25, ... } }
+```
+
+**2. Invite Sam and let him join.**
+
+```
+POST /v1/trips/0192a1f0-...-7c1/invites
+{ "role": "editor", "email": "sam@example.com" }
+-> 201 { "id": "0192a1f1-...", "url": "https://wayfold.app/i/Qx7...", "uses_left": 1, "expires_at": "2026-10-07T..." }
+
+# Sam opens the link, signs in, and POST /v1/me/bootstrap creates his Free account.
+GET  /v1/invites/Qx7...          -> 200 { "trip_name": "Lisbon in May", "inviter_name": "Maya", "role": "editor" }
+POST /v1/invites/Qx7.../accept   { "person_id": "0192a1f2-..." }
+-> 200 Trip { "my_role": "editor", "capabilities": { "effective_tier": "plus", ... } }   # trip capabilities come from Maya's tier
+```
+
+**3. Maya starts a fare hunt.**
+
+```
+POST /v1/trips/0192a1f0-...-7c1/agent-runs
+Idempotency-Key: 6f1c2b7e-5d7a-4e0e-9f7a-1f7f0a8f2a11
+{ "kind": "fare_hunt", "route_ids": ["0192a1f3-..."] }
+-> 202 Location: /v1/agent-runs/0192a2aa-...
+{ "id": "0192a2aa-...", "status": "queued", "is_taster": false,
+  "credits": { "action": "agent_run", "reserved": 40, "charged": null, "from_cache": false, "balance_after": 20, "ledger_id": "..." },
+  "events_url": "/v1/agent-runs/0192a2aa-.../stream" }
+```
+
+A retry with the same key replays this response with `Idempotent-Replay: true`. If Sam taps "Start agent run" while Maya's runs, Sam's call succeeds only if Sam has no active run and enough of his own credits (Free: the taster, once).
+
+**4. Receive events.**
+
+```
+GET /v1/agent-runs/0192a2aa-.../stream
+Accept: text/event-stream
+id: 1  event: run.started   data: {"seq":1,"summary":"Fare hunt started for LIS"}
+id: 4  event: tool.search   data: {"seq":4,"tool_name":"web_search","summary":"Searching fares JFK to LIS, May 12"}
+id: 9  event: fare.saved    data: {"seq":9,"summary":"Saved $489 round trip on TAP, seen on the airline page","payload":{"fare_id":"0192a2b1-..."}}
+id: 17 event: run.finished  data: {"seq":17,"summary":"2 fares saved","payload":{"status":"succeeded","credits":{"reserved":40,"charged":40,"balance_after":20}}}
+```
+
+**5. Credits settled.** The worker marked the `ai_usage` row `settled` (provider cost $0.61, under the $0.80 hard stop), the ledger recorded the settle, and the run shows its receipt.
+
+```
+GET /v1/me/credits        -> 200 { "total": 20, "monthly": 20, "trip_pass": 0, "purchased": 0, "next_monthly_grant_at": "2026-10-31T..." }
+GET /v1/me/credits/ledger -> 200 { "items": [{ "kind": "settle", "delta": -40, "balance_after": 20, "action": "agent_run", "run_id": "0192a2aa-..." }, ...] }
+GET /v1/agent-runs/0192a2aa-.../outputs -> 200 { "fares": [ { "price": { "amount_minor": 48900, "currency": "USD" }, "confidence": "agent_seen", "source_url": "..." } ], "notes": [...] }
+```
+
+If the provider had failed before any result, the run would end `failed`, the ledger would show a `release` of +40, and `run.finished` would carry `"charged": 0`. If the same run had been a shared cache hit, the receipt would show `"from_cache": true, "charged": 8`.
+
+**6. Maya picks the fare.**
+
+```
+PUT /v1/routes/0192a1f3-.../choice   { "fare_id": "0192a2b1-..." }   -> 200 Trip (flight_dates set)
+GET /v1/trips/0192a1f0-...-7c1/offers?context=flight_chosen
+-> 200 [{ "category": "flight", "label": "Book on Aviasales", "price_note": "price at last check, cached 2 h ago",
+          "disclosure": "We earn a commission if you book here.",
+          "non_affiliate": { "label": "Search on the airline's site", "url": "https://..." } }]
+POST /v1/outbound { "entity_type": "fare", "entity_id": "0192a2b1-...", "surface": "flight-chosen", "trip_id": "0192a1f0-...-7c1" }
+-> 201 { "click_id": "3vQ9kT2mX0bE7nLw1ZpCya", "url": "https://go.wayfold.app/go/3vQ9kT2mX0bE7nLw1ZpCya" }
+GET  /go/3vQ9kT2mX0bE7nLw1ZpCya   -> 302 Location: https://www.aviasales.com/...?marker=...&sub_id=8Kq2xPv1Lm
+```
+
+Later the nightly Travelpayouts pull (or a postback to `/v1/webhooks/affiliate/travelpayouts`) writes an `affiliate_conversions` row matched to the click by sub-id. Nothing in the app changes for the user.
