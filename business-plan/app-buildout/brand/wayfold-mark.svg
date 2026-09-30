@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="Wayfold">
+  <title>Wayfold</title>
+  <rect width="1024" height="1024" rx="228" fill="#15203a"/>
+  <path d="M512 250 Q380 196 238 214 Q214 217 214 242 L214 800 Q214 826 240 822 Q382 800 512 846 Z" fill="#e3e8ef"/>
+  <path d="M512 250 Q644 196 786 214 Q810 217 810 242 L810 800 Q810 826 784 822 Q642 800 512 846 Z" fill="#fafbfd"/>
+  <path d="M512 250 L512 846" stroke="#d3dae4" stroke-width="8" stroke-linecap="round"/>
+  <polyline points="318,370 415,690 512,440 609,690 706,370" fill="none" stroke="#8c1d40" stroke-width="74" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="318" cy="370" r="50" fill="#e3e8ef" stroke="#8c1d40" stroke-width="26"/>
+  <circle cx="706" cy="370" r="58" fill="#8c1d40"/>
+</svg>
