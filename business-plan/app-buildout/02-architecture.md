@@ -57,11 +57,11 @@ flowchart LR
 ### 1.1 Design rules
 
 1. The API never does slow work. Anything that calls Anthropic, loops over providers, sends push or email, builds an export or renders a PDF is a job.
-2. Every job is safe to run twice. Every job has an idempotency key (section 6).
+2. Every job is safe to run twice. Every job has an idempotency key (section 5.1).
 3. One code path per rule. Entitlement checks, credit charges, tenant checks and kill switches are each one function, called from routes and jobs alike.
 4. The client never decides anything about money, limits or permissions. It displays what `GET /me/entitlements` and `TripOut.capabilities` return.
 5. Postgres is the only system of record. Caches can be dropped without data loss.
-6. Hosted-only code. The personal Windows mode of the old Trip Planner is not carried into Wayfold (section 13).
+6. Hosted-only code. The personal Windows mode of the old Trip Planner is not carried into Wayfold (section 14).
 
 ### 1.2 Processes
 
@@ -97,14 +97,14 @@ wayfold/
           auth/  trips/  collaboration/  flights/  lodging/  itinerary/
           places/  ai/  billing/  credits/  affiliate/  concierge/
           groups/  notifications/  admin/  advisors/
-        providers/                one file per third party (section 11)
+        providers/                one file per third party (section 8)
         migrations/               Alembic env and versions
         seed/                     airports, affiliate_programs, feature_flags defaults
       tests/
     worker/                       job definitions and the scheduler
       wayfold_worker/
         app.py                    Procrastinate app, lanes, retry strategies
-        jobs/                     one file per job (section 6)
+        jobs/                     one file per job (section 5.1)
         scheduler.py              leader election, next_run_at scanner
         agents/                   AgentLoop, tools, prompts, evals hooks
       tests/
@@ -210,7 +210,7 @@ Boundary rules that tests enforce:
 | `GET /health/live`, `/health/ready` | none | Ready checks database, migration head, queue reachability |
 | `GET /go/{click_id}` | none | Never takes a URL from the request. Looks up a `link_clicks` row created by an authenticated call, builds the destination from `affiliate_link_templates`, logs, and 302s. Unknown or expired id goes to the trip page, never elsewhere |
 | `GET /share/{token}` | token | Read-only trip view with redaction flags, per-token throttle |
-| `POST /webhooks/revenuecat`, `/webhooks/stripe`, `/webhooks/resend`, `/webhooks/supabase-auth` | signature | Verify, insert into `webhook_events` by provider event id, return 200 fast, process in a job (section 6) |
+| `POST /webhooks/revenuecat`, `/webhooks/stripe`, `/webhooks/resend`, `/webhooks/supabase-auth` | signature | Verify, insert into `webhook_events` by provider event id, return 200 fast, process in a job (section 5.1) |
 | `POST /auth/session`, `GET /me` | JWT | Session bootstrap |
 | `/admin/*` | admin session | Separate middleware: SSO, 2FA, IP allowlist optional, every call writes `audit_log` |
 | `GET /i/{token}` | none | Universal link landing, JSON for the app, HTML for the web fallback |
@@ -358,7 +358,7 @@ All configuration is environment variables, read once in `config.py` through `py
 | `MIGRATION_DATABASE_URL` | DDL role, used only by `migrate` | `postgresql+psycopg://wayfold_migrator:...` | Yes |
 | `DATABASE_POOL_SIZE` / `DATABASE_MAX_OVERFLOW` | Pool size per process | `10` / `5` | No |
 | `DATABASE_STATEMENT_TIMEOUT_MS` | Per-statement timeout (migrator overrides) | `15000` | No |
-| `TEST_DATABASE_URL` | Test database; CI and local only | `postgresql+psycopg://...tripplanner_test` style, named `wayfold_test` | Yes |
+| `TEST_DATABASE_URL` | Test database; CI and local only | `postgresql+psycopg://wayfold:...@localhost/wayfold_test` | Yes |
 | `REDIS_URL` | Empty until Redis is added (about 10k MAU) | empty | Yes |
 
 **Identity and device trust**
@@ -494,7 +494,7 @@ GitHub Actions, one workflow per concern. Production deploys use OIDC, never sto
 
 | Workflow | Trigger | Steps |
 |---|---|---|
-| `ci.yml` | Pull request | 1. Install (`uv sync --frozen`, `npm ci`). 2. `npm run lint` (ruff, import-linter, oxlint, tsc). 3. `npm test` with a `postgres:18` service (pytest and vitest). 4. OpenAPI drift: `npm run gen:api` then `git diff --exit-code` on `schema.d.ts`; shared constants drift check. 5. Tenant-isolation suite (section 9 of [10-quality-security-launch.md](10-quality-security-launch.md)). 6. Migration test: from empty, and from the last released revision; single Alembic head. 7. Build the Docker image. 8. Trivy scan. |
+| `ci.yml` | Pull request | 1. Install (`uv sync --frozen`, `npm ci`). 2. `npm run lint` (ruff, import-linter, oxlint, tsc). 3. `npm test` with a `postgres:18` service (pytest and vitest). 4. OpenAPI drift: `npm run gen:api` then `git diff --exit-code` on `schema.d.ts`; shared constants drift check. 5. Tenant-isolation suite (section 1.3 of [10-quality-security-launch.md](10-quality-security-launch.md)). 6. Migration test: from empty, and from the last released revision; single Alembic head. 7. Build the Docker image. 8. Trivy scan. |
 | `e2e.yml` | Pull request labeled `e2e`, nightly | Playwright against the built image with the e2e seed (desktop and iPhone viewport projects) |
 | `evals.yml` | Changes under `agents/`, prompts, or model config; weekly | AI evals through the Batch API; blocks merge on a gate miss |
 | `security.yml` | Weekly and on pull request | `pip-audit`, `npm audit`, `gitleaks`, CodeQL, Trivy |
@@ -580,7 +580,7 @@ Paths are under `backend/tripplanner/` and `frontend/src/` in the current repo. 
 | `migrate.py`, `setup_db.py` | Adapt, Drop | `cli.py migrate`; setup dropped | Keep the Alembic runner with advisory lock; superuser prompt setup is local-only |
 | `paths.py` | Drop | none | `%LOCALAPPDATA%` and repo-relative paths; no writable local state |
 | `cli.py` | Adapt | `cli.py` | Keep the typer or argparse shape; commands become `api`, `worker`, `scheduler`, `migrate`, `seed`, `openapi` |
-| `paths` of `migrations/` | Drop history, keep `env.py` | `migrations/` | Start Wayfold with a new baseline from [03-database-schema.md](03-database-schema.md); the 7 existing revisions are replaced by one baseline plus a one-off data import script |
+| `migrations/` (7 revisions) | Drop history, keep `env.py` | `migrations/` | Start Wayfold with a new baseline from [03-database-schema.md](03-database-schema.md); the 7 existing revisions are replaced by one baseline plus a one-off data import script |
 | `models/base.py` | Adapt | `modules/*/models.py` base | Keep the declarative base; switch to UUIDv7 public ids and `timestamptz` |
 | `models/trip.py`, `people.py` | Adapt | `trips`, `people`, `trip_people` | Add owner, `public_id`, `deleted_at`, `owner_user_id`, `linked_user_id`; `trip_travelers` becomes `trip_people` |
 | `models/flights.py` | Adapt | `flight_routes`, `fare_observations`, `trip_fare_links`, `chosen_flights`, `price_alerts` | Logic is sound; add tenant scope, cache keys and alert rows |

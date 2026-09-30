@@ -2,8 +2,8 @@
 
 Part of the [business plan](README.md). The decisions of record in the README override anything here.
 
-Written 2026-09-30. Scope: the AI the app uses today, the move from the Claude Code CLI to the Claude API, the AI features and
-their credit prices, and cost control. Related files: [02-pricing-tiers.md](02-pricing-tiers.md) (tiers and paywalls),
+Written 2026-09-30. Scope: the AI the local Trip Planner uses today, the move from the Claude Code CLI to the Claude API, the AI
+features Wayfold will sell and their credit prices, the free taster run, and cost control. Related files: [02-pricing-tiers.md](02-pricing-tiers.md) (tiers and paywalls),
 [04-users-and-accounts.md](04-users-and-accounts.md), [05-infrastructure.md](05-infrastructure.md),
 [06-database-and-data-integrations.md](06-database-and-data-integrations.md) (flight and places providers) and
 [07-local-to-app-store.md](07-local-to-app-store.md) (phases).
