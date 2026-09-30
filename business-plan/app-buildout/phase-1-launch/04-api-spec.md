@@ -8,13 +8,16 @@ Written 2026-09-30. This file is complete and self-contained for Phase 1: it def
 
 | Addition | Where |
 |---|---|
-| Import a trip from a calendar file, a calendar feed URL (with SSRF protection) or pasted booking text; preview, then confirm; one free Trip Pass reward per user | 5.26 |
+| Import a trip from a calendar file, a calendar feed URL (with SSRF protection), pasted booking text, a Google Maps export or pasted places, through entries named for TripIt, Tripsy and Wanderlog; preview, then confirm; opt-in "Keep checking this calendar" polling every 6 hours; one free Trip Pass reward per user | 5.26 |
+| "Verify this plan": paste an itinerary from ChatGPT, Gemini, Layla or Mindtrip, check each place, hours and price with sources, import the confirmed items | 5.30 |
+| Evidence freshness: `stale` after 14 days and a one-tap recheck on notes and verified items | 5.14 |
+| Public status summary, "How we earn" data and the Android install guide data | 5.28 |
 | Live calendar subscription feed per trip, token URL | 5.29 |
 | Booked-fare fields (`paid`, `booked_at`) and the booked-fare drop alert | 5.8 |
 | Referral codes and referral rewards | 5.27 |
 | Public sample trips and public shared-trip reads (search-friendly pages) | 5.28 and 5.6 |
 | Free owners invite 1 collaborator per trip (Plus and Trip Pass up to 6) | 1.3, 2.3, 4 and 5.6 |
-| Only Free, Plus, Trip Pass and credit packs are sold; RevenueCat is the only billing webhook | 5.19 and 6 |
+| Only Free, Plus, Trip Pass and credit packs are sold, in the iOS app only (no web purchases in Phase 1); RevenueCat is the only billing webhook | 5.19, 5.20 and 6 |
 
 ## 1. Conventions
 
@@ -171,7 +174,7 @@ type Iata = string                          // "LIS"
 type Role = "owner" | "editor" | "viewer"
 type Tier = "free" | "plus"                  // Phase 2 adds "family" and "pro" (additive, see 1.1)
 type Product = Tier | "trip_pass"
-type CreditAction = "explain" | "live_search" | "draft_day" | "draft_trip" | "research" | "agent_run"
+type CreditAction = "explain" | "live_search" | "draft_day" | "draft_trip" | "research" | "agent_run" | "verify_plan"
 type Page<T> = { items: T[]; next_cursor: string | null; has_more: boolean }
 type Attribution = { id: Uuid; display_name: string | null }   // null display_name means "Former member"
 ```
@@ -274,6 +277,9 @@ type Trip = {
 | 422 | `unsupported_currency` | Currency not in `fx_rates` | Pick another |
 | 422 | `feed_url_not_allowed` | Calendar feed URL failed the SSRF rules (5.26) | Ask for a public https calendar link |
 | 422 | `referral_not_eligible` | Code is yours, expired, past the 14 day window or the account is not new | Explain |
+| 422 | `list_link_not_readable` | A Google Maps list link was sent where text or a file is needed; Wayfold never opens it | Show how to export the list, keep the link as a note |
+| 422 | `plan_too_long` | Pasted plan over 8,000 characters | Ask for one trip at a time |
+| 409 | `polling_limit` | Already 3 calendars are being kept up to date, or the import cannot be polled | Turn one off first |
 | 426 | `client_upgrade_required` | Below minimum client | Show update screen |
 | 428 | `precondition_required` | Versioned write without `If-Match` | Bug |
 | 429 | `rate_limited` | Limit hit | Back off per `Retry-After` |
@@ -301,10 +307,11 @@ Gate codes used in the endpoint tables. A call that fails a gate returns the err
 | `ai` | `ai_processing` consent, trip `ai_enabled`, kill switch open | `ai_consent_required`, `ai_disabled_for_trip`, `feature_disabled` |
 | `credits(n)` | Spendable credits at least `n` (`reserve_credits`, which raises SQLSTATE `WF402` when short) and provider ceiling has headroom | 402 `insufficient_credits` or 429 `provider_budget_exhausted` |
 | `taster` | Free user has not used the lifetime deep run | 402 `payment_required`, reason `agent_taster_used` |
-| `import_reward` | The account has never received an import reward and the confirmed import meets the rules in 5.26 | no error; the response carries `reward: null` |
+| `import_reward` | The account has never received an import reward and the confirmed import meets the rules in 5.26 (at least 3 items including a flight or a stay, verified email, no active pass on the trip, no active Plus) | no error; the response carries `reward: null` |
+| `verify_items` | The number of items selected for a plan check is at most `plans.limits.verify_items_per_run` (Free 5, Plus and Trip Pass 12) | 403 `limit_reached` with no paywall (the cap is per run, so the rest can be checked in another run); the body says how many can be checked |
 | `admin(role)` | Caller is an `admin_users` row with the role | 404 (routes are hidden) |
 
-Credit prices (README, final): `explain` 1, `live_search` 1, `draft_day` 1, `draft_trip` 4, `research` 8 (1 from shared cache), `agent_run` 40 (8 from shared cache). Hard stops are enforced in the worker, not the API. Credit-spending endpoints reserve before work, settle after, and release on `provider_error`, `provider_timeout` or cancellation before a result.
+Credit prices (README, final): `explain` 1, `live_search` 1, `draft_day` 1, `draft_trip` 4, `research` 8 (1 from shared cache), `agent_run` 40 (8 from shared cache), and `verify_plan` 1 per checked item (added from the competitive analysis; reading the pasted plan is 1 credit at the `explain` price; a one-tap evidence recheck is 1 credit at the `explain` price). Hard stops are enforced in the worker, not the API. Credit-spending endpoints reserve before work, settle after, and release on `provider_error`, `provider_timeout` or cancellation before a result.
 
 ## 5. Endpoints by module
 
@@ -624,8 +631,8 @@ type Job = { id: Uuid; status: "queued" | "running" | "done" | "failed"; locatio
 **Booked-fare drop alert.** When a flight is marked booked with a paid amount, Wayfold keeps watching that exact itinerary and tells the traveler if the same trip later costs less. It is a notification, not a refund promise.
 
 - Matching: a `fare_observations` row linked to the route (`trip_fare_links`) with the same origin, destination, departure date, return date, cabin and party size as the chosen flight, not `suspect` or `hidden`, with `confidence` `cached` or `live` (an `indicative` agent fare is shown on the screen but never triggers a push). Different currency: converted to the paid currency with the latest `fx_rates` row.
-- Trigger: the cheapest matching fare is lower than `paid` by at least 5% and by at least the equivalent of 10 USD. Alerts are deduplicated by the notification key `booked_drop:{chosen_flight_id}:{price_minor}`; a second alert needs a further 5% fall below the last alerted price, at most one a day per flight.
-- Delivery: push and email through the normal notification path, honoring `notifications.price_alerts`. Copy: "You paid $412. It is now $368. Check the airline's change and credit rules." The only action links are the trip screen and `airline_search_url`; no partner link, no claim that a refund or credit is available.
+- Trigger (settled values): the cheapest matching fare is lower than `paid` by at least 5% and by at least the equivalent of 10 USD after conversion. A flight is alerted at most once every 7 days, and a later alert also needs a price below the last alerted one. Alerts are deduplicated by the notification key `booked_drop:{chosen_flight_id}:{price_minor}`. The numbers are the `setting_booked_fare_drop` rules (`min_drop_pct` 5, `min_drop_usd` 10, `min_days_between` 7).
+- Delivery: push and email through the normal notification path, honoring `notifications.price_alerts`. Copy: "You paid $412. It is now $368. Check the airline's change and credit rules." The only action links are the trip screen and the airline's own change and credit rules page (`airline_search_url`); never a partner link, and no claim that a refund or credit is available.
 - Cost and limits: no credits, no live calls beyond the route's own scheduled checks (cached refresh for Free, live routes on Plus and passes). Runs for every tier until the departure date or until `paid` is cleared. Emits `booked_fare_drop_sent`.
 
 ### 5.9 Lodging
@@ -857,7 +864,9 @@ Notes are either user notes or agent findings. An agent note must carry at least
 | `POST /trips/{trip_id}/notes` | editor | none | `NoteIn` to 201 `Note` | `kind: "user"` only; agent notes are written by the worker. |
 | `PATCH /notes/{note_id}` | author or owner | versioned | `Partial<NoteIn>` to `Note` | Agent notes can be pinned or hidden, not edited. |
 | `DELETE /notes/{note_id}` | author or owner | none | 204 | |
-| `GET /notes/{note_id}/evidence` | viewer | none | none to `Evidence` | Source URLs, titles, fetched times and the run that found them. |
+| `GET /notes/{note_id}/evidence` | viewer | none | none to `Evidence` | Source URLs, titles, fetched times, `checked_at`, `stale` and the run that found them. |
+| `POST /notes/{note_id}/recheck` | editor | `ai`, `credits(1)` (`explain`, run kind `recheck`; kill switch `ai.recheck`) | `Idempotency-Key` to 200 `RecheckResult` | One tap on "May be out of date". Fetches the stored source once and reports `confirmed` (moves `checked_at` to today), `changed` or `not_shown` (shows the new value, changes nothing), or `unreachable` (credit refunded). Agent notes only. 06 section 5.12. |
+| `POST /items/{item_id}/recheck` | editor | as above | `Idempotency-Key` to 200 `RecheckResult` | The same for an itinerary item that carries `check_url` (created by plan verification). `422 validation_failed` when the item has no evidence to recheck. |
 | `POST /reports` | user (viewer on the trip) | 20 per day per user | `ReportIn` to 201 `{ id: Uuid }` | "Report a problem" on an agent note or an AI answer. Writes `content_reports` (`target_type` `agent_note` or `ai_answer`; when the run used the shared cache the `cache_key` is added server side). The report immediately expires that cache entry so it is no longer served; the third report from different users also flags it (03 section 5.11). The reporter is never shown to anyone but moderators. |
 | `POST /shared/{token}/report` | none (share token) | 5 an hour per IP | `{ reason: ReportReason, detail?: string }` to 201 | Report a shared trip page (`target_type` `shared_trip`, `reporter_user_id` null). Reviewed in the admin moderation queue (08 6.12). |
 
@@ -867,9 +876,21 @@ type ReportIn = { note_id?: Uuid; run_id?: Uuid; reason: ReportReason; detail?: 
 type NoteIn = { title?: string; body: string /* max 10000 */; pinned?: boolean; is_private?: boolean; day?: string | null; item_id?: Uuid | null; version?: number }
 type Note = NoteIn & {
   id: Uuid; trip_id: Uuid; version: number; kind: "user" | "agent"; author: Attribution | null
-  run_id: Uuid | null; sources: Source[]; created_at: string; updated_at: string
+  run_id: Uuid | null; sources: Source[]; checked_at: string; stale: boolean   // stale: checked_at older than 14 days (agent notes only)
+  created_at: string; updated_at: string
 }
-type Evidence = { note_id: Uuid; run_id: Uuid | null; sources: Source[]; excerpt: string | null }
+type Evidence = {
+  note_id: Uuid; run_id: Uuid | null; sources: Source[]; excerpt: string | null
+  checked_at: string                         // the day the sources were last seen on their pages (notes.checked_at); the date on the evidence label
+  stale: boolean                             // true when checked_at is more than 14 days ago: the UI shows "May be out of date" and a Recheck button
+  stale_after_days: 14
+}
+type RecheckResult = {
+  result: "confirmed" | "changed" | "not_shown" | "unreachable"
+  current_value: string | null               // what the page shows now, copied exactly; null for confirmed and unreachable
+  source: Source; checked_at: string         // moved to today only when result is confirmed
+  credits: CreditReceipt                     // charged 1, or 0 when unreachable
+}
 ```
 
 ### 5.15 Presentation data
@@ -946,8 +967,9 @@ Later: Phase 2 (concierge lane and room-block requests).
 type Entitlements = {
   tier: Tier; source: "none" | "subscription" | "comp"
   product_id: string | null; status: "none" | "active" | "in_trial" | "in_grace" | "billing_retry" | "paused" | "expired" | "refunded" | "revoked"
-  valid_until: string | null; auto_renew: boolean | null; store: "apple" | "stripe" | null        // "stripe": RevenueCat Web Billing; events still arrive through the RevenueCat webhook (6)
+  valid_until: string | null; auto_renew: boolean | null; store: "apple" | null        // Phase 1 sells only through the App Store; there are no web purchases
   manage_subscription_url: string | null
+  cancel_url: string | null                  // the store's own subscription page, opened by the one-tap "Cancel subscription" row (07 section 4.3); null when there is no subscription
   limits: { active_trips: number | null; live_routes: number; monthly_credits: number; price_alerts: number; collaborators: number }   // plans.limits keys
   usage: { active_trips: number }
   trip_passes: TripPass[]
@@ -985,6 +1007,7 @@ The server decides which offer to show and why, so the client never hard codes p
 ```ts
 type PaywallOffer = {
   offer_id: Uuid; reason: PaywallHint["reason"]
+  purchasable: boolean                                       // false on the web app: there are no web purchases in Phase 1 and "lead" and "alternatives" are empty
   headline: string; body: string; why: string              // why this is shown now, plain words
   lead: { product_id: string; label: string; trial_days: number | null }
   alternatives: { product_id: string; label: string }[]     // at most 2
@@ -993,6 +1016,8 @@ type PaywallOffer = {
   experiment_cell: string | null
 } | null
 ```
+
+**Web app.** The web app cannot buy anything in Phase 1. When the request comes from the web client (`X-Wayfold-Client: web`) the offer has `purchasable: false`, `lead.product_id` is omitted, and the headline is "Upgrade in the iOS app" with the same `why` and `free_path`; `cta` is an App Store link, never a purchase page or a price comparison. Web billing arrives with Android in Phase 2.
 
 Mapping (decision table the endpoint implements, detail in 07): `sharing` (a Free owner wants a second collaborator) leads with Trip Pass for a one-trip group or Plus annual for repeat planners; `live_routes` and `agent_taster_used` lead with Plus annual; `credits` shows credit packs first for Plus members and Plus for Free; `traveler_limit` shows Plus; `trip_limit` shows Plus and the option to archive. Credit packs are never shown beside an upsell on a trips home screen. `reason` on `GET /paywall/offer` accepts every `PaywallHint.reason` plus the client-initiated trigger codes `export_footer`, `ninth_stay`, `lifecycle_14d` and `alert_limit` ([07-monetization-spec.md](07-monetization-spec.md) section 6.2). Product ids in `lead` and `alternatives` are `store_products.product_id` values such as `wayfold_plus_annual` and `wayfold_trip_pass`.
 
@@ -1059,7 +1084,7 @@ Base path `/v1/admin`, hidden from the public OpenAPI schema, reachable only fro
 
 ### 5.26 Imports (switching from TripIt, Wanderlog and calendars)
 
-An import brings an existing plan into Wayfold in two steps: create a **preview** (nothing is written to any trip), review it, then **confirm**. There are three sources, stored as `trip_imports.source`: `ics_file` (an uploaded calendar file, for example a TripIt single-trip export or a Google Calendar export), `ics_feed` (a calendar feed URL the user pastes) and `pasted_text` (booking confirmations pasted as text). An import targets a new trip (the default, used by the onboarding card "Coming from TripIt or Wanderlog?") or an existing trip the caller can edit. Email-forward import (plans@wayfold.app) is Later: Phase 2.
+An import brings an existing plan into Wayfold in two steps: create a **preview** (nothing is written to any trip), review it, then **confirm**. There are five sources, stored as `trip_imports.source`: `ics_file` (an uploaded calendar file, for example a TripIt, Tripsy or Google Calendar export), `ics_feed` (a calendar feed URL the user pastes), `pasted_text` (booking confirmations pasted as text), `maps_file` (a Google Maps saved-list export: Takeout CSV, GeoJSON or KML) and `places_text` (pasted place names, one per line, or a list copied out of Wanderlog or Google Maps). The import screen has entries named for TripIt, Tripsy, Wanderlog and Google Maps; every create call takes an optional `origin` (`tripit`, `tripsy`, `wanderlog`, `google_calendar`, `google_maps`, `other`) that only changes the instructions shown and feeds the "switch imports per week" metric, never the parsing. An import targets a new trip (the default, used by the onboarding card "Coming from TripIt or Wanderlog?") or an existing trip the caller can edit. Email-forward import (plans@wayfold.app) is Later: Phase 2.
 
 Rules that hold for every source:
 
@@ -1067,17 +1092,24 @@ Rules that hold for every source:
 2. A preview belongs to the importing user, expires after 24 hours and stores only normalized candidates (`trip_imports.preview`), never the raw file or pasted text. Raw content and feed URLs never go to logs or Sentry.
 3. Claude Haiku (06 section 5.3) is used only where text must be interpreted: pasted text, and calendar event descriptions that look like bookings. Dates, times, places and titles read straight from a calendar file are parsed without AI and cost nothing.
 4. Nothing is saved until confirm. Every row an import creates has `source: "import"` and appears in the trip's activity feed ("Maya imported 9 items").
+5. Google Maps is never scraped. A Google Maps list link (`maps.app.goo.gl`, `google.com/maps/placelists/...`) is never opened, resolved or fetched; sent where a file or text is needed it returns `422 list_link_not_readable`, and the screen explains how to export the list and offers to keep the link as a note on the trip. Places from a file or pasted text are matched by name through place search (Geoapify), with no AI and no credits; any Google Maps URL in the file stays as plain text in the item's notes.
 
 | Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
 |---|---|---|---|---|
 | `POST /imports/ics-file` | user | none; 20 previews a day | multipart form: `file` (max 2 MB, `.ics` or `text/calendar`), `trip_id?` (caller must be editor) to 201 `ImportPreview` | Parses in the worker sandbox and returns a `previewed` import (files are parsed locally, so no async step). `415 unsupported_media_type`, `413 payload_too_large`, `422 validation_failed` (`no_events`, `too_many_events`). Description extraction may spend credits (see parsing rules). |
 | `POST /imports/ics-feed` | user | none; 5 a day; SSRF rules below | `{ url: string, trip_id?: Uuid }` with `Idempotency-Key` to 202 `ImportPreview` (status `fetching`) | Validates the URL, stores it encrypted, enqueues the fetch job, sets `Location: /v1/imports/{id}`. Poll `GET /imports/{id}` until `previewed` or `failed`. `422 feed_url_not_allowed`, `422 blocked_domain`, `502 feed_fetch_failed` (as the failed import's `error_code`). |
 | `POST /imports/paste` | user | `ai`, `credits(1)` (`booking_import`, action code `explain`) | `{ text: string /* max 12000 */, trip_id?: Uuid }` with `Idempotency-Key` to 201 `ImportPreview` | Reserves 1 credit, redacts personal data, calls Haiku once with a strict JSON schema, builds candidates. Nothing recognized: the credit is refunded and the import has `warnings: [{ code: "unrecognized" }]`. `402 insufficient_credits`, `403 ai_consent_required`, `503 feature_disabled` (kill switch `ai.import`). The server never fetches a URL in the text. |
+| `POST /imports/maps-file` | user | none; 20 previews a day | multipart form: `file` (max 5 MB, `.csv`, `.json`, `.geojson` or `.kml`), `trip_id?`, `origin?` to 201 `ImportPreview` | Reads the Takeout list locally (title, note, comment; coordinates when present) and matches each title by place search. Up to 200 places, more is `422 too_many_events`. Candidates are `kind: "place"`. No AI, no credits. `415`, `413`. |
+| `POST /imports/places` | user | none; 20 previews a day | `{ text: string /* max 20000 */, trip_id?: Uuid, origin?: ImportOrigin }` to 201 `ImportPreview` | Pasted place names, one per line or a copied list. A single Google Maps list link returns `422 list_link_not_readable`. Matching by place search, no AI, no credits; up to 200 places. |
 | `GET /imports` | user | none | `?status=&limit&cursor` to `Page<ImportSummary>` | The caller's imports from the last 30 days and registered feeds. |
 | `GET /imports/{import_id}` | the importer | none | none to `ImportPreview` | Poll and review. `410 import_expired` for a preview older than 24 hours, discarded or already confirmed. |
-| `POST /imports/{import_id}/refresh` | the importer | `ics_feed` only; 4 a day | none to 202 `ImportPreview` | Re-fetches the stored feed and builds a new preview containing only events that are new or changed since the last confirm. Never applies anything by itself, and feeds are never polled in the background. |
+| `POST /imports/{import_id}/refresh` | the importer | `ics_feed` only; 4 a day | none to 202 `ImportPreview` | Re-fetches the stored feed now and builds a change preview containing only events that are new or changed since the last confirm. Never applies anything by itself. |
+| `PUT /imports/{import_id}/polling` | the importer | `ics_feed` only, after confirm; at most 3 polled feeds per account | `{ enabled: boolean }` to 200 `ImportSummary` | "Keep checking this calendar": opt-in, off by default, never switched on for the person. On: the encrypted feed URL is kept and the worker polls every 6 hours (`trip_imports.poll_enabled`, `next_poll_at`). Off: the stored URL and any pending changes are deleted. Calls `set_import_polling()` (03 5.9). `409 polling_limit`, `503 feature_disabled` (kill switch `import.polling`). |
+| `GET /imports/{import_id}/changes` | the importer | none | none to `ImportChanges \| null` | The change preview found by polling or refresh: events added, changed and removed since the last confirm. `null` when there is nothing to review. |
+| `POST /imports/{import_id}/changes/confirm` | the importer (editor on the trip) | none | `{ include_keys: string[] }` with `Idempotency-Key` to 200 `ImportResult` | Applies only the ticked changes, matched by `import_uid`; removed events are never deleted silently (the item is shown as "Removed from your calendar" for the person to delete). Polling changes never count toward the reward. |
+| `DELETE /imports/{import_id}/changes` | the importer | none | none to 204 | Dismisses the change preview. |
 | `POST /imports/{import_id}/confirm` | the importer (editor on an existing target trip) | `active_trips` when a new trip is created; `routes_per_trip` for tracked fares | `ImportConfirm` with `Idempotency-Key` to 201 `ImportResult` | One transaction (rules below). Sets `trip_imports.status = 'confirmed'`, deletes the candidate payload, and applies the reward when the account is eligible. `403 limit_reached` (reason `trip_limit`) when a Free owner has 2 active trips; the client then offers "Add to an existing trip". |
-| `DELETE /imports/{import_id}` | the importer | none | none to 204 | Discards the preview, deletes the stored feed URL and candidates. Rows an earlier confirm created stay. |
+| `DELETE /imports/{import_id}` | the importer | none | none to 204 | Discards the preview, deletes the stored feed URL and candidates. Rows an earlier confirm created stay. Also turns polling off. |
 | `GET /me/import-reward` | user | none | none to `ImportReward` | Drives the onboarding card and the copy on the import screen. |
 
 **Parsing rules (file and feed).** RFC 5545 is parsed with a maintained library inside a size-limited sandbox. `TZID` and `VTIMEZONE` are honored and local times are kept with their zone; all-day events become all-day items; `STATUS:CANCELLED` events and `VTODO` are ignored; recurring events are expanded up to 60 occurrences inside the trip window (the rest dropped with warning `recurrence_trimmed`); more than 500 events is `422 too_many_events`. Classification is deterministic first: a flight number plus two IATA codes in the summary, or a TripIt flight marker, gives `flight`; "Check-in", "Hotel" or "Stay" plus a location gives `lodging`; everything else is `item` with a category guessed from keywords and `other` by default.
@@ -1093,21 +1125,24 @@ Rules that hold for every source:
 - Redirects: at most 3. Every hop is validated from scratch (scheme, port, address, blocked hosts) and a redirect to an Airbnb, Vrbo or Booking.com host is refused.
 - Limits: 5 second connect timeout, 15 second total, response body at most 2 MB (streamed and aborted at the limit, also after decompression). The body must start with `BEGIN:VCALENDAR`; anything else is `502 feed_fetch_failed`. No cookies and no authorization headers are sent. `User-Agent: WayfoldCalendarImport/1.0`, `Accept: text/calendar`.
 - Egress: the fetch job runs in a worker whose outbound traffic goes only through an egress proxy that enforces the same address rules at the network layer and has no route to the private network, the database or metadata services.
-- Privacy: feed URLs often carry a secret token. The URL is stored encrypted (`trip_imports.feed_url`), shown back only as the host plus a masked path, and deleted on discard, on expiry of an import that was never confirmed, and on account deletion.
-- Abuse: 5 registrations a day per user, 4 refreshes a day per import, 60 fetches an hour per destination host across the platform; three consecutive failures mark the import `failed`.
+- Privacy: feed URLs often carry a secret token. The URL is stored encrypted (`trip_imports.feed_url_enc`), shown back only as the host plus a masked path, and deleted on discard, on expiry of an import that was never confirmed, when polling is switched off, and on account deletion. It is kept only while "Keep checking this calendar" is on.
+- Polling (opt-in): every 6 hours, through the same guard, with a conditional request and a content hash. A change produces a preview the person confirms (`GET /imports/{id}/changes`) and one push or in-app notice; nothing is applied automatically. Polling stops 7 days after the trip ends, after three consecutive failures (the person is told, `calendar_poll_stopped`), or when the person turns it off.
+- Abuse: 5 registrations a day per user, 4 manual refreshes a day per import, at most 3 polled feeds per account, 60 fetches an hour per destination host across the platform; three consecutive failures mark the import `failed` and stop polling.
 
-**Confirm.** `include_keys` selects candidates and `edits` corrects them. In one transaction the server creates the trip when the target is new (`status` `booked` when a booked flight or stay is included, else `planning`) with its destinations, then the rows: a flight becomes an itinerary item (`category: "travel"`, `status: "booked"`, `source: "import"`); a stay becomes a `lodging_options` row (`status: "booked"`, `added_via: "manual"`, `url` exactly as given in the source); anything else becomes an itinerary item (`source: "import"`). Confirmation numbers go into the item's notes. For each flight listed in `track_fares` that has origin, destination, departure date and a paid amount, the server also creates a cached-mode `flight_routes` row and a `chosen_flights` row with `booked_at`, `paid_amount_minor`, `paid_currency` and `source: "import"`, so the booked-fare drop alert (5.8) starts watching it. Tracked flights count toward `routes_per_trip`; flights over the cap are created as plain items with warning `route_limit`, so nothing is lost.
+**Confirm.** `include_keys` selects candidates and `edits` corrects them. In one transaction the server creates the trip when the target is new (`status` `booked` when a booked flight or stay is included, else `planning`) with its destinations, then the rows: a flight becomes an itinerary item (`category: "travel"`, `status: "booked"`, `source: "import"`); a stay becomes a `lodging_options` row (`status: "booked"`, `added_via: "manual"`, `url` exactly as given in the source); a place (Google Maps or pasted) becomes an idea item with no day (`category` from the place, `source: "import"`, the list note in its notes); anything else becomes an itinerary item (`source: "import"`). Confirmation numbers go into the item's notes. For each flight listed in `track_fares` that has origin, destination, departure date and a paid amount, the server also creates a cached-mode `flight_routes` row and a `chosen_flights` row with `booked_at`, `paid_amount_minor`, `paid_currency` and `source: "import"`, so the booked-fare drop alert (5.8) starts watching it. Tracked flights count toward `routes_per_trip`; flights over the cap are created as plain items with warning `route_limit`, so nothing is lost.
 
-**Reward (free Trip Pass, once).** The first confirmed import for an account grants a Trip Pass for the trip it filled, once per account for life (gate `import_reward`). It is granted only when all of these hold:
+**Reward (free Trip Pass, once).** The first qualifying confirmed import for an account grants a Trip Pass for the trip it filled, once per account for life (gate `import_reward`). It is granted only when all of these hold (settled values):
 
-- the confirm created or added at least 2 rows, at least one of them a flight or a stay;
+- the confirm created or added at least 3 items, at least one of them a flight or a stay (place-only imports and change confirmations never qualify);
 - the trip is owned by the caller and has no active pass;
-- the account has a verified email (an Apple relay address counts), and no earlier import reward went to this user, this normalized email or this Apple or Google subject (`trip_imports.reward_granted_at`).
+- the account has a verified email (an Apple relay address counts) and no active Plus;
+- no earlier import reward went to this user, this normalized email or this Apple or Google subject (`trip_imports.reward_granted_at`).
 
 The grant is a `trip_passes` row bound to the trip: `plan_code = 'trip_pass'`, no `store_transaction_id`, `starts_at` now, `expires_at` 90 days later, the same limits as a purchased Trip Pass (2 live routes, 60 live checks, 6 collaborators, 8 travelers) and its one-time 40 credit `trip_pass` grant, with `trip_imports.reward_pass_id` pointing at it. It is a gift: no card is asked, it is not refundable, and it can move to another trip once like any pass. The response carries `reward: TripPass`. Refreshes and later imports never grant again. Emits `import_reward_granted`.
 
 ```ts
-type ImportSource = "ics_file" | "ics_feed" | "pasted_text"
+type ImportSource = "ics_file" | "ics_feed" | "pasted_text" | "maps_file" | "places_text"
+type ImportOrigin = "tripit" | "tripsy" | "wanderlog" | "google_calendar" | "google_maps" | "other"
 type ImportStatus = "fetching" | "previewed" | "confirmed" | "discarded" | "expired" | "failed"
 type ImportFlightDraft = {
   airline: string | null; flight_number: string | null
@@ -1122,27 +1157,32 @@ type ImportLodgingDraft = {
 }
 type ImportCandidate = {
   key: string                                   // stable within the preview, used by confirm
-  kind: "flight" | "lodging" | "item"
+  kind: "flight" | "lodging" | "item" | "place"      // place: a Google Maps or pasted place, imported as an idea with no day
   include: boolean                              // false for duplicates and low-confidence rows
   confidence: "high" | "medium" | "low"
-  origin: "calendar" | "ai_extraction" | "calendar_and_ai"
+  origin: "calendar" | "ai_extraction" | "calendar_and_ai" | "place_match"
   draft: ImportFlightDraft | ImportLodgingDraft | ItemIn
   duplicate_of: Uuid | null
   warnings: string[]                            // codes: outside_trip_dates, recurrence_trimmed, missing_dates, not_in_text
 }
 type ImportPreview = {
-  id: Uuid; source: ImportSource; status: ImportStatus
+  id: Uuid; source: ImportSource; origin: ImportOrigin; status: ImportStatus
   trip: { mode: "new_trip" | "existing_trip"; trip_id: Uuid | null
           draft: { name: string; start_date: string | null; end_date: string | null; destinations: DestinationIn[] } | null }
   candidates: ImportCandidate[]
-  counts: { flights: number; stays: number; items: number; duplicates: number }
+  counts: { flights: number; stays: number; items: number; places: number; duplicates: number }
   warnings: { code: string; message: string }[]   // unrecognized, ai_partial_no_credits, ai_skipped_no_credits, too_many_events
-  feed: { host: string; last_fetched_at: string | null } | null
+  feed: { host: string; last_fetched_at: string | null; polling: boolean; next_poll_at: string | null; pending_changes: number } | null
   credits: CreditReceipt | null                   // null when no AI ran
-  reward_available: boolean                       // true when confirming now would grant the free Trip Pass
+  reward_available: boolean                       // true when confirming now would grant the free Trip Pass (3 or more items including a flight or stay, verified email, no active Plus)
   error_code: string | null; expires_at: string; created_at: string
 }
-type ImportSummary = Pick<ImportPreview, "id" | "source" | "status" | "counts" | "expires_at" | "created_at"> & { trip_id: Uuid | null; feed_host: string | null }
+type ImportSummary = Pick<ImportPreview, "id" | "source" | "origin" | "status" | "counts" | "expires_at" | "created_at"> & { trip_id: Uuid | null; feed_host: string | null; polling: boolean }
+type ImportChanges = {
+  import_id: Uuid; found_at: string; expires_at: string
+  added: ImportCandidate[]; changed: (ImportCandidate & { item_id: Uuid; was: Partial<ItemIn> })[]
+  removed: { item_id: Uuid; title: string }[]      // events that left the calendar; shown, never deleted for the person
+}
 type ImportConfirm = {
   include_keys: string[]
   edits?: Record<string, Partial<ImportFlightDraft> | Partial<ImportLodgingDraft> | Partial<ItemIn>>   // by candidate key
@@ -1153,20 +1193,20 @@ type ImportConfirm = {
 }
 type ImportResult = {
   trip: Trip
-  created: { itinerary_items: number; lodging_options: number; routes: number; chosen_flights: number }
+  created: { itinerary_items: number; lodging_options: number; places: number; routes: number; chosen_flights: number }
   skipped: number; warnings: { code: string; message: string }[]
   reward: TripPass | null                       // the free Trip Pass, first confirmed import only
 }
 type ImportReward = {
   available: boolean                            // false once granted
   granted_at: string | null; trip_id: Uuid | null; pass: TripPass | null
-  rules: string                                 // plain sentence for the UI: "Your first import earns a free Trip Pass for that trip."
+  rules: string                                 // plain sentence for the UI: "Your first import earns a free Trip Pass for that trip when it adds 3 or more items including a flight or a stay." Empty for accounts with an active Plus (available: false)
 }
 ```
 
 ### 5.27 Referrals
 
-Every account has one referral code (`referral_codes`, created at bootstrap), shown on the profile screen as the link `https://wayfold.app/r/<code>`. Rewards (`referral_rewards`) are AI credits for both people, never cash, never a discount on a purchase and never tied to a review or rating. Amounts below are defaults kept in `feature_flags` (`referral_reward_credits`, `referral_reward_cap_per_year`); [07-monetization-spec.md](07-monetization-spec.md) wins if it states different numbers.
+Every account has one referral code (`referral_codes`, created at bootstrap), shown on the profile screen as the link `https://wayfold.app/r/<code>`. Rewards (`referral_rewards`) are AI credits for both people, never cash, never a discount on a purchase and never tied to a review or rating. Amounts below are the settled values, kept in the `setting_referral_credits` flag (03 section 11.5); [07-monetization-spec.md](07-monetization-spec.md) section 9 restates them.
 
 | Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
 |---|---|---|---|---|
@@ -1175,14 +1215,14 @@ Every account has one referral code (`referral_codes`, created at bootstrap), sh
 | `POST /me/referral/redeem` | user | once per account; within 14 days of sign-up | `{ code: string }` to `Referral` | Links the account to the code's owner. `409 referral_already_redeemed`, `422 referral_not_eligible` (own code, account older than 14 days, code disabled), `404 not_found`. The client also passes the code in `POST /me/bootstrap`, which calls the same logic and ignores a bad code. Creates `referral_rewards` rows with status `pending` for both people. |
 | `GET /me/referral/rewards` | user | none | `?limit&cursor` to `Page<ReferralReward>` | History as referrer and as referee. |
 
-**When a reward is granted.** A pending reward becomes `granted` when the referred person does their first qualifying thing within 30 days of redeeming: a trip with at least 3 itinerary items, or a first confirmed import (5.26). They also need a verified email. Each person then receives `referral_reward_credits` (default 20) as a `promo` grant in `credit_grants` (`period_key = 'referral:<reward id>'`, which makes the grant idempotent, expiring after 6 months) and a notification. A referrer can earn at most `referral_reward_cap_per_year` (default 10) rewards per calendar year; further sign-ups still get their own reward. Promo credits are spent inside the normal provider-spend ceilings and do not raise them. Guards: a code cannot be redeemed by its owner, by an account on the same device (App Attest or device id) or by the same normalized email; admins can void a reward (status `void`, credits clawed back through the ledger). Emits `referral_redeemed` and `referral_reward_granted`.
+**When a reward is granted.** A pending reward becomes `granted` when the referred person creates their first trip with dates, within 30 days of redeeming. They also need a verified email. Each person then receives 20 credits as a `promo` grant in `credit_grants` (`period_key = 'referral:<reward id>'`, which makes the grant idempotent, expiring after 12 months) and a notification. A referrer is paid for at most 5 rewards in a rolling 30 days and 10 in a calendar year; past a cap the referred person still gets their 20 credits and the referrer gets nothing more (`referrer_capped`). The caps are not raised for anyone. Promo credits are spent inside the normal provider-spend ceilings and do not raise them. Guards: a code cannot be redeemed by its owner, by an account on the same device (App Attest or device id) or by the same normalized email; admins can void a reward (status `void`, credits clawed back through the ledger). Emits `referral_redeemed` and `referral_reward_granted`.
 
 ```ts
 type Referral = {
   code: string; share_url: string                  // https://wayfold.app/r/<code>
   redeemed_code: string | null                     // the code this account used, if any
   stats: { signups: number; qualified: number; credits_earned: number }
-  reward: { credits_each: number; cap_per_year: number; qualifying_action: string }   // plain sentence for the UI
+  reward: { credits_each: 20; expires_after_months: 12; cap_per_30_days: 5; cap_per_year: 10; qualifying_action: string }   // plain sentence for the UI: "after your friend's first trip with dates"
 }
 type ReferralPreview = { inviter_first_name: string | null; reward_sentence: string }
 type ReferralReward = {
@@ -1203,6 +1243,8 @@ These routes need no sign-in. They feed the pages search engines see: public sam
 | `POST /public/sample-trips/{slug}/copy` | user | `active_trips` | `{ start_date?: string }` with `Idempotency-Key` to 201 `Trip` | "Use this plan": copies days, items and saved places (never flights or prices) into a new trip owned by the caller, shifting dates to start at `start_date`. Items get `source: "manual"`. Emits `sample_trip_copied`. |
 | `GET /shared/{token}/meta` | none (per-IP and per-token limit) | none | none to `SharedMeta` | Title, description and cover for the page head and social cards, so the web app can render them at the edge. Returns `indexable` so the page sets `noindex` when it is false. `410 share_link_revoked` for revoked or expired links. |
 | `GET /public/sitemap` | none | none | `?cursor` to `Page<{ url: string; updated_at: string }>` | Sample trips and shared links with `indexable: true`, for the sitemap generator. `Cache-Control: public, max-age=3600`. |
+| `GET /public/status` | none (60 a minute per IP) | none | none to `PublicStatus` | The same component summary the public status page shows (web app, API, AI features, fare data, push), so the app can show a banner when something is degraded. `Cache-Control: public, max-age=30`. The hosted status page is separate and keeps working when the API is down (02 section 8.1). |
+| `GET /public/how-we-earn` | none | none | none to `HowWeEarn` | Data for the public "How we earn" page: the rules, every active partner with its category and disclosure line, and live counts. Built from `affiliate_programs` and `GET /affiliate/disclosure` content. `Cache-Control: public, max-age=3600`. |
 
 The shared-trip read itself is `GET /shared/{token}` in 5.6 (redacted presentation, `X-Robots-Tag: noindex` unless the link is `indexable`), with `POST /shared/{token}/outbound` and `POST /shared/{token}/report` beside it. A shared trip opts in to search only when the owner sets `indexable: true` on the link, and then the server keeps `people`, `notes` and `hotel_address` redaction on.
 
@@ -1214,6 +1256,18 @@ type SampleTrip = {
   cta: { label: "Plan your own"; url: string }; updated_at: string
 }
 type SharedMeta = { title: string; description: string; cover_url: string | null; indexable: boolean; canonical_url: string }
+type PublicStatus = {
+  overall: "operational" | "degraded" | "outage"
+  components: { key: "web" | "api" | "ai" | "fares" | "push"; label: string; state: "operational" | "degraded" | "outage" }[]
+  incident: { title: string; started_at: string; url: string } | null   // the current incident on the hosted status page
+  updated_at: string
+}
+type HowWeEarn = {
+  rules: string[]                                   // never ranked by commission, labeled links, no ads, no data sales, Airbnb, Vrbo and Booking.com pages are never fetched
+  partners: { name: string; category: string; disclosure: string | null }[]   // affiliate_programs with status active
+  counts: { partners: number; categories: number; link_labels: number }       // link_labels: surfaces that carry the commission line
+  updated_at: string
+}
 ```
 
 ### 5.29 Calendar feed
@@ -1241,6 +1295,47 @@ type CalendarFeed = { url: string; webcal_url: string; created_at: string }     
 type CalendarFeedStatus = { enabled: boolean; created_at: string | null; rotated_at: string | null; last_fetched_at: string | null }
 ```
 
+### 5.30 Plan verification ("Verify this plan")
+
+A person pastes an itinerary from ChatGPT, Gemini, Layla, Mindtrip or any other source. Wayfold reads it into items (step 1), the person chooses which items to check (step 2) and Wayfold checks each place, its opening hours and its price against place data and cited pages, then the person can import the confirmed items. The pasted text is redacted before the model sees it and is never stored; Wayfold never opens a link in the text and never opens Airbnb, Vrbo or Booking.com pages. The AI details, prompts and limits are in [06-ai-agents-spec.md](06-ai-agents-spec.md) section 5.11 and the tables in 03 section 5.20. The feature works on every tier (the `ai` gate, consent and credits apply) and is off when the `verify_plan` flag or the `ai.verify` kill switch says so.
+
+| Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
+|---|---|---|---|---|
+| `POST /trips/{trip_id}/verify-plan` | editor | `ai`, `credits(1)` (`explain`, run kind `verify_extract`; kill switch `ai.verify`) | `VerifyPlanIn` with `Idempotency-Key` to 201 `PlanVerification` (status `review`) | Redacts personal data, reads the text with Haiku (strict schema, no tools) and returns up to 25 items. Nothing recognized: the credit is refunded and `warnings` has `unrecognized`. `422 plan_too_long`, `402 insufficient_credits`, `403 ai_consent_required`, `503 feature_disabled`. The pasted text is not stored. |
+| `GET /trips/{trip_id}/plan-verifications` | viewer | none | `?limit&cursor` to `Page<PlanVerificationSummary>` | Verifications of the last 30 days on the trip. |
+| `GET /plan-verifications/{id}` | viewer on the trip | none | none to `PlanVerification` | Items, verdicts and evidence. Poll while `status` is `checking`. `410 import_expired` after 30 days. |
+| `PUT /plan-verifications/{id}/selection` | editor | `verify_items` | `{ item_ids: Uuid[] }` to `PlanVerification` | Chooses which items to check (at most `plans.limits.verify_items_per_run`: Free 5, Plus and Trip Pass 12). The default selection is the first items in plan order. `403 limit_reached` (no paywall) over the cap. |
+| `POST /plan-verifications/{id}/check` | editor | `ai`, `credits(n)` where n is the number of selected items (`verify_plan`, 1 each; 6 or more needs the usual confirm), `verify_items`; one check at a time per verification | `Idempotency-Key` to 202 `PlanVerification` (status `checking`, `Location` the same resource, `events_url` the run stream) | Reserves n credits, creates the `verify_plan` run and enqueues the worker. Progress streams on `GET /agent-runs/{run_id}/stream` (5.13, events `item.checked`). Settles to the items that ended green, amber or red and refunds the rest. `409 state_conflict` when already checking, `402`, `429 provider_budget_exhausted`. |
+| `POST /plan-verifications/{id}/import` | editor | none | `{ include_item_ids: Uuid[] }` with `Idempotency-Key` to 201 `{ created: number, skipped: number }` | Writes the ticked items as itinerary items (`source: "verify_plan"`, with `check_url` and `checked_at` from the evidence, so the freshness flag and recheck apply). Free, no credits. Red items can be ticked but are never ticked by default. |
+| `DELETE /plan-verifications/{id}` | editor | none | 204 | Discards the result and its evidence. Items already imported stay. |
+
+```ts
+type VerifyPlanIn = { text: string /* max 8000 */; source_label?: "chatgpt" | "gemini" | "layla" | "mindtrip" | "other" }
+type Verdict = "green" | "amber" | "red" | "unchecked"      // green: confirmed; amber: differs or partly confirmed; red: could not be found
+type PlanVerificationItem = {
+  id: Uuid; position: number; day_label: string | null; planned_day: string | null; planned_start: string | null
+  name: string; category: ItemCategory
+  claimed: { hours: string | null; price: Money | null }                       // what the plan says
+  selected: boolean; verdict: Verdict
+  reason_code: "not_found" | "hours_differ" | "price_differ" | "closed_at_planned_time" | "partly_confirmed" | "blocked_source" | "over_cap" | "budget_stop" | "provider_error" | null
+  reason: string | null                                                       // one plain sentence: "Closed on Mondays. Your plan has Monday at 10:00."
+  checks: { exists: "confirmed" | "differs" | "unconfirmed"; hours: "confirmed" | "differs" | "unconfirmed" | "not_claimed"; price: "confirmed" | "differs" | "unconfirmed" | "not_claimed" } | null
+  found: { place_name: string | null; hours: string | null; price: Money | null; lat: number | null; lon: number | null } | null
+  evidence: { source_url: string; source_domain: string; seen_at: string; from_cache: boolean } | null   // the evidence label: "Found on [site], checked [date]"; always set for green and amber
+  include_in_import: boolean; imported_item_id: Uuid | null
+}
+type PlanVerification = {
+  id: Uuid; trip_id: Uuid; source_label: string; status: "extracting" | "review" | "checking" | "done" | "failed" | "discarded"
+  items: PlanVerificationItem[]
+  counts: { found: number; selected: number; green: number; amber: number; red: number; unchecked: number }
+  price: { per_item_credits: 1; max_items: number; selected_credits: number }   // the price shown before the second step
+  warnings: { code: string; message: string }[]                                  // unrecognized, over_cap
+  credits: CreditReceipt | null; events_url: string | null
+  error_code: string | null; created_at: string; expires_at: string
+}
+type PlanVerificationSummary = Pick<PlanVerification, "id" | "source_label" | "status" | "counts" | "created_at" | "expires_at">
+```
+
 ## 6. Webhooks
 
 All webhook endpoints are public routes (no bearer token), excluded from the cross-tenant test by an explicit allow-list, and served under `/v1/webhooks`. Shared processing rules:
@@ -1257,13 +1352,13 @@ All webhook endpoints are public routes (no bearer token), excluded from the cro
 | `POST /webhooks/apple` | Apple App Store Server Notifications V2, only if used directly | Signed JWS (`signedPayload`); verify the x5c chain to Apple's root, check bundle id and environment, verify the nested `signedTransactionInfo` and `signedRenewalInfo` | `SUBSCRIBED`, `DID_RENEW`, `DID_FAIL_TO_RENEW`, `GRACE_PERIOD_EXPIRED`, `EXPIRED`, `REFUND`, `REVOKE`, `DID_CHANGE_RENEWAL_STATUS`, `CONSUMPTION_REQUEST` (answer through the App Store Server API). Runs the same entitlement code as the RevenueCat handler. Off by default while RevenueCat is the source; kept so a move to direct StoreKit needs no API change. |
 | `POST /webhooks/affiliate/{network}` | Travelpayouts, Impact, Stay22, Viator (where a network offers postbacks); `{network}` is an `affiliate_programs.network` value and the `webhook_events.provider` | Per network: Travelpayouts shared token in a header or query parameter plus IP allow-list; Impact HMAC signature; Stay22 and Viator by token. Reject unknown slugs with `404`. | Writes `affiliate_conversions` upserted on `(program_id, network_txn_id)`, matched to `link_clicks` by sub-id, status history (`pending`, `approved`, `rejected`, `paid`). An unmatched conversion is stored with `click_id = null` and counted toward the unmatched-share health metric. Postbacks are a supplement: the nightly network pull job is the source of truth. Conversions never change any user-visible feature. |
 
-Later: Phase 3 adds `POST /webhooks/stripe` (group payments, print orders, advisor seats). Phase 1 has no Stripe webhook: web purchases of Plus, Trip Pass and credit packs go through RevenueCat Web Billing, whose events arrive on the RevenueCat endpoint above, so nothing in Phase 1 needs Stripe to call us.
+Later: Phase 3 adds `POST /webhooks/stripe` (group payments, print orders, advisor seats). Phase 1 has no web purchases (the web paywall says "Upgrade in the iOS app") and no Stripe webhook: every purchase is an App Store purchase whose events arrive on the RevenueCat endpoint above. Web billing arrives with Android in Phase 2.
 
 Replay protection: a webhook older than 7 days is stored and ignored unless it is a refund or revocation. `webhook_events` rows are kept 12 months (03 section 8).
 
 ## 7. Mapping from the existing Trip Planner API
 
-For the team reusing the current code. Phase 1 covers every row; new Phase 1 routes (imports, referrals, sample trips, calendar feed, booked fare) have no existing equivalent.
+For the team reusing the current code. Phase 1 covers every row; new Phase 1 routes (imports, plan verification, referrals, sample trips, calendar feed, booked fare, public status) have no existing equivalent.
 
 | Existing route (under `/api/v1`) | Wayfold route (under `/v1`) | Change |
 |---|---|---|
@@ -1292,8 +1387,8 @@ FastAPI generates the OpenAPI 3.1 schema from the Pydantic 2 models and route de
 - The web and iOS (Capacitor) clients use `openapi-fetch` on top of the generated `paths` type. `client.ts` sets `baseUrl` from `VITE_API_BASE_URL`, middleware adds `Authorization`, `X-Wayfold-Client`, `X-Client-Version` and `X-Request-Id`, adds an `Idempotency-Key` for routes marked `x-idempotency-required`, refreshes once on 401, maps `application/problem+json` to a typed `ApiError` keyed by `code`, and sends `If-Match` from the cached `ETag`.
 - SSE is not described by OpenAPI. The stream route is documented with a `text/event-stream` response and the event payloads in section 5.13; the client has a small hand-written reader (`lib/api/sse.ts`) that uses the generated `RunEvent` type.
 - Enums in this file are closed in the schema but clients treat unknown values as "other" (1.1).
-- Backend layout: one router module per section (`api/me.py`, `api/trips.py`, `api/flights.py`, `api/lodging.py`, `api/itinerary.py`, `api/places.py`, `api/ai.py`, `api/agent_runs.py`, `api/imports.py`, `api/calendar_feed.py`, `api/referrals.py`, `api/public.py`, `api/billing.py`, `api/affiliate.py`, `api/webhooks.py`, `api/admin/`), all using the shared dependencies `CurrentUser`, `require_trip(trip_id, min_role)`, `require_gate(...)` and `idempotent(...)`.
-- Tests: the cross-tenant suite (user B against user A's ids expects 404 for every route not on the public allow-list), a gate test per row of section 4, an idempotency replay test for every required route, webhook fixtures with recorded signatures, an SSRF test suite for the feed importer (private, loopback, link-local and metadata addresses, DNS rebinding, redirects to private hosts, oversize bodies) and a calendar-feed test that secrets (paid amounts, notes, confirmation numbers) never appear in the output.
+- Backend layout: one router module per section (`api/me.py`, `api/trips.py`, `api/flights.py`, `api/lodging.py`, `api/itinerary.py`, `api/places.py`, `api/ai.py`, `api/agent_runs.py`, `api/imports.py`, `api/plan_verification.py`, `api/calendar_feed.py`, `api/referrals.py`, `api/public.py`, `api/billing.py`, `api/affiliate.py`, `api/webhooks.py`, `api/admin/`), all using the shared dependencies `CurrentUser`, `require_trip(trip_id, min_role)`, `require_gate(...)` and `idempotent(...)`.
+- Tests: the cross-tenant suite (user B against user A's ids expects 404 for every route not on the public allow-list), a gate test per row of section 4, an idempotency replay test for every required route, webhook fixtures with recorded signatures, an SSRF test suite for the feed importer (private, loopback, link-local and metadata addresses, DNS rebinding, redirects to private hosts, oversize bodies) a calendar-feed test that secrets (paid amounts, notes, confirmation numbers) never appear in the output, a polling test (unchanged feed makes no preview, a changed feed makes a preview that is never applied without confirm, the third failure stops polling and deletes the stored URL), and plan verification tests (the credits reserved equal the items selected, unchecked items are refunded, a green or amber item always carries evidence, a verdict cannot be edited by a member).
 
 ## 9. Example flow: trip, invite, agent run, events, credits settled
 

@@ -321,10 +321,13 @@ iOS bottom tab bar, 49 pt plus the safe area, `--tp-sheet` at 94% with 20 px bac
 | Segmented control | 32 px visual, 44 pt target, iOS style on phones; used for view toggles (List, Map) |
 | Progress and run timeline | Steps with a dot, label, elapsed time in mono; current step pulses (static under reduced motion) |
 | Stamp | Outcome mark (Done, Stopped, Failed, Booked) that uses `stamp-press`; text plus icon, never color only |
-| Evidence label | One line in small text, "Found on theflightsite.com, checked 12 Sep", on every AI-found fact (fares, findings, notes, slides, share pages, PDF). The whole line is a link to the source. After 30 days, or when the source fails, it reads "Source not checked since 12 Sep"; with several sources it shows the first and "and 2 more". Never on Wikipedia text or notes people wrote |
+| Evidence label | One line in small text, "Found on theflightsite.com, checked 12 Sep", on every AI-found fact (fares, findings, notes, slides, share pages, PDF). The whole line is a link to the source. When the source fails to load it reads "Source not checked since 12 Sep"; with several sources it shows the first and "and 2 more". Findings and checked plan items whose date is more than 14 days old add an amber "May be out of date" chip and a "Recheck" button (6.39); fares keep their own age tag instead. Never on Wikipedia text or notes people wrote |
+| Verdict chip | Used in Verify this plan (6.38): a 24 px chip with an icon and a word, never color alone. Green check "Confirmed", amber triangle "Differs" or "Partly confirmed", red cross "Could not find it", grey dash "Not checked". Colors use the success, warning, danger and muted ink tokens from 2.1 and meet 4.5 to 1 with their words |
+| Sync indicator | One line of text in the trip header, "Synced 12 s ago", with a small refresh icon. States: Syncing (icon turns, static under reduced motion), Synced N s ago (seconds under a minute, then "3 min", then the time), "Offline, 3 edits waiting", "Could not sync, retrying". Tap runs a sync now. The text updates every 5 seconds; screen readers hear state changes only (polite), never the ticking seconds |
+| Status banner | Uses the Banner pattern: "Fares are delayed right now. Saved trips still work." with "Service status" linking to the status page. Shown only when the public status summary says a component is degraded, never for one person's failed request |
 | Evidence row | Favicon, page title, the evidence label, one-line quote, "Open source" link |
 | Map | MapLibre with the themed pins from `index.css` (`tp-map-pin`, numbered, group colored); attribution stays visible; "Open in Apple Maps" and "Open in Google Maps" actions |
-| Banner | Full-width strip under the header for state: offline, limited trip, pending deletion. One at a time, most urgent wins |
+| Banner | Full-width strip under the header for state: offline, limited trip, pending deletion, service degraded. One at a time, most urgent wins |
 | Stepper list | Checklist rows with a check, title, reason, three actions (see 6.20) |
 | Context menu and action sheet | iOS action sheet on phones, dropdown on web; destructive last, red text plus icon |
 | Pull to refresh | Custom passport-stamp spinner is not used; use the native-style spinner with "Updated just now" text |
@@ -338,7 +341,9 @@ Wayfold
 +-- Trips (tab 1, web: sidebar "Trips")
 |   +-- Trips home (upcoming, in progress, past, shared with me)
 |   +-- Create trip
-|   +-- Import a trip  (calendar file, calendar link, pasted confirmations)
+|   +-- Import a trip  (entries for TripIt, Tripsy, Wanderlog, Google Calendar, Google Maps;
+|   |                   calendar file or link, pasted confirmations, Maps list, pasted places)
+|   +-- Verify a plan  (paste a plan from ChatGPT, Gemini, Layla or Mindtrip)
 |   +-- Trip workspace  /trips/:tripId
 |       +-- Overview   (summary, next steps, Before you go, cost so far)
 |       +-- Flights    (routes, alerts, booked-fare watch, fare detail, Book this fare)
@@ -346,23 +351,30 @@ Wayfold
 |       +-- Plan       (day list, calendar, map, add item, ideas)
 |       +-- Group      (people: travelers, members, invite)
 |       +-- Present    (full screen deck, share)
-|       +-- Notes and evidence (reached from Overview; notes also attach to days, items and stays)
+|       +-- Notes and evidence (reached from Overview; notes also attach to days, items and stays;
+|       |                      freshness flag and recheck)
+|       +-- Plan checks (Verify this plan results, from the trip menu)
 |       +-- Agent runs (from Flights, Plan and the AI sheet; run detail)
 |       +-- Trip settings (members, AI on or off, Trip Pass status, calendar feed,
 |                          offline download, export, archive)
 +-- Discover (tab 2)  destination ideas, cheap fares from your airport
 +-- Activity (tab 3)  alerts, changes by others, agent results, invites, referral rewards
-+-- Account (tab 4)  profile, subscription and credits, invite friends, import a trip,
-                     settings, how we earn money, notifications, export and delete, help
++-- Account (tab 4)  profile, subscription and credits (with Cancel subscription), invite friends,
+                     import a trip, settings, how we earn, how billing works, service status,
+                     install on Android, notifications, export and delete, help
 
 Public web pages (no account, no tab bar, marketing shell)
 +-- /samples and /samples/:slug   sample trips
 +-- /s/:shareId                   shared-trip page
 +-- /vs/:competitor               comparison pages
 +-- /r/:code                      friend's code landing
++-- /how-we-earn                  how we earn (partners and rules)
++-- /billing                      how billing works
++-- /install/android              Android install guide
++-- status.wayfold.app            public status page (hosted outside the app)
 ```
 
-Public web pages use the marketing shell described in 6.34 and sit outside the app shell.
+Public web pages use the marketing shell described in 6.34 and sit outside the app shell. The trust pages and the Android guide are described in 6.40 and 6.42.
 
 Notes and evidence have no tab of their own. Notes live in Overview (trip notes) and on each day, item and stay; the Evidence list lives on every agent result and in the Notes screen reachable from Overview. Agent runs have no top-level destination at launch (they are an action, not a place); the list of runs for a trip is Overview, "AI activity".
 
@@ -394,6 +406,7 @@ The sidebar trip switcher lists the five most recent trips and "All trips". Keyb
 | `/` | Trips home |
 | `/trips/new` | Create trip |
 | `/import`, `/trips/:tripId/import` | Import a trip |
+| `/trips/:tripId/verify`, `/trips/:tripId/verify/:verificationId` | Verify this plan, plan check result |
 | `/trips/:tripId` | Overview |
 | `/trips/:tripId/flights`, `/flights/:routeId/fare/:fareId` | Flights, fare detail |
 | `/trips/:tripId/stays`, `/stays/compare`, `/stays/add` | Stays |
@@ -411,6 +424,9 @@ The sidebar trip switcher lists the five most recent trips and "All trips". Keyb
 | `/samples`, `/samples/:slug` | Sample trips (public) |
 | `/vs/:competitor` | Comparison page (public) |
 | `/r/:code` | Friend's code landing (public) |
+| `/how-we-earn`, `/billing` | How we earn, how billing works (public) |
+| `/install/android` | Android install guide (public) |
+| `/status` | Redirect to the hosted status page |
 
 The current repository routes (`/trips/:tripId/itinerary`, `/lodging`, `/agents`) are renamed to Plan and Stays and folded into the trip workspace.
 
@@ -475,7 +491,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 
 **Purpose.** Collect the minimum that improves fares: a display name and a home airport.
 **Layout.** One sheet: Name, Home airport (combobox with "Use my location" that asks for permission only on tap), Currency (prefilled from locale). "Skip for now" is a full button.
-**Interactions.** Saving creates the "Me" traveler. Skipping still creates "Me" with no airport. After this step, onboarding shows the "Coming from TripIt or Wanderlog?" card (6.30).
+**Interactions.** Saving creates the "Me" traveler. Skipping still creates "Me" with no airport. After this step, onboarding shows the "Coming from TripIt, Tripsy or Wanderlog?" card (6.30).
 **States.** Location denied: "Location is off. Type a city or an airport code instead." Offline: fields work, saved locally.
 **Events.** `onboarding_step_completed {step: profile|home_airport}`, `onboarding_step_skipped {step}`.
 **Accessibility.** The location button states what it does and why ("Use my location to suggest nearby airports").
@@ -485,8 +501,8 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 **Purpose.** See every trip and start a new one.
 **Layout.** Large title "Trips", trailing "+" button (also a primary "New trip" button when empty). Sections: **In progress**, **Upcoming**, **Shared with me**, **Past**. Trip cards (4.4) stacked on phones, a two-column grid from 768 px. A "Trip limit" line under the title on Free: "2 of 2 active trips".
 **Content.** Sorted by start date (upcoming ascending, past descending); the sort is fixed and not commission related. A banner appears for pending invites ("Sam invited you to Lisbon in March. View").
-**Interactions.** Tap opens the trip at the last section. Swipe left: Archive. Long press: Open, Share, Archive, Delete. Pull to refresh. "+" opens a menu: New trip, Import a trip (6.30). Archived trips are under a "Past" section toggle, always readable and exportable.
-**States.** Loading: three trip card skeletons. Empty: rosette, "No trips yet", "Start with a place and a few dates. You can change everything later.", [New trip], and under it a quiet card "Coming from TripIt or Wanderlog?" with [Import a trip] (6.30). Error: "We could not load your trips. Pull down to try again." Offline: cached trips with "Saved offline" icons and a banner "You are offline. Showing your saved trips." No permission: not applicable. Limit reached: "+" opens the third trip paywall (6.27, trigger `third_trip`) with the free path "Archive a trip" first.
+**Interactions.** Tap opens the trip at the last section. Swipe left: Archive. Long press: Open, Share, Archive, Delete. Pull to refresh. "+" opens a menu: New trip, Import a trip (6.30), Verify a plan (6.38). Archived trips are under a "Past" section toggle, always readable and exportable.
+**States.** Loading: three trip card skeletons. Empty: rosette, "No trips yet", "Start with a place and a few dates. You can change everything later.", [New trip], and under it a quiet card "Coming from TripIt, Tripsy or Wanderlog?" with [Import a trip] (6.30). Error: "We could not load your trips. Pull down to try again." Offline: cached trips with "Saved offline" icons and a banner "You are offline. Showing your saved trips." No permission: not applicable. Limit reached: "+" opens the third trip paywall (6.27, trigger `third_trip`) with the free path "Archive a trip" first.
 **Copy.** Limit line "You have 2 active trips. Archive one to make room, or upgrade."
 **Events.** `trips_home_viewed {trip_count_bucket, active_count}`, `trip_opened {source}`, `trip_archived`.
 **Accessibility.** Each card is one link with a combined label ("Lisbon, 12 to 19 March, 2 travelers, planning"); swipe actions have a custom-actions alternative; sections are headings.
@@ -549,7 +565,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 
 **Layout.** Header band with the trip's guilloche, destination in `type-title`, dates, travelers, status. Below: a "Next steps" card (up to three suggestions, derived from missing data: dates, flight, stay, first day), then summary cards for each section, then Before you go, cost so far (from chosen flight and booked stays), Notes and evidence, AI activity (runs and credits used on this trip).
 **Content.** A quiet "Places to stay in Lisbon" partner card appears only when dates exist, collapses after the first view, and follows 4.13 (one per screen view). Destination facts (local time, currency, a Wikipedia summary with attribution) are in a collapsed card.
-**Interactions.** Every summary card opens its section. "Invite" avatar button opens the invite flow (6.8). The "..." menu: Share, Calendar feed (6.31), Import into this trip (6.30), Trip settings, Export, Archive, Delete. Changes by others show a brand dot on the section and a "Sam updated Stays" line.
+**Interactions.** Every summary card opens its section. "Invite" avatar button opens the invite flow (6.8). The "..." menu: Share, Calendar feed (6.31), Import into this trip (6.30), Verify a plan (6.38), Plan checks, Trip settings, Export, Archive, Delete. The header shows the sync indicator (4.21, 6.33) under the destination name. Changes by others show a brand dot on the section and a "Sam updated Stays" line.
 **States.** Loading: skeleton header and five cards. Empty (no data yet): only "Next steps". Error: block-level retry per card. Offline: "Saved offline, updated 2 h ago" chip. No permission (viewer): Next steps hidden, summary cards read-only. Limit reached: a limited trip (Plus lapsed, pass expired) shows a banner "This trip is limited. Extra travelers are now viewers. Renew to restore editing." with the free actions visible (read, export).
 **Copy.** Empty next step "Pick your dates". Banner as above.
 **Events.** `trip_overview_viewed`, `next_step_tapped {step}`, `section_opened {section}`.
@@ -687,6 +703,8 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 | Explain (short answer about a fare, place or plan) | 1 | Fare detail, place detail |
 | Suggest a packing list (from the weather and your plans) | 1 | Before you go, Packing |
 | Paste a booking (turn a confirmation email into a draft) | 1 | Flights, Stays, Add item |
+| Verify a plan from another AI (read it: 1, then 1 per place checked, 5 at a time on Free, 12 on Plus and Trip Pass) | 1, then 1 each | Trips home "+", trip menu (6.38) |
+| Recheck a finding (older than 14 days) | 1 | Notes and evidence, plan checks (6.39) |
 | Live check (flight or rental) | 1 | Flights, Stays |
 | Draft this day | 1 | Day card |
 | Draft the trip (up to 14 days) | 4 | Plan empty state |
@@ -704,7 +722,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 ### 6.16 Agent run: live progress and evidence
 
 **Purpose.** Watch a deep run, trust what it found, and keep the good parts.
-**Layout.** Run screen pushed from the AI sheet. Header: goal ("Find the cheapest way to fly NYC to Lisbon, 10 to 20 March"), a stamp status (Running, Done, Stopped, Failed), elapsed time in mono, credits reserved ("40 credits, billed by use"), and a **Stop** button. Body: a **timeline** of steps (Searching, Reading a page, Checking a fare, Saving a finding) with time, and below it **Findings** grouped as Fares and Notes. Each finding is an **evidence row** (4.21): what was found, the evidence label ("Found on theflightsite.com, checked 12 Sep"), the source page title, a quote, "Open source".
+**Layout.** Run screen pushed from the AI sheet. Header: goal ("Find the cheapest way to fly NYC to Lisbon, 10 to 20 March"), a stamp status (Running, Done, Stopped, Failed), elapsed time in mono, credits reserved ("40 credits, billed by use"), and a **Stop** button. Body: a **timeline** of steps (Searching, Reading a page, Checking a fare, Saving a finding) with time, and below it **Findings** grouped as Fares and Notes. Each finding is an **evidence row** (4.21): what was found, the evidence label ("Found on theflightsite.com, checked 12 Sep"), the source page title, a quote, "Open source". A finding older than 14 days later shows "May be out of date" and "Recheck" (6.39).
 
 ```
 +------------------------------+
@@ -747,9 +765,9 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 
 **Purpose.** Keep the trip's knowledge in one place, with where each fact came from.
 **Layout.** Reached from Overview. Two tabs in a segmented control: **Notes** (written by people) and **Found by AI** (saved findings). Notes are a reverse-chronological list with author avatar and "private" lock; each note can attach to the trip, a day, an item or a stay. Found by AI lists evidence rows grouped by topic, each with its evidence label ("Found on [site], checked [date]").
-**Interactions.** Add a note (plain text, links auto-detected). Mark private (excluded from AI context and from other members). Pin a note to Overview. "Research this" (8 credits) starts research from a selected note. Tap an evidence row to see the quote and open the source. "Stale" appears on findings older than 30 days ("Seen 12 Aug. Check it is still true.").
+**Interactions.** Add a note (plain text, links auto-detected). Mark private (excluded from AI context and from other members). Pin a note to Overview. "Research this" (8 credits) starts research from a selected note. Tap an evidence row to see the quote and open the source. Findings whose date is more than 14 days old show an amber "May be out of date" chip and a "Recheck" button (6.39); the chip text reads "Seen 12 Aug. May be out of date." Nothing is hidden or removed.
 **States.** Loading: row skeletons. Empty: "No notes yet", "Write down what you learn. Anything an AI finds is saved here with its source.", [Add a note]. Error: "We could not load notes. Pull down to try again." Offline: notes can be added and ticked (queued); evidence is readable. No permission: viewers can read. Limit: none.
-**Events.** `note_added {scope, private}`, `evidence_opened`, `finding_saved_to_notes`.
+**Events.** `note_added {scope, private}`, `evidence_opened`, `finding_saved_to_notes`, `evidence_stale_shown {age_bucket}`.
 **Accessibility.** Private state is text plus icon; evidence links name the domain; long notes are not truncated for screen readers.
 
 ### 6.19 Present mode
@@ -811,8 +829,8 @@ Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 ### 6.25 Account and settings
 
 **Purpose.** Manage profile, plan, privacy and devices.
-**Layout.** Large title "Account". Top: profile card (name, email, tier chip, credit balance). Groups: **Subscription and credits**, **Invite friends** (6.37), **Import a trip** (6.30), **Profile** (name, home airport, currency, traveler "Me"), **Notifications**, **Appearance** (Light, Dark, System), **Text size** (follows system Dynamic Type, with an in-app override), **Privacy** (AI consent, AI history, analytics choice), **How we earn money**, **Devices** (sign out everywhere), **Export my data**, **Delete account**, **Help and support**, **Terms and Privacy**, version.
-**How we earn money.** A static page: "Wayfold is paid for by subscriptions, trip passes, AI credits and commissions from partners when you book. We never show ads, sell your data, or rank anything by commission." Lists current partners, the disclosure sentence, the ranking rule, and the **Hide booking links** switch.
+**Layout.** Large title "Account". Top: profile card (name, email, tier chip, credit balance). Groups: **Subscription and credits**, **Invite friends** (6.37), **Import a trip** (6.30), **Verify a plan** (6.38), **Profile** (name, home airport, currency, traveler "Me"), **Notifications**, **Appearance** (Light, Dark, System), **Text size** (follows system Dynamic Type, with an in-app override), **Privacy** (AI consent, AI history, analytics choice), **How we earn** (public page, 6.40), **How billing works** (6.40), **Help and support** (with **Install on Android**, 6.42, and **Service status**, 6.41), **Devices** (sign out everywhere), **Export my data**, **Delete account**, **Terms and Privacy**, version.
+**How we earn.** The same public page as `/how-we-earn` (6.40): "Wayfold is paid for by subscriptions, trip passes, AI credits and commissions from partners when you book. We never show ads, sell your data, or rank anything by commission." Lists every current partner, the disclosure sentence, the ranking rule, and the **Hide booking links** switch.
 **States.** Loading: skeleton rows. Error: retry. Offline: profile readable, purchases disabled ("Connect to buy or restore"). Guest: sign-in row replaces the profile card. Limit: n/a.
 **Events.** `account_viewed`, `setting_changed {key}`, `booking_links_hidden {value}`.
 **Accessibility.** Standard iOS list semantics; switch rows are single hit areas; destructive rows come last and are labeled.
@@ -827,7 +845,8 @@ Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 | < Account  Plan and credits  |
 | Plus (annual)                |
 | Renews 14 Mar 2027, $39.99   |
-| [ Manage subscription ]      |
+| [ Change plan ]              |
+| [ Cancel subscription ]      |
 |                              |
 | Credits           27 left    |
 | 12 monthly, renew 1 Nov      |
@@ -840,10 +859,11 @@ Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 | Compare plans                |
 | Restore purchases            |
 | How credits work             |
+| How billing works            |
 +------------------------------+
 ```
 
-**Content.** Current plan, renewal date and price in the store currency, pause or cancel through "Manage subscription" (opens the system subscriptions page). Credit balance split into monthly (do not roll over), promo (the taster and referral credits, each with an expiry) and purchased (12 months, spent last) with expiry dates and a ledger link ("History": date, action, credits, refund marks). Trip Pass list with status and binding ("Not applied yet. Choose a trip"); a pass from a first import shows "Included with your first import". **Compare plans** shows the tier table below in plain numbers. Packs: 50, 150, 400 credits at $2.99, $6.99, $14.99 with the per-credit price as a fact and the expiry sentence "Bought credits last 12 months."
+**Content.** Current plan, renewal date and price in the store currency. "Cancel subscription" is a first-level row on the plan card, never inside a menu: one tap opens the App Store's own subscription sheet for this plan, where Apple asks for the final confirm, with no survey or offer before it; once cancelled the row reads "Your plan ends on 14 Mar". "Change plan" opens the same sheet for switching between monthly and annual. On the web app the rows read "Change plan in the iOS app" and "Cancel in the iOS app" and open the App Store's subscription page; nothing can be bought on the web. "How billing works" opens the plain billing page (6.40). Credit balance split into monthly (do not roll over), promo (the taster and referral credits, each with an expiry) and purchased (12 months, spent last) with expiry dates and a ledger link ("History": date, action, credits, refund marks). Trip Pass list with status and binding ("Not applied yet. Choose a trip"); a pass from a first import shows "Included with your first import". **Compare plans** shows the tier table below in plain numbers. Packs: 50, 150, 400 credits at $2.99, $6.99, $14.99 with the per-credit price as a fact and the expiry sentence "Bought credits last 12 months."
 
 | | Free | Plus | Trip Pass |
 |---|---|---|---|
@@ -852,13 +872,14 @@ Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 | Live fare routes | 0 (1 cached route per trip) | 3, checked daily within 120 days of departure | 2 (max 60 checks) |
 | Credits | 12 a month | 60 a month | 40 |
 | Invite people | 1 per trip, they join free | Up to 6 | Up to 6 |
-| Offline reading, calendar feed, import, booked-fare alert | Yes | Yes | Yes |
+| Offline reading, calendar feed, import, booked-fare alert, share links | Yes | Yes | Yes |
+| Verify this plan, places checked at once | 5 | 12 | 12 |
 
 Later: Phase 2 adds Family, Group Trip Pass and Pro, see [../phase-2-growth/README.md](../phase-2-growth/README.md). The table says "Plans include generous limits, listed above. Live tracking and AI use real services, so they have fair limits."
 
 **Interactions.** Purchases use the native sheet (RevenueCat over StoreKit 2). "Restore purchases" is on this screen and every paywall. Downgrade or lapse never deletes or hides data: a line says so ("Your trips stay yours. If a plan ends, you can still read and export everything.").
 **States.** Loading: skeletons. Offline: "Connect to see your plan." Error: "We could not load your plan. Your access has not changed. Try again." Pending purchase: "Your purchase is waiting for approval." Refunded credits: ledger row "Refund, 8 credits returned".
-**Events.** `screen_viewed {screen: subscription}`, `restore_tapped {result}`, `purchase_started {product}` for a credit pack tap, `manage_subscription_tapped`.
+**Events.** `screen_viewed {screen: subscription}`, `restore_tapped {result}`, `purchase_started {product}` for a credit pack tap, `manage_subscription_tapped` (Change plan), `cancel_link_tapped {surface}`, `billing_page_viewed`.
 **Accessibility.** The comparison table is a real table; the balance is text with the unit; price lines include period and the true monthly equivalent as plain text.
 
 ### 6.27 Paywalls for each trigger
@@ -876,12 +897,15 @@ All paywalls use the sheet in 4.14 and the rules in section 8. The trigger id is
 | `out_of_credits_research` | Research, Ask, Explain or Paste a booking with no credits | "Get 8 credits for one question" | One research question | "Not now" (a file or link import stays free) | Small pack (50 credits, $2.99) |
 | `ninth_stay` | Save a ninth stay on Free | "Keep all your stays" | More saved stays per trip | "Keep it in Later" | Trip Pass |
 | `export_footer` | Share or export a Free presentation | "Share without the footer" | No footer or watermark | "Share with the footer" | Trip Pass |
+| `out_of_credits_verify` | Tap "Check places" (6.38) or "Recheck" (6.39) with fewer credits than it costs | "Check these places" | Credits for the places you picked | "Check fewer places" or "Not now" (the list of places stays free) | Credit pack or Plus |
 | `out_of_credits_agent` | Deep agent run or fare hunt with fewer than 40 credits (taster already used) | "Run a deep search" | One deep agent run for 40 credits | "Not now" or use the cached result if one exists | Credit pack (150 credits) or Plus |
 | `lifecycle_14d` | Message, not a sheet, 14 days before departure on a Free trip with dates (push or email, at most once per trip) | "Your fares moved this week" | Live checks until you fly | Open the route | Trip Pass |
 
 Paywalls for scheduled routines, group tools, group passes, payment collection and households: Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 
-There is **no paywall** after an affiliate booking (only the soft "Plan your days" prompt), at first launch, inside present playback, during an agent run, in the import flow, the calendar feed sheet, the booked-fare alert, on the public web pages, on the taster result (it is a card, not a sheet), or on Account unless the person opens it. Default offer order when the trigger does not decide: Trip Pass first when the trip has dates within 120 days, annual Plus first when the person has two or more active trips.
+**On the web app** every paywall in this table is the same sheet without prices or a purchase button: the same headline and what it gives, the free path at equal weight, and a primary button "Upgrade in the iOS app" that opens the App Store page. There are no web purchases in Phase 1.
+
+There is **no paywall** after an affiliate booking (only the soft "Plan your days" prompt), at first launch, inside present playback, during an agent run, in the import flow, the calendar feed sheet, the booked-fare alert, the list of places in Verify this plan, on the public web pages, on the taster result (it is a card, not a sheet), or on Account unless the person opens it. Default offer order when the trigger does not decide: Trip Pass first when the trip has dates within 120 days, annual Plus first when the person has two or more active trips.
 
 ### 6.28 Export and delete account
 
@@ -920,7 +944,7 @@ Flow: list effects, choose what to do with trips others share (transfer to a mem
 
 **Purpose.** Tell people what matters, never to sell.
 **Permission.** Asked only after the first invite or the first price alert, through a reason screen: "Allow notifications so we can tell you when a fare drops or someone joins your trip." [Allow] [Not now]. Declining never blocks the feature; an in-app fallback shows in Activity.
-**Types.** Price drop on a followed route (user requested), booked-fare drop (the fare you paid fell, 6.32), someone joined, someone changed the plan (digest, at most one an hour per trip), agent run finished, referral reward earned, trip starts tomorrow, leave for the airport (local notification, works offline), a single optional "7 days before departure" checklist reminder. **Never:** promotions, partner offers, credit sales, re-engagement nags, or any push whose only purpose is a click.
+**Types.** Price drop on a followed route (user requested), booked-fare drop (the fare you paid fell by at least 5 percent and $10, at most once a week per flight, 6.32), calendar changes found (6.30), a finished plan check (6.38), someone joined, someone changed the plan (digest, at most one an hour per trip), agent run finished, referral reward earned, trip starts tomorrow, leave for the airport (local notification, works offline), a single optional "7 days before departure" checklist reminder. **Never:** promotions, partner offers, credit sales, re-engagement nags, or any push whose only purpose is a click.
 **Settings.** Account, Notifications: a switch per type, a quiet hours control (default 22:00 to 08:00 local), and per-trip mute. Email has its own list with one-click unsubscribe; marketing email is a separate opt-in.
 **Copy.** Push titles are facts: "Lisbon: fare fell $42", "Ana joined Lisbon", "Research finished: 3 notes saved". No exclamation marks, no emoji.
 **States.** Permission denied: row shows "Notifications are off in Settings" with "Open Settings". Offline: local notifications still fire.
@@ -929,17 +953,18 @@ Flow: list effects, choose what to do with trips others share (transfer to a mem
 
 ### 6.30 Import a trip
 
-**Purpose.** Bring a trip from TripIt, Google Calendar, Wanderlog or booking emails into Wayfold without retyping it and without sharing a password.
+**Purpose.** Bring a trip from TripIt, Tripsy, Wanderlog, Google Calendar, Google Maps or booking emails into Wayfold without retyping it and without sharing a password.
 **Layout.** Entry is the onboarding card below (shown once after the profile step, and as a quiet card on an empty Trips home), the "+" menu on Trips home, a trip's "..." menu ("Import into this trip") and Account. The flow is a full-screen modal in three steps with a progress label: **Choose a source**, **Check what we found**, **Done**.
 
 ```
 +------------------------------+
-| Coming from TripIt or        |
-| Wanderlog?                   |
+| Coming from TripIt, Tripsy   |
+| or Wanderlog?                |
 |                              |
 | Bring a trip over from a     |
 | calendar file, a calendar    |
-| link or booking emails.      |
+| link, booking emails or a    |
+| list of places.              |
 | No password needed.          |
 |                              |
 | [  Bring your trips over  ]  |
@@ -953,17 +978,21 @@ Step 1, choose a source:
 +------------------------------+
 | x   Import a trip   Step 1/3 |
 |                              |
-| Choose how to bring it over  |
+| Where are you coming from?   |
 |                              |
-| [ Choose a calendar file ]   |
-|   .ics from TripIt, Google   |
-|   Calendar or another app    |
-|                              |
-| [ Paste a calendar link  ]   |
-|   TripIt or Google Calendar  |
-|                              |
-| [ Paste booking emails   ]   |
-|   1 credit for each email    |
+| [ TripIt                 ]   |
+|   Calendar file or link      |
+| [ Tripsy                 ]   |
+|   Calendar file or link      |
+| [ Wanderlog              ]   |
+|   Pasted places or emails    |
+| [ Google Calendar        ]   |
+|   File or secret address     |
+| [ Google Maps list       ]   |
+|   Exported file or places    |
+| [ Something else         ]   |
+|   File, link or booking      |
+|   emails (1 credit each)     |
 |                              |
 | We never ask for a password. |
 +------------------------------+
@@ -1006,16 +1035,20 @@ Step 3, done:
 | collaborators and 40 credits |
 | until 4 Dec.                 |
 |                              |
+| Keep checking this calendar  |
+| every 6 hours          [off] |
+| You confirm every change.    |
+|                              |
 | [       Open trip        ]   |
 | [ Turn on calendar feed  ]   |
 +------------------------------+
 ```
 
-**Content.** Step 1 has three source rows. "Choose a calendar file" opens the file picker for .ics files. "Paste a calendar link" is one field that accepts `webcal://` and `https://` links from TripIt or Google Calendar. "Paste booking emails" is a text area for up to 10 texts, each with a credit cost chip (4.11) and the balance. Under the rows, "Where do I find the file or link?" opens a short help sheet for TripIt, Google Calendar and Wanderlog, and a line says "We never ask for a password." Step 2 lists everything found by day: a tick, a type icon with a text label (Flight, Stay, Activity, Other, never color alone), the title, time and place, and a "Change type" menu on each row. A large calendar adds a date range and type chips with "Select all in range". A destination row reads "Import to: New trip Lisbon, March" with "Change" to pick an existing trip. A sticky primary button reads "Import 16 items". Step 3 shows a stamp, the counts, the reward card when one was earned (the Trip Pass text below), and the buttons "Open trip", "Turn on calendar feed" (6.31) and "Import more".
+**Content.** Step 1 lists entries named for each app (plain text, no logos): TripIt, Tripsy, Wanderlog, Google Calendar, Google Maps list and "Something else". Choosing one opens the matching method with two or three steps for getting the data out of that app, checked against that app's own help pages before launch; where an app has no export we say so. The methods are: "Choose a calendar file" (the file picker for .ics files), "Paste a calendar link" (one field that accepts `webcal://` and `https://` links), "Paste booking emails" (a text area for up to 10 texts, each with a credit cost chip, 4.11, and the balance), "Choose a Maps export" (Takeout CSV, GeoJSON or KML, up to 200 places) and "Paste places" (one per line). The Google Maps entry says "We cannot open a Google Maps list link. Export the list, or paste the place names." A pasted Google Maps list link shows the same line with two export steps and "Keep this link as a note". A line under the rows says "We never ask for a password." Step 2 for places shows the matched place (name, address, small map) with "Not the right place" and untick; places import as ideas with no day.Step 2 lists everything found by day: a tick, a type icon with a text label (Flight, Stay, Activity, Other, never color alone), the title, time and place, and a "Change type" menu on each row. A large calendar adds a date range and type chips with "Select all in range". A destination row reads "Import to: New trip Lisbon, March" with "Change" to pick an existing trip. A sticky primary button reads "Import 16 items". Step 3 shows a stamp, the counts, the reward card when one was earned (the Trip Pass text below), for a calendar link the switch "Keep checking this calendar every 6 hours" (off by default, never turned on for the person, with the line "You confirm every change. Nothing is applied on its own."), and the buttons "Open trip", "Turn on calendar feed" (6.31) and "Import more". When changes arrive later, a notification and an Activity item open a "Calendar changed" sheet that lists each new, changed (before and after) and removed event with a tick and "Apply 3 changes"; removed events are listed but never deleted for the person, and "Not now" leaves the sheet for later.
 **Interactions.** Choosing a file or sending a link or text starts reading at once and moves to step 2. Unticking rows changes the count. Pasted emails are read one at a time, each charged after the confirm; a text with no booking in it is refunded and says so. "Import" saves everything ticked; Back changes nothing. Imported booked flights offer the booked-fare watch (6.32) on the new trip. A guest who taps Import sees the Save your trip sheet first (6.2).
-**States.** Loading: skeleton rows under "Reading your file", one row per pasted email as it finishes. Empty: "We did not find any trips or bookings in that file.", "Try another file, or paste a booking email.", [Paste a booking email]. Error: unreadable file "We could not read that file. Check that it is a calendar (.ics) file and try again."; too large "That file is too large. Export a shorter date range and try again."; over 500 events "That calendar has more than 500 events. Choose a date range."; other host "We can read links from TripIt and Google Calendar. For anything else, upload the file."; link failed "We could not read that link. Check that it is the full link, or upload the file instead." Offline: "Connect to import. Nothing was changed." No permission: viewers cannot import into a trip; editors and owners can. Limit: text over 12,000 characters "That is too long. Paste one email at a time."; no credits for a pasted email opens `out_of_credits_research` (6.27) while the file and link routes stay free.
-**Copy.** Above the button "Nothing is saved until you tap Import." Reward card "Your first import includes a Trip Pass for Lisbon: live fare checks, up to 6 collaborators and 40 credits until 4 Dec." The card appears only when the pass will be granted, and never as a paywall. No third-party logos are used.
-**Events.** `import_started {source: file|feed|paste}`, `import_previewed {source, item_count_bucket}`, `import_completed {source, item_count_bucket, reward_granted}`, `import_failed {source, reason}`.
+**States.** Loading: skeleton rows under "Reading your file", one row per pasted email as it finishes. Empty: "We did not find any trips or bookings in that file.", "Try another file, or paste a booking email.", [Paste a booking email]. Error: unreadable file "We could not read that file. Check that it is a calendar (.ics) file and try again."; too large "That file is too large. Export a shorter date range and try again."; over 500 events "That calendar has more than 500 events. Choose a date range."; blocked host "We do not open links from Airbnb, Vrbo or Booking.com. Download the calendar and upload the file instead."; link failed "We could not read that link. Check that it is the full link, or upload the file instead." Offline: "Connect to import. Nothing was changed." No permission: viewers cannot import into a trip; editors and owners can. Google Maps link "We cannot open Google Maps links. Export your list, or paste the place names."; more than 200 places "We imported the first 200 places."; polling stopped "We could not reach your calendar three times, so we stopped checking. Turn it back on any time."; Limit: text over 12,000 characters "That is too long. Paste one email at a time."; no credits for a pasted email opens `out_of_credits_research` (6.27) while the file and link routes stay free.
+**Copy.** Above the button "Nothing is saved until you tap Import." Reward card "Your first import includes a Trip Pass for Lisbon: live fare checks, up to 6 collaborators and 40 credits until 4 Dec." The card appears only when the pass will be granted (3 or more items including a flight or a stay, a verified email, no active pass on the trip and no active Plus), never for a places-only import, and never as a paywall. No third-party logos are used.
+**Events.** `import_started {source: file|feed|paste|maps_file|places, origin: tripit|tripsy|wanderlog|google_calendar|google_maps|other}`, `import_previewed {source, item_count_bucket}`, `import_completed {source, item_count_bucket, reward_granted}`, `import_failed {source, reason}`, `calendar_polling_enabled`, `calendar_changes_found {change_count_bucket}`, `calendar_changes_applied {applied_count_bucket}`.
 **Accessibility.** Each preview row is a checkbox with its full label ("Flight, JFK to LIS, Friday 12 March, 18:05, will be imported"); the count is a polite live region; the step label is announced; the file button, link field and text area have visible labels.
 
 ### 6.31 Calendar feed
@@ -1104,7 +1137,7 @@ Second, the "Your booked fare" block on the chosen-flight card and the route car
 ```
 
 **Content.** The amount is prefilled from the fare and editable; the currency follows the fare. The comparison uses the same airports, dates, cabin and traveler count, from cached fares and, where the trip has a live route, live checks. The block shows the current comparable fare with its source tag and age (4.5), the difference as words and an arrow ("Down $49 since you booked"), and the fixed line "This is the lowest fare we found for those dates. It may be a different flight." The link "Airline change and credit rules" opens the airline's own site, never a partner link. No Book button, partner card or paywall appears in this block or in the alert.
-**Interactions.** "Save" stores the amount and the watch; "Skip" stores nothing and the block is not shown. The switch on the block turns the watch on or off. The alert (push and Activity) opens the block. One alert a day at most, and only for a new lower price.
+**Interactions.** "Save" stores the amount and the watch; "Skip" stores nothing and the block is not shown. The switch on the block turns the watch on or off. The alert (push and Activity) opens the block. An alert needs the fare to be at least 5 percent and at least $10 (converted) below what was paid, comes at most once a week per flight, and only for a new lower price. It never contains a partner link.
 **States.** Loading: skeleton lines. Empty (no watch): a quiet row "Watch the fare you paid" with [Add what you paid]. Stale (comparable data over 48 hours old): "Fares are stale. We will check again soon." and no alert. Error: "We could not save that. Try again." Offline: readable, editing disabled. No permission: viewers see the block without the switch. Limit: none; it does not use the alert counts of 6.9.
 **Copy.** Alert "You paid $480. It is now $431 (cached, checked 3 h ago). Check the airline's change and credit rules." Push title "Lisbon: fare fell to $431". The copy never says refund, credit owed, or savings guaranteed.
 **Events.** `booked_fare_saved {watch: on|off}`, `booked_fare_watch_changed {value}`, `booked_fare_alert_opened`, `booked_fare_rules_opened`.
@@ -1134,17 +1167,17 @@ Second, the "Your booked fare" block on the chosen-flight card and the route car
 +------------------------------+
 ```
 
-**Content.** Trips opened in the last 30 days (up to 10) save their plan, flights and fares with age, stays, checklist, notes, evidence labels and travelers automatically. "Download for offline" adds map tiles for the trip area and shows its size first ("About 18 MB"). Sync state is plain text ("3 edits waiting to sync").
+**Content.** Trips opened in the last 30 days (up to 10) save their plan, flights and fares with age, stays, checklist, notes, evidence labels and travelers automatically. "Download for offline" adds map tiles for the trip area and shows its size first ("About 18 MB"). Sync state is plain text ("3 edits waiting to sync"), and every trip header shows the sync indicator (4.21): "Synced 12 s ago" from the last successful sync, "Syncing", "Offline, 3 edits waiting", or "Could not sync, retrying" after three failed polls; tapping it syncs now.
 **Interactions.** "Update download" refreshes tiles; "Remove download" frees space after a confirm. Edits made offline queue and send on reconnect, last writer wins per field, and a 409 opens the conflict sheet (6.12). Reading needs no setup.
 **States.** Loading: size estimate skeleton. Empty: "Not downloaded yet. Your plan is still saved for reading." Error: "We could not download the map. Your plan is still saved." Offline: the block is readable, Download is disabled ("Connect to download"). No permission: all members can read offline; viewers cannot queue edits. Limit: a trip beyond the 10 most recent shows "Open it once online to save it." Storage full: "Your phone is almost full. Remove a download to save this trip."
 **Copy.** Banner `offline_banner` and `saved_offline` (7.5). No partner content is shown offline.
-**Events.** `offline_download_started`, `offline_download_completed {size_bucket}`, `offline_download_removed`, `sync_completed {queued_count_bucket}`.
+**Events.** `offline_download_started`, `offline_download_completed {size_bucket}`, `offline_download_removed`, `sync_completed {queued_count_bucket}`, `sync_indicator_tapped {state}`.
 **Accessibility.** Sync and offline changes are polite announcements; sizes and dates are text; the chip states are words with icons.
 
 ### 6.34 Shared-trip page (public)
 
 **Purpose.** Let someone with a link read the trip in a clean page, with no app and no account.
-**Layout.** The marketing shell: a light top bar with the light lockup (mark 28 px) and a "Get the app" button, a 720 px reading column, no sidebar and no tab bar, and a footer with Terms, Privacy and How we earn money. The page is the route `/s/:shareId`. On phones a sticky bottom bar offers "Plan your own trip"; it is a link, never a paywall or an interstitial, and it can be dismissed for the session.
+**Layout.** The marketing shell: a light top bar with the light lockup (mark 28 px) and a "Get the app" button, a 720 px reading column, no sidebar and no tab bar, and a footer with Terms, Privacy and How we earn. The page is the route `/s/:shareId`. On phones a sticky bottom bar offers "Plan your own trip"; it is a link, never a paywall or an interstitial, and it can be dismissed for the session.
 
 ```
 +------------------------------+
@@ -1224,10 +1257,10 @@ Second, the "Your booked fare" block on the chosen-flight card and the route car
 +------------------------------+
 | < Account   Invite friends   |
 |                              |
-| You and a friend each get 10 |
-| credits when they sign up and|
-| start a trip with 3 or more  |
-| items. Credits last 12 months|
+| You and a friend each get 20 |
+| credits after their first    |
+| trip with dates. Credits last|
+| 12 months.                   |
 |                              |
 | Your link                    |
 | wayfold.app/r/MAYA7K         |
@@ -1236,14 +1269,14 @@ Second, the "Your booked fare" block on the chosen-flight card and the route car
 |                              |
 | 2 friends joined             |
 | 20 credits earned            |
-| Up to 100 credits a year     |
+| Up to 5 rewards a month      |
 +------------------------------+
 ```
 
-**Content.** The rule in words: "You and a friend each get 10 credits when they sign up and start a trip with 3 or more items. Credits last 12 months." No friend names are shown. No countdowns, no levels, no nags. A friend enters a code from the sign-in screen ("Have a friend's code?", one field) or arrives by the link `wayfold.app/r/<code>` (web landing, then the app through the universal link).
-**Interactions.** Share opens the native sheet. Applying a code shows "Code applied. You will get 10 credits after you start a trip with 3 or more items." Rewards arrive as promo credits (F-SUB-4) with an Activity item and at most one push.
-**States.** Loading: skeleton card. Error: "We could not load your link. Try again." Offline: the code is readable and Share works; applying a code waits ("Connect to apply a code."). Invalid code: "That code is not right. Check it and try again." Own code: "That is your own code." Already used: "You already used a code on this account." Limit: "You have earned the maximum 100 credits this year. Friends you invite still get theirs." Not eligible (existing account): "Codes are for new accounts."
-**Copy.** Button "Share your link". Reward line "Friend joined. 10 credits added."
+**Content.** The rule in words: "You and a friend each get 20 credits after their first trip with dates. Credits last 12 months." The limits are stated plainly: "You can earn for up to 5 friends in 30 days and 10 a year." No friend names are shown. No countdowns, no levels, no nags. A friend enters a code from the sign-in screen ("Have a friend's code?", one field) or arrives by the link `wayfold.app/r/<code>` (web landing, then the app through the universal link).
+**Interactions.** Share opens the native sheet. Applying a code shows "Code applied. You will get 20 credits after you create your first trip with dates." Rewards arrive as promo credits (F-SUB-4) with an Activity item and at most one push.
+**States.** Loading: skeleton card. Error: "We could not load your link. Try again." Offline: the code is readable and Share works; applying a code waits ("Connect to apply a code."). Invalid code: "That code is not right. Check it and try again." Own code: "That is your own code." Already used: "You already used a code on this account." Limit: "You have reached the limit for rewards (5 in 30 days, 10 a year). Friends you invite still get theirs." Not eligible (existing account): "Codes are for new accounts."
+**Copy.** Button "Share your link". Reward line "Friend joined. 20 credits added."
 **Events.** `referral_link_shared {method}`, `referral_code_applied {result}`, `referral_reward_earned {role: referrer|friend}`.
 **Accessibility.** The code is selectable text with a labeled Copy button; progress is text ("2 friends joined, 20 credits earned"); errors are linked to the field.
 
@@ -1308,13 +1341,21 @@ An error message has three parts, in order: what happened, why if known, and how
 | `restore_none` | "We did not find any purchases to restore for this Apple ID." |
 | `evidence_label` | "Found on {site}, checked {date}" |
 | `evidence_stale` | "Source not checked since {date}" |
+| `evidence_old` | "May be out of date" |
+| `recheck_button` | "Recheck" |
+| `sync_ago` | "Synced {n} s ago" |
+| `sync_offline` | "Offline, {n} edits waiting" |
+| `verify_header` | "Checked {checked} of {found}. {green} confirmed, {amber} differ, {red} not found. {unchecked} not checked." |
+| `web_upgrade` | "Upgrade in the iOS app" |
+| `cancel_row` | "Cancel subscription" |
+| `status_banner` | "{thing} is delayed right now. Saved trips still work." |
 | `import_reward` | "Your first import includes a Trip Pass for {trip}: live fare checks, up to 6 collaborators and 40 credits until {date}." |
 | `import_unsaved` | "Nothing is saved until you tap Import." |
 | `feed_delay` | "Changes show up on your calendar app's schedule, often within an hour and sometimes up to a day." |
 | `feed_public` | "Anyone with this link can see your trip's schedule." |
 | `booked_drop` | "You paid {paid}. It is now {now} ({source}, checked {age}). Check the airline's change and credit rules." |
 | `booked_caveat` | "This is the lowest fare we found for those dates. It may be a different flight." |
-| `referral_rule` | "You and a friend each get 10 credits when they sign up and start a trip with 3 or more items. Credits last 12 months." |
+| `referral_rule` | "You and a friend each get 20 credits after their first trip with dates. Credits last 12 months." |
 
 ## 8. Paywall design rules
 
@@ -1325,10 +1366,10 @@ An error message has three parts, in order: what happened, why if known, and how
 5. **Say what it gives on this trip.** The first line after the headline names the concrete result for this trip ("Live prices for Lisbon until 4 Dec"), with real numbers from [01-product-spec.md](01-product-spec.md), section 1.4.
 6. **Up to three options**, in this order of prominence, chosen by the rules in 6.27: Trip Pass (lead when the trip has dates in the next 120 days), Plus annual (pre-selected where it is the lead subscription), Plus monthly under "More options". Credit packs appear only at credit triggers. Family and Pro arrive in Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 7. **Annual is pre-selected with the true monthly equivalent**: "Plus annual, $39.99 a year, about $3.33 a month" next to "Plus monthly, $5.99 a month". The saving is stated as a number ("Save $31.89 a year"), never a percent alone or a crossed-out fake price.
-8. **Trials and renewals are plain.** The trial line reads "7 days free, then $39.99 a year from 7 Oct. Cancel any time in Settings." A reminder is sent before conversion. No trial for Trip Pass or credit packs.
+8. **Trials and renewals are plain.** The trial line reads "7 days free, then $39.99 a year from 7 Oct. Cancel any time in Settings." with a link to "How billing works". A reminder with the one-tap cancel link is sent 2 days before conversion. No trial for Trip Pass or credit packs.
 9. **Restore purchases** is a visible text button on every paywall and on the Plan and credits screen. It shows a result either way (`restore_done`, `restore_none`).
 10. **No countdowns, no invented scarcity, no "limited offer", no pre-checked upsell add-ons, no confirmshaming** ("No thanks, I like paying more"). The free button says "Not now" or names the free action.
-11. **Legal row** under the buttons: price and period, renewal, cancellation, Terms, Privacy. 12 px minimum, never hidden.
+11. **Legal row** under the buttons: price and period, renewal, cancellation (with a link to How billing works), Terms, Privacy. 12 px minimum, never hidden. On the web app there is no price or purchase button: the primary button reads "Upgrade in the iOS app".
 12. **Never next to affiliate content** and never on the same screen as a partner card. After an affiliate booking there is no paywall.
 13. **Confirm credit spends, do not paywall them.** Spending credits is a confirm sheet (6.15), not a paywall; it appears for 6 credits or more and always shows the balance after.
 14. **Resume the task.** After a purchase the sheet closes with a stamp, the blocked action resumes (the route is added, the invite sheet opens) and the plan or pass is bound to the trip when it applies ("Apply to Lisbon?" picker for a Trip Pass).
@@ -1376,7 +1417,7 @@ One `h1` per screen. Landmarks: header, nav, main. Section strips are `tablist`.
 - Custom controls expose roles and states (`aria-pressed` for votes, `aria-expanded` for day cards, `aria-selected` for tabs, `aria-current="step"` in the run timeline).
 - Dynamic content uses live regions: toasts (`status` or `alert`), run progress (polite), credit balance changes (polite). Loading states expose `aria-busy`.
 - Rotor and headings: each day card is a heading; each list has an accessible count ("Stays, 4 items").
-- Reading order matches visual order. Price, age and source are read in one phrase ("412 dollars, cached, checked 3 hours ago").
+- Reading order matches visual order. Price, age and source are read in one phrase ("412 dollars, cached, checked 3 hours ago"). Verdict chips are read as a word plus the place ("Confirmed, Time Out Market"); the sync indicator announces state changes only.
 - **Dynamic Type:** all text is `rem`. The native shell reads the system size through `@capacitor/text-zoom` and applies it to the root font size, supporting up to Accessibility XXXL (about 310%). Layouts reflow rather than clip: the section strip scrolls, the tab bar labels stay (icons stay 24 px, labels wrap to two lines then truncate only at the largest sizes with the accessible name intact), cards stack their metadata, tables scroll horizontally with a sticky label column, buttons grow in height. Test each screen at default, Large and the largest accessibility size.
 - Web supports 200% browser zoom and 400% reflow at 320 px width with no two-dimensional scrolling (except the chart and compare table, which scroll in their own region).
 

@@ -47,10 +47,12 @@ Positioning line: **Plan together. Know the fare.**
 ### 1.3 Platforms
 
 iOS app (Capacitor wrapper around the React app, bundled) and the web app. Both ship the same
-features except: purchases of subscriptions, Trip Pass and credit packs happen through the App
-Store in the iOS app (RevenueCat over StoreKit 2; how the web app sells them is in
-[07-monetization-spec.md](07-monetization-spec.md)). Android users get the web app in Phase 1.
-Native Android: Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
+features except: purchases of subscriptions, Trip Pass and credit packs happen only through the App
+Store in the iOS app (RevenueCat over StoreKit 2). There are no web purchases in Phase 1: the web
+paywall says "Upgrade in the iOS app" and links to the App Store (see
+[07-monetization-spec.md](07-monetization-spec.md)). Android users get the installable web app in
+Phase 1, with an install guide (F-WEB-7) and testing on Android Chrome. Native Android and web
+billing: Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 
 ### 1.4 Phase 1 shared decisions
 
@@ -60,9 +62,9 @@ not sold in Phase 1.
 
 | Code | Name | Price (US) | Store product | Key limits |
 |---|---|---|---|---|
-| `free` | Free | $0 | none | 2 active trips, 1 cached-fare route per trip, 12 credits a month, one lifetime deep agent run ("taster"), 1 cached-fare alert, invite 1 collaborator per trip (so couples plan free), offline reading, joins others' trips free |
-| `plus` | Plus | $5.99 a month, $39.99 a year | auto-renewing subscription, group `wayfold_membership` | unlimited trips (fair use 25), 3 live routes checked daily within 120 days of departure, 60 credits a month, can invite up to 6 collaborators per trip |
-| `trip_pass` | Trip Pass | $9.99 | non-renewing subscription, 90 days | one trip: 2 live routes, max 60 live checks, 40 credits, up to 6 collaborators |
+| `free` | Free | $0 | none | 2 active trips, 1 cached-fare route per trip, 12 credits a month, one lifetime deep agent run ("taster"), 1 cached-fare alert, invite 1 collaborator per trip (so couples plan free), read-only share links, offline reading, joins others' trips free, checks up to 5 plan items per Verify run |
+| `plus` | Plus | $5.99 a month, $39.99 a year | auto-renewing subscription, group `wayfold_membership` | unlimited trips (fair use 25), 3 live routes checked daily within 120 days of departure, 60 credits a month, can invite up to 6 collaborators per trip, checks up to 12 plan items per Verify run |
+| `trip_pass` | Trip Pass | $9.99 | non-renewing subscription, 90 days | one trip: 2 live routes, max 60 live checks, 40 credits, up to 6 collaborators, 12 plan items per Verify run |
 | `credits_50` / `credits_150` / `credits_400` | Credit packs | $2.99 / $6.99 / $14.99 | consumable | purchased credits last 12 months and are spent last |
 
 Rules: a trip's capabilities are the best of its owner's tier and any pass on that trip. Invitees
@@ -80,9 +82,11 @@ import (F-IMP-3).
 | `draft_trip` | 4 | $0.10 |
 | `research` | 8 (1 from shared cache) | $0.16; 5 searches, 8 fetches |
 | `agent_run` (fare hunt or deep research) | 40 (8 from shared cache) | $0.80; 20 turns, 10 searches, 10 fetches, one at a time |
+| `verify_plan` (Verify this plan: one checked item) | 1 per item, at most 5 per run on Free and 12 on Plus and Trip Pass | $0.02 per item; 1 search, 1 page |
 
-The packing list (F-AI-9) and booking import (F-AI-10, F-IMP-2) are priced as `explain`. Monthly
-provider-spend ceilings: Free $0.25 (plus the one-time taster), Plus $2.25, Trip Pass $1.80. Daily:
+The packing list (F-AI-9), booking import (F-AI-10, F-IMP-2), reading a pasted plan (F-AI-11 step 1) and the evidence recheck (F-AI-12) are priced as `explain`. Monthly
+provider-spend ceilings: Free $0.25 (plus the one-time taster), Plus $2.25, Trip Pass $1.80; only purchased
+credits raise a ceiling, never referral, taster or pass credits. Daily:
 Free $0.05, Plus and Trip Pass $0.40. An agent run is admitted if the month has $0.80 of headroom,
 even above the daily budget. Cached data always keeps working. Models: Claude Haiku 4.5
 (`claude-haiku-4-5`) for short answers and page summaries, Claude Sonnet 5.5 (`claude-sonnet-5-5`)
@@ -165,7 +169,7 @@ Each journey lists the steps, the screens involved and the feature ids that impl
    Visitor chooses Sign in with Apple, Google, or an email code. (F-ACC-3)
 4. Guest data is claimed into the account. A skippable profile asks for display name, home
    airport and currency, creating the "Me" traveler. (F-ACC-4)
-5. A card asks "Coming from TripIt or Wanderlog?" with "Bring your trips over" and "Start fresh".
+5. A card asks "Coming from TripIt, Tripsy or Wanderlog?" with "Bring your trips over" and "Start fresh".
    (F-ACC-7, F-IMP-1)
 
 Success: account exists, trip is saved, no data was lost, no paywall was shown.
@@ -258,19 +262,41 @@ Success: account exists, trip is saved, no data was lost, no paywall was shown.
 
 The flight delay prompt, memories and the "Year in travel" card: Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 
-### 3.12 Switch from TripIt or Wanderlog
+### 3.12 Switch from TripIt, Tripsy or Wanderlog
 
-1. On first run the onboarding card "Coming from TripIt or Wanderlog?" (or "Import a trip" on Trips
-   home or in Settings) opens Import. (F-ACC-7)
-2. The user picks how: upload a calendar file, paste a calendar feed link (TripIt, Google
-   Calendar), or paste booking confirmations. (F-IMP-1, F-IMP-2)
+1. On first run the onboarding card "Coming from TripIt, Tripsy or Wanderlog?" (or "Import a trip"
+   on Trips home or in Settings) opens Import. (F-ACC-7)
+2. The import screen lists entries named for TripIt, Tripsy and Wanderlog, plus Google Calendar and
+   Google Maps. Each shows how to get the data out of that app and opens the matching method: a
+   calendar file, a calendar feed link, pasted booking confirmations, a Google Maps list export or
+   pasted places. (F-IMP-1, F-IMP-2, F-IMP-4, F-IMP-5)
 3. A preview lists everything found. The user unticks anything wrong and taps "Import"; nothing is
    saved before that.
-4. A new trip opens with flights, stays and reservations in place. The first import shows "Your
-   first import includes a Trip Pass for <trip>". (F-IMP-3)
-5. Optional: turn on the calendar feed so the trip shows in the user's calendar app. (F-CAL-1)
+4. A new trip opens with flights, stays, reservations and saved places in place. When the import
+   added at least 3 items including a flight or a stay, it shows "Your first import includes a
+   Trip Pass for <trip>". (F-IMP-3)
+5. Optional: for a calendar feed, turn on "Keep checking this calendar" so later changes arrive as
+   a preview to confirm (F-IMP-6), and turn on the calendar feed so the trip shows in the user's
+   own calendar app (F-CAL-1).
 
-Success: the trip exists without retyping, and no TripIt, Google or Wanderlog password was shared.
+Success: the trip exists without retyping, and no TripIt, Tripsy, Google or Wanderlog password was
+shared.
+
+### 3.14 Check a plan from another AI
+
+1. A user who planned in ChatGPT, Gemini, Layla or Mindtrip taps "Verify a plan" (Trips home "+"
+   menu, a trip's menu, or the import screen) and pastes the text. (F-AI-11)
+2. Wayfold reads the places out of it (1 credit) and shows the list with the price of checking
+   them ("Check 7 places for 7 credits"). The user picks the items to check, up to 5 on Free and 12
+   on Plus and Trip Pass.
+3. Each place comes back green (confirmed), amber (differs or only partly confirmed, with the
+   source) or red (could not be found), with "Found on [site], checked [date]". Items that were not
+   checked say so.
+4. The user imports the confirmed items into the trip as a draft. Older findings later show "May
+   be out of date" with a one-tap recheck. (F-AI-12, F-NTE-2)
+
+Success: the user knows which parts of the AI plan hold up, sees the source for each claim, and
+starts the trip from checked facts. No paywall appears before the first list of places.
 
 ### 3.13 Arrive from the web
 
@@ -369,20 +395,20 @@ action code and price, or "none". Acceptance bullets are testable at API or UI l
   - Owner can disable AI per trip; it then shows "AI is off for this trip" to all members.
 - Tier: all.
 
-#### F-ACC-7 "Coming from TripIt or Wanderlog?" onboarding
+#### F-ACC-7 "Coming from TripIt, Tripsy or Wanderlog?" onboarding
 
 - Story: As someone switching from another planner, I want to be offered an import when I start,
   so that I do not retype my trips.
 - Acceptance:
   - After sign-in and the skippable profile step, onboarding shows one card titled "Coming from
-    TripIt or Wanderlog?" with "Bring your trips over" (opens F-IMP-1) and "Start fresh". The card
-    is shown once in onboarding and can be skipped.
+    TripIt, Tripsy or Wanderlog?" with "Bring your trips over" (opens the import screen, F-IMP-4)
+    and "Start fresh". The card is shown once in onboarding and can be skipped.
   - The same entry stays available as "Import a trip" on Trips home (prominent when the user has no
     trips, otherwise in the "+" menu), in a trip's menu ("Import into this trip"), and in Settings.
   - Guests do not see the card before sign-up; a guest who taps Import gets the "Save your trip"
     prompt first (F-ACC-3).
   - No paywall and no credit charge appear in the card or the import choice screen.
-  - Copy names both products as plain text; no third-party logos are used.
+  - Copy names the products as plain text; no third-party logos are used.
 - Tier: all. Credits: none.
 
 ### 4.2 Trips and destinations (F-TRP)
@@ -547,7 +573,13 @@ action code and price, or "none". Acceptance bullets are testable at API or UI l
   - Every editable row has a version; a stale write returns 409 with the current row and the UI
     shows both versions with "Keep mine" and "Use theirs".
   - A simple activity feed lists changes newest first ("Maya added Lisbon food tour").
-- Tier: all on shared trips.
+  - The trip header shows a sync indicator: "Synced 12 s ago" (seconds under a minute, then
+    minutes, then the time), counted from the last successful sync response or accepted queued
+    edit, refreshed every 5 seconds. Other states are "Syncing", "Offline, 3 edits waiting" and
+    "Could not sync, retrying" (after three failed polls). Tapping it syncs now. It never shows a
+    time for a sync that did not happen, is text as well as an icon, and screen readers are told of
+    state changes only, not the ticking seconds.
+- Tier: all on shared trips; the indicator is on every trip.
 
 #### F-COL-6 Share links
 
@@ -689,12 +721,13 @@ Reuse note: route, fare and choice logic carry over from the existing Trip Plann
     destination airports, dates, cabin (economy) and traveler count, from cached fares on every
     tier and from live checks where the trip already has a live route. It never starts a provider
     call of its own, and it stops at departure.
-  - An alert fires when the comparable fare is lower than the amount paid by at least $20 (or the
-    equivalent in the paid currency) or 5 percent, whichever is greater, and lower than the last
-    price alerted. At most one alert per watch per day.
+  - An alert fires when the comparable fare is lower than the amount paid by at least 5 percent and
+    by at least $10 (the equivalent after conversion to US dollars), and lower than the last price
+    alerted. At most one alert per flight every 7 days.
   - Alert text states both numbers, the source and the age, and points to the airline's own rules:
     "You paid $480. It is now $431 (cached, checked 3 h ago). Check the airline's change and
-    credit rules." Push and in-app (F-NOT-1 type price alert); email links to the flight card.
+    credit rules." Push and in-app (F-NOT-1 type price alert); email links to the flight card. The
+    alert never carries a partner link.
   - The flight card shows "Your booked fare": amount paid, the current comparable fare with source
     and age, the difference, and a link "Airline change and credit rules" that opens the airline's
     own site (non-affiliate). No Book button, partner card or paywall appears on it.
@@ -1017,6 +1050,89 @@ Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 - The switching import (F-IMP-2) uses this same pipeline for several pasted confirmations in one
   session.
 
+#### F-AI-11 Verify this plan
+
+- Story: As someone who planned a trip in ChatGPT, Gemini, Layla or Mindtrip, I want to paste the
+  plan and see which places, opening hours and prices hold up, so that I do not check each one by
+  hand.
+- Story: As a planner who found some problems, I want to import only what checked out, so that my
+  trip starts from facts and I can see where each one came from.
+- Acceptance:
+  - Entry points: "Verify a plan" in the "+" menu on Trips home, in a trip's menu, and on the
+    import screen. It runs inside a trip (a Free owner at the 2 active trip limit is offered "Check
+    it inside one of your trips"); a person starting from Trips home can create the trip from the
+    plan's first destination.
+  - Step 1, read the plan: the person pastes text of up to 8,000 characters and optionally says
+    which assistant wrote it (ChatGPT, Gemini, Layla, Mindtrip or other, shown but never trusted).
+    Personal data is replaced with placeholders before the model call (F-AI-10 rules). Wayfold
+    lists up to 25 items (place, day, time, stated hours, stated price). Costs 1 credit (`explain`
+    price class), shown before the tap; text with no places is refunded and says so. The text is
+    never stored and no link in it is opened.
+  - The list shows the price of step 2 before anything is checked: "Check 7 places for 7
+    credits" (1 credit per checked item). A check of 6 or more items asks for the usual confirm.
+    The person ticks the items to check; the cap per run is 5 on Free and 12 on Plus and Trip Pass.
+    Items over the cap stay "Not checked" and can be checked in another run, each run priced on its
+    own.
+  - Step 2, check: for each selected item Wayfold looks the place up in place data, uses the
+    shared cache when it has a fresh answer, and otherwise reads at most one page, to confirm that
+    the place exists, that the stated opening hours fit the planned day and time, and that a stated
+    price is within 15 percent of the page. The result is one of:
+    - Green "Confirmed": the place exists and everything the plan stated was confirmed.
+    - Amber "Differs" or "Partly confirmed": the place exists but a stated hour or price differs
+      or could not be confirmed. The row says which field and shows what the source says ("Closed
+      Mondays. Your plan has Monday at 10:00").
+    - Red "Could not find it": no place data and no page names it.
+    - "Not checked" with a reason: over the cap, the cost limit was reached, the source is an
+      Airbnb, Vrbo or Booking.com page (never opened), or a provider error (the credit is
+      refunded).
+  - Every green and amber item shows the evidence label "Found on [site], checked [date]" linking
+    to the page. Colors always come with a word and an icon. A red item is never shown as a fact
+    and never appears on a trip until the person chooses to add it.
+  - The header states what was done, not a score: "Checked 7 of 9. 5 confirmed, 1 differs, 1 not
+    found. 2 not checked." Wayfold never calls a whole plan "verified".
+  - The worker saves verdicts only with their evidence; a person cannot edit a verdict or a date.
+    Only the tick marks for checking and importing are editable.
+  - Credits are reserved for the selected items and settled to the items that ended green, amber
+    or red; unchecked items, provider errors and a run that finds nothing are refunded.
+  - "Add to trip" imports the ticked items as itinerary items (`source = 'verify_plan'`, status
+    `idea`, or `planned` when the plan gave a day) with their evidence. Green items are ticked by
+    default, amber items after the person has opened them, red items never. Importing costs nothing
+    and nothing is saved before the tap.
+  - Results stay available for 30 days on the trip ("Plan checks") and are then deleted with their
+    evidence; items already imported stay.
+  - Needs AI consent and `trips.ai_enabled`; kill switch `ai.verify` and flag `verify_plan`. No
+    partner link, affiliate card or paywall appears on the screens. At zero credits the normal
+    credit paywall appears only when the person taps "Check".
+- Tier: all. Credits: `explain` 1 to read the plan, then `verify_plan` 1 per checked item (at most
+  5 on Free and 12 on Plus and Trip Pass per run). Model: Claude Haiku 4.5.
+- Edge cases: a plan with more than 25 places reads the first 25 and says so; a plan longer than
+  8,000 characters asks for one trip at a time; two items that match the same place are merged into
+  one row; an item that duplicates something already on the trip is marked "Already on your trip"
+  and left unticked; a place whose stated price is in another currency is converted with the ECB
+  rate for the comparison only; a closed-for-renovation or renamed place is amber with the page
+  that says so.
+
+#### F-AI-12 Evidence recheck
+
+- Story: As a planner with an older finding, I want to ask again whether the page still says the
+  same thing, so that I do not plan around stale facts.
+- Acceptance:
+  - An AI-found finding (a note from an agent run) or a checked plan item whose evidence is more
+    than 14 days old shows "May be out of date" next to its evidence label (F-NTE-2) and a
+    "Recheck" button. The flag is computed from the date on the label; nothing is sent or changed
+    in the background.
+  - "Recheck" costs 1 credit (`explain` price class), shown first. It opens the stored source page
+    once and tells the person one of four things: still the same (the label date moves to today),
+    changed (what the page says now, with the source, and "Save as a note"; the old text is not
+    overwritten), no longer shown, or unreachable (nothing is charged).
+  - Rechecking never searches the web, never opens Airbnb, Vrbo or Booking.com, and never changes
+    a trip item by itself.
+  - Editors and owners can recheck at any time, not only after 14 days; viewers see the flag only.
+  - Kill switch `ai.recheck`; needs AI consent and `trips.ai_enabled`.
+- Tier: all, from the user's credits. Credits: `explain` 1. Model: Claude Haiku 4.5.
+- Edge cases: fares are not rechecked here (they show their own age and "Refresh now", F-FLT-4); a
+  finding with several sources rechecks the first and offers the others in turn.
+
 ### 4.8 Notes and evidence (F-NTE)
 
 #### F-NTE-1 Notes feed
@@ -1046,8 +1162,10 @@ Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
   - The label appears wherever the item appears: route cards and fare rows, the Found by AI list,
     the run page, presentation slides, share pages and PDF export.
   - With more than one source the label shows the first and "and 2 more", which opens the list.
-  - An item whose source later fails, or that was last checked more than 30 days ago, is not
-    removed but shows "Source not checked since <date>" in place of "checked <date>".
+  - Freshness: an AI-found finding or checked plan item whose label date is more than 14 days old
+    shows "May be out of date" beside the label and a one-tap "Recheck" (F-AI-12). It is not removed
+    or hidden. An item whose source later fails to load is also not removed: it shows "Source not
+    checked since <date>" in place of "checked <date>".
   - The run page lists rejected items and why (F-AI-5). Rejected items never wear the label
     because they are never shown as facts.
   - Fares add "Indicative: seen on the linked page, not live-checked" (F-AI-5) next to the label.
@@ -1147,8 +1265,9 @@ Global rules (each is a testable requirement):
 7. A per-partner kill switch can hide a partner immediately.
 8. Paid tiers see the same links in the same places, never hidden.
 9. Offline mode shows no partner content.
-10. Settings has "How we earn money" listing partners and the ranking rule, with a "Hide booking
-    links" switch that collapses buttons to a plain "Open on partner site" link.
+10. Settings has "How we earn" (the public page, F-WEB-4) listing every partner and the ranking
+    rule, with a "Hide booking links" switch that collapses buttons to a plain "Open on partner
+    site" link.
 
 #### F-AFF-1 Destination card
 
@@ -1190,8 +1309,9 @@ Global rules (each is a testable requirement):
 
 - Checklist "Get it" buttons (F-CHK-1), optional "Book the plan" slide (F-PRS-1), and a "Today"
   card during the trip (F-TRV-1) follow the same global rules. Trip created, flight charts,
-  lodging import, the switching import, the booked-fare alert, the calendar feed, comparison and
-  sample pages, agent pages, trips home and paywalls carry no affiliate UI.
+  lodging import, the switching import, Verify this plan, evidence rechecks, the booked-fare alert,
+  the calendar feed, comparison and sample pages, the trust pages, the status page, agent pages,
+  trips home and paywalls carry no affiliate UI.
 
 #### F-AFF-6 Launch partners
 
@@ -1208,7 +1328,8 @@ Global rules (each is a testable requirement):
   - Channels: push (APNs), in-app inbox, email (Resend). Settings has a matrix of event types by
     channel.
   - Event types: price alert (including the booked-fare drop), invite accepted, member joined,
-    agent run finished, checklist reminder, referral reward, export ready, deletion steps.
+    agent run finished, plan check finished, calendar changes found, checklist reminder, referral
+    reward, export ready, deletion steps.
   - Change-digest push for shared trips is at most one per hour per trip.
   - No promotional push (Apple guideline 4.10). Marketing email is separate and opt-in.
   - Every email has a one click unsubscribe for non-transactional types.
@@ -1235,8 +1356,9 @@ Global rules (each is a testable requirement):
 - Acceptance: sections for Account (name, email, sign-in methods, devices with "sign out
   everywhere"), Preferences (home airports, currency, units, locale, time zone, theme),
   Notifications (F-NOT-1), AI (consent, per-trip toggles, credit history), Subscription
-  (F-SUB), Invite friends (F-REF), Import a trip (F-IMP), How we earn money, Privacy, Help and
-  Legal. Changes save immediately.
+  (F-SUB, with "Cancel subscription" and "How billing works", F-SUB-7), Invite friends (F-REF),
+  Import a trip (F-IMP), How we earn (F-WEB-4), Privacy, Help (including "Install on Android",
+  F-WEB-7, and "Service status", F-WEB-6) and Legal. Changes save immediately.
 
 #### F-SET-2 Export
 
@@ -1280,7 +1402,11 @@ Global rules (each is a testable requirement):
     `trip_pass` $9.99, `credits_50` $2.99, `credits_150` $6.99, `credits_400` $14.99.
   - Plus monthly and annual share the `wayfold_membership` group; switching between them follows
     StoreKit rules.
-  - The trial screen states the price and renewal date; a reminder is sent before conversion.
+  - The trial screen states the price and renewal date; a reminder (local notification and email)
+    is sent 2 days before conversion and carries the one-tap cancel link (F-SUB-7).
+  - On the web app no plan can be bought: the paywall shows what the upgrade unlocks, the free
+    path and "Upgrade in the iOS app" with a link to the App Store. It shows no price list, no
+    purchase button and no "cheaper on the web" text.
   - Restore purchases is always present.
   - Entitlements are stored server side from RevenueCat and App Store Server Notifications v2;
     the client reads `GET /me/entitlements` and never decides.
@@ -1312,7 +1438,7 @@ Global rules (each is a testable requirement):
     the actor's monthly allowance and before purchased credits.
   - The trip settings screen shows the pass status and expiry, a notice 7 days before expiry, and
     a renewal offer (a new pass starts a new 90 days).
-  - A Trip Pass is also granted free by a first import (F-IMP-3). It behaves exactly like a
+  - A Trip Pass is also granted free by a first qualifying import (F-IMP-3). It behaves exactly like a
     purchased pass except that it has no store transaction (`trip_passes.source = 'import_reward'`).
   - Default paywall order: Trip Pass first when a trip has dates within 120 days; annual `plus`
     first when the user has 2 or more active trips.
@@ -1332,7 +1458,8 @@ Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
   - Monthly grants: `free` 12, `plus` 60, `trip_pass` 40 once; monthly grants do not roll over.
   - Purchased packs last 12 months and are spent last; expiry dates are shown.
   - Promo credits (the taster, referral credits from F-REF-1) carry their own expiry and are
-    shown separately from purchased credits.
+    shown separately from purchased credits. Only purchased credits raise the provider-spend
+    ceiling; promo, taster, referral and pass credits never do.
   - Spend order: monthly allowance, then promo (the taster, then referral credits, oldest expiry
     first), then pass credits for that trip, then adjustments, then purchased credits (oldest
     expiry first).
@@ -1355,15 +1482,15 @@ paywall before first value, none beside an affiliate card.
 | Second route | `free` 1 route per trip | `trip_pass` |
 | Live tracking or alert beyond limit | No live access | `trip_pass` or 1 credit |
 | Invite a second collaborator | `free` owner with 1 collaborator already on the trip | `trip_pass` ("They join free") |
-| Draft or research out of credits | 0 credits | Credit pack or `plus` |
+| Draft, research or plan check out of credits | Fewer credits than the action costs | Credit pack or `plus` |
 | Presentation footer and PDF watermark | `free` share | `trip_pass` (soft, at export) |
 | Saving the 9th stay | `free` limit | Keep in "Later", `trip_pass` |
 | 14 days before departure on a `free` trip | Lifecycle | `trip_pass` (email or push, opt-in) |
 
 - Acceptance: the "After booking through an affiliate link" moment shows no paywall; no
   countdown timers, no invented scarcity, no "unlimited" claims in copy. The import flow, the
-  calendar feed, the booked-fare alert, the taster result and the public web pages never show a
-  paywall.
+  calendar feed, the booked-fare alert, the list of places in Verify this plan, the taster result and
+  the public web pages never show a paywall.
 - Paywall moments for scheduled routines, group tools and group passes: Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 
 #### F-SUB-6 Downgrade and lapse
@@ -1375,7 +1502,28 @@ paywall before first value, none beside an affiliate card.
     (the earliest to join stays an editor), live tracking pauses, extras are kept and come back if
     the owner renews.
   - A banner tells the owner what changed and how to restore.
-  - Cancellation and a 3 month pause are offered before cancelling (where the store allows).
+  - Cancelling is never blocked, delayed or put behind an offer: "Cancel subscription" is always
+    one tap away (F-SUB-7).
+
+#### F-SUB-7 Plain billing and one-tap cancel
+
+- Story: As a subscriber, I want to understand what I pay and cancel without hunting, so that I
+  never feel trapped.
+- Acceptance:
+  - On the Account screen the plan card has a first-level row "Cancel subscription" next to
+    "Change plan". One tap opens the App Store's own subscription sheet for that plan, where Apple
+    asks for the final confirm. No question, survey or retention offer comes before it. When the
+    plan already ends, the row reads "Your plan ends on <date>".
+  - On the web app the row reads "Cancel in the iOS app" and opens the App Store's subscription
+    page.
+  - The trial reminder, receipt and billing problem emails carry the same cancel link.
+  - "How we bill" is a plain page (F-WEB-5), linked from Settings, every paywall and the App Store
+    listing, that says what each plan costs and when it renews, what the trial does on day 8, that
+    a Trip Pass never renews, how credits expire, that refunds go through Apple, what stays when
+    you cancel, and that purchases are in the iOS app only.
+  - Cancelling keeps the data: trips stay readable and exportable, purchased credits stay (F-SUB-6).
+  - No countdowns, no pre-checked upsells, no renamed or hidden cancel.
+- Tier: all subscribers. Credits: none.
 
 ### 4.17 Travel and after-trip (F-TRV, F-AFT)
 
@@ -1399,7 +1547,8 @@ paywall before first value, none beside an affiliate card.
     data age are shown.
   - Trips opened in the last 30 days (up to 10) stay cached automatically; "Download for offline"
     on a trip fetches its map tiles on demand.
-  - Edits queue and sync when the connection returns (section 6.2).
+  - Edits queue and sync when the connection returns (section 6.2). The sync indicator (F-COL-5)
+    reads "Offline, N edits waiting" while they wait.
   - No partner content is shown offline.
 - Tier: all. Credits: none.
 
@@ -1417,8 +1566,8 @@ Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 People arrive with trips already in TripIt, a calendar app or their email. Import brings them in
 without retyping and without giving Wayfold a password. Wayfold never asks for a TripIt, Google or
 Wanderlog login, uses no sign-in tokens from those services, and has no access to anyone's inbox.
-Wanderlog users bring trips over with a calendar file, if they have one, or by pasting
-confirmations.
+The import screen has an entry for each app (F-IMP-4), a Google Maps list import (F-IMP-5) and an
+opt-in way to keep a calendar feed up to date (F-IMP-6).
 
 #### F-IMP-1 Import from a calendar file or feed
 
@@ -1426,14 +1575,14 @@ confirmations.
   link, so that my bookings are in Wayfold without retyping.
 - Acceptance:
   - Import accepts an iCalendar (.ics) file chosen from the device (a TripIt single-trip export, a
-    Google Calendar export, or any iCalendar file), or a calendar feed link pasted into a field
-    (a TripIt iCal feed or a Google Calendar secret iCal address, `webcal://` or `https://`). A
-    feed is read once, at import time; Wayfold does not subscribe to it, and the link is not
-    stored.
-  - Limits: file or feed up to 2 MB and 500 events. A link is fetched over https only, with a 10
-    second timeout, at most 3 redirects, private and internal addresses refused, and only for
-    hosts `tripit.com` and `calendar.google.com`; any other host asks the person to upload the
-    file. The server never follows links found inside events.
+    Tripsy or Google Calendar export, or any iCalendar file), or a calendar feed link pasted into a
+    field (a TripIt or Tripsy iCal feed or a Google Calendar secret iCal address, `webcal://` or
+    `https://`). A feed is read once, at import time, and the link is not stored, unless the person
+    turns on "Keep checking this calendar" after the first import (F-IMP-6).
+  - Limits: file or feed up to 2 MB and 500 events. A link is fetched over https only, with a 15
+    second timeout, at most 3 redirects, and private and internal addresses refused; Airbnb, Vrbo
+    and Booking.com hosts are refused and ask the person to upload a file. The server never follows
+    links found inside events.
   - A TripIt trip export is treated as one trip. A larger calendar shows a date range and type
     filters (Flights, Stays, Activities, Other) with "Select all in range".
   - Reading is deterministic, with no AI and no credits: events that look like flights (flight
@@ -1482,14 +1631,18 @@ confirmations.
   can judge Wayfold with my own data.
 - Acceptance:
   - The first time an account completes an import (F-IMP-1 or F-IMP-2) that adds at least 3
-    items, the trip that received them gets a Trip Pass for 90 days at no charge: a `trip_passes`
-    row with `source = 'import_reward'`, no `store_transactions` row, bound to that trip, with the
-    same capabilities and 40 pass credits as a purchased Trip Pass (F-SUB-2).
+    items including a flight or a stay, the trip that received them gets a Trip Pass for 90 days at
+    no charge: a `trip_passes` row with `source = 'import_reward'`, no `store_transactions` row,
+    bound to that trip, with the same capabilities and 40 pass credits as a purchased Trip Pass
+    (F-SUB-2).
+  - All of these must hold: at least 3 items added, at least one of them a flight or a stay; a
+    verified email; the trip has no active pass; the account has no active Plus. A Google Maps or
+    pasted-places import (F-IMP-5) and a calendar change confirmation (F-IMP-6) never qualify.
   - Once per account, ever. The import screens promise the pass only while it is still available
-    ("Your first import includes a Trip Pass for Lisbon").
-  - Requires a signed-in account past the age gate, checked server side with device attestation. A
-    trip that already has an active pass does not receive a second one, and the reward stays
-    available for the next import.
+    and the person has no Plus ("Your first import includes a Trip Pass for Lisbon").
+  - Requires a signed-in account past the age gate, checked server side with device attestation. An
+    import that does not qualify, or a trip that already has an active pass, does not consume the
+    reward, and it stays available for the next import.
   - The result screen says plainly what was granted: "Your first import includes a Trip Pass for
     Lisbon: live fare checks, up to 6 collaborators and 40 credits until 4 Dec."
   - The pass shows in Settings, Purchases as "Included with your first import", can move once
@@ -1499,6 +1652,72 @@ confirmations.
 - Tier: all. Credits: 40 pass credits.
 - Edge cases: deleting the imported trip does not restore the reward; a pass granted to a trip the
   owner later transfers follows F-COL-7.
+
+#### F-IMP-4 Import entries named for TripIt, Tripsy and Wanderlog
+
+- Story: As someone using another planner, I want an entry with my app's name that tells me how to
+  get my trips out, so that I know it will work before I try.
+- Acceptance:
+  - The import screen lists TripIt, Tripsy, Wanderlog, Google Calendar and Google Maps as plain
+    text entries (no logos). Each entry opens the matching method and shows two or three steps for
+    getting the data out of that app: TripIt and Tripsy: a calendar file or calendar feed link;
+    Wanderlog: pasted places from a list or pasted booking confirmations; Google Calendar: an
+    exported file or a secret iCal address; Google Maps: F-IMP-5. The steps are checked against the
+    app's own help pages at build time and before launch; where an app offers no export we say so
+    instead of guessing.
+  - Each entry says what moves ("dates, flights, stays and places", never "everything") and that
+    nothing is saved until the person taps "Import".
+  - The entry used is recorded (`origin`) for the "switch imports per week" metric and nothing else.
+  - No entry asks for another app's password, sign-in or email access.
+- Tier: all. Credits: none for the entries themselves (pasted confirmations cost 1 credit each,
+  F-IMP-2).
+
+#### F-IMP-5 Google Maps list and pasted places
+
+- Story: As someone who saved places in a Google Maps list or another planner, I want to bring
+  those places into a trip, so that I do not search for each one again.
+- Acceptance:
+  - Import accepts an exported Google Maps saved-list file (a Google Takeout "Saved" CSV, GeoJSON
+    or KML file, up to 5 MB and 200 places) or pasted place names, one per line or copied from a
+    list, up to 20,000 characters.
+  - Wayfold never opens, resolves or scrapes a Google Maps list link. If the person pastes a list
+    link, the screen explains that the list has to be exported first (two steps, with the Takeout
+    path), offers "Keep this link as a note on the trip", and does not contact the address.
+  - Each place is matched by name through place search (Geoapify); the preview shows the match
+    (name, address, a small map) with "Not the right place" to pick another or drop it. Unmatched
+    rows stay in the list as plain text for the person to fix or untick.
+  - Places become ideas with no day (F-ITN-3). The list's own notes and any Google Maps URLs in the
+    file are kept as plain text in the item's notes and are never followed.
+  - Reading uses no AI and no credits. Nothing is saved until "Import".
+  - A places-only import never earns the first-import Trip Pass (F-IMP-3).
+- Tier: all. Credits: none.
+- Edge cases: a file with no recognizable places says so and offers the paste field; more than
+  200 places imports the first 200 and says so; a duplicate of an existing saved place is marked
+  "Already on your trip" and left unticked.
+
+#### F-IMP-6 Keep checking this calendar
+
+- Story: As someone whose trip lives in a TripIt or Tripsy calendar feed, I want Wayfold to notice
+  changes, so that my plan stays current without re-importing.
+- Acceptance:
+  - After a feed import is applied, the result screen offers a switch "Keep checking this
+    calendar", off by default and never turned on for the person. It says how often ("every 6
+    hours") and that changes arrive as a preview to confirm.
+  - When on, Wayfold reads the feed every 6 hours. If events were added, changed or removed, the
+    trip shows "Your calendar changed: 3 updates" with a notification, and a preview listing each
+    change (new, changed with before and after, removed). The person ticks what to apply and taps
+    "Apply"; nothing is applied automatically, ever. Removed events are listed and never deleted
+    for the person.
+  - The feed link is stored encrypted only while the switch is on, is never shown in full, and is
+    deleted when the switch goes off, the import is discarded, the trip is deleted or the account
+    is deleted.
+  - Polling turns off by itself after 3 failed reads in a row (the person is told), 7 days after
+    the trip ends, or when the person turns it off. At most 3 calendars can be kept up to date per
+    account.
+  - Polling is one way: Wayfold never writes to the person's calendar. It is free, uses no AI and
+    no credits, works on every tier, and does not count as an import for the reward (F-IMP-3).
+  - Kill switches `import.polling` and `import.all`; flag `calendar_feed_polling`.
+- Tier: all. Credits: none.
 
 ### 4.19 Live calendar subscription feed (F-CAL)
 
@@ -1594,6 +1813,75 @@ Only the page behavior is specified here; hosting and SEO plumbing are in
     URL. The comparison basis statement shows on UK and EU storefronts (section 6.4).
 - Tier: public.
 
+#### F-WEB-4 How we earn
+
+- Story: As a visitor or user, I want to see exactly how Wayfold makes money, so that I can trust
+  its suggestions.
+- Acceptance:
+  - A public page at `/how-we-earn`, needing no account, linked from Settings, every paywall,
+    empty states and every `/vs` page, states in plain words: Wayfold earns from subscriptions,
+    Trip Passes, credits and commissions when someone books through a partner link; nothing is
+    ranked by commission; every partner link is labeled; there are no ads; user data is never
+    sold; Airbnb, Vrbo and Booking.com pages are never fetched.
+  - It lists every active partner by category with its disclosure line, and shows live counts
+    (partners and categories) built from the same partner list the app uses, so a partner cannot
+    be added without appearing on it.
+  - It shows how a partner button and its label look, and explains the "Hide booking links"
+    setting.
+  - It has no affiliate links, no cards and no paywall.
+- Tier: public.
+
+#### F-WEB-5 How billing works
+
+- Story: As a subscriber or a person about to subscribe, I want a plain explanation of billing, so
+  that nothing surprises me.
+- Acceptance:
+  - A public page at `/billing` (also in Settings and on every paywall) says, in short sentences:
+    each plan's price and renewal; the 7-day trial on the annual plan, the reminder 2 days before
+    it converts and what happens on day 8; that Trip Pass is one time and never renews; how credits
+    expire; how to cancel (the one-tap link, F-SUB-7); what stays after cancelling; that refunds go
+    through Apple and what Wayfold can do; that no card details are stored; that purchases are in
+    the iOS app only for now; and what stays free.
+  - Prices on the page come from the same configuration as the paywall, so they cannot disagree.
+  - It is reviewed with every price change and included in the App Review notes.
+- Tier: public.
+
+#### F-WEB-6 Public status page and service status
+
+- Story: As a user who sees something wrong, I want to check whether Wayfold has a problem, so that
+  I know it is not me.
+- Acceptance:
+  - A public status page at `status.wayfold.app` (also linked as `/status`) is hosted outside
+    Wayfold's own infrastructure, so it works during an outage. It shows five components (web app,
+    API, AI features, fare data, push), each operational, degraded or down, with 90 days of uptime
+    and posted incidents in plain words with times.
+  - The app shows a quiet banner when a component is degraded ("Fares are delayed right now. Saved
+    trips still work") with a link to the page. Settings has "Service status".
+  - The banner never appears for a single user's failed request; it reflects the same state as the
+    page.
+  - The trip header shows how fresh its data is ("Synced 12 s ago", F-COL-5).
+- Tier: public.
+
+#### F-WEB-7 Android install guide
+
+- Story: As an Android user, I want to use Wayfold like an app, so that I can plan with friends who
+  have iPhones.
+- Acceptance:
+  - The web app is installable: a web app manifest (name, icons, theme, standalone display) and a
+    service worker that keeps opened trips readable offline, so Chrome on Android offers "Install
+    app" and "Add to Home screen".
+  - A page at `/install/android` explains in 3 short steps with screenshots how to install from
+    Chrome (and notes Samsung Internet), what works (full planning, editing, sharing, reading
+    offline) and what does not yet (push notifications for price drops arrive by email; native
+    Android app is planned), and links to Settings, Help, "Install on Android".
+  - On Android Chrome a dismissible card "Add Wayfold to your home screen" appears after the person
+    has created a trip (never on the first screen, never a modal), once every 30 days at most, and
+    uses the browser's own install prompt.
+  - Wayfold is tested on Android Chrome (phone and tablet sizes) before each release: sign-in,
+    creating and editing a trip, sharing, offline reading and the install flow.
+  - Copy never claims a Play Store app or push that does not exist.
+- Tier: all. Credits: none.
+
 ### 4.21 Referral credits (F-REF)
 
 #### F-REF-1 Invite a friend, both get credits
@@ -1605,17 +1893,19 @@ Only the page behavior is specified here; hosting and SEO plumbing are in
     Account, "Invite friends", with the native share sheet. A friend can also type the code
     ("Have a friend's code?") at sign-in or in onboarding. There is no attribution SDK, so the code
     arrives through the link on the web, the universal link when the app is installed, or typing.
-  - The reward is 10 credits to the referrer and 10 credits to the friend when the friend signs in
+  - The reward is 20 credits to the referrer and 20 credits to the friend when the friend signs in
     with a verified identity, passes the age gate, and, within 30 days of applying the code,
-    creates or imports a trip with at least 3 items.
-  - Credits are promo grants (`credit_grants`, kind `referral`), expire after 12 months, and are
-    spent as in F-SUB-4. They are never cash and cannot be sold or transferred.
-  - A referrer can earn up to 10 rewards in a rolling 12 months (100 credits); after that friends
-    still get theirs and the screen says so.
+    creates their first trip with dates.
+  - Credits are promo grants (`credit_grants`, kind `promo`), expire after 12 months, and are
+    spent as in F-SUB-4. They are never cash and cannot be sold or transferred. They never raise
+    the provider-spend ceiling.
+  - A referrer is paid for at most 5 rewards in a rolling 30 days and 10 in a calendar year; past a
+    cap friends still get theirs and the screen says so.
   - Refused: your own code, a second code on one account, an account sharing the referrer's
     device attestation, and disposable email domains.
   - Joining a trip through a trip invite (F-COL-4) earns no referral reward for anyone.
-  - Screen shows the plain rule, friends joined and credits earned (no friend names), with no
+  - Screen shows the plain rule ("You and a friend each get 20 credits after their first trip with
+    dates. Credits last 12 months."), friends joined and credits earned (no friend names), with no
     countdowns and no nags; there is at most one push per reward earned.
 - Tier: all. Credits: earned as above.
 - Edge cases: a friend who already has an account cannot apply a code; if the friend deletes the
@@ -1643,9 +1933,11 @@ the full ladder, including Family, Pro and Group Trip Pass, is in [../README.md]
 | Read-only share link and shared-trip page | yes, with footer | yes | yes |
 | Offline reading | yes | yes | yes |
 | Live calendar feed | yes | yes | yes |
-| Switching import (calendar file or feed) | yes | yes | yes |
+| Switching import (calendar file or feed, TripIt, Tripsy and Wanderlog entries) | yes | yes | yes |
+| Google Maps list and pasted places import | yes | yes | yes |
+| Keep checking this calendar (feed polling every 6 hours, opt-in) | yes | yes | yes |
 | Import from pasted confirmations | 1 credit each | 1 credit each | 1 credit each |
-| Free Trip Pass after first import | once per account | once per account | not applicable |
+| Free Trip Pass after first qualifying import (3 or more items including a flight or a stay, verified email, no active Plus) | once per account | not applicable (has Plus) | not applicable |
 | Routes per trip (cached fares; live where allowed) | 1 | 5 | 3 |
 | Airports per side of a route | 2 | 4 | 4 |
 | Live-tracked routes (daily, within 120 days) | 0 | 3 | 2 (max 60 checks) |
@@ -1660,7 +1952,11 @@ the full ladder, including Family, Pro and Group Trip Pass, is in [../README.md]
 | Presentation mode | yes, footer and watermark | yes | yes |
 | Before-you-go checklist | yes | yes | yes |
 | After-trip wrap-up | yes | yes | yes |
-| Evidence labels on AI-found facts | yes | yes | yes |
+| Evidence labels on AI-found facts, "May be out of date" after 14 days | yes | yes | yes |
+| Evidence recheck (`explain`, 1) | credits | credits | credits |
+| Verify this plan: read the plan (1), check items (`verify_plan`, 1 per item) | credits; 5 items per run | credits; 12 items per run | credits; 12 items per run |
+| How we earn, How billing works, status page, Android install guide | public | public | public |
+| Cancel subscription link (one tap) | not applicable | yes | not applicable (a pass never renews) |
 | Affiliate booking links | yes | yes | yes |
 | Monthly credits | 12 | 60 | 40 once |
 | `explain` (1), `packing_list` (1), `booking_import` (1) | credits | credits | credits |
@@ -1668,7 +1964,7 @@ the full ladder, including Family, Pro and Group Trip Pass, is in [../README.md]
 | `research` (8, 1 cached) | credits | credits | credits |
 | `agent_run` manual (40, 8 cached) | credits | credits | credits |
 | Deep agent run taster | one, lifetime | no | no |
-| Referral credits (F-REF-1) | yes | yes | yes |
+| Referral credits (F-REF-1): 20 each, 12 month expiry, 5 paid per 30 days and 10 per year for the referrer | yes | yes | yes |
 | Data export (JSON, ICS, PDF) | yes | yes | yes |
 | Delete account in app | yes | yes | yes |
 | Monthly provider-spend ceiling | $0.25 (plus taster) | $2.25 | $1.80 |
@@ -1700,7 +1996,8 @@ Notes:
 | `draft_day`, `draft_trip` | Under 15 s and 45 s p90; streaming preview |
 | `research` | Under 90 s p90 |
 | `agent_run` | Usually 3 to 10 minutes; live log updates every 2 s; hard cap 20 minutes |
-| Sync on shared trip | A change is visible to another member within 30 s |
+| Sync on shared trip | A change is visible to another member within 30 s; the sync indicator is accurate to 5 s |
+| `verify_extract` and each `verify_plan` item | Plan read under 10 s p90; each item under 25 s, 12 items under 90 s p90 |
 | Presentation | Slide change under 100 ms; 60 fps drag on calendar |
 | Availability | 99.9% monthly for API; planned migrations without downtime |
 | Web bundle | Initial JS under 250 KB gzipped, routes code-split |
@@ -1713,10 +2010,10 @@ Notes:
   and travelers, plus map tiles for the destination area (user can "Download for offline" per
   trip).
 - A visible "Offline" bar shows when there is no connection; data age is shown ("Updated 3 h
-  ago").
+  ago"); the trip header's sync indicator shows "Offline, N edits waiting" (F-COL-5).
 - Write offline: edits to itinerary items, notes and checklist ticks queue locally, send on
   reconnect, last writer wins per field, and a 409 shows the conflict UI.
-- Not available offline: search, fares, AI, imports, purchases, invites, calendar feed setup.
+- Not available offline: search, fares, AI (including Verify this plan and rechecks), imports, purchases, invites, calendar feed setup.
   Buttons explain why.
 - No partner content is shown offline.
 - Sign-in state survives offline; tokens refresh on reconnect.
@@ -1780,7 +2077,7 @@ Notes:
   fraud; disposable email blocklist; report and block on shared trips.
 - Children: not for children; age gate 13+ (16+ in EU and UK); minors on a trip are first names
   only.
-- Site terms: no scrapers, no fetching of Airbnb, Vrbo or Booking.com pages by the server, ever.
+- Site terms: no scrapers, no fetching of Airbnb, Vrbo or Booking.com pages by the server, ever, and no reading of Google Maps list links.
 
 ### 6.6 Reliability and data
 
@@ -1804,7 +2101,8 @@ Each line is a pointer only. These features are not specified, built or sold in 
 - Pro tier and scheduled agent routines: Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 - Concierge lane (host agency): Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 - Direct affiliate programs (Expedia Group and Vrbo, Booking.com, Skyscanner, Airalo, GetYourGuide): Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
-- Native Android app: Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
+- Native Android app and web billing: Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
+- "Paste your group chat" to draft a plan, and repair-a-day when plans change: Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 - After-trip flight compensation prompt, memories and "Year in travel" card: Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 - Stripe group payments: Later: Phase 3, see [../phase-3-scale/README.md](../phase-3-scale/README.md).
 - Wayfold for Advisors: Later: Phase 3, see [../phase-3-scale/README.md](../phase-3-scale/README.md).
@@ -1828,8 +2126,8 @@ Each line is a pointer only. These features are not specified, built or sold in 
 - Apple Family Sharing, passwords, SMS sign-in, passkeys at launch.
 - Owner-funded shared credit pools on group trips (credits follow the acting user).
 - Reading anyone's email or calendar account (no Gmail or Google Calendar sign-in, no OAuth to
-  TripIt or Wanderlog). Phase 1 imports only files, feed links the user pastes, and text the user
-  pastes. Also out: loyalty program tracking and visa application filing.
+  TripIt, Tripsy or Wanderlog, and no scraping of Google Maps lists). Phase 1 imports only files,
+  feed links the user pastes, and text the user pastes. Also out: loyalty program tracking and visa application filing.
 - Social feed, browsing of other people's trips, user reviews of places, and user-generated public
   guides. The public sample trips are a fixed list written by Wayfold.
 - Languages other than English at launch, and right-to-left languages.

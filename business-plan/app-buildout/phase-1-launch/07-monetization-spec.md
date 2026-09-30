@@ -4,7 +4,7 @@ Part of the [Wayfold build specification](../README.md), [Phase 1: the launch ap
 
 Written 2026-09-30.
 
-Phase 1 sells Free, Plus, Trip Pass and three credit packs, earns affiliate commission through Travelpayouts, Stay22 and Viator, and adds two growth mechanics that cost credits instead of earning money: referral credits (section 9) and a free Trip Pass for a first import (section 10). Everything that belongs to Phase 2 or 3 is listed in section 11 and is not built in Phase 1.
+Phase 1 sells Free, Plus, Trip Pass and three credit packs, only inside the iOS app (there are no web purchases in Phase 1), earns affiliate commission through Travelpayouts, Stay22 and Viator, prices the "Verify this plan" check and the evidence recheck in credits (section 5.8), publishes the trust pages ("How we earn", billing and cancel; sections 7.11 and 8.5), and adds two growth mechanics that cost credits instead of earning money: referral credits (section 9) and a free Trip Pass for a first import (section 10). Everything that belongs to Phase 2 or 3 is listed in section 11 and is not built in Phase 1.
 
 ## 1. Revenue lanes and principles
 
@@ -23,7 +23,7 @@ Principles that every rule below follows:
 2. One payer per capability. A trip's capabilities are the best of its owner's tier and any pass on that trip; invitees join free. Credits are charged to the person who starts the action.
 3. No dark patterns. The free path is always visible; no fake urgency; price, renewal date and cancel path are stated on every paywall.
 4. Never hold data hostage. Downgrade or lapse never hides, locks or deletes a trip; read and export always work.
-5. Digital features are sold only through In-App Purchase on iOS. Real-world costs (affiliate bookings and any trip cost paid to a third party) never use In-App Purchase and never unlock app features.
+5. Digital features are sold only through In-App Purchase on iOS. The web app sells nothing in Phase 1: its paywall says "Upgrade in the iOS app" and links to the App Store, with no price list and no purchase button (web billing arrives with Android in Phase 2). Real-world costs (affiliate bookings and any trip cost paid to a third party) never use In-App Purchase and never unlock app features.
 6. Never rank by commission, never sell user data, no banner ads, no lifetime plans.
 
 ## 2. Product catalogue
@@ -43,7 +43,9 @@ Subscription group `wayfold_membership` holds every auto-renewing product. In Ph
 
 Product IDs are the `store_products.product_id` values seeded in 03 section 11.2 (plan codes such as `plus` and `credits_50` are `plans.code`). Plus annual is pre-selected on the paywall and Trip Pass is the lead offer for a trip with dates.
 
-Later: Phase 2 or 3: the Family, Pro and Group Trip Pass products, and the Stripe-sold `advisor_seat` and group payments. None of them is created in App Store Connect for Phase 1.
+Later: Phase 2 or 3: the Family, Pro and Group Trip Pass products, web billing with Android, and the Stripe-sold `advisor_seat` and group payments. None of them is created in App Store Connect for Phase 1.
+
+**The web paywall.** When a signed-in person hits a limit on the web app, the server returns the same offer with `purchasable: false` (04 section 5.20). The sheet says what the upgrade unlocks, the free path, and "Upgrade in the iOS app" with an App Store badge. It never shows a price, a checkout or a "cheaper on the web" line, and the web app has no purchase code at all.
 
 Rules:
 
@@ -63,8 +65,10 @@ The entitlement service resolves to this table, which mirrors the `plans.limits`
 | Credits: `monthly_credits` for tiers, `credits_granted` for passes | 12 a month | 60 a month | 40 once |
 | `collaborators` (people the owner can invite to one trip) | 1 | 6 (default) | 6 |
 | `travelers_per_trip` | 2 | 8 | 8 |
-| `price_alerts` (`live_alerts` false on Free; the booked-fare drop watch counts here) | 1 cached-fare | 3 | 2 |
-| `imports` and `calendar_feed` | yes | yes | yes |
+| `price_alerts` (`live_alerts` false on Free; the booked-fare drop watch does not count here) | 1 cached-fare | 3 | 2 |
+| `imports` (including Google Maps lists and calendar polling) and `calendar_feed` | yes | yes | yes |
+| Share links (read-only, `Made with Wayfold` footer on Free) | yes | yes | yes |
+| `verify_items_per_run` (items one "Verify this plan" check may include) | 5 | 12 | 12 |
 | `hide_presentation_footer` (true removes the Made with Wayfold footer and PDF watermark) | false (shown) | true | true |
 
 Everyone joins other people's trips free, on every tier, and gets that trip's capabilities on that trip.
@@ -224,7 +228,7 @@ One credit is a budget of up to $0.02 of provider spend. Credit action codes, pr
 
 - A pack purchase arrives as `NON_RENEWING_PURCHASE` or a consumable transaction. The handler writes a `credit_grants` row (kind `purchase`, `credits` from `plans.credits_granted` of the product's `plan_code`, `store_transaction_id`, `expires_at` = purchase time plus `credits_valid_days`, 365) and a `credit_ledger` row (`entry_type = 'grant'`, positive `delta`, `idempotency_key` `store:{transaction_id}`); the unique index on `credit_grants.store_transaction_id` means a replayed webhook never grants twice.
 - The pack screen states: "Purchased credits last 12 months and are spent after your monthly credits."
-- Purchased credits also raise the account's spend ceiling by their cost value ([06-ai-agents-spec.md](06-ai-agents-spec.md) section 6.5).
+- Purchased credits also raise the account's spend ceiling by their cost value ([06-ai-agents-spec.md](06-ai-agents-spec.md) section 6.5). No other credit does: monthly allowances, the taster, Trip Pass credits, import-reward pass credits and referral credits never raise a ceiling.
 
 ### 5.3 Grants on renewal
 
@@ -278,6 +282,20 @@ A reservation that spans pools records each draw (`credit_ledger` rows with `gra
 - `GET /v1/me/credits` returns the balance per pool with expiry dates from the `credit_balances` view; the in-app usage meter shows "Monthly credits", "Trip Pass credits", "Bonus credits" (promo) and "Purchased credits" separately.
 - A daily reconciliation asserts that, per grant, `credits` plus the sum of its non-`grant` `delta` values equals `remaining`; any mismatch alerts.
 
+### 5.8 Credit prices added from the competitive analysis
+
+Three actions join the price list of the README. Prices are in credits at the README rate (1 credit is a budget of up to $0.02); the real spend is lower for most items, which is the margin. Hard stops and the AI details are in [06-ai-agents-spec.md](06-ai-agents-spec.md) sections 5.11 and 5.12 and the seed rows in 03 section 11.3.
+
+| Action | Credit action code | Price | Cap | Real cost (Haiku 4.5) |
+|---|---|---|---|---|
+| Read a pasted plan into items ("Verify this plan", step 1) | `explain` | 1 | one plan, up to 8,000 characters and 25 items | about $0.004 to $0.008 |
+| Check a plan item (step 2) | `verify_plan` | 1 per checked item | 5 items per run on Free, 12 on Plus and Trip Pass (`plans.limits.verify_items_per_run`) | about $0.002 when place data settles it, about $0.017 with one search and one page; the hard stop is $0.02 per item |
+| Recheck evidence older than 14 days | `explain` | 1 | one fact; refunded when the source page cannot be reached | about $0.005 |
+
+How it plays out: a 7 item plan costs 1 + 7 = 8 credits; one full check of 12 items on Plus costs 13. A Free account has 12 monthly credits, which is two short checks of 5 items (6 credits each), so a person who likes it reaches the credit limit naturally and sees the normal credit-out paywall (`out_of_credits_verify`, 6.2): a Trip Pass (40 credits) covers about three full checks, Plus (60 a month) about four to five, and the 50-credit pack about three. The price is per checked item, not per dollar: a hit on a popular place served from the shared `place_check` cache still costs 1 credit, because the cache is margin. Unchecked items, items that hit a provider error or the dollar stop, and a plan in which nothing is found are refunded in full (06 section 6.3), so no one pays for work that did not happen. Every step states its price before it runs, and a check of 6 or more items asks for the usual confirm.
+
+Margin check: worst case on Free is 1 + 5 credits for at most $0.11 of real spend, inside the Free ceiling of $0.25 a month (a check is admitted when the month has headroom for its hard stop, 06 section 6.5); worst case on Plus is 1 + 12 credits for at most $0.25 against a $2.25 monthly ceiling. A check of 12 items bought with purchased credits at the 50-credit price ($0.0598 a credit) earns about $0.78 against at most $0.25 of cost.
+
 ## 6. Paywall decision engine
 
 The server chooses whether to show a paywall and what to offer. The client renders the result. This keeps frequency rules, experiments and entitlements in one place and lets us change them without an app release.
@@ -318,11 +336,12 @@ Trigger ids are the same as in [05-ui-ux-spec.md](05-ui-ux-spec.md) section 6.27
 | `out_of_credits_draft` | "Draft my itinerary" | Out of credits | `credits` or `plus_first`; blurred preview of day one | Plan manually, or invite a friend for credits (section 9) |
 | `out_of_credits_research` | "Research this" or "Ask" | Out of credits | `credits` (small pack first) | Skip, or invite a friend for credits (section 9) |
 | `out_of_credits_agent` | Deep agent run or fare hunt | Fewer than 40 credits | `credits` (400 pack highlighted when short by more than 50) or `plus_first` | Use a research question |
+| `out_of_credits_verify` | "Check these places" in Verify this plan (or a Recheck) | Fewer credits than the items selected | `credits` or `plus_first` | Check fewer items, or invite a friend for credits (section 9) |
 | `export_footer` | Export or share with the Made with footer | Free export | Soft line at export, never a modal | Export with footer |
 | `ninth_stay` | Save the 9th lodging option | Free limit | `trip_first`; keep saving to a "later" list | Later list |
 | `lifecycle_14d` | 14 days before departure | Free trip with dates | `trip_first` via email or in-app card, not a modal | Dismiss |
 
-No trigger exists for the first session, for presentation playback, for actions after an affiliate booking, or for the first-import reward (the free Trip Pass is a gift, not an upsell). Hard limits (third trip) are a block with the free alternative, not a nag. A trip that already has an active pass, paid or promo, never gets a Trip Pass offer, and triggers that pass already covers do not fire. The API `reason` for each trigger ([04-api-spec.md](04-api-spec.md) section 2.2): `third_trip` is `trip_limit`; `second_route`, `track_live` and `alert_limit` are `live_routes`; `invite` is `sharing`; the three `out_of_credits_*` triggers are `credits` (the taster is `agent_taster_used`). `export_footer`, `ninth_stay` and `lifecycle_14d` are client-initiated and are sent as `reason` by their trigger code.
+No trigger exists for the first session, for presentation playback, for actions after an affiliate booking, or for the first-import reward (the free Trip Pass is a gift, not an upsell). Hard limits (third trip) are a block with the free alternative, not a nag. A trip that already has an active pass, paid or promo, never gets a Trip Pass offer, and triggers that pass already covers do not fire. The API `reason` for each trigger ([04-api-spec.md](04-api-spec.md) section 2.2): `third_trip` is `trip_limit`; `second_route`, `track_live` and `alert_limit` are `live_routes`; `invite` is `sharing`; the four `out_of_credits_*` triggers are `credits` (the taster is `agent_taster_used`). `export_footer`, `ninth_stay` and `lifecycle_14d` are client-initiated and are sent as `reason` by their trigger code.
 
 Later: Phase 2 or 3: the triggers `routine`, `group_tools`, `group_pass`, `collect_payments` and `household`, and the offerings `group`, `family` and `pro`.
 
@@ -365,7 +384,7 @@ Counters are read server-side from `users.prefs` (`paywall`: the times of recent
 
 ### 6.6 Paywall content rules
 
-- Show price and billing period most prominently, then trial length and the price after the trial, auto-renew terms, links to Terms of Use and Privacy Policy, and Restore (Guideline 3.1.2).
+- Show price and billing period most prominently, then trial length and the price after the trial, auto-renew terms, a plain line on how to cancel with a link to "How billing works" (7.11), links to Terms of Use and Privacy Policy, and Restore (Guideline 3.1.2). On the web app the paywall shows none of the price lines: it says "Upgrade in the iOS app".
 - Say what the user gets on this trip ("Live prices for Lisbon in April"), use real numbers ("3 routes, checked daily until you fly"), and never "unlimited AI" or "unlimited live tracking".
 - Always a "Not now" control of the same size and contrast as the main one. No countdown timers, no invented scarcity, no pre-checked upsells. Trial reminder: a local notification and an email two days before the trial converts.
 - The free path and the plain-text "How we earn money" link are on every paywall. No affiliate card appears beside an upsell.
@@ -389,7 +408,7 @@ Rules: one experiment per trigger at a time; pre-register the metric and minimum
 
 ### 7.1 Trials
 
-- Only `wayfold_plus_annual` has a 7-day free trial, one per Apple ID per group. The paywall shows "7 days free, then $39.99 a year" with the renewal date, and a reminder two days before it converts.
+- Only `wayfold_plus_annual` has a 7-day free trial, one per Apple ID per group. The paywall shows "7 days free, then $39.99 a year" with the renewal date, and a reminder two days before it converts. The reminder email and the local notification carry the one-tap cancel link (7.11).
 - During the trial: status `in_trial`, full Plus capabilities and the normal Plus allowance, the normal Plus ceiling. Exposure for a typical trial is about $0.45.
 - Trial to paid: `RENEWAL` event with a paid period; status `active`. Trial cancelled: access until the trial ends, then `EXPIRATION`.
 - No trial for monthly plans, passes or packs. Reinstalls and new devices cannot restart a trial (Apple enforces one per Apple ID per group).
@@ -415,7 +434,7 @@ There is no lower paid level in Phase 1; ending Plus is a cancellation (7.5). La
 
 ### 7.5 Cancellation, grace, billing retry
 
-- **Cancellation.** The user cancels in iOS Settings (we link to Manage Subscriptions from Settings and never hide it). Status stays `active` with `auto_renew = false` until the period ends, then `EXPIRATION`. The app shows "Your plan ends on {date}" and a one-tap resubscribe. Account deletion does not cancel an Apple subscription; the deletion screen says so and links to Manage Subscriptions.
+- **Cancellation.** The user cancels through Apple (we cannot cancel for them), and we make it one tap to get there: the Account screen shows "Cancel subscription" on the plan card (7.11) and never hides it. Status stays `active` with `auto_renew = false` until the period ends, then `EXPIRATION`. The app shows "Your plan ends on {date}" and a one-tap resubscribe. Account deletion does not cancel an Apple subscription; the deletion screen says so and links to Manage Subscriptions.
 - **Billing grace period.** Turn on Apple's billing grace period for all subscription products, 16 days (default). During grace the entitlement stays active and the credits of the current period stay spendable, but no new allowance is granted. The app shows a banner "We could not renew your plan. Update your payment method" with a deep link to the App Store subscription page; email on day 0, 7 and 14.
 - **Billing retry.** After grace, Apple keeps retrying for up to 60 days in total. Status `billing_retry`: entitlement is off (the user drops to their remaining sources), the banner stays, purchased credits remain. If payment succeeds, a `RENEWAL` arrives, status returns to `active`, and the allowance for the new period is granted. If it never succeeds, `EXPIRATION`.
 - **Pause.** Not used; Apple subscription pause is not offered. The pricing plan's "3-month pause" idea is handled by a win-back (7.10), not by the store.
@@ -457,6 +476,14 @@ Later: Phase 2: the Group Trip Pass (12 travelers, polls, manual cost splitting,
 ### 7.10 Win-back and retention (after launch)
 
 When `auto_renew` turns false, the next two checkpoints are a cancellation survey (one question, skippable) and a win-back offer 7 days after expiry: an Apple promotional or win-back offer on the same product (for example 3 months at a discount, verify product configuration). Win-back offers are configured in App Store Connect after the first month of data and delivered through RC; never used as a dark pattern (shown once, clearly priced). A lifecycle email "Planning another trip?" goes out to lapsed users with a trip in the next 120 days.
+
+### 7.11 Plain billing page and one-tap cancel
+
+These are trust features that answer the most repeated complaints about travel apps (hard-to-find cancel, surprise renewals). They cost nothing to run.
+
+- **One-tap cancel link.** The plan card on the Account screen has a first-level row "Cancel subscription" (next to "Change plan"), not inside a menu. One tap opens Apple's own subscription sheet for that subscription (`Purchases.showManageSubscriptions()` in RevenueCat, which opens StoreKit's manage-subscriptions sheet), where Apple asks for the final confirm. We ask no questions and show no retention offer before the link. `Entitlements.cancel_url` (04 section 5.19) carries the same target for the web app, where the row reads "Cancel in the iOS app" and opens Apple's subscription page (`https://apps.apple.com/account/subscriptions`). The trial reminder email, the renewal receipt email and the billing-problem emails carry the same link. The link is shown even when `auto_renew` is already false, where it reads "Your plan ends on {date}".
+- **How billing works (`/billing`, also in Settings and on every paywall).** A plain page, written in short sentences and reviewed with every price change: what each plan costs and when it renews; the 7-day trial on the annual plan, what happens on day 8 and that we remind you 2 days before; that Trip Pass is a one-time $9.99 for 90 days and never renews; that credit packs are one-time, last 12 months and are spent after monthly credits; how to cancel (the link above) and what stays when you do (your trips, read and export, purchased credits); that refunds go through Apple (`reportaproblem.apple.com`) and what we can do ourselves (goodwill credits); that we never store card details; that purchases are in the iOS app only for now; and the free path: what stays free on every tier.
+- **Rules.** No dark patterns around either: no countdowns, no "are you sure", no hidden or renamed cancel. The page and the link are included in the App Review notes.
 
 ## 8. Affiliate system
 
@@ -534,7 +561,7 @@ Rules:
 - Sentence used everywhere, next to every partner button, in AI output cards, on shared trip pages, in presentation mode and in the PDF: **"We earn a commission if you book here."** Text, never color alone; VoiceOver reads it in the same element as the button.
 - "Ad" tag on UK and EU storefronts (by App Store storefront country or account country; the stricter rule applies when unknown).
 - Booking.com adds its own required line where its tracking link appears.
-- Every list says how it is sorted (price, rating, distance, hearts) and that commission plays no part. Prices from partners show the date checked and provider. "How we earn money" page linked from Settings, every paywall and empty states; a "Hide booking links" switch collapses buttons to a plain "Open on partner site" link.
+- Every list says how it is sorted (price, rating, distance, hearts) and that commission plays no part. Prices from partners show the date checked and provider. "How we earn" page (`/how-we-earn`, public, no sign-in) linked from Settings, every paywall and empty states, and from every `/vs` page: it states the rules (never ranked by commission, every link labeled, no ads, no sale of data, Airbnb, Vrbo and Booking.com pages never fetched), lists every active partner by category with its disclosure line, and shows live counts (partners and categories, from `affiliate_programs`; 04 section 5.28). It is rendered from data, so a new partner cannot be added without appearing on it; a "Hide booking links" switch collapses buttons to a plain "Open on partner site" link.
 - No insurance card until the trip has a chosen flight or booking; no eSIM card for domestic trips; AI never gives insurance advice; visas link to official sites first.
 - No affiliate push that exists only to drive clicks (Guideline 4.10). User-requested price alerts are fine, and they link into the app route, not to a partner.
 - Affiliate purchases never unlock app features, and nothing is worded as if they do (Guideline 3.1.1).
@@ -595,8 +622,8 @@ Referral credits reward people who bring a friend who actually plans a trip. The
 | `granted` | Credits were given to both people |
 | `rejected` | Abuse or not eligible (`reject_reason`) |
 
-- **Qualifying.** The referred person has a verified email (an Apple relay address counts) and, within 30 days of redeeming, creates a first trip with at least 3 itinerary items or confirms a first import. On iOS the device must have passed App Attest, or the stricter fallback in [02-architecture.md](02-architecture.md) section 8.
-- **Reward.** The amounts live in the setting `setting_referral_credits`: 20 credits for each person. Each is a `promo` grant in `credit_grants` with `period_key = 'referral:{reward_id}'` (a unique key, so a reward can never be granted twice), expiring 12 months after the grant, with a `grant` entry in `credit_ledger`. Both people get a notification. The job `grant_referral_rewards` (02 section 5.1) marks rewards `qualified` and calls `grant_referral_reward()`.
+- **Qualifying.** The referred person has a verified email (an Apple relay address counts) and, within 30 days of redeeming, creates their first trip with dates. On iOS the device must have passed App Attest, or the stricter fallback in [02-architecture.md](02-architecture.md) section 8.
+- **Reward.** The amounts live in the setting `setting_referral_credits` (settled values): 20 credits for each person, expiring after 12 months, with the caps in 9.3 and no ceiling raise. Each is a `promo` grant in `credit_grants` with `period_key = 'referral:{reward_id}'` (a unique key, so a reward can never be granted twice), expiring 12 months after the grant, with a `grant` entry in `credit_ledger`. Both people get a notification. The job `grant_referral_rewards` (02 section 5.1) marks rewards `qualified` and calls `grant_referral_reward()`.
 - **Spending.** Referral credits are spent after the monthly allowance and before pass and purchased credits (5.4), on any AI action. They cannot be bought, sold or transferred and have no cash value. They are spent inside the normal provider-spend ceilings and do not raise them ([06-ai-agents-spec.md](06-ai-agents-spec.md) section 6.5), so on Free they are used across several months rather than at once.
 
 ### 9.3 Abuse limits
@@ -633,9 +660,9 @@ The free Trip Pass rewards people who switch from another planner by importing a
 
 ### 10.1 Rules
 
-- **Once per user.** The first confirmed import earns it, once for life (gate `import_reward`). The unique index `uq_trip_imports_one_reward` and `grant_import_reward()` enforce it, and the reward flag lives on the import row, so deleting the trip and importing again never grants a second pass.
+- **Once per user.** The first qualifying import earns it, once for life (gate `import_reward`). The unique index `uq_trip_imports_one_reward` and `grant_import_reward()` enforce it, and the reward flag lives on the import row, so deleting the trip and importing again never grants a second pass.
 - **Conditions.** All must hold, otherwise nothing is granted and, where noted, the reward is not consumed:
-  - The confirm saved at least 3 items, at least one a flight or a stay (the setting `setting_import_reward` holds the minimum). An empty, duplicate or junk import earns nothing, and the same file hash (`trip_imports.content_hash`) or the same set of event `UID` values cannot earn it twice across accounts.
+  - The confirm saved at least 3 items, at least one a flight or a stay (the setting `setting_import_reward` holds the minimum). Place-only imports (Google Maps lists and pasted places) and calendar change confirmations never qualify. An empty, duplicate or junk import earns nothing, and the same file hash (`trip_imports.content_hash`) or the same set of event `UID` values cannot earn it twice across accounts.
   - The trip is owned by the importer, is not in the trash, and has no active pass (otherwise nothing is consumed and the reward stays for the next import).
   - The owner has no active Plus subscription, because Plus already carries these capabilities (nothing is consumed).
   - The account has a verified email (an Apple relay address counts), and no earlier reward went to this user, this normalized email, or this Apple or Google subject.
@@ -652,7 +679,7 @@ The free Trip Pass rewards people who switch from another planner by importing a
 
 ## 11. Later lanes
 
-Later: Phase 2: Family plan and households (products, pooled credits, household rules), Group Trip Pass with polls and manual cost splitting and the room-block request, Pro with scheduled routines, the concierge lane, direct affiliate programs beyond Travelpayouts, Stay22 and Viator, and Android purchases.
+Later: Phase 2: Family plan and households (products, pooled credits, household rules), Group Trip Pass with polls and manual cost splitting and the room-block request, Pro with scheduled routines, the concierge lane, direct affiliate programs beyond Travelpayouts, Stay22 and Viator, Android purchases and web billing.
 
 Later: Phase 3: Stripe and Stripe Connect group payments, Wayfold for Advisors (Stripe Billing), partner guides, printed trip books, in-app hotel booking through LiteAPI, and white-label and API.
 
@@ -697,10 +724,13 @@ All amounts are stored in minor units with an ISO currency and converted to USD 
 | Revenue per trip | All revenue attributed to a real trip (passes bought for it, affiliate conversions from its clicks) divided by the number of real trips in the period; also per trip by tier of owner |
 | Gross margin | Net revenue minus variable cost (AI, provider calls, infrastructure allocation, payment fees) divided by net revenue |
 | Free cost per MAU | (Free-tier AI plus provider cost) divided by Free MAU; guard value about $0.02 a month for AI |
-| Import activation | New users who confirm an import within 7 days of sign-up, divided by new users; by method (`ics_file`, `ics_feed`, `pasted`) |
+| Import activation | New users who confirm an import within 7 days of sign-up, divided by new users; by method (`ics_file`, `ics_feed`, `pasted_text`, `maps_file`, `places_text`) and by entry (`origin`: TripIt, Tripsy, Wanderlog, Google Maps) |
 | Import reward conversion | Import-reward passes granted; share whose owner buys a Trip Pass, Plus or a pack within 30 days after the pass ends; promotional cost per converted user |
 | Referral funnel | Links shared, sign-ups attributed, rewards `pending`, `qualified`, `granted` and `rejected`; reject rate; referred users' 30-day retention and paid conversion versus organic |
 | Promotional cost | (Referral credits granted plus import-reward pass credits granted) times $0.02, as a share of net revenue |
+| Verify this plan | Checks started per 100 new users; items checked per run; verdict mix (green, amber, red); credits spent and real cost per checked item (alert above $0.02); share of Free users who check a plan; conversion to a pack, Trip Pass or Plus within 7 days of a check; imports of verified items per check |
+| Evidence rechecks | Rechecks per 100 stale labels shown; share that come back `changed` or `not_shown`; credits spent |
+| Trust pages | Views of `/how-we-earn` and `/billing`; taps on "Cancel subscription"; cancellations started within 7 days of the trial reminder |
 
 Kill rule: at month 9 after launch, if under 1% of monthly users pay and affiliate income is under $0.20 per monthly user per year (annualized), stop investing. Both numbers are tracked monthly from launch.
 
@@ -719,4 +749,4 @@ Weekly Monday review uses the same tiles: installs, activation, import activatio
 
 ### 12.4 Events (first-party, sent to PostHog)
 
-`paywall_viewed`, `paywall_dismissed`, `purchase_started`, `purchase_completed` (with `is_trial` for a trial start), `purchase_failed`, `restore_tapped`, `subscription_started`, `subscription_renewed`, `trial_converted`, `subscription_canceled`, `subscription_changed` (monthly and annual switches), `trip_pass_applied`, `trip_pass_moved`, `trip_pass_expired`, `ai_action_started` and `ai_action_completed` (credit reserve, settle and refund, with `outcome: refunded`), `credits_expired`, `purchase_completed` with a `credits_*` product (a pack), `partner_link_tapped` (an outbound click). Phase 1 adds `import_started`, `import_previewed`, `import_completed`, `import_failed`, `import_reward_granted`, `referral_link_shared`, `referral_signup_attributed`, `referral_reward_granted`, `calendar_feed_enabled`, `calendar_feed_rotated`, `calendar_feed_read` and `booked_fare_drop_sent`; the catalogue with their properties is in [10-quality-security-launch.md](10-quality-security-launch.md) section 4. No event carries names, emails, feed addresses, pasted text or other free text; session replay is off or masked.
+`paywall_viewed`, `paywall_dismissed`, `purchase_started`, `purchase_completed` (with `is_trial` for a trial start), `purchase_failed`, `restore_tapped`, `subscription_started`, `subscription_renewed`, `trial_converted`, `subscription_canceled`, `subscription_changed` (monthly and annual switches), `trip_pass_applied`, `trip_pass_moved`, `trip_pass_expired`, `ai_action_started` and `ai_action_completed` (credit reserve, settle and refund, with `outcome: refunded`), `credits_expired`, `purchase_completed` with a `credits_*` product (a pack), `partner_link_tapped` (an outbound click). Phase 1 adds `import_started`, `import_previewed`, `import_completed`, `import_failed`, `import_reward_granted`, `referral_link_shared`, `referral_signup_attributed`, `referral_reward_granted`, `calendar_feed_enabled`, `calendar_feed_rotated`, `calendar_feed_read`, `booked_fare_drop_sent`, `calendar_polling_enabled`, `calendar_changes_found`, `verify_started`, `verify_checked`, `verify_imported`, `evidence_rechecked`, `cancel_link_tapped`, `how_we_earn_viewed` and `billing_page_viewed`; the catalogue with their properties is in [10-quality-security-launch.md](10-quality-security-launch.md) section 4. No event carries names, emails, feed addresses, pasted text or other free text; session replay is off or masked.

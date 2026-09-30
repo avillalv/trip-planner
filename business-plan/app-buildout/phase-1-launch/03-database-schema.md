@@ -21,9 +21,9 @@ Target: PostgreSQL 18 (native `uuidv7()`), SQLAlchemy 2 models, Alembic migratio
 
 **Seed rows decision.** The `plans` rows for `family`, `group_trip_pass`, `pro` and `advisor_seat` are not seeded at all, not even as inactive rows. No Phase 1 logic reads them: `store_products`, `subscriptions`, `entitlements` and `trip_passes` are constrained to Phase 1 plan codes, the entitlement merge (7.1) works on whatever rows exist, and the legacy import comps the owner accounts to Plus. Phase 2 inserts them with its own migration. Likewise the direct affiliate programs (Expedia Group and Vrbo, Booking.com direct, Skyscanner, Airalo, GetYourGuide direct, AirHelp), the Travelpayouts compensation program (used only by the Phase 2 after-trip prompt), and the feature flags and kill switches of later features are not seeded.
 
-**Changed to match the Phase 1 scope.** The Free plan invites 1 collaborator per trip (`collaborators = 1`, `can_invite = true`), as the build README says, where the full schema had 0. `store_transactions.kind` is `subscription`, `pass` or `credit_pack`. `webhook_events.provider` and `store_transactions.store` keep only the providers Phase 1 uses.
+**Changed to match the Phase 1 scope.** The Free plan invites 1 collaborator per trip (`collaborators = 1`, `can_invite = true`), as the build README says, where the full schema had 0. `store_transactions.kind` is `subscription`, `pass` or `credit_pack`. Phase 1 has no web purchases (the web paywall says "Upgrade in the iOS app"), so `store_products.store`, `store_transactions.store` and `subscriptions.store` allow only `apple`, `store_products` has no web price column, and `webhook_events.provider` has no web billing value; Phase 2 adds them together with web billing.
 
-**Added for Phase 1.** `trip_imports` (calendar file, calendar feed and pasted booking confirmation imports, parsed counts, and the once-per-user free Trip Pass reward) with `grant_import_reward()`; booked-fare columns on `chosen_flights` and the `booked_fare_drops` view for the booked-fare drop alert; `referral_codes` and `referral_rewards` with the referral functions; `saved_place_votes` (hearts on places); `notifications` (push and email outbox with de-duplication); `sample_trips` (public sample trips); `fx_convert_minor()`; `trip_passes.source`; `itinerary_items` and `lodging_options` import columns. Section 13 gives the reason for each.
+**Added for Phase 1.** `trip_imports` (calendar file, calendar feed, pasted booking confirmation, Google Maps export and pasted places imports, the rival entry the user came through, parsed counts, opt-in calendar feed polling columns, and the once-per-user free Trip Pass reward) with `grant_import_reward()` and `set_import_polling()`; `plan_verifications` and `plan_verification_items` ("Verify this plan" results with the evidence for each checked item, 5.20); evidence freshness columns `notes.checked_at`, `itinerary_items.check_url` and `itinerary_items.checked_at`; `users.email_verified_at` (a condition of the import reward); booked-fare columns on `chosen_flights` and the `booked_fare_drops` view for the booked-fare drop alert; `referral_codes` and `referral_rewards` with the referral functions; `saved_place_votes` (hearts on places); `notifications` (push and email outbox with de-duplication); `sample_trips` (public sample trips); `fx_convert_minor()`; `trip_passes.source`; `itinerary_items` and `lodging_options` import columns. Section 13 gives the reason for each.
 
 ## 2. Conventions
 
@@ -164,6 +164,11 @@ erDiagram
   trip_imports ||--o{ itinerary_items : "created"
   trip_imports ||--o{ lodging_options : "created"
   trip_imports ||--o| trip_passes : "rewards"
+  trips ||--o{ plan_verifications : "verifies"
+  users ||--o{ plan_verifications : "pastes"
+  plan_verifications ||--o{ plan_verification_items : "checks"
+  plan_verification_items ||--o| itinerary_items : "imported as"
+  runs ||--o{ plan_verifications : "reads and checks"
   trips ||--o{ checklist_items : "before you go"
   trips ||--o{ notes : "notes"
   fare_observations {
@@ -188,8 +193,17 @@ erDiagram
   trip_imports {
     uuid id PK
     text source
+    text origin
     text status
+    boolean poll_enabled
+    timestamptz next_poll_at
     timestamptz reward_granted_at
+  }
+  plan_verification_items {
+    uuid id PK
+    text verdict
+    text source_url
+    timestamptz seen_at
   }
 ```
 
@@ -280,6 +294,7 @@ CREATE TABLE users (
   id                  uuid PRIMARY KEY DEFAULT uuidv7(),
   email               citext,                                   -- may be an Apple relay address
   email_is_relay      boolean NOT NULL DEFAULT false,
+  email_verified_at   timestamptz,                              -- set at sign-in when the provider proved the address (Apple, Google or an email code); null for guests. A condition of the import reward (5.9)
   display_name        text NOT NULL DEFAULT '' CHECK (char_length(display_name) <= 80),
   locale              text NOT NULL DEFAULT 'en-US',
   timezone            text NOT NULL DEFAULT 'UTC',
@@ -403,7 +418,7 @@ END $$;
 Three small catalog tables hold what the build README calls tiers and credit prices, so a price or limit test is an `UPDATE`, not a deploy. Values are in section 11. The client never decides; the API reads `entitlements` and these tables. `ai_action` is created here because `credit_action_prices` and later tables use it.
 
 ```sql
-CREATE TYPE ai_action AS ENUM ('explain', 'live_search', 'draft_day', 'draft_trip', 'research', 'agent_run');
+CREATE TYPE ai_action AS ENUM ('explain', 'live_search', 'draft_day', 'draft_trip', 'research', 'agent_run', 'verify_plan');   -- verify_plan is priced per checked item (11.3)
 
 CREATE TABLE plans (
   code                 text PRIMARY KEY,                  -- Phase 1: free, plus, trip_pass, credits_50, credits_150, credits_400
@@ -426,17 +441,16 @@ CREATE TABLE plans (
 SELECT add_updated_at_trigger('plans');
 
 CREATE TABLE store_products (                               -- one row per purchasable SKU
-  product_id        text PRIMARY KEY,                       -- App Store product id or Stripe price lookup key
+  product_id        text PRIMARY KEY,                       -- App Store product id
   store             text NOT NULL,
   plan_code         text NOT NULL REFERENCES plans (code) ON DELETE RESTRICT,
   period            text NOT NULL,
   price_minor       bigint NOT NULL CHECK (price_minor >= 0),
   currency          currency_code NOT NULL DEFAULT 'USD',   -- US price; Apple regional tiers are set in App Store Connect
   trial_days        smallint NOT NULL DEFAULT 0,
-  stripe_price_id   text,
   is_active         boolean NOT NULL DEFAULT true,
   created_at        timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT ck_store_products_store CHECK (store IN ('apple', 'stripe')),
+  CONSTRAINT ck_store_products_store CHECK (store = 'apple'),                 -- no web purchases in Phase 1; Phase 2 widens this with web billing
   CONSTRAINT ck_store_products_period CHECK (period IN ('month', 'year', 'once'))
 );
 CREATE INDEX ix_store_products_plan ON store_products (plan_code);
@@ -624,11 +638,14 @@ Rule enforced by the API: a person is linked to at most one user per trip, and a
 
 ### 5.6 AI: runs, events, usage, provider calls and shared research
 
-A `run` is one execution: a manual research question, a draft, a booking import or an agent run (fare hunt or deep research). The account that pays is `runs.user_id` (charged credits). `run_events` and `provider_calls` are high-volume logs and are partitioned by month (section 9). `ai_usage` is the billing-grade record; `runs.cost_usd_micros` is the operational copy. Phase 1 has no scheduled runs: there is no `routines` table, every run is started by a person (or by the import job on a person's behalf), and the daily live-route fare checks are worker jobs that write `fare_observations` and `provider_calls` without a run. The `ai_action` enum was created in 5.3.
+A `run` is one execution: a manual research question, a draft, a booking import, a plan verification or evidence recheck, or an agent run (fare hunt or deep research). The account that pays is `runs.user_id` (charged credits). `run_events` and `provider_calls` are high-volume logs and are partitioned by month (section 9). `ai_usage` is the billing-grade record; `runs.cost_usd_micros` is the operational copy. Phase 1 has no scheduled runs: there is no `routines` table, every run is started by a person (or by the import job on a person's behalf), and the daily live-route fare checks are worker jobs that write `fare_observations` and `provider_calls` without a run. The `ai_action` enum was created in 5.3.
 
 ```sql
 CREATE TYPE run_kind     AS ENUM ('fare_hunt', 'deep_research', 'research_question', 'draft_trip', 'draft_day', 'explain',
-                                  'packing_list', 'booking_import');   -- priced as 'explain'; platform work (digest, cache_warm, classifier, eval) has no run
+                                  'packing_list', 'booking_import',    -- priced as 'explain'
+                                  'verify_extract',                    -- reads a pasted plan into items (priced as 'explain')
+                                  'verify_plan',                       -- checks the selected items, 1 credit each (action 'verify_plan')
+                                  'recheck');                          -- one-tap evidence recheck (priced as 'explain'); platform work (digest, cache_warm, classifier, eval) has no run
 CREATE TYPE run_trigger  AS ENUM ('manual');                          -- Phase 1 runs are always started by a person
 CREATE TYPE run_status   AS ENUM ('queued', 'running', 'succeeded', 'partial', 'failed', 'timed_out', 'cancelled', 'interrupted');
 CREATE TYPE usage_state  AS ENUM ('reserved', 'settled', 'released');
@@ -783,18 +800,18 @@ CREATE TABLE shared_research_cache (                         -- derived research
   cost_usd_micros bigint NOT NULL DEFAULT 0,                  -- what creating it cost (the first requester's run)
   report_count    smallint NOT NULL DEFAULT 0,                -- distinct reporters (content_reports); three set flagged_at
   flagged_at      timestamptz,                                -- never served and never overwritten until an admin clears it; the key then runs uncached at the normal price
-  CONSTRAINT ck_shared_research_cache_kind CHECK (kind IN ('ai_research', 'destination_brief', 'visa_summary', 'neighborhoods', 'rentals', 'agent_result')),
+  CONSTRAINT ck_shared_research_cache_kind CHECK (kind IN ('ai_research', 'destination_brief', 'visa_summary', 'neighborhoods', 'rentals', 'agent_result', 'place_check')),
   CONSTRAINT ck_shared_research_cache_window CHECK (stale_until >= expires_at)
 );
 CREATE INDEX ix_shared_research_cache_kind_exp ON shared_research_cache (kind, expires_at);
 CREATE INDEX ix_shared_research_cache_purge ON shared_research_cache (stale_until) WHERE flagged_at IS NULL;
 ```
 
-Rules for `shared_research_cache`: the key is built only from normalized public inputs (destination, month, prompt version, model), never from user text, and entries are never derived from private notes or trip data. A hit costs the user 1 credit instead of 8 (research) or 8 instead of 40 (agent run). The refresh lease that keeps 50 simultaneous requests to one model run is a session-level `pg_try_advisory_lock(hashtextextended(key, 0))`, so it needs no column and dies with the worker. A "Report a problem" sets `expires_at` and `stale_until` to now (the entry is no longer served and is purged); the third report from a different user also sets `flagged_at`, which pauses that key (no serve, no rewrite, no purge) until an admin reviews it. `kind` is the storage class (`destination_brief` for briefs, `ai_research` for the other research topics, `agent_result` for fare hunts and deep research); the topic (`destination_brief`, `events_and_closures`, `reservations_needed`, `getting_around`, `seasonal_notes`, `fare_hunt`) is `params ->> 'topic'`.
+Rules for `shared_research_cache`: the key is built only from normalized public inputs (destination, month, prompt version, model), never from user text, and entries are never derived from private notes or trip data. A hit costs the user 1 credit instead of 8 (research) or 8 instead of 40 (agent run). The refresh lease that keeps 50 simultaneous requests to one model run is a session-level `pg_try_advisory_lock(hashtextextended(key, 0))`, so it needs no column and dies with the worker. A "Report a problem" sets `expires_at` and `stale_until` to now (the entry is no longer served and is purged); the third report from a different user also sets `flagged_at`, which pauses that key (no serve, no rewrite, no purge) until an admin reviews it. `kind` is the storage class (`destination_brief` for briefs, `ai_research` for the other research topics, `agent_result` for fare hunts and deep research, `place_check` for the public facts found about one place when a plan is verified: hours, ticket price and source, kept 14 days); the topic (`destination_brief`, `events_and_closures`, `reservations_needed`, `getting_around`, `seasonal_notes`, `fare_hunt`) is `params ->> 'topic'`.
 
 ### 5.7 Billing: subscriptions, entitlements, passes, transactions, webhooks
 
-Apple is the source of truth for purchases; RevenueCat webhooks (over StoreKit 2) feed these tables, which are a read model. The backend reads `entitlements` and `trip_passes` only and never calls Apple on a request. Phase 1 sells Plus (monthly and annual), the Trip Pass and three credit packs; the `store` and `kind` checks below list only what Phase 1 uses (Phase 2 adds `google` and the Family and Group Trip Pass values, Phase 3 adds the Stripe-only kinds).
+Apple is the source of truth for purchases; RevenueCat webhooks (over StoreKit 2) feed these tables, which are a read model. The backend reads `entitlements` and `trip_passes` only and never calls Apple on a request. Phase 1 sells Plus (monthly and annual), the Trip Pass and three credit packs; the `store` and `kind` checks below list only what Phase 1 uses (Phase 2 adds `google`, web billing and the Family and Group Trip Pass values; Phase 3 adds the Stripe-only kinds).
 
 ```sql
 CREATE TYPE subscription_status AS ENUM ('active', 'in_trial', 'in_grace', 'billing_retry', 'paused', 'expired', 'refunded', 'revoked');
@@ -821,7 +838,7 @@ CREATE TABLE store_transactions (                            -- every money even
   environment               store_environment NOT NULL DEFAULT 'production',
   raw                       jsonb,                                                 -- kept 12 months, then nulled
   created_at                timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT ck_store_transactions_store CHECK (store IN ('apple', 'stripe')),
+  CONSTRAINT ck_store_transactions_store CHECK (store = 'apple'),
   CONSTRAINT ck_store_transactions_kind CHECK (kind IN ('subscription', 'pass', 'credit_pack')),
   CONSTRAINT ck_store_transactions_status CHECK (status IN ('purchased', 'renewed', 'refunded', 'revoked', 'failed')),
   CONSTRAINT uq_store_transactions_txn UNIQUE (store, store_transaction_id)
@@ -847,7 +864,7 @@ CREATE TABLE subscriptions (
   raw_last_event            jsonb,
   created_at                timestamptz NOT NULL DEFAULT now(),
   updated_at                timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT ck_subscriptions_store CHECK (store IN ('apple', 'stripe')),
+  CONSTRAINT ck_subscriptions_store CHECK (store = 'apple'),
   CONSTRAINT uq_subscriptions_original UNIQUE (store, original_transaction_id)
 );
 CREATE INDEX ix_subscriptions_user ON subscriptions (user_id) WHERE status IN ('active', 'in_trial', 'in_grace', 'billing_retry');
@@ -914,7 +931,7 @@ CREATE TABLE webhook_events (                                 -- idempotency: in
   received_at    timestamptz NOT NULL DEFAULT now(),
   processed_at   timestamptz,
   PRIMARY KEY (provider, event_id),
-  CONSTRAINT ck_webhook_events_provider CHECK (provider IN ('revenuecat', 'apple', 'stripe', 'travelpayouts', 'viator', 'stay22')),
+  CONSTRAINT ck_webhook_events_provider CHECK (provider IN ('revenuecat', 'apple', 'travelpayouts', 'viator', 'stay22')),
   CONSTRAINT ck_webhook_events_status CHECK (status IN ('received', 'processed', 'failed', 'ignored'))
 );
 CREATE INDEX ix_webhook_events_pending ON webhook_events (received_at) WHERE status IN ('received', 'failed');
@@ -1178,18 +1195,21 @@ $$;
 
 ### 5.9 Trip imports and referrals
 
-**Imports.** A `trip_imports` row records one import a user ran: a calendar file (`ics_file`, for example a TripIt single-trip export or a Google Calendar export), a calendar feed URL read once (`ics_feed`, never polled again in Phase 1) or pasted booking confirmations (`pasted_text`, extracted by Claude Haiku in a `booking_import` run). The file or text is parsed into a preview (`preview`, kept 7 days), the user confirms, and the job writes `itinerary_items` (flights and reservations, with `source = 'import'`) and `lodging_options` (stays, `added_via = 'import'`) that point back to the import through `import_id`, so one tap can undo an import. The raw upload lives in R2 (`raw_key`, deleted after 7 days); a feed URL is never stored (it often contains a secret token), only its host in `source_name`; pasted text is never stored. Stays in a confirmation are read from the text the user pasted, never fetched from the booking site.
+**Imports.** A `trip_imports` row records one import a user ran. `source` is the input method: a calendar file (`ics_file`, for example a TripIt, Tripsy or Google Calendar export), a calendar feed URL (`ics_feed`), pasted booking confirmations (`pasted_text`, extracted by Claude Haiku in a `booking_import` run), a Google Maps saved-list export file (`maps_file`: Takeout CSV, GeoJSON or KML, read locally) or pasted place names (`places_text`, for example a list copied out of Wanderlog or a Google Maps list). `origin` is the entry the person used on the import screen (`tripit`, `tripsy`, `wanderlog`, `google_calendar`, `google_maps` or `other`); it only changes the instructions the screen shows and feeds the "switch imports per week" metric, never the parsing. The file or text is parsed into a preview (`preview`, kept 7 days), the user confirms, and the job writes `itinerary_items` (flights, reservations and place ideas, with `source = 'import'`) and `lodging_options` (stays, `added_via = 'import'`) that point back to the import through `import_id`, so one tap can undo an import. The raw upload lives in R2 (`raw_key`, deleted after 7 days); pasted text is never stored. Stays in a confirmation are read from the text the user pasted, never fetched from the booking site. Nothing in a Google Maps file or pasted list is ever fetched: a place is matched by name through place search, and any Google Maps URL in the file stays as text in the item's notes. A pasted Google Maps list link is never opened (Google's terms); the screen explains how to export the list and keeps the link only as a note on the trip.
 
-**The free Trip Pass reward.** The first successful import a user applies earns a Trip Pass (90 days, 40 credits) on the imported trip. "Once per user" is enforced by the partial unique index `uq_trip_imports_one_reward` and by `grant_import_reward()`: the reward flag lives on the import row, which survives deletion of the trip (`trip_id` is `SET NULL`), so deleting the trip and importing again never grants a second pass. Users cannot delete import rows (6.1). If the trip already has an active pass the function returns `NULL` and does not consume the reward, so it stays available for the next import. The pass is an ordinary `trip_passes` row with `source = 'import_reward'`, and its credits are a `trip_pass` grant for that trip.
+**Keep checking this calendar.** A feed import can be switched to polling, by the person and only after the first preview is confirmed (`set_import_polling()`). Polling needs the feed URL, which often carries a secret token, so for a polled feed (and only then) the URL is kept encrypted in `feed_url_enc` (application-level AES-GCM, key in the `FIELD_ENCRYPTION_KEY` environment variable (02 section 7), never logged). For an import that is not polled the URL is held only until the preview is confirmed or discarded and is then set to NULL by the worker. A worker job reads every row whose `next_poll_at` is due (every 6 hours), fetches the feed through the same SSRF guard as the first read, and compares a hash of the feed body with `last_content_hash`. No change: only `last_polled_at` and `next_poll_at` move. A change: the worker builds a diff against the items this import created (matched by `import_uid`) and stores it in `pending_changes` with a `calendar_changes` notification. The diff is a preview and nothing is applied until the person confirms it; it is never applied automatically. A fetch failure adds one to `consecutive_failures` (reset on success); the third failure in a row switches polling off, deletes the URL and sends a `calendar_poll_stopped` notification. Polling also stops 7 days after the trip's end date. A person can have at most 3 polled feeds.
 
-**Referrals.** Every user can have one referral code (`referral_codes`, created on first use by `my_referral_code()`). A new user who enters a code within 14 days of sign-up creates one `referral_rewards` row through `redeem_referral()`; a user can be referred once (`uq_referral_rewards_referee`). The worker marks the row `qualified` when the referee does something real (the default rule is a first trip with at least three itinerary items, read from `feature_flags` key `setting_referral_credits`), then `grant_referral_reward()` gives both people credits as `promo` grants with `period_key = 'referral:' || id`, which makes the grant idempotent. Credit amounts, the qualifying rule and the referrer's monthly cap come from that setting, not from code. Referral rewards are credits only: never cash, never a tier.
+**The free Trip Pass reward.** The first qualifying import a user applies earns a Trip Pass (90 days, 40 credits) on the imported trip. An import qualifies when it adds at least 3 items including a flight or a stay (`items_applied >= 3` and `flights_applied + stays_applied >= 1`), the importer has a verified email (`users.email_verified_at`), the trip has no active pass and the importer has no active Plus. Place-only imports (Google Maps and pasted places) and calendar poll updates never qualify. "Once per user" is enforced by the partial unique index `uq_trip_imports_one_reward` and by `grant_import_reward()`: the reward flag lives on the import row, which survives deletion of the trip (`trip_id` is `SET NULL`), so deleting the trip and importing again never grants a second pass. Users cannot delete import rows (6.1). An import that does not qualify returns `NULL` and does not consume the reward, so it stays available for the next import. The pass is an ordinary `trip_passes` row with `source = 'import_reward'`, and its credits are a `trip_pass` grant for that trip.
+
+**Referrals.** Every user can have one referral code (`referral_codes`, created on first use by `my_referral_code()`). A new user who enters a code within 14 days of sign-up creates one `referral_rewards` row through `redeem_referral()`; a user can be referred once (`uq_referral_rewards_referee`). The worker marks the row `qualified` when the referee creates their first trip with dates (`trips.start_date` set; read from `feature_flags` key `setting_referral_credits`), then `grant_referral_reward()` gives 20 credits to each person as `promo` grants that expire after 12 months, with `period_key = 'referral:' || id`, which makes the grant idempotent. The referee always gets their 20. The referrer gets theirs until they reach 5 rewards in a rolling 30 days or 10 in a calendar year (UTC); a capped row is still marked `granted` for the referee and records `referrer_capped`. Credit amounts, the qualifying rule, the expiry and both caps come from that setting, not from code. Referral credits are promo credits: they never raise the provider-spend ceiling (06 6.5), and they are credits only: never cash, never a tier.
 
 ```sql
 CREATE TABLE trip_imports (
   id                     uuid PRIMARY KEY DEFAULT uuidv7(),
   user_id                uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   trip_id                uuid REFERENCES trips (id) ON DELETE SET NULL,      -- the trip the items were written to; set when applied; null if the trip was deleted later
-  source                 text NOT NULL,
+  source                 text NOT NULL,                                      -- the input method
+  origin                 text NOT NULL DEFAULT 'other',                      -- the entry used on the import screen; instructions and metrics only
   status                 text NOT NULL DEFAULT 'received',
   source_name            text CHECK (source_name IS NULL OR char_length(source_name) <= 200),   -- file name, or the feed's host for ics_feed; never a full feed URL
   content_hash           char(64),                                           -- sha256 of the file or pasted text, to warn about importing the same thing twice
@@ -1199,8 +1219,11 @@ CREATE TABLE trip_imports (
   stays_found            smallint NOT NULL DEFAULT 0,
   reservations_found     smallint NOT NULL DEFAULT 0,
   other_found            smallint NOT NULL DEFAULT 0,
-  items_found            integer GENERATED ALWAYS AS (flights_found + stays_found + reservations_found + other_found) STORED,
+  places_found           smallint NOT NULL DEFAULT 0,                        -- Google Maps and pasted places: ideas with no day
+  items_found            integer GENERATED ALWAYS AS (flights_found + stays_found + reservations_found + other_found + places_found) STORED,
   items_applied          integer NOT NULL DEFAULT 0,                         -- written to the trip after the user confirmed the preview
+  flights_applied        smallint NOT NULL DEFAULT 0,                        -- of those, flights and stays: the reward needs at least one of them
+  stays_applied          smallint NOT NULL DEFAULT 0,
   items_skipped          integer NOT NULL DEFAULT 0,                         -- unchecked in the preview
   items_duplicate        integer NOT NULL DEFAULT 0,                         -- matched an existing item by import_uid or by title, day and time
   preview                jsonb,                                              -- parsed items awaiting confirmation; nulled 7 days after the import
@@ -1208,27 +1231,42 @@ CREATE TABLE trip_imports (
   error                  text,
   reward_granted_at      timestamptz,                                        -- set by grant_import_reward(); once per user
   reward_pass_id         uuid REFERENCES trip_passes (id) ON DELETE SET NULL,
+  -- Opt-in "Keep checking this calendar" (ics_feed only): polled every 6 hours, changes shown as a preview the person confirms.
+  poll_enabled           boolean NOT NULL DEFAULT false,
+  next_poll_at           timestamptz,                                        -- set when polling is switched on; the worker moves it 6 hours on after each poll
+  last_polled_at         timestamptz,
+  last_content_hash      char(64),                                           -- sha256 of the feed body at the last successful poll; an equal hash means nothing changed
+  consecutive_failures   smallint NOT NULL DEFAULT 0,                        -- reset on success; the third in a row switches polling off
+  feed_url_enc           bytea,                                              -- the feed URL, encrypted; kept only while polling is on, see the paragraph above
+  pending_changes        jsonb,                                              -- the diff awaiting confirmation: {added, changed, removed}; never applied automatically
+  pending_changes_at     timestamptz,
   created_at             timestamptz NOT NULL DEFAULT now(),
   updated_at             timestamptz NOT NULL DEFAULT now(),
   completed_at           timestamptz,
-  CONSTRAINT ck_trip_imports_source CHECK (source IN ('ics_file', 'ics_feed', 'pasted_text')),
+  CONSTRAINT ck_trip_imports_source CHECK (source IN ('ics_file', 'ics_feed', 'pasted_text', 'maps_file', 'places_text')),
+  CONSTRAINT ck_trip_imports_origin CHECK (origin IN ('tripit', 'tripsy', 'wanderlog', 'google_calendar', 'google_maps', 'other')),
   CONSTRAINT ck_trip_imports_status CHECK (status IN ('received', 'parsing', 'review', 'applied', 'failed', 'discarded')),
   CONSTRAINT ck_trip_imports_counts CHECK (items_applied + items_skipped + items_duplicate <= items_found),
   CONSTRAINT ck_trip_imports_applied CHECK (status <> 'applied' OR completed_at IS NOT NULL),
   CONSTRAINT ck_trip_imports_reward CHECK (reward_granted_at IS NULL OR status = 'applied'),
-  CONSTRAINT ck_trip_imports_raw CHECK (raw_key IS NULL OR source = 'ics_file')
+  CONSTRAINT ck_trip_imports_raw CHECK (raw_key IS NULL OR source IN ('ics_file', 'maps_file')),
+  CONSTRAINT ck_trip_imports_applied_split CHECK (flights_applied + stays_applied <= items_applied),
+  CONSTRAINT ck_trip_imports_feed_url CHECK (feed_url_enc IS NULL OR source = 'ics_feed'),
+  CONSTRAINT ck_trip_imports_poll CHECK (NOT poll_enabled OR (source = 'ics_feed' AND status = 'applied' AND feed_url_enc IS NOT NULL AND next_poll_at IS NOT NULL))
 );
 -- The first applied import earns the free Trip Pass, once per user for life.
 CREATE UNIQUE INDEX uq_trip_imports_one_reward ON trip_imports (user_id) WHERE reward_granted_at IS NOT NULL;
 CREATE INDEX ix_trip_imports_user ON trip_imports (user_id, created_at DESC);
 CREATE INDEX ix_trip_imports_trip ON trip_imports (trip_id) WHERE trip_id IS NOT NULL;
 CREATE INDEX ix_trip_imports_hash ON trip_imports (user_id, content_hash) WHERE content_hash IS NOT NULL;
-CREATE INDEX ix_trip_imports_cleanup ON trip_imports (created_at) WHERE raw_key IS NOT NULL OR preview IS NOT NULL;
+CREATE INDEX ix_trip_imports_cleanup ON trip_imports (created_at) WHERE raw_key IS NOT NULL OR preview IS NOT NULL OR (feed_url_enc IS NOT NULL AND NOT poll_enabled);
+CREATE INDEX ix_trip_imports_poll_due ON trip_imports (next_poll_at) WHERE poll_enabled;     -- the 6-hourly calendar poll job
 SELECT add_updated_at_trigger('trip_imports');
 
 -- Grants the once-per-user import reward: a 90 day Trip Pass on the imported trip plus its 40 pass credits.
 -- Returns the new trip_passes.id, or NULL when the import does not qualify (nothing is consumed in that case).
 -- Called by the worker after the import is applied. The reward switch and minimum item count are the feature_flags setting 'setting_import_reward'.
+-- Conditions: at least 3 items applied including a flight or a stay, a verified email, no active pass on the trip, no active Plus, once per user.
 CREATE FUNCTION grant_import_reward(p_import uuid) RETURNS uuid
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
@@ -1238,9 +1276,14 @@ BEGIN
   IF NOT FOUND OR v_imp.status <> 'applied' OR v_imp.trip_id IS NULL OR v_imp.reward_granted_at IS NOT NULL THEN
     RETURN NULL;
   END IF;
-  SELECT enabled, COALESCE((rules ->> 'min_items_applied')::integer, 1) INTO v_enabled, v_min
+  SELECT enabled, COALESCE((rules ->> 'min_items_applied')::integer, 3) INTO v_enabled, v_min
     FROM feature_flags WHERE key = 'setting_import_reward';
-  IF NOT COALESCE(v_enabled, false) OR v_imp.items_applied < COALESCE(v_min, 1) THEN RETURN NULL; END IF;
+  IF NOT COALESCE(v_enabled, false) OR v_imp.items_applied < GREATEST(COALESCE(v_min, 3), 3) THEN RETURN NULL; END IF;
+  -- At least one flight or stay among the applied items (place ideas and other events alone do not qualify).
+  IF v_imp.flights_applied + v_imp.stays_applied < 1 THEN RETURN NULL; END IF;
+  -- A verified email, and no active Plus (a Plus owner already has the capabilities a pass would add).
+  IF NOT EXISTS (SELECT 1 FROM users WHERE id = v_imp.user_id AND email_verified_at IS NOT NULL AND NOT is_guest AND deleted_at IS NULL) THEN RETURN NULL; END IF;
+  IF EXISTS (SELECT 1 FROM entitlements WHERE user_id = v_imp.user_id AND tier_code = 'plus' AND (valid_until IS NULL OR valid_until > now())) THEN RETURN NULL; END IF;
   -- The importer must own a live trip: a pass is bound to a trip its purchaser owns.
   IF NOT EXISTS (SELECT 1 FROM trips WHERE id = v_imp.trip_id AND owner_user_id = v_imp.user_id AND deleted_at IS NULL) THEN RETURN NULL; END IF;
   -- Once per user for life.
@@ -1260,6 +1303,27 @@ BEGIN
   RETURN v_pass;
 EXCEPTION WHEN unique_violation THEN
   RETURN NULL;                                   -- a concurrent call already granted the reward
+END $$;
+
+-- Switches "Keep checking this calendar" on or off for the caller's own applied feed import (the API runs as the caller). Returns true when the state changed.
+-- Turning it on needs a stored feed URL and fewer than 3 polled feeds; turning it off deletes the stored URL and any pending changes.
+CREATE FUNCTION set_import_polling(p_import uuid, p_enabled boolean) RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_me uuid := app_user_id(); v_imp trip_imports%ROWTYPE;
+BEGIN
+  IF v_me IS NULL THEN RETURN false; END IF;
+  SELECT * INTO v_imp FROM trip_imports WHERE id = p_import AND user_id = v_me FOR UPDATE;
+  IF NOT FOUND OR v_imp.source <> 'ics_feed' THEN RETURN false; END IF;
+  IF p_enabled THEN
+    IF v_imp.poll_enabled OR v_imp.status <> 'applied' OR v_imp.feed_url_enc IS NULL OR v_imp.trip_id IS NULL THEN RETURN false; END IF;
+    IF (SELECT count(*) FROM trip_imports WHERE user_id = v_me AND poll_enabled) >= 3 THEN RETURN false; END IF;
+    UPDATE trip_imports SET poll_enabled = true, next_poll_at = now() + interval '6 hours', consecutive_failures = 0 WHERE id = p_import;
+  ELSE
+    IF NOT v_imp.poll_enabled THEN RETURN false; END IF;
+    UPDATE trip_imports SET poll_enabled = false, next_poll_at = NULL, feed_url_enc = NULL, pending_changes = NULL, pending_changes_at = NULL WHERE id = p_import;
+  END IF;
+  RETURN true;
 END $$;
 
 CREATE TABLE referral_codes (
@@ -1282,6 +1346,7 @@ CREATE TABLE referral_rewards (
   referrer_grant_id    uuid REFERENCES credit_grants (id) ON DELETE SET NULL,
   referee_grant_id     uuid REFERENCES credit_grants (id) ON DELETE SET NULL,
   reject_reason        text,
+  referrer_capped      boolean NOT NULL DEFAULT false,          -- the referrer hit the 30-day or calendar-year cap, so only the referee was paid
   created_at           timestamptz NOT NULL DEFAULT now(),
   qualified_at         timestamptz,
   granted_at           timestamptz,
@@ -1342,39 +1407,49 @@ BEGIN
   RETURN v_id;
 END $$;
 
--- Gives both people their credits once the row is 'qualified' (worker only). The referee always gets theirs; the referrer gets
--- theirs until they reach the monthly cap in setting_referral_credits (rules.referrer_monthly_cap, default 10 a rolling 30 days).
+-- Gives both people their credits once the row is 'qualified' (worker only): 20 credits each, expiring after 12 months. The referee always gets
+-- theirs; the referrer gets theirs until they reach 5 paid rewards in a rolling 30 days or 10 in the calendar year (UTC). The numbers are the
+-- setting_referral_credits rules referrer_monthly_cap, referrer_yearly_cap and expiry_months; none of them is a ceiling raise (06 6.5).
 -- Returns true when the row was granted. Replays do nothing: each grant is keyed by period_key 'referral:<id>'.
 CREATE FUNCTION grant_referral_reward(p_reward uuid) RETURNS boolean
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
-  r referral_rewards%ROWTYPE; v_cap integer; v_recent integer; v_g_referrer uuid; v_g_referee uuid;
+  r referral_rewards%ROWTYPE; v_cap30 integer; v_capyear integer; v_months integer; v_recent integer; v_year integer;
+  v_g_referrer uuid; v_g_referee uuid; v_ok boolean;
 BEGIN
   SELECT * INTO r FROM referral_rewards WHERE id = p_reward FOR UPDATE;
   IF NOT FOUND OR r.status <> 'qualified' THEN RETURN false; END IF;
-  SELECT COALESCE((rules ->> 'referrer_monthly_cap')::integer, 10) INTO v_cap FROM feature_flags WHERE key = 'setting_referral_credits';
-  SELECT count(*) INTO v_recent FROM referral_rewards
-   WHERE referrer_user_id = r.referrer_user_id AND status = 'granted' AND granted_at > now() - interval '30 days';
+  SELECT COALESCE((rules ->> 'referrer_monthly_cap')::integer, 5), COALESCE((rules ->> 'referrer_yearly_cap')::integer, 10),
+         COALESCE((rules ->> 'expiry_months')::integer, 12)
+    INTO v_cap30, v_capyear, v_months FROM feature_flags WHERE key = 'setting_referral_credits';
+  -- Only rewards where the referrer was actually paid count toward their caps.
+  SELECT count(*) FILTER (WHERE granted_at > now() - interval '30 days'),
+         count(*) FILTER (WHERE granted_at >= date_trunc('year', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')
+    INTO v_recent, v_year
+    FROM referral_rewards
+   WHERE referrer_user_id = r.referrer_user_id AND status = 'granted' AND NOT referrer_capped;
+  v_ok := v_recent < COALESCE(v_cap30, 5) AND v_year < COALESCE(v_capyear, 10);
 
   IF r.referee_credits > 0 THEN
     INSERT INTO credit_grants (user_id, kind, credits, remaining, period_key, expires_at)
-    VALUES (r.referee_user_id, 'promo', r.referee_credits, r.referee_credits, 'referral:' || r.id, now() + interval '12 months')
+    VALUES (r.referee_user_id, 'promo', r.referee_credits, r.referee_credits, 'referral:' || r.id, now() + make_interval(months => COALESCE(v_months, 12)))
     ON CONFLICT (user_id, kind, period_key) WHERE user_id IS NOT NULL AND period_key IS NOT NULL DO NOTHING
     RETURNING id INTO v_g_referee;
     IF v_g_referee IS NOT NULL THEN
       INSERT INTO credit_ledger (user_id, grant_id, entry_type, delta, note) VALUES (r.referee_user_id, v_g_referee, 'grant', r.referee_credits, 'referral reward');
     END IF;
   END IF;
-  IF r.referrer_credits > 0 AND v_recent < COALESCE(v_cap, 10) THEN
+  IF r.referrer_credits > 0 AND v_ok THEN
     INSERT INTO credit_grants (user_id, kind, credits, remaining, period_key, expires_at)
-    VALUES (r.referrer_user_id, 'promo', r.referrer_credits, r.referrer_credits, 'referral:' || r.id, now() + interval '12 months')
+    VALUES (r.referrer_user_id, 'promo', r.referrer_credits, r.referrer_credits, 'referral:' || r.id, now() + make_interval(months => COALESCE(v_months, 12)))
     ON CONFLICT (user_id, kind, period_key) WHERE user_id IS NOT NULL AND period_key IS NOT NULL DO NOTHING
     RETURNING id INTO v_g_referrer;
     IF v_g_referrer IS NOT NULL THEN
       INSERT INTO credit_ledger (user_id, grant_id, entry_type, delta, note) VALUES (r.referrer_user_id, v_g_referrer, 'grant', r.referrer_credits, 'referral reward');
     END IF;
   END IF;
-  UPDATE referral_rewards SET status = 'granted', granted_at = now(), referrer_grant_id = v_g_referrer, referee_grant_id = v_g_referee WHERE id = r.id;
+  UPDATE referral_rewards SET status = 'granted', granted_at = now(), referrer_grant_id = v_g_referrer, referee_grant_id = v_g_referee,
+         referrer_capped = (r.referrer_credits > 0 AND NOT v_ok) WHERE id = r.id;
   RETURN true;
 END $$;
 ```
@@ -1716,7 +1791,7 @@ CREATE UNIQUE INDEX uq_route_price_insights_key
   ON route_price_insights (origin, destination, depart_date, COALESCE(return_date, DATE '0001-01-01'), currency);
 ```
 
-The booked-fare drop alert reads this view nightly (worker role). It returns one row per booked flight that has a matching observation from the last 48 hours priced below what the user paid, already converted to the currency they paid in. The worker then applies the thresholds in `feature_flags` key `setting_booked_fare_drop` (`min_drop_pct`, `min_drop_usd`), skips rows whose `current_minor` is not lower than `last_drop_notified_minor`, and writes a `notifications` row with `dedupe_key = 'booked_drop:<chosen_flight_id>:<current_minor>'`. A missing FX rate makes `fx_convert_minor()` return `NULL` and the row is skipped: no made-up number is ever shown. Cached fares are display hints: the message always says where and when the price was seen.
+The booked-fare drop alert reads this view nightly (worker role). It returns one row per booked flight that has a matching observation from the last 48 hours priced below what the user paid, already converted to the currency they paid in. The worker then applies the thresholds in `feature_flags` key `setting_booked_fare_drop` (`min_drop_pct`, `min_drop_usd`), skips rows whose `current_minor` is not lower than `last_drop_notified_minor` and flights already alerted in the last 7 days (`min_days_between`), and writes a `notifications` row with `dedupe_key = 'booked_drop:<chosen_flight_id>:<current_minor>'`. A missing FX rate makes `fx_convert_minor()` return `NULL` and the row is skipped: no made-up number is ever shown. Cached fares are display hints: the message always says where and when the price was seen.
 
 ```sql
 CREATE VIEW booked_fare_drops WITH (security_invoker = true) AS
@@ -1733,7 +1808,8 @@ SELECT c.id                AS chosen_flight_id,
        cur.current_minor,
        c.paid_minor - cur.current_minor                                         AS drop_minor,
        round(100.0 * (c.paid_minor - cur.current_minor) / c.paid_minor, 1)    AS drop_pct,
-       c.last_drop_notified_minor
+       c.last_drop_notified_minor,
+       c.last_drop_notified_at
   FROM chosen_flights c
   JOIN trips t ON t.id = c.trip_id AND t.deleted_at IS NULL
   CROSS JOIN LATERAL (
@@ -1848,6 +1924,8 @@ CREATE TABLE itinerary_items (
   place_id               text,
   place_data             jsonb,
   source                 text NOT NULL DEFAULT 'manual',      -- where the item came from; AI drafts stay flagged after the user accepts them
+  check_url              text,                                -- evidence: the page the item's hours or price were checked on (plan verification); null for items with no AI evidence
+  checked_at             timestamptz,                         -- the day that page was seen; older than 14 days shows "May be out of date" and offers a recheck
   import_id              uuid REFERENCES trip_imports (id) ON DELETE SET NULL,   -- the import that created this item
   import_uid             text,                                -- calendar event UID or hash of the parsed booking; de-duplicates re-imports
   created_by             uuid REFERENCES users (id) ON DELETE SET NULL,
@@ -1856,7 +1934,8 @@ CREATE TABLE itinerary_items (
   created_at             timestamptz NOT NULL DEFAULT now(),
   updated_at             timestamptz NOT NULL DEFAULT now(),
   FOREIGN KEY (saved_place_id, trip_id) REFERENCES saved_places (id, trip_id) ON DELETE SET NULL (saved_place_id),
-  CONSTRAINT ck_itinerary_items_source CHECK (source IN ('manual', 'place_search', 'ai_draft', 'agent', 'import')),
+  CONSTRAINT ck_itinerary_items_source CHECK (source IN ('manual', 'place_search', 'ai_draft', 'agent', 'import', 'verify_plan')),
+  CONSTRAINT ck_itinerary_items_check CHECK ((check_url IS NULL) = (checked_at IS NULL)),
   CONSTRAINT uq_itinerary_items_id_trip UNIQUE (id, trip_id),
   CONSTRAINT ck_itinerary_items_times_need_day CHECK (day IS NOT NULL OR start_time IS NULL),
   CONSTRAINT ck_itinerary_items_end_needs_start CHECK (start_time IS NOT NULL OR end_time IS NULL),
@@ -1955,7 +2034,7 @@ CREATE INDEX ix_saved_place_votes_trip ON saved_place_votes (trip_id);
 
 ### 5.15 Checklist and notes
 
-`checklist_items` stores the "Before you go" state per trip: one row per kind from the checklist rules (`source = 'rules'`), any number of custom items (`kind = 'custom'`, `source = 'user'`) and the lines of an accepted AI packing list (`kind = 'packing'`, `source = 'ai'`, one row per line). Official visa and entry links come first; at least half of the kinds are unmonetized; only kinds linked to a partner create `link_clicks`. `notes` holds both user notes and agent findings, and can be attached to a day or an itinerary item; an agent note must carry at least one source URL.
+`checklist_items` stores the "Before you go" state per trip: one row per kind from the checklist rules (`source = 'rules'`), any number of custom items (`kind = 'custom'`, `source = 'user'`) and the lines of an accepted AI packing list (`kind = 'packing'`, `source = 'ai'`, one row per line). Official visa and entry links come first; at least half of the kinds are unmonetized; only kinds linked to a partner create `link_clicks`. `notes` holds both user notes and agent findings, and can be attached to a day or an itinerary item; an agent note must carry at least one source URL. `notes.checked_at` is the date on the evidence label: it is the day the agent saw the fact on its source page, and a one-tap recheck (06 5.12) moves it forward.
 
 ```sql
 CREATE TABLE checklist_items (
@@ -2005,6 +2084,7 @@ CREATE TABLE notes (
   is_private      boolean NOT NULL DEFAULT false,                -- visible only to the author; never sent to AI
   pinned          boolean NOT NULL DEFAULT false,
   run_id          uuid REFERENCES runs (id) ON DELETE SET NULL,
+  checked_at      timestamptz NOT NULL DEFAULT now(),            -- when the sources were last seen on their pages (evidence label date); a recheck moves it. Older than 14 days shows "May be out of date"
   version         integer NOT NULL DEFAULT 1,
   created_at      timestamptz NOT NULL DEFAULT now(),
   updated_at      timestamptz NOT NULL DEFAULT now(),
@@ -2257,7 +2337,7 @@ CREATE INDEX ix_idempotency_keys_expiry ON idempotency_keys (expires_at);
 
 ### 5.18 Notifications
 
-Push (APNs) and email for price drops, booked-fare drops, invites, run results, import results, pre-trip reminders and referral rewards. A row is created by the job that has the news and carries a `dedupe_key`, so a retried job or a repeated scan never sends the same message twice. The sender honors the user's consents (`push_notifications`, `marketing_email` does not apply to transactional mail), the `push.all` and `email.all` kill switches and each device's `revoked_at`. The row is also the in-app inbox entry (`read_at`).
+Push (APNs) and email for price drops, booked-fare drops, invites, run results, import results, calendar changes found by polling, finished plan checks, pre-trip reminders and referral rewards. A row is created by the job that has the news and carries a `dedupe_key`, so a retried job or a repeated scan never sends the same message twice. The sender honors the user's consents (`push_notifications`, `marketing_email` does not apply to transactional mail), the `push.all` and `email.all` kill switches and each device's `revoked_at`. The row is also the in-app inbox entry (`read_at`).
 
 ```sql
 CREATE TABLE notifications (
@@ -2277,7 +2357,8 @@ CREATE TABLE notifications (
   created_at     timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT ck_notifications_kind CHECK (kind IN (
     'price_drop', 'booked_fare_drop', 'trip_invite', 'invite_accepted', 'run_finished',
-    'import_finished', 'pre_trip_reminder', 'referral_reward', 'import_reward')),
+    'import_finished', 'pre_trip_reminder', 'referral_reward', 'import_reward',
+    'calendar_changes', 'calendar_poll_stopped', 'verify_finished')),
   CONSTRAINT uq_notifications_dedupe UNIQUE (user_id, dedupe_key)
 );
 CREATE INDEX ix_notifications_user ON notifications (user_id, created_at DESC);
@@ -2314,6 +2395,91 @@ CREATE TABLE sample_trips (
 CREATE INDEX ix_sample_trips_published ON sample_trips (sort_order, published_at DESC) WHERE status = 'published';
 SELECT add_updated_at_trigger('sample_trips');
 ```
+
+### 5.20 Plan verification ("Verify this plan")
+
+A person pastes an itinerary written by ChatGPT, Gemini, Layla, Mindtrip or anything else, and Wayfold checks each place, its opening hours and its price against place data and cited pages (06 5.11). Two runs are involved: `verify_extract` reads the text into a list of items (Haiku, 1 credit) and `verify_plan` checks the items the person selected (1 credit per checked item, capped per run). The pasted text is never stored: only the extracted items, the claims in them and the evidence found are kept, for 30 days, so the result can be reopened and imported. One `plan_verifications` row belongs to one trip (the trip the person ran it from; the trip counts toward active trips like any other). Items that are not checked stay `unchecked` with a reason. Every `green` or `amber` item carries the source page and the day it was seen, which is the evidence label; `red` means nothing could be found. Airbnb, Vrbo and Booking.com pages are never opened: a stay on those sites can only be `unchecked` with reason `blocked_source` unless place data recognizes it. Importing the result writes `itinerary_items` with `source = 'verify_plan'`, `check_url` and `checked_at` (so the freshness flag and recheck apply), and stamps `imported_item_id` on the item.
+
+```sql
+CREATE TABLE plan_verifications (
+  id                 uuid PRIMARY KEY DEFAULT uuidv7(),
+  trip_id            uuid NOT NULL REFERENCES trips (id) ON DELETE CASCADE,
+  user_id            uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,         -- who pasted it and pays the credits
+  source_label       text NOT NULL DEFAULT 'other',                                 -- what the person says wrote it; shown, never trusted
+  status             text NOT NULL DEFAULT 'extracting',
+  content_hash       char(64),                                                      -- sha256 of the redacted text, to warn about checking the same plan twice
+  extract_run_id     uuid REFERENCES runs (id) ON DELETE SET NULL,                  -- the verify_extract run
+  check_run_id       uuid REFERENCES runs (id) ON DELETE SET NULL,                  -- the latest verify_plan run
+  items_found        smallint NOT NULL DEFAULT 0,
+  items_selected     smallint NOT NULL DEFAULT 0,
+  green_count        smallint NOT NULL DEFAULT 0,
+  amber_count        smallint NOT NULL DEFAULT 0,
+  red_count          smallint NOT NULL DEFAULT 0,
+  unchecked_count    smallint NOT NULL DEFAULT 0,
+  error_code         text,                                                          -- nothing_found, too_long, provider_error, refused
+  created_at         timestamptz NOT NULL DEFAULT now(),
+  updated_at         timestamptz NOT NULL DEFAULT now(),
+  completed_at       timestamptz,
+  expires_at         timestamptz NOT NULL DEFAULT now() + interval '30 days',
+  CONSTRAINT ck_plan_verifications_label CHECK (source_label IN ('chatgpt', 'gemini', 'layla', 'mindtrip', 'other')),
+  CONSTRAINT ck_plan_verifications_status CHECK (status IN ('extracting', 'review', 'checking', 'done', 'failed', 'discarded')),
+  CONSTRAINT ck_plan_verifications_counts CHECK (green_count + amber_count + red_count <= items_selected AND items_selected <= items_found),
+  CONSTRAINT uq_plan_verifications_id_trip UNIQUE (id, trip_id)
+);
+CREATE INDEX ix_plan_verifications_trip ON plan_verifications (trip_id, created_at DESC);
+CREATE INDEX ix_plan_verifications_user ON plan_verifications (user_id, created_at DESC);
+CREATE INDEX ix_plan_verifications_expiry ON plan_verifications (expires_at);
+SELECT add_updated_at_trigger('plan_verifications');
+
+CREATE TABLE plan_verification_items (
+  id                  uuid PRIMARY KEY DEFAULT uuidv7(),
+  verification_id     uuid NOT NULL,
+  trip_id             uuid NOT NULL,                                                -- copy of the verification's trip, keeps RLS cheap
+  position            smallint NOT NULL,                                            -- order in the pasted plan
+  day_label           text CHECK (day_label IS NULL OR char_length(day_label) <= 60),   -- as written, for example "Day 2"
+  planned_day         date,                                                         -- set when the plan names a date or the trip has dates
+  planned_start       time,
+  name                text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 200),
+  category            item_category NOT NULL DEFAULT 'other',
+  claimed_hours       text CHECK (claimed_hours IS NULL OR char_length(claimed_hours) <= 120),   -- hours the plan states, as text
+  claimed_price_minor bigint CHECK (claimed_price_minor IS NULL OR claimed_price_minor >= 0),
+  claimed_currency    currency_code,
+  selected            boolean NOT NULL DEFAULT false,                               -- chosen for checking (within the per-run cap)
+  verdict             text NOT NULL DEFAULT 'unchecked',                            -- green: confirmed; amber: differs or partly confirmed; red: could not be found
+  reason_code         text,                                                         -- not_found, hours_differ, price_differ, closed_at_planned_time, partly_confirmed, blocked_source, over_cap, budget_stop, provider_error
+  reason              text CHECK (reason IS NULL OR char_length(reason) <= 300),    -- one plain sentence for the screen
+  exists_result       text,                                                         -- confirmed, differs, unconfirmed
+  hours_result        text,                                                         -- confirmed, differs, unconfirmed, not_claimed
+  price_result        text,                                                         -- confirmed, differs, unconfirmed, not_claimed
+  place_provider      text,
+  place_id            text,
+  place_name          text,                                                         -- the name the source uses, which may differ from the plan
+  lat                 double precision,
+  lon                 double precision,
+  found_hours         text,
+  found_price_minor   bigint CHECK (found_price_minor IS NULL OR found_price_minor >= 0),
+  found_currency      currency_code,
+  source_url          text,                                                         -- the page the finding was seen on (the evidence label)
+  source_domain       text,
+  seen_at             timestamptz,                                                  -- the day that page was seen
+  from_cache          boolean NOT NULL DEFAULT false,                               -- served from shared_research_cache (kind place_check)
+  include_in_import   boolean NOT NULL DEFAULT false,                               -- green on by default; amber on after the person looks; red off
+  imported_item_id    uuid,
+  FOREIGN KEY (verification_id, trip_id) REFERENCES plan_verifications (id, trip_id) ON DELETE CASCADE,
+  FOREIGN KEY (imported_item_id, trip_id) REFERENCES itinerary_items (id, trip_id) ON DELETE SET NULL (imported_item_id),
+  CONSTRAINT uq_plan_verification_items_pos UNIQUE (verification_id, position),
+  CONSTRAINT ck_plan_verification_items_verdict CHECK (verdict IN ('green', 'amber', 'red', 'unchecked')),
+  CONSTRAINT ck_plan_verification_items_evidence CHECK (verdict NOT IN ('green', 'amber') OR (source_url IS NOT NULL AND seen_at IS NOT NULL)),
+  CONSTRAINT ck_plan_verification_items_checked CHECK (verdict = 'unchecked' OR selected),
+  CONSTRAINT ck_plan_verification_items_claim_price CHECK ((claimed_price_minor IS NULL) = (claimed_currency IS NULL)),
+  CONSTRAINT ck_plan_verification_items_found_price CHECK ((found_price_minor IS NULL) = (found_currency IS NULL)),
+  CONSTRAINT ck_plan_verification_items_lat_lon CHECK ((lat IS NULL) = (lon IS NULL))
+);
+CREATE INDEX ix_plan_verification_items_verification ON plan_verification_items (verification_id, position);
+CREATE INDEX ix_plan_verification_items_trip ON plan_verification_items (trip_id);
+```
+
+The API writes a verification row when a person starts one and may change only `status` (to `discarded`) on it; every other column, and every item column except `selected` and `include_in_import`, is written by the worker, so a member cannot edit a verdict or an evidence date (6.1).
 
 ## 6. Row-level security
 
@@ -2367,10 +2533,17 @@ GRANT UPDATE (clicked_at, redirect_status, opened_in) ON link_clicks TO wayfold_
 REVOKE UPDATE ON users FROM wayfold_app;
 GRANT UPDATE (display_name, locale, timezone, home_currency, home_airports, country_code, hide_booking_links, prefs, last_seen_at) ON users TO wayfold_app;
 
--- Imports: the API creates an import and may discard it; the worker does everything else. Nobody but the worker deletes the row,
+-- Imports: the API creates an import and may discard it (polling is switched through set_import_polling()); the worker does everything else. Nobody but the worker deletes the row,
 -- because the reward flag on it is what makes the free Trip Pass a once-per-user grant.
 REVOKE UPDATE, DELETE ON trip_imports FROM wayfold_app;
 GRANT UPDATE (status) ON trip_imports TO wayfold_app;
+
+-- Plan verification: the API starts a verification and lets the person discard it or tick which items to check and import; verdicts, evidence and
+-- counts are written by the worker only, so a member cannot edit what the evidence says.
+REVOKE UPDATE, DELETE ON plan_verifications FROM wayfold_app;
+GRANT UPDATE (status) ON plan_verifications TO wayfold_app;
+REVOKE INSERT, UPDATE, DELETE ON plan_verification_items FROM wayfold_app;
+GRANT UPDATE (selected, include_in_import) ON plan_verification_items TO wayfold_app;
 
 -- Notifications: the API reads them and marks them read; jobs create them.
 REVOKE INSERT, UPDATE, DELETE ON notifications FROM wayfold_app;
@@ -2399,9 +2572,9 @@ GRANT  EXECUTE ON FUNCTION ensure_free_monthly_grant(uuid), ensure_taster_grant(
 GRANT  EXECUTE ON FUNCTION record_credit_debt(uuid, integer, text), settle_credit_debt(uuid) TO wayfold_worker;
 -- Phase 1 reward functions (5.9). The API may ask for its own referral code and redeem a code; granting is worker only.
 REVOKE EXECUTE ON FUNCTION grant_import_reward(uuid), ensure_referral_code(uuid), grant_referral_reward(uuid),
-  my_referral_code(), redeem_referral(text) FROM PUBLIC;
+  my_referral_code(), redeem_referral(text), set_import_polling(uuid, boolean) FROM PUBLIC;
 GRANT  EXECUTE ON FUNCTION grant_import_reward(uuid), ensure_referral_code(uuid), grant_referral_reward(uuid) TO wayfold_worker;
-GRANT  EXECUTE ON FUNCTION my_referral_code(), redeem_referral(text) TO wayfold_app, wayfold_worker;
+GRANT  EXECUTE ON FUNCTION my_referral_code(), redeem_referral(text), set_import_polling(uuid, boolean) TO wayfold_app, wayfold_worker;
 ```
 
 `FORCE ROW LEVEL SECURITY` is deliberately not used: `wayfold_owner` owns the tables and the `SECURITY DEFINER` helpers below read across tenants on its behalf, while `wayfold_app` never owns a table, so it can never bypass a policy. The test suite must therefore connect as `wayfold_app` (section 6.5).
@@ -2487,7 +2660,8 @@ DECLARE t text;
 BEGIN
   FOREACH t IN ARRAY ARRAY[
     'trip_invites', 'trip_share_links', 'trip_destinations', 'trip_people', 'flight_routes', 'trip_fare_links',
-    'chosen_flights', 'itinerary_days', 'saved_places', 'lodging_options', 'checklist_items', 'runs'
+    'chosen_flights', 'itinerary_days', 'saved_places', 'lodging_options', 'checklist_items', 'runs',
+    'plan_verifications', 'plan_verification_items'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('CREATE POLICY %I ON %I FOR SELECT USING (trip_id IN (SELECT visible_trip_ids()))', t || '_select', t);
@@ -2590,8 +2764,9 @@ BEGIN
     RETURN QUERY SELECT v_user, false;
     RETURN;
   END IF;
-  INSERT INTO users (email, email_is_relay, display_name)
-  VALUES (p_email, coalesce(p_email_is_relay, false), left(coalesce(p_display_name, ''), 80))
+  INSERT INTO users (email, email_is_relay, email_verified_at, display_name)
+  VALUES (p_email, coalesce(p_email_is_relay, false), CASE WHEN p_email IS NOT NULL THEN now() END,   -- the API calls this only with an address the provider verified
+          left(coalesce(p_display_name, ''), 80))
   RETURNING id INTO v_user;
   INSERT INTO auth_identities (user_id, provider, subject, email, email_is_relay, last_login_at)
   VALUES (v_user, p_provider, p_subject, p_email, coalesce(p_email_is_relay, false), now());
@@ -2843,9 +3018,12 @@ ON CONFLICT (user_id, kind, period_key) WHERE user_id IS NOT NULL AND period_key
 -- Collaborator cap for an invite: members beyond the limit (Free owner 1, Plus and Trip Pass 6) are refused, viewers included in the count.
 SELECT count(*) FILTER (WHERE role <> 'owner') AS collaborators FROM trip_members WHERE trip_id = :trip_id;
 
--- Nightly booked-fare drop scan (worker). The thresholds come from feature_flags 'setting_booked_fare_drop' (rules.min_drop_pct, rules.min_drop_usd).
+-- Nightly booked-fare drop scan (worker). The thresholds come from feature_flags 'setting_booked_fare_drop': the drop must be at least
+-- rules.min_drop_pct (5) percent AND at least rules.min_drop_usd (10) US dollars after conversion, and a flight is alerted at most once every
+-- rules.min_days_between (7) days. The alert never carries a partner link.
 SELECT d.* FROM booked_fare_drops d
  WHERE (d.last_drop_notified_minor IS NULL OR d.current_minor < d.last_drop_notified_minor)
+   AND (d.last_drop_notified_at IS NULL OR d.last_drop_notified_at <= now() - make_interval(days => :min_days_between))
    AND d.drop_pct >= :min_drop_pct
    AND COALESCE(fx_convert_minor(d.drop_minor, d.paid_currency, 'USD'), 0) >= :min_drop_usd_minor;
 -- After the notifications row is inserted (dedupe_key 'booked_drop:<chosen_flight_id>:<current_minor>'):
@@ -2853,16 +3031,21 @@ UPDATE chosen_flights SET last_drop_notified_at = now(), last_drop_notified_mino
 
 -- After an import is applied (worker): try the once-per-user Trip Pass reward. NULL means it did not qualify and nothing was consumed.
 SELECT grant_import_reward(:import_id);
--- Onboarding and the import screen: is the reward still available to this user?
-SELECT NOT EXISTS (SELECT 1 FROM trip_imports WHERE user_id = :user_id AND reward_granted_at IS NOT NULL) AS reward_available;
+-- Onboarding and the import screen: is the reward still available to this user? (Plus owners are not offered it.)
+SELECT NOT EXISTS (SELECT 1 FROM trip_imports WHERE user_id = :user_id AND reward_granted_at IS NOT NULL)
+   AND NOT EXISTS (SELECT 1 FROM entitlements WHERE user_id = :user_id AND tier_code = 'plus' AND (valid_until IS NULL OR valid_until > now())) AS reward_available;
 
--- Nightly referral pass (worker): a referee whose first trip has at least 3 itinerary items qualifies, then both sides are paid.
+-- Nightly referral pass (worker): a referee who has created their first trip with dates qualifies, then both sides are paid
+-- (20 credits each, expiring after 12 months; the referrer caps are applied inside grant_referral_reward).
 UPDATE referral_rewards r SET status = 'qualified', qualified_at = now()
  WHERE r.status = 'pending'
    AND EXISTS (SELECT 1 FROM trips t
-                WHERE t.owner_user_id = r.referee_user_id AND t.deleted_at IS NULL
-                  AND (SELECT count(*) FROM itinerary_items i WHERE i.trip_id = t.id) >= 3);
+                WHERE t.owner_user_id = r.referee_user_id AND t.deleted_at IS NULL AND t.start_date IS NOT NULL);
 SELECT grant_referral_reward(id) FROM referral_rewards WHERE status = 'qualified';
+
+-- Every 6 hours (worker): calendar feeds that are due. Each row is fetched through the SSRF guard; an unchanged body only moves next_poll_at.
+SELECT id, user_id, trip_id, feed_url_enc, last_content_hash FROM trip_imports
+ WHERE poll_enabled AND next_poll_at <= now() ORDER BY next_poll_at LIMIT 200 FOR UPDATE SKIP LOCKED;
 ```
 
 ## 8. Retention rules
@@ -2872,11 +3055,12 @@ The product promises account deletion in the app, data export on every tier, and
 | Table | Retention | Mechanism |
 |---|---|---|
 | `users`, `auth_identities`, `devices`, `consents` | While the account exists. Hard purge 30 days after a deletion request | Deletion job (section 8.1). Revoked `devices` rows purged 90 days after `revoked_at` |
-| `trips` and all trip children (`trip_*`, `flight_routes`, `chosen_flights`, `price_alerts`, `itinerary_*`, `saved_places`, `saved_place_votes`, `lodging_*`, `checklist_items`, `notes`, `sample_trips`) | While the trip exists. Trash for 30 days, then hard delete (cascades) | `DELETE FROM trips WHERE deleted_at < now() - interval '30 days'` |
+| `trips` and all trip children (`trip_*`, `flight_routes`, `chosen_flights`, `price_alerts`, `itinerary_*`, `saved_places`, `saved_place_votes`, `lodging_*`, `checklist_items`, `notes`, `plan_verifications`, `sample_trips`) | While the trip exists. Trash for 30 days, then hard delete (cascades) | `DELETE FROM trips WHERE deleted_at < now() - interval '30 days'` |
 | `trip_invites` | Expire at 7 days, rows purged at 30 days | `DELETE ... WHERE expires_at < now() - interval '30 days'` |
 | `trip_share_links` | Until revoked or expired (default 90 days); purged 30 days after | Nightly delete |
 | `activity_log` | 90 days | Nightly delete by `created_at` |
-| `trip_imports` | The uploaded file (`raw_key`) is deleted from R2 and `preview` is nulled 7 days after creation. The row (counts, status, reward flag) stays with the account, because the reward flag must outlive the trip; it is deleted with the account | Nightly job; cascade on user delete |
+| `trip_imports` | The uploaded file (`raw_key`) is deleted from R2 and `preview` is nulled 7 days after creation. The feed URL (`feed_url_enc`) is deleted when polling is switched off, when the import is discarded, after 7 days if it was never applied, and when the trip is deleted. `pending_changes` is nulled 30 days after it was created if nobody confirmed it. The row (counts, status, reward flag) stays with the account, because the reward flag must outlive the trip; it is deleted with the account | Nightly job; cascade on user delete |
+| `plan_verifications`, `plan_verification_items` | 30 days after creation (`expires_at`), or with the trip. The pasted text itself is never stored | Nightly `DELETE FROM plan_verifications WHERE expires_at < now()` (items cascade) |
 | `fare_observations` | `raw` nulled after 14 days; rows kept 24 months for price history | Nightly `UPDATE ... SET raw = NULL`, then batched `DELETE` (5,000 rows per batch) past 24 months |
 | `trip_fare_links` | With the trip; links to pruned observations cascade away | Foreign key cascade |
 | `chosen_flights.paid_minor` | With the trip. The user can clear it; it is never sent to AI or shared links | Foreign key cascade |
@@ -3002,13 +3186,13 @@ Practical rules for the revisions: functions, triggers, partitions, policies and
 | `0004_trips_people` | `trips` (with owner-member trigger), `trip_members`, `trip_invites`, `trip_share_links`, `trip_destinations`, `activity_log`, `people`, `trip_people` | 0002 |
 | `0005_ai` | `runs`, `run_events` (partitioned), `ai_usage`, `provider_calls` (partitioned), `provider_call_rollups`, `shared_research_cache`, partition functions and the first partitions (section 9). The same migration installs Procrastinate's own schema (the `procrastinate_*` tables and functions, taken from the library's SQL and not listed in this file) and the `job_heartbeats` view over its worker table | 0003, 0004 |
 | `0006_billing_credits` | `store_transactions`, `subscriptions`, `entitlements`, `trip_passes`, `webhook_events`, `credit_grants`, `credit_ledger`, `credit_debts`, `credit_balances`, `reserve_credits`, `settle_credits`, `release_stale_reservations`, `expire_credit_grants`, `record_credit_debt`, `settle_credit_debt`, `ensure_free_monthly_grant`, `ensure_taster_grant` | 0003, 0004 |
-| `0007_imports_referrals` | `trip_imports`, `grant_import_reward`, `referral_codes`, `referral_rewards`, `ensure_referral_code`, `my_referral_code`, `redeem_referral`, `grant_referral_reward` | 0005, 0006 |
+| `0007_imports_referrals` | `trip_imports` (with the polling columns), `grant_import_reward`, `set_import_polling`, `referral_codes`, `referral_rewards`, `ensure_referral_code`, `my_referral_code`, `redeem_referral`, `grant_referral_reward` | 0005, 0006 |
 | `0008_affiliate` | `affiliate_programs`, `affiliate_link_templates`, `link_clicks` (partitioned), `affiliate_conversions`, `affiliate_payouts`, materialized views | 0003 |
 | `0009_flights` | `flight_routes`, `fare_observations`, `trip_fare_links`, `chosen_flights`, `route_price_insights`, `booked_fare_drops`, `price_alerts` | 0003, 0005 |
 | `0010_itinerary_lodging` | `itinerary_days`, `saved_places`, `itinerary_items` (foreign key to `trip_imports`), `lodging_options` (foreign keys to `affiliate_programs` and `trip_imports`), `lodging_votes`, `saved_place_votes` | 0004, 0007, 0008 |
 | `0011_checklist_notes` | `checklist_items` (foreign key to `affiliate_programs`), `notes` (foreign key to `itinerary_items`) | 0008, 0010 |
 | `0012_admin_privacy` | `admin_users`, `feature_flags`, `kill_switches`, `audit_log`, `support_tickets`, `content_reports` (references `trip_share_links`, `notes` and `runs`), `consents`, `data_exports`, `deletion_requests`, `rate_limit_counters`, `idempotency_keys` | 0004, 0005, 0011 |
-| `0013_notifications_samples` | `notifications`, `sample_trips` | 0004 |
+| `0013_notifications_samples` | `notifications`, `sample_trips`, `plan_verifications`, `plan_verification_items` | 0004, 0005, 0010 |
 | `0014_rls` | Helper functions, `trip_member_profiles`, policies for every table, grants and `SECURITY DEFINER` changes (section 6). Any table added after this revision must include its own `GRANT`, `ENABLE ROW LEVEL SECURITY` and policies in the same migration; the test in 6.5 fails otherwise | all tables exist |
 | `0015_seed` | Seed data (section 11), idempotent `INSERT ... ON CONFLICT DO NOTHING` | 0014 |
 
@@ -3033,23 +3217,24 @@ Phase 1 seeds six rows: `free`, `plus`, `trip_pass` and the three credit packs. 
 | `hide_presentation_footer` | True removes the "Made with Wayfold" footer and PDF watermark (Free false, everything paid true) |
 | `monthly_ceiling_micros`, `daily_ceiling_micros` | Per-account provider-spend ceilings in micro-dollars |
 | `taster_agent_runs` | One-time free deep agent runs |
+| `verify_items_per_run` | Most items one "Verify this plan" check may include (Free 5, Plus and Trip Pass 12); more items need another run |
 
 ```sql
 INSERT INTO plans (code, kind, name, rank, monthly_credits, credits_granted, credits_valid_days, duration_days, feature_flag_key, is_active, sort_order, limits) VALUES
 ('free', 'tier', 'Free', 0, 12, 0, NULL, NULL, NULL, true, 0,
  '{"active_trips":2,"active_trips_bonus":0,"routes_per_trip":1,"live_routes":0,"live_window_days":0,"price_alerts":1,"live_alerts":false,
    "collaborators":1,"travelers_per_trip":2,"can_invite":true,"saved_lodging_per_trip":8,"lodging_compare":2,
-   "places_searches_per_day":30,"hide_presentation_footer":false,"taster_agent_runs":1,
+   "places_searches_per_day":30,"hide_presentation_footer":false,"taster_agent_runs":1,"verify_items_per_run":5,
    "monthly_ceiling_micros":250000,"daily_ceiling_micros":50000}'),
 ('plus', 'tier', 'Plus', 20, 60, 0, NULL, NULL, NULL, true, 10,
  '{"active_trips":25,"active_trips_bonus":0,"routes_per_trip":5,"live_routes":3,"live_window_days":120,"price_alerts":3,"live_alerts":true,
    "collaborators":6,"travelers_per_trip":8,"can_invite":true,"saved_lodging_per_trip":100,"lodging_compare":4,
-   "places_searches_per_day":100,"hide_presentation_footer":true,"taster_agent_runs":0,
+   "places_searches_per_day":100,"hide_presentation_footer":true,"taster_agent_runs":0,"verify_items_per_run":12,
    "monthly_ceiling_micros":2250000,"daily_ceiling_micros":400000}'),
 ('trip_pass', 'pass', 'Trip Pass', 25, 0, 40, 90, 90, NULL, true, 40,
  '{"active_trips_bonus":1,"routes_per_trip":3,"live_routes":2,"live_window_days":120,"live_checks_max":60,"price_alerts":2,"live_alerts":true,
    "collaborators":6,"travelers_per_trip":8,"can_invite":true,"saved_lodging_per_trip":30,"lodging_compare":4,
-   "places_searches_per_day":100,"hide_presentation_footer":true,
+   "places_searches_per_day":100,"hide_presentation_footer":true,"verify_items_per_run":12,
    "monthly_ceiling_micros":1800000,"daily_ceiling_micros":400000}'),
 ('credits_50',  'credit_pack', '50 credits',  0, 0,  50, 365, NULL, NULL, true, 60, '{}'),
 ('credits_150', 'credit_pack', '150 credits', 0, 0, 150, 365, NULL, NULL, true, 61, '{}'),
@@ -3078,7 +3263,7 @@ Apple product ids are the ids created in App Store Connect; the subscription gro
 
 ### 11.3 Credit prices
 
-1 credit is a budget of up to $0.02, so `hard_stop_micros` equals `credits * 20000` at the uncached price.
+1 credit is a budget of up to $0.02, so `hard_stop_micros` equals `credits * 20000` at the uncached price (for `verify_plan`, per checked item).
 
 ```sql
 INSERT INTO credit_action_prices (action, credits, credits_cached, hard_stop_micros, max_turns, max_searches, max_fetches, model) VALUES
@@ -3087,7 +3272,11 @@ INSERT INTO credit_action_prices (action, credits, credits_cached, hard_stop_mic
 ('draft_day',   1, NULL,   30000, 1,    0,  0,  'claude-sonnet-5-5'),
 ('draft_trip',  4, NULL,  100000, 1,    0,  0,  'claude-sonnet-5-5'),
 ('research',    8, 1,     160000, NULL, 5,  8,  'claude-sonnet-5-5'),
-('agent_run',  40, 8,     800000, 20,   10, 10, 'claude-sonnet-5-5')
+('agent_run',  40, 8,     800000, 20,   10, 10, 'claude-sonnet-5-5'),
+-- verify_plan is priced per checked item: the credits and the caps below are for ONE item (1 credit, one search, one page). A run reserves
+-- credits x items (at most verify_items_per_run, 11.1) and its hard stop is hard_stop_micros x items. Reading the pasted plan is a separate
+-- 'explain' action (run kind verify_extract); a one-tap evidence recheck is also 'explain' (run kind recheck).
+('verify_plan', 1, NULL,    20000, 1,    1,  1,  'claude-haiku-4-5')
 ON CONFLICT (action) DO NOTHING;
 ```
 
@@ -3137,7 +3326,7 @@ ON CONFLICT DO NOTHING;
 
 ### 11.5 Feature flags and kill switches
 
-Only Phase 1 flags are seeded. The three new settings at the end of the flags block drive the Phase 1 additions: `setting_import_reward` (the free Trip Pass for a first import), `setting_referral_credits` (credits for referrer and referee, the qualifying rule and the referrer's monthly cap) and `setting_booked_fare_drop` (when a booked-fare drop is worth an alert). Their numbers are starting values the owner can change in the admin console with a reason and history; they are not from the pricing model.
+Only Phase 1 flags are seeded. The four new settings at the end of the flags block drive the Phase 1 additions: `setting_import_reward` (the free Trip Pass for a first qualifying import), `setting_referral_credits` (credits for referrer and referee, the expiry, the qualifying rule and the referrer's caps), `setting_booked_fare_drop` (when a booked-fare drop is worth an alert) and `setting_calendar_polling` (feed polling interval and limits). Their numbers are starting values the owner can change in the admin console with a reason and history; they are not from the pricing model.
 
 ```sql
 INSERT INTO feature_flags (key, description, enabled, rollout_pct, rules, variants) VALUES
@@ -3151,7 +3340,10 @@ INSERT INTO feature_flags (key, description, enabled, rollout_pct, rules, varian
 ('shared_research_cache',    'Serve AI research from the shared cache',                         true,  100, '{}', '{}'),
 ('trip_import',              'Import a trip from a calendar file, a calendar feed or pasted confirmations', true, 100, '{}', '{}'),
 ('referrals',                'Referral codes and referral credits',                             true,  100, '{}', '{}'),
-('booked_fare_alerts',       'Booked-fare drop alerts (you paid X, it is now Y)',               true,  100, '{}', '{}')
+('booked_fare_alerts',       'Booked-fare drop alerts (you paid X, it is now Y)',               true,  100, '{}', '{}'),
+('verify_plan',              'Verify this plan: check a pasted itinerary place by place',       true,  100, '{}', '{}'),
+('evidence_recheck',         'One-tap recheck of evidence older than 14 days',                  true,  100, '{}', '{}'),
+('calendar_feed_polling',    'Opt-in "Keep checking this calendar" for feed imports',           true,  100, '{}', '{}')
 ON CONFLICT (key) DO NOTHING;
 
 -- Settings are flags with kind 'setting': the value is in rules, and the admin console edits them with a reason and history (08 6.16).
@@ -3160,11 +3352,14 @@ INSERT INTO feature_flags (key, kind, description, enabled, rollout_pct, rules, 
 ('setting_ai_warm_daily_usd',      'setting', 'Daily budget for nightly shared-cache warming, in dollars (06 8.6)',  true, 100, '{"usd":5}',  '{}'),
 ('setting_ai_global_daily_usd',    'setting', 'Global daily Anthropic budget in dollars; 80 and 95 percent of it trip the AI breakers (08 6.5)', true, 100, '{"usd":50}', '{}'),
 ('setting_serpapi_monthly_quota',  'setting', 'SerpApi searches per month; 90 percent trips provider.serpapi (08 6.5)', true, 100, '{"searches":5000}', '{}'),
-('setting_import_reward',          'setting', 'Free Trip Pass for the first applied import, once per user; rules.min_items_applied is the minimum number of items written', true, 100, '{"min_items_applied":1}', '{}'),
-('setting_referral_credits',       'setting', 'Referral credits for each side, the qualifying rule and the referrer cap per rolling 30 days', true, 100,
-   '{"referrer":20,"referee":20,"referrer_monthly_cap":10,"qualify_event":"first_trip_with_items","qualify_min_items":3}', '{}'),
-('setting_booked_fare_drop',       'setting', 'Booked-fare drop alert thresholds: minimum drop in percent and in US dollars (converted), and how fresh the fare must be', true, 100,
-   '{"min_drop_pct":5,"min_drop_usd":15,"max_age_hours":48}', '{}')
+('setting_import_reward',          'setting', 'Free Trip Pass for the first qualifying import, once per user; at least min_items_applied items including a flight or a stay, a verified email, no active pass on the trip, no active Plus', true, 100,
+   '{"min_items_applied":3,"require_flight_or_stay":true,"require_verified_email":true,"block_if_plus":true}', '{}'),
+('setting_referral_credits',       'setting', 'Referral credits for each side (20), expiry in months (12), the referrer caps (5 per rolling 30 days, 10 per calendar year) and the qualifying rule', true, 100,
+   '{"referrer":20,"referee":20,"expiry_months":12,"referrer_monthly_cap":5,"referrer_yearly_cap":10,"qualify_event":"first_trip_with_dates"}', '{}'),
+('setting_booked_fare_drop',       'setting', 'Booked-fare drop alert thresholds: at least min_drop_pct percent and at least min_drop_usd US dollars (converted) below what was paid, at most once per flight every min_days_between days; never a partner link', true, 100,
+   '{"min_drop_pct":5,"min_drop_usd":10,"min_days_between":7,"max_age_hours":48}', '{}'),
+('setting_calendar_polling',       'setting', 'Calendar feed polling: hours between polls (6), failures in a row before polling stops (3), polled feeds per person (3)', true, 100,
+   '{"interval_hours":6,"max_failures":3,"max_feeds_per_user":3}', '{}')
 ON CONFLICT (key) DO NOTHING;
 
 INSERT INTO kill_switches (key, description, auto_rule) VALUES
@@ -3177,6 +3372,8 @@ INSERT INTO kill_switches (key, description, auto_rule) VALUES
 ('ai.research',            'Stop research questions',            NULL),
 ('ai.taster',              'Stop the free taster run',           NULL),
 ('ai.import',              'Stop booking import (pasted confirmations)', NULL),
+('ai.verify',              'Stop Verify this plan (reading and checking pasted plans)', NULL),
+('ai.recheck',             'Stop one-tap evidence rechecks', NULL),
 ('ai.packing',             'Stop packing lists',                 NULL),
 ('ai.web_search',          'Run AI without server web search; features that need it say unavailable', NULL),
 ('ai.web_fetch',           'Run AI without server web fetch; features that need it say unavailable', NULL),
@@ -3194,7 +3391,8 @@ INSERT INTO kill_switches (key, description, auto_rule) VALUES
 ('provider.frankfurter',   'Stop FX refresh; the last stored rates stay in use', NULL),
 ('push.all',               'Stop sending push notifications',    NULL),
 ('email.all',              'Stop sending email',                 NULL),
-('import.all',             'Stop every trip import (files, feeds and pasted text) and the import reward', NULL),
+('import.all',             'Stop every trip import (files, feeds, pasted text, Google Maps lists) and the import reward', NULL),
+('import.polling',         'Stop the 6-hourly calendar feed polling; first-time feed imports keep working', NULL),
 ('referrals.grant',        'Pause referral credit grants (abuse incident); codes can still be entered', NULL),
 ('webhooks.process',       'Keep receiving webhooks but pause processing, for a safe replay', NULL),
 ('maintenance',            'Read-only mode: writes return 503',  NULL),
@@ -3354,13 +3552,14 @@ The build README list is complete for the product; these tables are added becaus
 | `idempotency_keys` | The 24 hour replay store for the `Idempotency-Key` header on every money or credit route (04 section 1.6) |
 | `credit_debts` | Credits already spent when a pack refund arrives; `credit_grants.remaining` cannot go negative and the API must block paid AI until the debt is repaid (07 5.6) |
 | `content_reports` | Reports on shared trips and AI content, required by App Review Guideline 1.2 and by the "three reports pause a cached topic" rule (08 6.12, 06 8.5); the Phase 1 "basic content reports" |
-| `trip_imports` | New. The scope table's "Switching" row: import a trip from a calendar file, a calendar feed or pasted confirmations, with status, parsed item counts, undo (`import_id` on the items it created) and the once-per-user free Trip Pass reward, whose flag must survive deleting the trip |
+| `trip_imports` | New. The scope table's "Switching" row: import a trip from a calendar file, a calendar feed, pasted confirmations, a Google Maps export or pasted places, with the rival entry used, status, parsed item counts, undo (`import_id` on the items it created), the opt-in feed polling state and the once-per-user free Trip Pass reward, whose flag must survive deleting the trip |
+| `plan_verifications`, `plan_verification_items` | New. The "Verify this plan" feature added from the competitive analysis: the items read from a pasted plan, the verdict for each (green, amber, red, unchecked) and the source page and date behind it. Kept 30 days; the pasted text is never stored |
 | `referral_codes`, `referral_rewards` | New. "Referral credits" in the Growth basics row: one code per user, one reward row per referred user, idempotent credit grants and an abuse cap |
 | `saved_place_votes` | New. "Hearts on stays and places" in the Collaboration row: `lodging_votes` covered stays only |
 | `notifications` | New. The Notifications row: push and email for price drops, invites, run results and pre-trip reminders need a de-duplicated outbox, which also serves as the in-app inbox |
 | `sample_trips` | New. "Public sample trips" in the Growth basics row: a trip published with a slug and search copy |
 
-New objects that are not tables: the `booked_fare_drops` view and the `chosen_flights` booked-fare columns (the Flights row), `grant_import_reward()`, `ensure_referral_code()`, `my_referral_code()`, `redeem_referral()`, `grant_referral_reward()` and `fx_convert_minor()`.
+New objects that are not tables: the `booked_fare_drops` view and the `chosen_flights` booked-fare columns (the Flights row), the evidence freshness columns (`notes.checked_at`, `itinerary_items.check_url`, `itinerary_items.checked_at`), `users.email_verified_at`, `grant_import_reward()`, `set_import_polling()`, `ensure_referral_code()`, `my_referral_code()`, `redeem_referral()`, `grant_referral_reward()` and `fx_convert_minor()`.
 
 `analytics_events` (optional in the build README) is not created: product analytics stay in PostHog and the metrics the schema must answer (cache hit rate, cost per active user, credit margin, conversion) come from `provider_calls`, `ai_usage`, `credit_ledger` and `affiliate_conversions`. A `legacy_id_map` table exists only inside the `legacy` schema during the import and is not part of the product schema.
 
@@ -3376,18 +3575,19 @@ Names only. Each feature pack defines the exact DDL, policies, grants and seed r
 | Group Trip Pass, polls and cost splitting, room-block request | `polls`, `poll_votes`, `expenses`, `expense_shares`, `settlements`, `room_block_requests` | `trip_passes.upgraded_from_id`; `pass_status` value `upgraded`; `trip_passes.plan_code` check widened to `group_trip_pass`; `plans` row `group_trip_pass`; `store_products` row `wayfold_group_trip_pass`; limit keys `polls`, `cost_splitting`, `room_block_request` on every plan row; types `poll_status`, `split_method`; `poll_votes_validate()`, `check_expense_shares_sum()`; flags `group_tools`, `room_block_requests` |
 | Comments on items | `comments` | flag `poll_comments`; `notifications.kind` values for mentions and replies |
 | Email-forward import (`plans@wayfold.app`) | `forwarding_addresses`, `inbound_emails` | `trip_imports.source` value `email_forward`; `trip_imports.inbound_email_id` |
+| Paste your group chat, repair a day | none | `run_kind` values `group_chat_draft`, `repair_day`; `ai_action` values if they get their own price; flags `group_chat_draft`, `repair_day` |
 | Flight status, delay and gate alerts | `flight_status_subscriptions`, `flight_status_events` | `chosen_flights.flight_numbers`; `itinerary_items.flight_number`; `notifications.kind` values `flight_delay`, `gate_change`; kill switch `provider.flight_status` |
 | Pro tier and scheduled agent routines | `routines` | `runs.routine_id`, `runs.priority`; type `routine_kind`; `run_kind` values `price_check`, `batch_scan`; `run_trigger` values `schedule`, `catch_up`; `plans` row `pro`; `store_products` rows `wayfold_pro_monthly`, `wayfold_pro_annual`; limit keys `scheduled_routines`, `priority_queue`, `credit_rollover_cap`, `group_payments`; flags `tier_pro`, `scheduled_agent_routines` |
 | Concierge lane | `concierge_requests` | type `concierge_status`; `room_block_requests.concierge_request_id`; `consents.kind` value `concierge_sharing`; `support_tickets.category` value `concierge`; flag `concierge_requests` |
 | Direct affiliate programs | none | `affiliate_programs.network` values `impact`, `direct`; `webhook_events.provider` value `impact`; seed programs `expedia_group`, `booking_direct`, `skyscanner`, `airalo`, `getyourguide_direct`; their link templates for them; one `affiliate.<code>` kill switch each |
-| Native Android | none | `store_transactions.store`, `subscriptions.store` value `google`; `devices.push_provider` (FCM token path) |
+| Native Android and web billing | none | `store_products.store`, `store_transactions.store`, `subscriptions.store` values `google` and the web billing value (Phase 1 allows `apple` only); a web price column on `store_products`; `webhook_events.provider` web billing value; `devices.push_provider` (FCM token path) |
 | After-trip compensation prompt, memories and "Year in travel" card | `trip_memories`, `share_cards` | seed programs `travelpayouts_compensair`, `airhelp`; `notifications.kind` value `compensation_prompt`; `trips.completed_at` |
 
 ### Phase 3: scale (year 2 and later), see [../phase-3-scale/](../phase-3-scale/README.md)
 
 | Feature pack | New tables | New columns, values and objects on Phase 1 and Phase 2 tables |
 |---|---|---|
-| Stripe group payments | `payment_collections` | `settlements.collection_id`, `settlements.stripe_payment_intent_id`; `users.stripe_connect_account_id`, `users.stripe_connect_ready`; `store_transactions.kind` value `group_payment`; `webhook_events.provider` value `stripe` already allowed; kill switch `provider.stripe`; flag `group_payments` |
+| Stripe group payments | `payment_collections` | `settlements.collection_id`, `settlements.stripe_payment_intent_id`; `users.stripe_connect_account_id`, `users.stripe_connect_ready`; `store_transactions.kind` value `group_payment`; `webhook_events.provider` value `stripe` added; kill switch `provider.stripe`; flag `group_payments` |
 | Wayfold for Advisors | `advisor_orgs`, `advisor_seats`, `advisor_clients` | `plans.kind` value `advisor_seat`; `plans` row `advisor_seat`; `store_products` rows `advisor_seat_monthly`, `advisor_seat_annual`; `entitlements.source` value `advisor`; `store_transactions.kind` value `advisor_seat`; `concierge_requests.advisor_org_id`; `my_advisor_orgs()`; the advisor branch of the entitlement query (7.1); flag `advisor_workspaces` |
 | Partner guides | `partner_guides` | `itinerary_items.source` value `guide`; `link_clicks.entity_type` value `guide`; flag `partner_guides` |
 | Printed trip books | `print_orders` | `store_transactions.kind` value `print_order`; flag `print_orders` |
