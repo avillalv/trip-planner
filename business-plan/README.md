@@ -1,4 +1,7 @@
-# Business plan: from a personal trip planner to an App Store product
+# Wayfold business plan: from a personal trip planner to an App Store product
+
+The product name is **Wayfold** (see [app-buildout/brand/](app-buildout/brand/)). The build
+specification for the new app lives in [app-buildout/](app-buildout/README.md).
 
 Written 2026-09-30. This folder is a plan, not code: nothing in the app has changed yet.
 
@@ -18,9 +21,12 @@ so in a closing section, so the reasoning stays visible.
   every active user. With the guardrails here, the illustrative month at 10,000 users has about
   56% gross margin from paid plans alone, 64% with affiliate income, and the base-case scenario
   breaks even around month 18 to 22.
-- **Is it a big business?** The base case is a solid side income (about $99k revenue in year 3, about a third of it affiliate commissions),
-  not a venture outcome. The optimistic case needs a sharing loop that is not yet proven. The first
-  milestone is to validate demand before rewriting anything.
+- **Is it a big business?** The consumer app alone is a solid side income (base case about $99k
+  revenue in year 3, about a third of it affiliate commissions). Going well past that needs more
+  than one stream: a concierge booking lane through a host travel agency, group trips, and above all
+  a paid version for professional travel advisors. With those, the base case reaches about $572k in
+  year 5 and the ambitious case about $2.9M, but anything above about $250k a year needs hiring. The
+  first milestone is still to validate demand before rewriting anything.
 
 ## Files
 
@@ -33,7 +39,9 @@ so in a closing section, so the reasoning stays visible.
 | [05-infrastructure.md](05-infrastructure.md) | Hosting, job queue, scheduling, CI/CD, observability, security, infra cost at each scale |
 | [06-database-and-data-integrations.md](06-database-and-data-integrations.md) | Schema changes, data migration, flight and places providers and their terms, caching, affiliate tracking |
 | [07-local-to-app-store.md](07-local-to-app-store.md) | Mobile approach, frontend changes, in-app purchases, App Review checklist, phased roadmap, launch plan |
-| [08-affiliate-revenue.md](08-affiliate-revenue.md) | Every affiliate program researched (lodging, flights, cars, trains, tours, eSIM, insurance and more), where each appears in the app, compliance, tracking, revenue estimates |
+| [08-affiliate-revenue.md](08-affiliate-revenue.md) | Every affiliate program researched (lodging, flights, cars, trains, tours, eSIM, insurance and more), higher-commission lanes (concierge through a host agency, group room blocks, in-app hotel booking), placement, compliance, tracking, revenue estimates |
+| [09-revenue-expansion.md](09-revenue-expansion.md) | Revenue beyond consumer subscriptions and affiliate links: advisor SaaS, group trips, partner guides, printed trip books, white-label; 5-year scenarios and what it takes to reach $500k and $1M a year |
+| [app-buildout/](app-buildout/README.md) | Self-contained build specification for Wayfold: product spec, architecture, database, API, UI, AI, monetization, admin control center, roadmap, quality and launch |
 
 Suggested reading order: this page, 01, 02, 07 (the roadmap), then 03 to 06 as each phase starts.
 
@@ -45,11 +53,13 @@ Every file uses these. If a number changes, change it here first.
 
 | Decision | Value |
 |---|---|
-| Launch tiers | Free, Plus, Trip Pass, credit packs. Premium is built behind a flag and launches later. |
-| Free | $0. 2 active trips, 1 cached-fare route per trip, 8 AI credits a month, 1 price alert on cached fares, joins others' trips free, affiliate booking links |
-| Plus | $4.99 a month or $29.99 a year (7-day trial on annual only). Unlimited trips (fair use 25), 3 live-tracked routes checked daily within 120 days of departure, 40 credits a month, collaboration |
+| Launch tiers | Free, Plus, Family, Trip Pass, Group Trip Pass, credit packs. Pro is built behind a flag and launches later. |
+| Free | $0. 2 active trips, 1 cached-fare route per trip, 12 AI credits a month, one lifetime deep agent run as a taster (served from the shared cache when possible), 1 price alert on cached fares, joins others' trips free, affiliate booking links, "Before you go" checklist |
+| Plus | $5.99 a month or $39.99 a year (7-day trial on annual only; annual is pre-selected). Unlimited trips (fair use 25), 3 live-tracked routes checked daily within 120 days of departure, 60 credits a month (enough for one deep agent run plus extras), collaboration |
+| Family | $8.99 a month or $59.99 a year. Everything in Plus for up to 6 people in one household, 150 pooled credits a month, 5 live routes. Apple Family Sharing stays off; members are invited in the app. |
 | Trip Pass (lead offer) | $9.99 once. Upgrades one trip for 90 days: 2 live routes, at most 60 live checks, 40 credits, up to 6 collaborators. Sold as a non-renewing subscription in StoreKit, bound to the trip on the server. |
-| Premium (later) | $11.99 a month or $99 a year. 240 credits a month (about 6 deep agent runs), 6 live routes, scheduled agent routines, priority queue. Launches when measured agent cost is $0.60 or less per run over 200 runs, or when more than 15% of Plus payers buy agent-run credits. |
+| Group Trip Pass | $19.99 once. Like Trip Pass for groups: up to 12 travelers, 80 credits, polls and cost splitting, room-block request. Non-renewing subscription bound to the trip. |
+| Pro (later; was "Premium") | $11.99 a month or $99 a year. 240 credits a month (about 6 deep agent runs), 6 live routes, scheduled agent routines, priority queue. Launches when measured agent cost is $0.60 or less per run over 200 runs, or when more than 15% of Plus payers buy agent-run credits. |
 | Credit packs | $2.99 for 50, $6.99 for 150, $14.99 for 400. Purchased credits last 12 months and are spent last. |
 | Collaboration | Only the trip owner pays. Invitees join free and get the owner's tier on that trip. AI credits are charged to the person who starts the action. |
 | Ads | No banner ads. Affiliate commissions are the free-tier income; see the affiliate table below. |
@@ -63,10 +73,10 @@ Every file uses these. If a number changes, change it here first.
 | Credit prices | Haiku explain 1, live flight or rental search 1, itinerary day 1, whole-trip draft 4, research question 8 (1 if served from the shared cache), deep agent run 40 (hard stop at $0.80; 8 if served from the shared cache) |
 | Agent run caps | 20 turns, 10 web searches, 10 page fetches, effort `medium`, $0.80 hard stop, one run at a time per account |
 | Research question caps | 5 searches, 8 fetches, $0.16 hard stop |
-| Monthly provider-spend ceiling per account | Free $0.25, Plus $1.75, Trip Pass $1.80 per pass, Premium $5.50. Daily: Free $0.05, Plus and Trip Pass $0.40, Premium $1.25. Cached data keeps working when a ceiling is hit. A deep agent run is admitted if the month has $0.80 of headroom, even above the daily budget; its spend still counts toward that day, so no other paid actions run until the next day. |
+| Monthly provider-spend ceiling per account | Free $0.25 (plus the one-time $0.80 taster run), Plus $2.25, Family $3.40 pooled, Trip Pass $1.80 per pass, Group Trip Pass $3.60 per pass, Pro $5.50. Daily: Free $0.05, Plus, Family and passes $0.40, Pro $1.25. Cached data keeps working when a ceiling is hit. A deep agent run is admitted if the month has $0.80 of headroom, even above the daily budget; its spend still counts toward that day, so no other paid actions run until the next day. |
 | Models | Claude Haiku 4.5 for short answers and page summaries; Claude Sonnet 5.5 for drafting, research and agents |
 | Batch API | Only for offline jobs: shared-cache warming, nightly digests, scheduled fare scans. Never for multi-turn agents or anything a user is waiting on. |
-| Scheduled agents | Off for everyone until Premium. Scheduled work is API price checks plus cheap batch scans, not agents. |
+| Scheduled agents | Off for everyone until Pro. Scheduled work is API price checks plus cheap batch scans, not agents. |
 
 ### Affiliate revenue
 
@@ -83,6 +93,20 @@ Every file uses these. If a number changes, change it here first.
 | New surfaces | A "Before you go" checklist (at least half its items unmonetized; visas link to official sites first; insurance uses insurer-approved copy only and AI never gives insurance advice) and an after-trip "Was your flight delayed?" compensation prompt |
 | Not at launch | Credit cards, VPNs, Amazon product data in the app |
 | Revenue assumption | $0.10 / $0.60 / $1.50 per monthly user per year (conservative / base / optimistic), about $1 per planned trip in the base case; lodging is about 60% of it |
+
+### Revenue beyond subscriptions and links
+
+| Decision | Value |
+|---|---|
+| Concierge lane (year 1 to 2) | Optional "Have a human book this" on stays, cruises and complex trips, fulfilled by the founder as an advisor under a host travel agency (for example Fora). Earns the agency commission (hotels about 8 to 15%, cruises 10 to 16%, host split 70 to 90%) and gives users perks (breakfast, credits, upgrades). Disclosed, never pushed. |
+| Group trips (year 1 to 2) | Group Trip Pass, polls, cost splitting, and hotel room-block requests for weddings and events. Payments for real-world costs go through Stripe, outside Apple In-App Purchase. |
+| In-app hotel booking (year 2+) | LiteAPI (Nuitee) as merchant of record, 5 to 15% margin, only after click data shows strong booking intent |
+| Wayfold for Advisors (year 2+) | Web SaaS for independent travel advisors: client trip workspaces, branded presentation mode, proposals, commission tracking. $29 a seat a month or $24 annual, billed by Stripe on the web. The largest single growth stream. |
+| Partner guides (year 2+) | Tourism boards and hotel brands sponsor clearly labeled destination guides. Never mixed into rankings, never paid placement in search results. |
+| Printed trip books (year 2) | Print-on-demand trip books and posters from presentation mode, ordered on the web |
+| White-label and API (year 3+) | Licensed planner for agencies and tour operators |
+| Not doing | Selling user data, banner ads, cashback that ranks by commission, lifetime subscriptions |
+| Scenarios | Year 5 revenue: conservative about $38k, base about $572k, ambitious about $2.9M. A solo founder tops out around $150k to $250k a year; beyond that needs 2 to 3 people, and $1M+ needs a small funded team. Details in [09-revenue-expansion.md](09-revenue-expansion.md). |
 
 ### Technology
 
@@ -107,7 +131,7 @@ Every file uses these. If a number changes, change it here first.
 | 1: hosted web beta | 6 to 8 weeks | Accounts, sharing, entitlements, ledger; 4-week retention measured |
 | 2: iOS TestFlight | 5 to 7 weeks | Capacitor app, purchases, push, account deletion |
 | 3: public launch | 3 to 4 weeks | App Review passed, support and monitoring in place |
-| 4: growth | Ongoing | Android, shareable trip pages for SEO, Premium |
+| 4: growth | Ongoing | Android, shareable trip pages for SEO, Pro, Wayfold for Advisors |
 
 **Kill rule:** at month 9 after launch, if under 1% of monthly users pay and affiliate income is
 under $0.20 per monthly user per year (annualized), stop investing and keep it as a personal tool.
@@ -122,6 +146,6 @@ These could not be confirmed from here and could change the numbers:
 3. Affiliate commission rates, cookie windows and app eligibility for every program in
    [08-affiliate-revenue.md](08-affiliate-revenue.md): the official partner sites were blocked
    from here, so all rates came from third-party reports.
-4. The real cost of an API agent run: measure 200 runs before setting Premium live.
+4. The real cost of an API agent run: measure 200 runs before setting Pro live.
 5. Apple's current rules on linking out to web checkout in the US.
 6. Competitor prices (taken from third-party reviews on 2026-09-30).

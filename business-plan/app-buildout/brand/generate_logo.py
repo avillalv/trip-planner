@@ -1,7 +1,8 @@
 from fontTools.ttLib import TTFont
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.pens.transformPen import TransformPen
-OUT="/home/user/trip-planner/business-plan/app-buildout/brand/"
+import os
+OUT=os.path.dirname(os.path.abspath(__file__))+"/"
 NAVY="#15203a"; BURG="#8c1d40"; SHEET="#fafbfd"; SUNK="#e3e8ef"; RULE="#d3dae4"; PINK="#e8678c"; PAPER="#edf1f5"
 
 def wordmark(text, font_path, size, tracking=0.0):
@@ -37,7 +38,7 @@ def write(name, w, h, body, title):
 write("wayfold-app-icon.svg",1024,1024,mark(bg=True),"Wayfold app icon")
 write("wayfold-mark.svg",1024,1024,mark(bg=True,rounded=True),"Wayfold")
 
-fp="package/files/archivo-latin-600-normal.woff"
+fp=os.environ.get("ARCHIVO_600", "package/files/archivo-latin-600-normal.woff")  # from: npm pack @fontsource/archivo
 d,wid,cap=wordmark("Wayfold",fp,300,-0.01)
 def lockup(dark):
     ink = "#dde4ef" if dark else NAVY
