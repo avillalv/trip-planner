@@ -363,18 +363,15 @@ Monthly USD, rough, infrastructure only (no Claude, no flight or place data, no 
 | API compute | $25 (1 instance) | $50 to $170 (2 x 2 GB, or 2 x 4 GB) | $300 to $600 (6 to 10 Fargate tasks) |
 | Job workers and scheduler | $25 | $50 to $170 (2 to 3 workers) | $400 to $900 (8 to 16 tasks across lanes) |
 | Managed Postgres with PITR | $30 to $50 (2 to 4 GB RAM) | $200 to $400 (HA, 8 to 16 GB) | $1,200 to $2,200 (Multi-AZ, plus one replica) |
+| Load balancer, NAT, networking | included | included | $150 to $400 |
 | Redis | $0 (not yet) | $30 (small) | $200 to $400 (ElastiCache) |
 | Auth (Supabase) | $0 (free plan) | $25 (Pro) | $25 to $100 |
 | Object storage and egress | $1 to $5 | $5 to $30 | $100 to $300 (S3 plus CloudFront) |
 | CDN, DNS, WAF | $0 (Cloudflare free) | $25 (Cloudflare Pro) | $200 to $500 (Cloudflare Business or AWS WAF) |
-| Load balancer, NAT, networking | included | included | $150 to $400 |
 | Email | $0 to $20 | $20 to $35 | $100 to $250 |
-| Push (APNs) | $0 | $0 | $0 |
 | Error tracking (Sentry) | $0 to $26 | $26 to $80 | $80 to $300 |
 | Logs, metrics, APM | $0 to $25 | $30 to $100 | $500 to $1,500 |
-| Uptime and status page | $0 to $20 | $20 to $30 | $30 to $100 |
-| CI (GitHub Actions, macOS builds) | $0 to $15 | $15 to $40 | $50 to $150 |
-| Secrets manager and misc | $0 | $0 to $10 | $20 to $60 |
+| CI, uptime, status page, secrets, misc (APNs is free) | $0 to $35 | $35 to $80 | $100 to $310 |
 | Apple Developer Program | about $8 ($99 a year) | about $8 | about $8 |
 | **Total (approx.)** | **$90 to $220** | **$500 to $1,150** | **$3,400 to $7,800** |
 | Infra cost per MAU | $0.09 to $0.22 | $0.05 to $0.115 | $0.034 to $0.078 |
@@ -382,7 +379,6 @@ Monthly USD, rough, infrastructure only (no Claude, no flight or place data, no 
 Reading the table:
 - Infrastructure is small next to Claude and flight-data spend, so design effort goes into caching, dedup, ceilings and alerts, not into shaving compute.
 - Flight data scales with unique searches, not users. Rough sizing at 100k MAU: 10 percent with live-tracked routes, up to 3 each, checked once a day is about 30k checks a day. With cross-user dedup, expect several times fewer provider calls. That saving is worth more than any hosting choice.
-- Costs at 100k on AWS can be about 30 percent lower with reserved capacity or Savings Plans once usage is predictable.
 
 ## 9. Phased rollout
 
