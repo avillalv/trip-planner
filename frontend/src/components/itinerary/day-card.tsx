@@ -1,9 +1,11 @@
 import { ChevronRight, MapPin } from 'lucide-react'
 import { Link } from 'react-router'
 import type { Day } from '@/lib/api/itinerary'
+import type { DayWeather } from '@/lib/api/weather'
 import { parseDate } from '@/lib/dates'
 import { formatTime } from '@/lib/itinerary-time'
 import { cn } from '@/lib/utils'
+import { WeatherChip } from './weather-chip'
 
 const weekday = new Intl.DateTimeFormat(undefined, { weekday: 'short' })
 const month = new Intl.DateTimeFormat(undefined, { month: 'short' })
@@ -21,7 +23,9 @@ function Brief({ label, item }: { label: string; item: NonNullable<Day['first']>
 }
 
 /** One day of the trip: its date like a passport entry stamp, what it's called, and its first and last plans. */
-export function DayCard({ day, number, to }: { day: Day; number: number | null; to: string }) {
+type DayCardProps = { day: Day; number: number | null; to: string; weather?: DayWeather }
+
+export function DayCard({ day, number, to, weather }: DayCardProps) {
   const date = parseDate(day.day)
   const empty = day.activity_count === 0
   const more = day.activity_count - (day.first ? 1 : 0) - (day.last ? 1 : 0)
@@ -57,6 +61,7 @@ export function DayCard({ day, number, to }: { day: Day; number: number | null; 
               aria-hidden="true"
             />
           </div>
+          {weather && <WeatherChip weather={weather} />}
           {empty ? (
             <p className="text-sm text-ink-soft">Nothing planned yet</p>
           ) : (

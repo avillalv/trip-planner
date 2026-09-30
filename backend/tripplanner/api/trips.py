@@ -2,7 +2,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 
 from tripplanner.api.deps import DbSession
 from tripplanner.schemas.presentation import Presentation
-from tripplanner.schemas.trips import TripIn, TripOut
+from tripplanner.schemas.trips import InterestsIn, TripIn, TripOut
 from tripplanner.services import presentation as deck
 from tripplanner.services import trips as service
 from tripplanner.services.enrichment import enrich_destinations
@@ -57,6 +57,15 @@ def update_trip(trip_id: int, body: TripIn, db: DbSession, background: Backgroun
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
     background.add_task(enrich_destinations, needs_info)
     return service.to_out(trip)
+
+
+@router.put("/{trip_id}/interests", response_model=TripOut)
+def set_interests(trip_id: int, body: InterestsIn, db: DbSession) -> TripOut:
+    """Replace what the travelers enjoy. The trip form doesn't touch this list."""
+    try:
+        return service.to_out(service.set_interests(db, trip_id, body.interests))
+    except service.TripNotFound as exc:
+        raise _not_found() from exc
 
 
 @router.delete("/{trip_id}", status_code=status.HTTP_204_NO_CONTENT)

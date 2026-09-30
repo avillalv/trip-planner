@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { Outlet, Route, Routes } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import type { Activity, Day } from '@/lib/api/itinerary'
+import type { DayWeather } from '@/lib/api/weather'
 import { trip } from '@/test/fixtures'
 import { jsonResponse, mockApi, renderWithProviders } from '@/test/render'
 import type { TripOutletContext } from './trip-context'
@@ -50,6 +51,21 @@ function idea(overrides: Partial<Activity> = {}): Activity {
   }
 }
 
+function weather(overrides: Partial<DayWeather> = {}): DayWeather {
+  return {
+    day: '2026-11-05',
+    destination_id: 1,
+    destination_name: 'Kyoto',
+    kind: 'forecast',
+    high_f: 84,
+    low_f: 72,
+    precip_in: 0.12,
+    rain_chance: 40,
+    wet_days_pct: null,
+    ...overrides,
+  }
+}
+
 function renderItinerary() {
   const context: TripOutletContext = { trip: trip(), editTrip: () => {} }
   return renderWithProviders(
@@ -75,6 +91,7 @@ describe('TripItinerary', () => {
         day({ day: '2026-11-06' }),
       ],
       '/api/v1/trips/7/activities': [idea()],
+      '/api/v1/trips/7/weather': [],
     })
 
     renderItinerary()
@@ -87,6 +104,42 @@ describe('TripItinerary', () => {
     expect(screen.getByText('Day 2')).toBeInTheDocument()
     expect(screen.getByText('Nothing planned yet')).toBeInTheDocument()
     expect(screen.getByText('Ghibli Museum')).toBeInTheDocument()
+    expect(screen.queryByText(/Open-Meteo/)).not.toBeInTheDocument()
+  })
+
+  it('shows each day its forecast or typical weather, with the attribution once', async () => {
+    mockApi({
+      '/api/v1/trips/7/days': [day(), day({ day: '2026-11-06' }), day({ day: '2026-11-07' })],
+      '/api/v1/trips/7/activities': [],
+      '/api/v1/trips/7/weather': [
+        weather(),
+        weather({ day: '2026-11-06', kind: 'typical', rain_chance: null, wet_days_pct: 25 }),
+      ],
+    })
+
+    renderItinerary()
+
+    const [first, second, third] = (await screen.findAllByRole('link', { name: /Day \d/ })).slice(0, 3)
+    expect(within(first).getByText('84° / 72° · 40% rain')).toBeInTheDocument()
+    expect(within(second).getByText('84° / 72° · 25% wet days')).toBeInTheDocument()
+    expect(within(second).getByText('typical')).toBeInTheDocument()
+    expect(within(third).queryByText(/°/)).not.toBeInTheDocument()
+    const credit = screen.getAllByRole('link', { name: 'Weather data by Open-Meteo.com' })
+    expect(credit).toHaveLength(1)
+    expect(credit[0]).toHaveAttribute('href', 'https://open-meteo.com/')
+  })
+
+  it("still shows the days when the weather can't be loaded", async () => {
+    mockApi({
+      '/api/v1/trips/7/days': [day({ title: 'Temples' })],
+      '/api/v1/trips/7/activities': [],
+      '/api/v1/trips/7/weather': () => jsonResponse({ detail: 'nope' }, 502),
+    })
+
+    renderItinerary()
+
+    expect(await screen.findByText('Temples')).toBeInTheDocument()
+    expect(screen.queryByText(/Open-Meteo/)).not.toBeInTheDocument()
   })
 
   it('saves your own idea', async () => {
@@ -94,6 +147,7 @@ describe('TripItinerary', () => {
     mockApi({
       '/api/v1/trips/7/days': [day()],
       '/api/v1/trips/7/activities': [],
+      '/api/v1/trips/7/weather': [],
       'POST /api/v1/trips/7/activities': async (request: Request) => {
         sent = await request.json()
         return jsonResponse(idea({ title: 'Sumo practice', category: 'sights' }), 201)

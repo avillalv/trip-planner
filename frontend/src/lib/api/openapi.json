@@ -543,6 +543,59 @@
         }
       }
     },
+    "/api/v1/trips/{trip_id}/interests": {
+      "put": {
+        "tags": [
+          "trips"
+        ],
+        "summary": "Set Interests",
+        "description": "Replace what the travelers enjoy. The trip form doesn't touch this list.",
+        "operationId": "set_interests",
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Trip Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InterestsIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TripOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/trips/{trip_id}/refresh-info": {
       "post": {
         "tags": [
@@ -3411,6 +3464,53 @@
           }
         }
       }
+    },
+    "/api/v1/trips/{trip_id}/weather": {
+      "get": {
+        "tags": [
+          "weather"
+        ],
+        "summary": "Trip Weather",
+        "description": "Weather for each trip day: the forecast for the next 15 days, typical weather (the last five\nyears' average for that date) for the rest. Days with no destination or no data are left out, so\nan undated trip, or one whose weather can't be reached, gives an empty list.",
+        "operationId": "trip_weather",
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Trip Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DayWeather"
+                  },
+                  "title": "Response Trip Weather"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4674,6 +4774,77 @@
         "type": "object",
         "title": "DayUpdate"
       },
+      "DayWeather": {
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day"
+          },
+          "destination_id": {
+            "type": "integer",
+            "title": "Destination Id"
+          },
+          "destination_name": {
+            "type": "string",
+            "title": "Destination Name"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "forecast",
+              "typical"
+            ],
+            "title": "Kind"
+          },
+          "high_f": {
+            "type": "integer",
+            "title": "High F"
+          },
+          "low_f": {
+            "type": "integer",
+            "title": "Low F"
+          },
+          "precip_in": {
+            "type": "number",
+            "title": "Precip In"
+          },
+          "rain_chance": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rain Chance"
+          },
+          "wet_days_pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wet Days Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "destination_id",
+          "destination_name",
+          "kind",
+          "high_f",
+          "low_f",
+          "precip_in"
+        ],
+        "title": "DayWeather",
+        "description": "One trip day's weather at its destination, in \u00b0F and inches.\n\n`forecast` days are within the forecast's reach and carry `rain_chance`. All other days are\n`typical`: averages over the last five years, with `wet_days_pct` (the share of those days that\nhad at least 0.04 in of rain or snow)."
+      },
       "DeckActivity": {
         "properties": {
           "id": {
@@ -5892,6 +6063,22 @@
         ],
         "title": "IntegrationStatus",
         "description": "Which API keys are configured. Values are never exposed, only presence."
+      },
+      "InterestsIn": {
+        "properties": {
+          "interests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Interests"
+          }
+        },
+        "type": "object",
+        "required": [
+          "interests"
+        ],
+        "title": "InterestsIn"
       },
       "Layover": {
         "properties": {
@@ -9786,6 +9973,13 @@
             "type": "string",
             "title": "Notes"
           },
+          "interests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Interests"
+          },
           "destinations": {
             "items": {
               "$ref": "#/components/schemas/DestinationOut"
@@ -9840,6 +10034,7 @@
           "status",
           "home_currency",
           "notes",
+          "interests",
           "destinations",
           "travelers",
           "cover",

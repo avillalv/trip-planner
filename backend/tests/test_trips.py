@@ -157,3 +157,52 @@ def test_editing_a_trip_keeps_each_destinations_place_id(client: TestClient) -> 
     elsewhere = {**destination("Osaka", lat=34.69, lon=135.5), "id": kept["id"]}
     moved = client.put(f"/api/v1/trips/{created['id']}", json=trip_payload(destinations=[elsewhere]))
     assert moved.json()["destinations"][0]["geoapify_place_id"] is None
+
+
+def test_interests_are_tidied_and_saved(client: TestClient, db_session: Session) -> None:
+    trip = client.post("/api/v1/trips", json=trip_payload()).json()
+    assert trip["interests"] == []
+
+    response = client.put(
+        f"/api/v1/trips/{trip['id']}/interests",
+        json={"interests": ["  Beaches ", "ATV   tours", "beaches", "", "   ", "Local  markets", "BEACHES"]},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["interests"] == ["Beaches", "ATV tours", "Local markets"]
+    assert client.get(f"/api/v1/trips/{trip['id']}").json()["interests"] == [
+        "Beaches",
+        "ATV tours",
+        "Local markets",
+    ]
+    assert (
+        client.put(f"/api/v1/trips/{trip['id']}/interests", json={"interests": []}).json()["interests"] == []
+    )
+
+
+def test_interest_limits_explain_themselves(client: TestClient) -> None:
+    trip = client.post("/api/v1/trips", json=trip_payload()).json()
+    url = f"/api/v1/trips/{trip['id']}/interests"
+
+    too_many = client.put(url, json={"interests": [f"Thing {n}" for n in range(26)]})
+    too_long = client.put(url, json={"interests": ["x" * 61]})
+    at_limits = client.put(url, json={"interests": ["x" * 60] + [f"Thing {n}" for n in range(24)]})
+    duplicates_dont_count = client.put(url, json={"interests": ["Surf", "surf"] * 20})
+
+    assert too_many.status_code == 422 and "25 interests or fewer" in too_many.text
+    assert too_long.status_code == 422 and "60 characters or fewer" in too_long.text
+    assert at_limits.status_code == 200 and len(at_limits.json()["interests"]) == 25
+    assert duplicates_dont_count.json()["interests"] == ["Surf"]
+    assert client.put("/api/v1/trips/4242/interests", json={"interests": []}).status_code == 404
+
+
+def test_saving_the_trip_form_keeps_interests(client: TestClient) -> None:
+    trip = client.post("/api/v1/trips", json=trip_payload()).json()
+    client.put(f"/api/v1/trips/{trip['id']}/interests", json={"interests": ["Volcanoes", "Streetwear"]})
+
+    saved = client.put(f"/api/v1/trips/{trip['id']}", json=trip_payload(name="Japan, later", notes="Edited"))
+
+    assert saved.status_code == 200
+    assert saved.json()["name"] == "Japan, later"
+    assert saved.json()["interests"] == ["Volcanoes", "Streetwear"]
+    assert client.get("/api/v1/trips").json()[0]["interests"] == ["Volcanoes", "Streetwear"]

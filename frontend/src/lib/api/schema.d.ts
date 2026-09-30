@@ -210,6 +210,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/interests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Interests
+         * @description Replace what the travelers enjoy. The trip form doesn't touch this list.
+         */
+        put: operations["set_interests"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trips/{trip_id}/refresh-info": {
         parameters: {
             query?: never;
@@ -1039,6 +1059,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/weather": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Trip Weather
+         * @description Weather for each trip day: the forecast for the next 15 days, typical weather (the last five
+         *     years' average for that date) for the rest. Days with no destination or no data are left out, so
+         *     an undated trip, or one whose weather can't be reached, gives an empty list.
+         */
+        get: operations["trip_weather"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1389,6 +1431,40 @@ export interface components {
             notes?: string | null;
             /** Destination Id */
             destination_id?: number | null;
+        };
+        /**
+         * DayWeather
+         * @description One trip day's weather at its destination, in °F and inches.
+         *
+         *     `forecast` days are within the forecast's reach and carry `rain_chance`. All other days are
+         *     `typical`: averages over the last five years, with `wet_days_pct` (the share of those days that
+         *     had at least 0.04 in of rain or snow).
+         */
+        DayWeather: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Destination Id */
+            destination_id: number;
+            /** Destination Name */
+            destination_name: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "forecast" | "typical";
+            /** High F */
+            high_f: number;
+            /** Low F */
+            low_f: number;
+            /** Precip In */
+            precip_in: number;
+            /** Rain Chance */
+            rain_chance?: number | null;
+            /** Wet Days Pct */
+            wet_days_pct?: number | null;
         };
         /** DeckActivity */
         DeckActivity: {
@@ -1754,6 +1830,11 @@ export interface components {
             wikimedia: boolean;
             /** Agent Api */
             agent_api: boolean;
+        };
+        /** InterestsIn */
+        InterestsIn: {
+            /** Interests */
+            interests: string[];
         };
         /** Layover */
         Layover: {
@@ -2881,6 +2962,8 @@ export interface components {
             home_currency: string;
             /** Notes */
             notes: string;
+            /** Interests */
+            interests: string[];
             /** Destinations */
             destinations: components["schemas"]["DestinationOut"][];
             /** Travelers */
@@ -3364,6 +3447,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Presentation"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_interests: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InterestsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TripOut"];
                 };
             };
             /** @description Validation Error */
@@ -5145,6 +5263,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentAck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trip_weather: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DayWeather"][];
                 };
             };
             /** @description Validation Error */

@@ -2,6 +2,7 @@ import { Clock, ExternalLink, RefreshCw } from 'lucide-react'
 import { TripFindings } from '@/components/agents/trip-findings'
 import { CountryTag } from '@/components/common/country-tag'
 import { PersonAvatar } from '@/components/people/person-avatar'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSystemStatus } from '@/lib/api/system'
@@ -161,6 +162,18 @@ function AtAGlance({ trip, now }: { trip: Trip; now: Date }) {
             {currency && currency.name !== trip.home_currency && ` — ${currency.name}`}
           </dd>
         </div>
+        {trip.interests.length > 0 && (
+          <div>
+            <dt className="type-label text-ink-soft">Interests</dt>
+            <dd className="mt-1.5 flex flex-wrap gap-1.5">
+              {trip.interests.map((interest) => (
+                <Badge key={interest} variant="outline" className="font-normal">
+                  {interest}
+                </Badge>
+              ))}
+            </dd>
+          </div>
+        )}
       </dl>
     </section>
   )

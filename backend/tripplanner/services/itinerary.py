@@ -47,6 +47,13 @@ def _brief(activity: Activity | None) -> ActivityBrief | None:
     return ActivityBrief(title=activity.title, start_time=activity.start_time) if activity else None
 
 
+def day_destination(trip: Trip, row: ItineraryDay | None) -> TripDestination | None:
+    """Where a day is spent: the destination set on the day, else the trip's first."""
+    if row is not None and row.destination_id:
+        return next((d for d in trip.destinations if d.id == row.destination_id), None)
+    return trip.destinations[0] if trip.destinations else None
+
+
 def list_days(db: Session, trip: Trip) -> list[DayOut]:
     overrides = {
         row.day: row for row in db.scalars(select(ItineraryDay).where(ItineraryDay.trip_id == trip.id))
@@ -58,12 +65,10 @@ def list_days(db: Session, trip: Trip) -> list[DayOut]:
         by_day[activity.day].append(activity)  # type: ignore[index]
 
     in_trip = set(trip_dates(trip))
-    destinations = {d.id: d for d in trip.destinations}
-    fallback: TripDestination | None = trip.destinations[0] if trip.destinations else None
     days = []
     for day in sorted(in_trip | set(by_day)):
         row = overrides.get(day)
-        destination = destinations.get(row.destination_id) if row and row.destination_id else fallback
+        destination = day_destination(trip, row)
         ordered = sorted(by_day.get(day, []), key=day_order)
         # The day's span: earliest and latest timed plans (any-time ones only when nothing is timed).
         timed = [a for a in ordered if a.start_time is not None] or ordered

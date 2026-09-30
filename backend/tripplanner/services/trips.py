@@ -109,6 +109,14 @@ def update_trip(db: Session, trip_id: int, data: TripIn) -> tuple[Trip, list[int
     return get_trip(db, trip_id), [d.id for d in needs_info]
 
 
+def set_interests(db: Session, trip_id: int, interests: list[str]) -> Trip:
+    trip = get_trip(db, trip_id)
+    trip.interests = interests
+    db.commit()
+    db.expire_all()
+    return get_trip(db, trip_id)
+
+
 def delete_trip(db: Session, trip_id: int) -> None:
     trip = get_trip(db, trip_id)
     db.delete(trip)
@@ -135,6 +143,7 @@ def to_out(trip: Trip) -> TripOut:
         status=trip.status,
         home_currency=trip.home_currency,
         notes=trip.notes,
+        interests=list(trip.interests or []),
         destinations=[DestinationOut.model_validate(d) for d in trip.destinations],
         travelers=[PersonOut.model_validate(p) for p in trip.travelers],
         cover=cover,

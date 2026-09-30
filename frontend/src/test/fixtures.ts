@@ -25,6 +25,7 @@ export function trip(overrides: Partial<Trip> = {}): Trip {
     status: 'planning',
     home_currency: 'USD',
     notes: '',
+    interests: [],
     destinations: [
       {
         id: 1,

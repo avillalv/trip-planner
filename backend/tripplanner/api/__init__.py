@@ -13,8 +13,23 @@ from tripplanner.api import (
     settings,
     system,
     trips,
+    weather,
 )
 
 api_router = APIRouter()
-for module in (system, auth, people, trips, flights, itinerary, places, lodging, runs, geo, settings, agent):
+for module in (
+    system,
+    auth,
+    people,
+    trips,
+    flights,
+    itinerary,
+    places,
+    lodging,
+    runs,
+    geo,
+    settings,
+    agent,
+    weather,
+):
     api_router.include_router(module.router)

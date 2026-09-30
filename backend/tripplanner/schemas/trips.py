@@ -78,6 +78,30 @@ class TripIn(BaseModel):
         return self
 
 
+MAX_INTERESTS = 25
+MAX_INTEREST_LENGTH = 60
+
+
+class InterestsIn(BaseModel):
+    interests: list[str]
+
+    @field_validator("interests")
+    @classmethod
+    def tidy(cls, values: list[str]) -> list[str]:
+        """Collapse spaces, drop blanks, and keep the first spelling of each interest."""
+        seen: dict[str, str] = {}
+        for value in values:
+            cleaned = " ".join(value.split())
+            if cleaned:
+                seen.setdefault(cleaned.casefold(), cleaned)
+        tidy = list(seen.values())
+        if len(tidy) > MAX_INTERESTS:
+            raise ValueError(f"Keep it to {MAX_INTERESTS} interests or fewer.")
+        if any(len(value) > MAX_INTEREST_LENGTH for value in tidy):
+            raise ValueError(f"Keep each interest to {MAX_INTEREST_LENGTH} characters or fewer.")
+        return tidy
+
+
 class TripCover(BaseModel):
     image_url: str
     image_file: str | None
@@ -113,6 +137,8 @@ class TripOut(BaseModel):
     status: TripStatus
     home_currency: str
     notes: str
+    # What the travelers enjoy; edited on its own (PUT /trips/{id}/interests), never by the trip form.
+    interests: list[str]
     destinations: list[DestinationOut]
     travelers: list[PersonOut]
     cover: TripCover | None

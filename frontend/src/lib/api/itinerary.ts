@@ -2,6 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { toast } from 'sonner'
 import { api, isStale, unwrap } from './client'
 import type { components } from './schema'
+import { weatherKey } from './weather'
 
 export type Day = components['schemas']['DayOut']
 export type DayUpdate = components['schemas']['DayUpdate']
@@ -54,7 +55,11 @@ export function useUpdateDay(tripId: number) {
       unwrap(
         await api.PUT('/api/v1/trips/{trip_id}/days/{day}', { params: { path: { trip_id: tripId, day } }, body }),
       ),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: daysKey(tripId) }),
+    onSuccess: (_day, variables) => {
+      // The day's destination decides which weather it gets.
+      if ('destination_id' in variables) void queryClient.invalidateQueries({ queryKey: weatherKey(tripId) })
+      return queryClient.invalidateQueries({ queryKey: daysKey(tripId) })
+    },
   })
 }
 

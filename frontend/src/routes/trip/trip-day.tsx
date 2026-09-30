@@ -10,11 +10,13 @@ import type { TimeChange } from '@/components/itinerary/day-calendar'
 import { IdeasPanel } from '@/components/itinerary/ideas-panel'
 import { longDate } from '@/components/itinerary/labels'
 import { searchCenter } from '@/components/itinerary/search-center'
+import { WeatherAttribution, WeatherChip } from '@/components/itinerary/weather-chip'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { useActivities, useDays, useUpdateActivity, useUpdateDay, type Activity, type Day } from '@/lib/api/itinerary'
+import { useTripWeather } from '@/lib/api/weather'
 import { addMinutes, suggestStart } from '@/lib/itinerary-time'
 import { NotFound } from '@/routes/errors'
 import { useTripContext } from './trip-context'
@@ -62,6 +64,7 @@ function DayView({ tripId, day, days, activities }: DayViewProps) {
   const update = useUpdateActivity(tripId)
   const updateDay = useUpdateDay(tripId)
   const text = useDayText(tripId, day)
+  const weather = useTripWeather(trip).data?.find((w) => w.day === day.day)
   const [ideasEl, setIdeasEl] = useState<HTMLElement | null>(null)
   const [adding, setAdding] = useState<Partial<ActivityDraft> | null>(null)
   const [editing, setEditing] = useState<Activity | null>(null)
@@ -166,6 +169,12 @@ function DayView({ tripId, day, days, activities }: DayViewProps) {
             )
           )}
           {destination?.timezone && <span>Times are local to {destination.name}</span>}
+          {weather && (
+            <>
+              <WeatherChip weather={weather} />
+              <WeatherAttribution />
+            </>
+          )}
         </div>
         <Input
           aria-label="Name this day"

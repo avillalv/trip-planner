@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, unwrap } from './client'
 import type { components } from './schema'
+import { weatherKey } from './weather'
 
 export type Trip = components['schemas']['TripOut']
 export type TripInput = components['schemas']['TripIn']
@@ -40,6 +41,36 @@ export function useSaveTrip(tripId?: number) {
         ? unwrap(await api.POST('/api/v1/trips', { body }))
         : unwrap(await api.PUT('/api/v1/trips/{trip_id}', { params: { path: { trip_id: tripId } }, body })),
     onSuccess: (trip) => {
+      queryClient.setQueryData(tripKey(trip.id), trip)
+      void queryClient.invalidateQueries({ queryKey: weatherKey(trip.id) })
+      return queryClient.invalidateQueries({ queryKey: tripsKey })
+    },
+  })
+}
+
+/** What the travelers enjoy. Changes show at once and roll back if the save fails. */
+export function useSetInterests(tripId: number) {
+  const queryClient = useQueryClient()
+  const mutationKey = ['set-interests', tripId]
+  return useMutation({
+    mutationKey,
+    mutationFn: async (interests: string[]): Promise<Trip> =>
+      unwrap(
+        await api.PUT('/api/v1/trips/{trip_id}/interests', {
+          params: { path: { trip_id: tripId } },
+          body: { interests },
+        }),
+      ),
+    onMutate: async (interests) => {
+      await queryClient.cancelQueries({ queryKey: tripKey(tripId) })
+      const before = queryClient.getQueryData<Trip>(tripKey(tripId))
+      queryClient.setQueryData<Trip>(tripKey(tripId), (trip) => trip && { ...trip, interests })
+      return { before }
+    },
+    onError: (_error, _interests, context) => queryClient.setQueryData(tripKey(tripId), context?.before),
+    onSuccess: (trip) => {
+      // While a newer change is still saving, keep showing it rather than this older answer.
+      if (queryClient.isMutating({ mutationKey }) > 1) return
       queryClient.setQueryData(tripKey(trip.id), trip)
       return queryClient.invalidateQueries({ queryKey: tripsKey })
     },

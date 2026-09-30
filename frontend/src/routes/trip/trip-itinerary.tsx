@@ -5,9 +5,11 @@ import { AddActivityDialog } from '@/components/itinerary/add-activity-dialog'
 import { DayCard } from '@/components/itinerary/day-card'
 import { IdeasPanel } from '@/components/itinerary/ideas-panel'
 import { searchCenter } from '@/components/itinerary/search-center'
+import { WeatherAttribution } from '@/components/itinerary/weather-chip'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useActivities, useDays, type Activity } from '@/lib/api/itinerary'
+import { useTripWeather, weatherByDay } from '@/lib/api/weather'
 import { formatDateRange } from '@/lib/dates'
 import { useTripContext } from './trip-context'
 
@@ -15,6 +17,8 @@ export function TripItinerary() {
   const { trip, editTrip } = useTripContext()
   const days = useDays(trip.id)
   const activities = useActivities(trip.id)
+  const weather = useTripWeather(trip)
+  const weatherOn = weatherByDay(weather.data)
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<Activity | null>(null)
   const ideas = (activities.data ?? []).filter((a) => a.day === null)
@@ -60,9 +64,15 @@ export function TripItinerary() {
                 day={day}
                 number={day.in_trip ? inTrip.findIndex((d) => d.day === day.day) + 1 : null}
                 to={day.day}
+                weather={weatherOn.get(day.day)}
               />
             ))}
           </ol>
+        )}
+        {weatherOn.size > 0 && (
+          <p>
+            <WeatherAttribution />
+          </p>
         )}
       </section>
 
