@@ -58,10 +58,10 @@ Every file uses these. If a number changes, change it here first.
 | Decision | Value |
 |---|---|
 | Credit unit | 1 credit is a budget of up to $0.02 of provider spend (Claude, SerpApi, Geoapify) |
-| Credit prices | Haiku explain 1, live flight or rental search 1, itinerary day 1, whole-trip draft 4, research question 8 (1 if served from the shared cache), deep agent run 40 (hard stop at $0.80) |
+| Credit prices | Haiku explain 1, live flight or rental search 1, itinerary day 1, whole-trip draft 4, research question 8 (1 if served from the shared cache), deep agent run 40 (hard stop at $0.80; 8 if served from the shared cache) |
 | Agent run caps | 20 turns, 10 web searches, 10 page fetches, effort `medium`, $0.80 hard stop, one run at a time per account |
 | Research question caps | 5 searches, 8 fetches, $0.16 hard stop |
-| Monthly provider-spend ceiling per account | Free $0.25, Plus $1.75, Trip Pass $1.80 per pass, Premium $5.50. Daily: Free $0.05, Plus and Trip Pass $0.40, Premium $1.25. Cached data keeps working when a ceiling is hit. |
+| Monthly provider-spend ceiling per account | Free $0.25, Plus $1.75, Trip Pass $1.80 per pass, Premium $5.50. Daily: Free $0.05, Plus and Trip Pass $0.40, Premium $1.25. Cached data keeps working when a ceiling is hit. A deep agent run is admitted if the month has $0.80 of headroom, even above the daily budget; its spend still counts toward that day, so no other paid actions run until the next day. |
 | Models | Claude Haiku 4.5 for short answers and page summaries; Claude Sonnet 5.5 for drafting, research and agents |
 | Batch API | Only for offline jobs: shared-cache warming, nightly digests, scheduled fare scans. Never for multi-turn agents or anything a user is waiting on. |
 | Scheduled agents | Off for everyone until Premium. Scheduled work is API price checks plus cheap batch scans, not agents. |

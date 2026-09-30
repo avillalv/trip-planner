@@ -282,6 +282,8 @@ The design goal: no account can cost more than its net revenue, whatever it does
 
 The ceiling counts SerpApi, Claude, and Geoapify spend attributed to the account. The ledger is the new `provider_calls` and `ai_usage` tables described in [06-database-and-data-integrations.md](06-database-and-data-integrations.md), which generalize today's `ApiCall` table (provider, units, cached) with user, trip, and cost in dollars. Purchased credits raise the ceiling by the pack's cost value, since that spend is separately paid.
 
+A deep agent run ($0.80 hard stop) costs more than the $0.40 daily budget on Plus and Trip Pass, so the rule is: a run is admitted when the month has at least $0.80 of headroom, even if it pushes past the daily budget. Its spend still counts toward that day, so no other paid actions run until the next day.
+
 ### 6.2 Rate and abuse limits
 
 - One agent run at a time per account, and one global concurrent-run cap per worker pool. Queue the rest (Premium first).

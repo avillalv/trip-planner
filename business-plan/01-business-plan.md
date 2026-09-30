@@ -19,7 +19,7 @@ Year 3 headline numbers (details in [Three-year scenarios](#three-year-scenarios
 
 | Scenario | Avg MAU | Paying users | Revenue | Net profit (before founder pay) |
 |---|---|---|---|---|
-| Conservative | 12,000 | 240 | about $11k | about -$2k (near break-even) |
+| Conservative | 12,000 | 240 | about $11k | about -$1.6k (near break-even) |
 | Base | 60,000 | 2,100 | about $111k | about +$47k |
 | Optimistic | 200,000 | 10,000 | about $580k | about +$222k |
 
@@ -283,7 +283,7 @@ Cost and quality:
 Each point below records an earlier idea, the concern, and the final decision.
 
 1. **Premium runs and price.** The initial idea was 10 to 15 agent runs a month at $11.99 or $79 a year. At $0.50 to $1.50 per run that costs $5 to $22 a month against $10.19 net (monthly) or $5.60 net (annual). Decision: Premium is $11.99 a month or $99 a year with 240 credits (about 6 deep runs), a $0.80 hard stop per run, a $5.50 monthly ceiling, and it launches later, when measured cost is $0.60 or less per run over 200 runs or over 15% of Plus payers buy run credits.
-2. **Premium price against rivals.** Rivals charge $40 to $50 a year (Wanderlog $39.99, TripIt $49, Layla about $49), and I would have tested $49.99 to $59.99. The concern stands: $99 is about double, so Premium must clearly offer something they lack. But at $49.99 to $59.99 a year the net is only $3.54 to $4.25 a month, too little for a $5.50 ceiling. Decision: $99 is the launch price because of the ceiling. Premium's price will be tested once measured agent cost drops, and credit packs carry heavy users meanwhile.
+2. **Premium price against rivals.** Rivals charge $40 to $50 a year (Wanderlog $39.99, TripIt $49, Layla about $49), and the first draft suggested testing $49.99 to $59.99. The concern stands: $99 is about double, so Premium must clearly offer something they lack. But at $49.99 to $59.99 a year the net is only $3.54 to $4.25 a month, too little for a $5.50 ceiling. Decision: $99 is the launch price because of the ceiling. Premium's price will be tested once measured agent cost drops, and credit packs carry heavy users meanwhile.
 3. **Live tracking as a headline.** Google Flights tracks prices free. Decision: Plus includes 3 live-tracked routes checked daily within 120 days of departure, but the pitch is "tracked with the reason and the source", and value comes from the workspace plus evidence-backed hunts.
 4. **Research per month.** Use is episodic, so a fixed monthly quota fits badly. Decision: AI is priced in credits (1 credit is up to $0.02 of provider spend). Trip Pass gives a burst of 40 credits for one trip over 90 days; Plus gives 40 a month; purchased credits last 12 months.
 5. **Affiliate as main free-tier income.** Plausible but unproven. At $0.40 to $1.20 per MAU per year it pays for infrastructure, not a salary. Decision: affiliate links are the free-tier income (no banner ads), treated as a floor, not the growth plan.
