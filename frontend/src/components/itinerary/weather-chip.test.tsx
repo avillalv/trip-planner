@@ -14,6 +14,7 @@ function weather(overrides: Partial<DayWeather> = {}): DayWeather {
     precip_in: 0.12,
     rain_chance: 40,
     wet_days_pct: null,
+    whole_country: false,
     ...overrides,
   }
 }
@@ -23,7 +24,7 @@ describe('WeatherChip', () => {
     render(<WeatherChip weather={weather()} />)
 
     const text = screen.getByText('84° / 72° · 40% rain')
-    expect(text.closest('[title]')).toHaveAttribute('title', 'Forecast: 84°F high, 72°F low, 40% chance of rain')
+    expect(text.closest('[title]')).toHaveAttribute('title', 'Forecast: 84°F high, 72°F low, 40% chance of rain.')
     expect(screen.queryByText('typical')).not.toBeInTheDocument()
   })
 
@@ -36,6 +37,15 @@ describe('WeatherChip', () => {
       expect.stringMatching(/^Typical for this date: average of the last 5 years\./),
     )
     expect(screen.getByText('typical')).toBeInTheDocument()
+  })
+
+  it('says when the weather is for the middle of a whole country', () => {
+    render(<WeatherChip weather={weather({ destination_name: 'Costa Rica', whole_country: true })} />)
+
+    expect(screen.getByText('84° / 72° · 40% rain').closest('[title]')).toHaveAttribute(
+      'title',
+      expect.stringContaining('Measured at the middle of Costa Rica; regions differ a lot.'),
+    )
   })
 
   it('leaves out the rain part when the forecast has no chance', () => {

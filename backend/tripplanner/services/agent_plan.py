@@ -61,6 +61,10 @@ def _weather_out(w: DayWeather | None) -> dict[str, Any] | None:
         out["rain_chance"] = w.rain_chance
     else:
         out["wet_days_pct"] = w.wet_days_pct
+    if w.whole_country:
+        out["note"] = (
+            "Measured at the middle of the country; regions differ a lot, so judge by where they'll be."
+        )
     return out
 
 

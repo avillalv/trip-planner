@@ -21,3 +21,5 @@ class DayWeather(BaseModel):
     precip_in: float
     rain_chance: int | None = None
     wet_days_pct: int | None = None
+    # The destination is a whole country, so this is the weather at its middle, not where they'll be.
+    whole_country: bool = False

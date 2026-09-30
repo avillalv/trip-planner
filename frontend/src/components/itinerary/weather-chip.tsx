@@ -14,9 +14,12 @@ export function WeatherChip({ weather, className }: { weather: DayWeather; class
   const chance = forecast ? weather.rain_chance : weather.wet_days_pct
   const temps = `${weather.high_f}°F high, ${weather.low_f}°F low`
   const rain = forecast ? `${chance}% chance of rain` : `rain or snow on ${chance}% of days`
+  const where = weather.whole_country
+    ? ` Measured at the middle of ${weather.destination_name}; regions differ a lot. Set the day's place for local weather.`
+    : ''
   const title = forecast
-    ? `Forecast: ${temps}${chance === null ? '' : `, ${rain}`}`
-    : `Typical for this date: average of the last 5 years. ${temps}${chance === null ? '' : `, ${rain}`}`
+    ? `Forecast: ${temps}${chance === null ? '' : `, ${rain}`}.${where}`
+    : `Typical for this date: average of the last 5 years. ${temps}${chance === null ? '' : `, ${rain}`}.${where}`
   return (
     <span title={title} className={cn('inline-flex items-center gap-1.5 text-xs text-ink-soft', className)}>
       <Icon weather={weather} />

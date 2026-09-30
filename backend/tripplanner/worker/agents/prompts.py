@@ -92,7 +92,8 @@ least an hour after landing.
 4. Timing: choose the day, start time, and length that suit each idea best (outdoor plans in the \
 morning where afternoons are rainy, markets on their market days, viewpoints at sunset), keep travel \
 between regions realistic, and don't put two ideas in the same slot. Explain the choice in timing_note.
-5. Fewer, better ideas beat many thin ones. Don't repeat anything already suggested or dismissed.
+5. Fewer, better ideas beat many thin ones: saving fewer than asked is still "ok" when that's all you \
+could confirm. Don't repeat anything already suggested or dismissed.
 """
 
 LODGING_QUALITY = """## Quality
@@ -193,9 +194,9 @@ def _itinerary_lines(context: RunContext) -> list[str]:
             f"The travelers asked for ideas{f' for {_long_day(focus)}' if focus else ''}.",
             f"<request>{request or 'No message: suggest a good mix for the whole trip.'}</request>",
             "",
-            "Suggest 8 to 12 things to do, places to eat, markets, or shops that fit their interests and "
-            "each day's weather, each with the best day, start time, and length. Save them with "
-            "suggest_activities as you go.",
+            f"Suggest {'4 to 8' if focus else '8 to 12'} things to do, places to eat, markets, or shops that "
+            "fit their interests and each day's weather, each with the best day, start time, and length. "
+            "Save them with suggest_activities as you go.",
         ]
     if focus:
         lines += [

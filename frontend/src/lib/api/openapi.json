@@ -5322,6 +5322,11 @@
               }
             ],
             "title": "Wet Days Pct"
+          },
+          "whole_country": {
+            "type": "boolean",
+            "title": "Whole Country",
+            "default": false
           }
         },
         "type": "object",

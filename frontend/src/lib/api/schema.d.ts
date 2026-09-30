@@ -1654,6 +1654,11 @@ export interface components {
             rain_chance?: number | null;
             /** Wet Days Pct */
             wet_days_pct?: number | null;
+            /**
+             * Whole Country
+             * @default false
+             */
+            whole_country?: boolean;
         };
         /** DeckActivity */
         DeckActivity: {

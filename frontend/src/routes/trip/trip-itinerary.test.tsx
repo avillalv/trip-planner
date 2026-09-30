@@ -62,6 +62,7 @@ function weather(overrides: Partial<DayWeather> = {}): DayWeather {
     precip_in: 0.12,
     rain_chance: 40,
     wet_days_pct: null,
+    whole_country: false,
     ...overrides,
   }
 }

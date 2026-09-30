@@ -115,6 +115,20 @@ def test_typical_weather_averages_five_years_around_the_date(
     # 7 dates around the 10th, 3 of them even: 3 of 7 days wet, 0.3 in over 7 days.
     assert day.wet_days_pct == 43 and day.precip_in == 0.04
     assert day.rain_chance is None
+    assert day.whole_country is False
+
+
+def test_weather_for_a_whole_country_says_so(
+    db_session: Session, trip: Trip, no_real_network: respx.MockRouter
+) -> None:
+    dated(trip, db_session, "2027-03-10", "2027-03-10")
+    trip.destinations[0].kind = "country"
+    db_session.flush()
+    no_real_network.get(meteo.ARCHIVE_URL).mock(side_effect=answer(lambda d: 60))
+
+    [day] = weather_for(db_session, trip)
+
+    assert day.whole_country is True
 
 
 def test_a_leap_day_uses_february_28_in_other_years(
