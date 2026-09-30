@@ -4,7 +4,7 @@ Part of the [business plan](README.md). The decisions of record in the README ov
 
 Written 2026-09-30. Apple policy and US court rulings move fast, so every rule marked "verify" must be re-read on the day of submission.
 
-This file is the master transition checklist: every change needed to go from the local Windows app to a public App Store launch, phase by phase, with a pointer to the file that holds the detail. It also covers the mobile approach, frontend changes, in-app purchases, the App Review checklist and the launch plan. Business case: [01-business-plan.md](01-business-plan.md). Tiers and credits: [02-pricing-tiers.md](02-pricing-tiers.md). AI: [03-ai-features-and-costs.md](03-ai-features-and-costs.md). Accounts: [04-users-and-accounts.md](04-users-and-accounts.md). Hosting: [05-infrastructure.md](05-infrastructure.md). Data and providers: [06-database-and-data-integrations.md](06-database-and-data-integrations.md).
+This file is the master transition checklist: every change needed to go from the local Windows app to a public App Store launch, phase by phase, with a pointer to the file that holds the detail. It also covers the mobile approach, frontend changes, in-app purchases, the App Review checklist and the launch plan. Business case: [01-business-plan.md](01-business-plan.md). Tiers and credits: [02-pricing-tiers.md](02-pricing-tiers.md). AI: [03-ai-features-and-costs.md](03-ai-features-and-costs.md). Accounts: [04-users-and-accounts.md](04-users-and-accounts.md). Hosting: [05-infrastructure.md](05-infrastructure.md). Data and providers: [06-database-and-data-integrations.md](06-database-and-data-integrations.md). Affiliate revenue: [08-affiliate-revenue.md](08-affiliate-revenue.md).
 
 ## 1. Where the app is today
 
@@ -83,6 +83,7 @@ Goal: a real product on the web that strangers can sign up for, with payments of
 | Entitlements table, server-side limit checks and the credit ledger (Free limits, 8 credits a month) | [02-pricing-tiers.md](02-pricing-tiers.md), [06-database-and-data-integrations.md](06-database-and-data-integrations.md) |
 | Upgrade screens are a waitlist or "coming with the app" page; no web payments | [02-pricing-tiers.md](02-pricing-tiers.md) |
 | Flight data: Travelpayouts cached fares as the free baseline; live fares behind the provider interface (SerpApi under a feature flag) | [06-database-and-data-integrations.md](06-database-and-data-integrations.md) |
+| Join Travelpayouts (also the launch affiliate network); build the `/go/<click_id>` redirect with stored link templates only (no open redirects), a random per-click sub-id, the `affiliate_programs` and `link_clicks` tables, and the nightly conversion pull; disable link previews for Airbnb, Vrbo and Booking.com domains on the hosted server | [06-database-and-data-integrations.md](06-database-and-data-integrations.md) section 6, [08-affiliate-revenue.md](08-affiliate-revenue.md) |
 | Frontend: `VITE_API_BASE_URL`, new sign-in and onboarding screens replacing the passcode login, empty and error states, responsive layout with bottom tab bar (4.3) | 4.1, 4.3, section 7 |
 | AI consent screen, account deletion backend, data export, privacy policy and terms | [04-users-and-accounts.md](04-users-and-accounts.md), 6.3 to 6.6 |
 | Observability (Sentry, PostHog, uptime monitor, structured logs), point-in-time recovery with a tested restore | [05-infrastructure.md](05-infrastructure.md) |
@@ -105,7 +106,11 @@ Goal: a native app that passes the "not a website" test, with purchases working 
 | APNs push and the price-drop job; notification preference center | 4.4, [06-database-and-data-integrations.md](06-database-and-data-integrations.md) |
 | In-app account deletion (with Sign in with Apple token revoke), report and block, AI consent | 6.3, 6.6, [04-users-and-accounts.md](04-users-and-accounts.md) |
 | Privacy manifest, nutrition labels, accessibility pass with VoiceOver | 6.4, 4.6 |
-| Affiliate click redirect (`/go/:partner/:offer`) so no tracking SDKs and no ATT prompt | 6.5, [06-database-and-data-integrations.md](06-database-and-data-integrations.md) |
+| Affiliate click redirect (`/go/<click_id>`, built in Phase 1) used from the app, so no tracking SDKs and no ATT prompt | 6.5, [06-database-and-data-integrations.md](06-database-and-data-integrations.md) |
+| In-app browser choice for affiliate links: `SFSafariViewController` through the Capacitor Browser plugin (not an embedded WKWebView, not an injected-JS webview); measure attribution loss against opening in Safari | 3, 6.5, [08-affiliate-revenue.md](08-affiliate-revenue.md) |
+| Affiliate disclosure text ("We earn a commission if you book here.") beside every partner button, an "Ad" label on UK and EU storefronts, and lists that say how they are sorted | 6.5, [08-affiliate-revenue.md](08-affiliate-revenue.md) |
+| App Review notes that explain affiliate links under Guideline 3.1.3(e): they lead to physical travel services consumed outside the app, while Plus, Trip Pass and credit packs use in-app purchase; no ATT prompt because there is no cross-app tracking | 6.5, 6.9 |
+| App Privacy labels updated to mention click logging (which partner button was tapped, linked to the user, for app functionality and analytics, not used for tracking) | 6.4 |
 | TestFlight: internal from week 1, external (30 to 100 testers) from week 4 | 6.10 |
 
 Gate: Capacitor app, purchases, push, account deletion. Also require crash-free sessions of at least 99.5 percent over 100 or more sessions, every sandbox purchase scenario passing (purchase, cancel, upgrade, refund, restore on a second device, billing retry, Trip Pass bound to a trip), a trip fully browsable in airplane mode on a real device, and a self-check against Guidelines 4.2, 4.8, 5.1.1(v), 3.1.2 and 1.2.
@@ -122,6 +127,7 @@ Goal: approved, live, with the launch machinery ready.
 | Load test at 10 times expected launch traffic; alerts; status page | [05-infrastructure.md](05-infrastructure.md) |
 | Support live (inbox, macros, FAQ); refund and cancellation guidance | 7, 8.2 |
 | Provider recheck: SerpApi flag decision and Skyscanner Partners application status | [06-database-and-data-integrations.md](06-database-and-data-integrations.md) |
+| Prepare the direct affiliate applications (Expedia Group for Vrbo, Booking.com after confirming its current network, Skyscanner, Airalo, GetYourGuide): live App Store link, screenshots of disclosure and placement, traffic numbers from the beta | [08-affiliate-revenue.md](08-affiliate-revenue.md) |
 | Launch content and phased release | 8.1 |
 
 Gate: App Review passed; support and monitoring in place. Also require crash-free at least 99.5 percent, API error rate under 1 percent, and no P0 in the first 72 hours.
@@ -134,6 +140,8 @@ Gate: App Review passed; support and monitoring in place. Also require crash-fre
 | Shareable public trip pages and SEO guides (server-rendered, separate from the SPA) | [01-business-plan.md](01-business-plan.md) |
 | Android: Capacitor Android, Play Billing through RevenueCat, FCM, App Links; 4 to 6 weeks | 3, 5.1 |
 | Retention loop: paywall experiments, win-back offers, lifecycle messages, referral | [01-business-plan.md](01-business-plan.md) |
+| From month 3 after launch: submit the direct network applications (Expedia Group, Booking.com, Skyscanner, Airalo, GetYourGuide) and replace the model's affiliate inputs with measured clicks, conversions and attribution loss | [08-affiliate-revenue.md](08-affiliate-revenue.md), [01-business-plan.md](01-business-plan.md) |
+| "Before you go" checklist (`checklist_items`; at least half unmonetized, visas link to official sites first, insurance uses insurer-approved copy only) and the after-trip "Was your flight delayed?" prompt, free on every tier | [08-affiliate-revenue.md](08-affiliate-revenue.md), [06-database-and-data-integrations.md](06-database-and-data-integrations.md) |
 | Native extras: Live Activities, widget, Face ID lock, offline map tiles | 4.4 |
 | Move hosting to AWS or Google Cloud around 50k MAU or $1,500 a month; Redis around 10k MAU | [05-infrastructure.md](05-infrastructure.md) |
 
@@ -338,7 +346,7 @@ Deletion must be in the app, easy to find in Settings, confirm intent, delete th
 
 ### 6.4 Privacy policy and nutrition labels
 
-- Host the policy publicly and link it in Settings and App Store Connect. Cover data collected (email, name, trips, locations, dates, companions' names), AI processing by Anthropic and other providers, analytics, crash reports, affiliates, retention, deletion, children, transfers and contact.
+- Host the policy publicly and link it in Settings and App Store Connect. Cover data collected (email, name, trips, locations, dates, companions' names), AI processing by Anthropic and other providers, analytics, crash reports, affiliates (including the server-side log of which partner button was tapped), retention, deletion, children, transfers and contact.
 - Likely App Privacy declarations, all "not used for tracking":
 
 | Data type | Linked to user | Purpose |
@@ -347,7 +355,7 @@ Deletion must be in the app, easy to find in Settings, confirm intent, delete th
 | User content (trips, notes, photos) | Yes | App functionality |
 | Identifiers (user ID, device ID for push) | Yes | App functionality, analytics |
 | Purchases | Yes | App functionality |
-| Usage data | Yes (first-party analytics only) | Analytics |
+| Usage data (first-party analytics, and affiliate click logging: which partner link was tapped, when, on which screen) | Yes | Analytics, app functionality |
 | Diagnostics | Optional | App functionality |
 | Location | Only if device location is used | App functionality |
 
@@ -355,7 +363,7 @@ Deletion must be in the app, easy to find in Settings, confirm intent, delete th
 
 ### 6.5 App Tracking Transparency
 
-ATT is needed only for tracking across other companies' apps and sites. Affiliate clicks go through our own redirect (`/go/:partner/:offer`), which logs the click server-side and appends the partner sub-id. **No ad SDKs, no ATT prompt.** This also fits the rule against automated fetching of Airbnb, Vrbo and Booking pages (links only). Disclose affiliate links in the app ("We may earn a commission").
+ATT is needed only for tracking across other companies' apps and sites. Affiliate clicks go through our own redirect (`/go/<click_id>`), which logs the click server-side (click logging is declared in the App Privacy labels, section 6.4) and appends a random per-click sub-id. No user id, device id or advertising id is sent to partners. Links open in `SFSafariViewController`. **No ad SDKs, no ATT prompt.** This also fits the rule against automated fetching of Airbnb, Vrbo and Booking pages (links only). Disclose affiliate links in the app ("We earn a commission if you book here."). Details: [08-affiliate-revenue.md](08-affiliate-revenue.md).
 
 ### 6.6 AI-generated content
 
@@ -375,7 +383,7 @@ Answer the 2025 age rating questionnaire honestly. Expect 4+ or 9+ without open 
 ### 6.9 Review notes and demo account
 
 - Provide a demo account (email and password or a "Demo mode" button; do not require Sign in with Apple for reviewers) with a loaded trip and an entitlement path that works in sandbox, since reviewers buy in sandbox.
-- Notes explain AI features, where deletion lives, how push and affiliate links behave, and that servers are live. Include a phone number and email. Keep the backend up and rate limits generous during review.
+- Notes explain AI features, where deletion lives, how push and affiliate links behave, and that servers are live. Affiliate note, roughly: "Partner buttons open hotel, tour, flight, car and eSIM booking pages in an in-app browser. These are physical travel services consumed outside the app, so they are outside In-App Purchase under Guideline 3.1.3(e); all digital plans and credits use In-App Purchase. Each button is labeled as a commission link. The app does not track users across other companies' apps or sites and shows no ATT prompt." Include a phone number and email. Keep the backend up and rate limits generous during review.
 - Expect 24 to 48 hours per submission and often one rejection. Common causes: broken login, a paywall missing Restore or terms links, missing deletion, privacy label mismatch, 4.2.
 
 ### 6.10 TestFlight
@@ -431,7 +439,7 @@ Positioning: "the trip planner that follows your trip offline", price alerts, AI
 - Security: monthly dependency audit, secrets rotation, a penetration test before scaling, quarterly restore drill.
 - Dashboards (PostHog, RevenueCat, App Store Connect): activation (trip created within 24 hours), week-1 and week-4 retention, paywall view to trial, trial to paid, churn, ARPPU, AI cost as percent of revenue, push opt-in, crash-free rate, ratings.
 
-**Kill rule.** At month 9 after launch, if under 1% of monthly users pay and affiliate income is under $0.20 per monthly user, stop investing and keep it as a personal tool. Track both numbers monthly from launch so month 9 holds no surprise. See [01-business-plan.md](01-business-plan.md).
+**Kill rule.** At month 9 after launch, if under 1% of monthly users pay and affiliate income is under $0.20 per monthly user per year (annualized), stop investing and keep it as a personal tool. Track both numbers monthly from launch so month 9 holds no surprise. See [01-business-plan.md](01-business-plan.md).
 
 ## 9. Risks specific to this transition
 

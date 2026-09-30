@@ -16,8 +16,9 @@ so in a closing section, so the reasoning stays visible.
 - **Can it be profitable?** Yes, if AI is a metered, capped extra on top of cheap API features,
   and if the plan is sold per trip, not per month. Open-ended agents on a schedule would lose money on
   every active user. With the guardrails here, the illustrative month at 10,000 users has about
-  56% gross margin, and the base-case scenario breaks even around month 16 to 20.
-- **Is it a big business?** The base case is a solid side income (about $111k revenue in year 3),
+  56% gross margin from paid plans alone, 64% with affiliate income, and the base-case scenario
+  breaks even around month 18 to 22.
+- **Is it a big business?** The base case is a solid side income (about $99k revenue in year 3, about a third of it affiliate commissions),
   not a venture outcome. The optimistic case needs a sharing loop that is not yet proven. The first
   milestone is to validate demand before rewriting anything.
 

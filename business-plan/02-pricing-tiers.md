@@ -79,9 +79,13 @@ Launch tiers: **Free**, **Plus**, **Trip Pass** (upgrades one trip for 90 days),
 | Scheduled agent routines | No | No | No | Yes: up to 3 per trip, max 1 run per day per routine |
 | Priority queue | No | No | No | Yes (agents and drafts jump the queue) |
 | Data export (JSON, ICS, PDF) | Yes | Yes | Yes | Yes |
-| Affiliate booking links | Yes | Yes | Yes | Yes (never removed) |
+| Affiliate booking links | Yes, same places | Yes, same places | Yes, same places | Yes, same places (never removed) |
+| "Before you go" checklist | Yes | Yes | Yes | Yes |
+| After-trip prompt ("Was your flight delayed?") | Yes | Yes | Yes | Yes |
 
 Notes on the choices:
+- **Affiliate links are on every tier, in the same places, and are never a paid feature.** A paid tier never removes them (they are the same helpful booking buttons, labeled with "We earn a commission if you book here."). Free is never degraded: results, ordering and detail are identical on every tier, and lists are never ranked by commission. Affiliate income is therefore earned on all MAU, free and paid alike. Program details, placement and disclosure are in [08-affiliate-revenue.md](08-affiliate-revenue.md).
+- **The "Before you go" checklist and the after-trip prompt are free features on every tier.** The checklist (documents, visas, insurance, eSIM, transfers and similar) has at least half its items unmonetized, links visas to official sites first, and uses insurer-approved copy only. The after-trip prompt asks "Was your flight delayed?" and links to a compensation service. Neither costs credits, and AI never gives insurance advice.
 - **Free gets 2 active trips, not 1.** Two people planning a couple's trip and a second idea (a weekend away) is normal. One trip makes users feel cornered; three makes Plus unnecessary for most.
 - **Free cannot host collaboration but can join it.** Only the trip owner pays. Invitees join free and get the owner's tier on that trip. That is the viral loop: every paying trip pulls in 1 to 5 new accounts at almost no cost beyond an idle account. AI credits are charged to the person who starts the action.
 - **Live tracking is limited by routes, frequency, and date window, not by credits.** Users hate seeing a price tracker burn a credit meter every morning. The ceiling in section 6 keeps it safe underneath.
@@ -211,7 +215,7 @@ Moving research from 6 to 8 credits does not raise any cost line: real cost per 
 | Typical | Cached route, 20 places searches, 3 Haiku, alert pushes | $0.06 |
 | Heavy (abuse case) | Maxes credits and places soft cap | $0.25 (hard limited) |
 
-Free revenue is affiliate only: an estimated $0.05 to $0.15 per MAU per month from Travelpayouts and hotel link-outs (unverified, not counted toward margin).
+Free revenue is affiliate only: about $0.05 per MAU per month in the base case ($0.60 a year; the range across the conservative and optimistic cases is $0.01 to $0.13 a month, from $0.10 to $1.50 a year). Every tier earns it, so it is not counted in the per-user margins here; section 5.5 shows it separately. It is unverified.
 
 **Plus (monthly subscriber, net $4.24; annual, net $2.12 per month)**
 
@@ -257,15 +261,17 @@ Assumption: 4% pay (150 + 100 + 120 + 30 = 400 payers, counting Trip Pass buyers
 
 | Line | Count | Net revenue | Cost |
 |---|---|---|---|
-| Free MAU | 9,600 | $0 (affiliate excluded) | 9,600 x $0.05 = $480 |
+| Free MAU | 9,600 | $0 (subscription revenue) | 9,600 x $0.05 = $480 |
 | Plus annual | 150 | 150 x $2.12 = $318 | 150 x $0.86 = $129 |
 | Plus monthly | 100 | 100 x $4.24 = $424 | 100 x $0.86 = $86 |
 | Trip Pass purchases per month | 120 | 120 x $8.49 = $1,019 | 120 x $0.84 = $101 |
 | Premium (blended) | 30 | 30 x $8.00 = $240 | 30 x $3.53 = $106 |
 | Credit packs | 60 packs | 60 x $5.00 net = $300 | about $110 |
-| Total | | $318 + 424 + 1,019 + 240 + 300 = $2,301 | $480 + 129 + 86 + 101 + 106 + 110 = $1,012 |
+| Affiliate (all 10,000 MAU, base case) | 10,000 | 10,000 x $0.05 = about $500 | none extra |
+| Total without affiliate | | $318 + 424 + 1,019 + 240 + 300 = $2,301 | $480 + 129 + 86 + 101 + 106 + 110 = $1,012 |
+| Total with affiliate | | $2,301 + $500 = $2,801 | $1,012 |
 
-Gross margin: (2,301 - 1,012) / 2,301 = 56%, unchanged by the research-credit change, before fixed costs (developer, hosting minimums, support). Premium lines are included as a later-stage sanity check; without the 30 Premium users the total is $2,061 revenue and $906 cost, still about 56%. Two lessons: Free users are 47% of variable cost (480 / 1,012), so the Free tier must stay near $0.05 per user; and Trip Pass plus packs carry more revenue than subscriptions at low scale.
+Gross margin without affiliate: (2,301 - 1,012) / 2,301 = 56%. With base-case affiliate income (10,000 x $0.05 = $500 a month, from $0.60 per MAU per year): (2,801 - 1,012) / 2,801 = 64%. Both are before fixed costs (developer, hosting minimums, support). Premium lines are included as a later-stage sanity check; without the 30 Premium users the total is $2,061 revenue and $906 cost, still about 56% without affiliate and (2,561 - 906) / 2,561 = about 65% with it. Two lessons: Free users are 47% of variable cost (480 / 1,012), so the Free tier must stay near $0.05 per user; and Trip Pass plus packs carry more revenue than subscriptions at low scale.
 
 ## 6. Guardrails
 
@@ -334,7 +340,7 @@ Ship this on day one (roadmap in [07-local-to-app-store.md](07-local-to-app-stor
 | Plus | $4.99 per month, $29.99 per year, 7-day trial on annual only |
 | Trip Pass | $9.99, non-renewing subscription in StoreKit, bound to one trip on the server, 90 days, 40 credits, 2 live routes, at most 60 live checks |
 | Credit packs | $2.99 for 50, $6.99 for 150, $14.99 for 400 |
-| Free | 2 active trips, 1 cached route per trip, 8 credits per month, free guest joining, 1 alert on cached fares |
+| Free | 2 active trips, 1 cached route per trip, 8 credits per month, free guest joining, 1 alert on cached fares, affiliate booking links, "Before you go" checklist, after-trip prompt |
 | Guardrails | Per-account ceilings, per-day budget, global circuit breakers, ledger from day one |
 | Family Sharing | Off |
 
@@ -368,7 +374,7 @@ Rules for each: the free path is always visible; the prompt says what the user g
 1. **Paywalling before value.** No paywall at first launch. Let people build a trip, see cached fares, and add plans first. Prompt only at a limit they hit.
 2. **Meters that punish core use.** Do not charge credits for editing the calendar, saving lodging, or scheduled live tracking.
 3. **Surprise deductions.** Show the credit cost before every AI action, with a confirm for anything at 6 credits or more (research questions and agent runs).
-4. **Hiding the free path.** Always show "Not now" and keep affiliate links visible and honest. Do not degrade free results to push upgrades.
+4. **Hiding the free path.** Always show "Not now" and keep affiliate links visible and honest, in the same places on every tier. Do not degrade free results to push upgrades, and do not remove affiliate links from paid tiers.
 5. **Hostage data.** Never lock, delete, or hide a trip on downgrade. Read and export always work.
 6. **Dark patterns on trials.** State the price and renewal date on the trial screen. Send a reminder before conversion.
 7. **Fake urgency.** No countdown timers or invented "only 2 spots" messages.
@@ -399,5 +405,5 @@ Final decisions are in the README; this section keeps the reasoning.
 ## 11. Open items for other files
 
 - Backend ([06-database-and-data-integrations.md](06-database-and-data-integrations.md)): the `provider_calls` and `ai_usage` ledger, and an entitlement service driven by App Store Server Notifications v2, including the Trip Pass to trip binding.
-- Legal and policy: SerpApi commercial terms for a consumer app; Travelpayouts affiliate terms for in-app use; prepaid credit disclosure rules.
+- Legal and policy: SerpApi commercial terms for a consumer app; affiliate terms for in-app use (Travelpayouts, Viator, Stay22, and the direct applications in [08-affiliate-revenue.md](08-affiliate-revenue.md)); prepaid credit disclosure rules.
 - Measurement plan: track cost per active payer, credits used share, Trip Pass vs Plus split, paywall conversion by moment, and agent-run cost distribution. Review the "typical usage" assumptions in 5.3 after 60 days.

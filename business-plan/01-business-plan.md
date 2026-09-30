@@ -19,9 +19,11 @@ Year 3 headline numbers (details in [Three-year scenarios](#three-year-scenarios
 
 | Scenario | Avg MAU | Paying users | Revenue | Net profit (before founder pay) |
 |---|---|---|---|---|
-| Conservative | 12,000 | 240 | about $11k | about -$1.6k (near break-even) |
-| Base | 60,000 | 2,100 | about $111k | about +$47k |
-| Optimistic | 200,000 | 10,000 | about $580k | about +$222k |
+| Conservative | 12,000 | 240 | about $7k | about -$5.2k (below break-even) |
+| Base | 60,000 | 2,100 | about $99k | about +$35k |
+| Optimistic | 200,000 | 10,000 | about $640k | about +$280k |
+
+Affiliate income is $0.10, $0.60 and $1.50 per MAU per year in the three cases (see [Affiliate revenue](#affiliate-revenue)); it is the least certain input, and the optimistic profit depends on it heavily.
 
 The decision that matters most: do not rewrite for the App Store until milestone M0 (validate) shows people want it. See [Milestones](#milestones).
 
@@ -80,8 +82,8 @@ The lead offer is Trip Pass, then annual Plus. Credit packs and, later, Premium 
 
 | Stream | Share of year 3 revenue | Notes |
 |---|---|---|
-| Subscriptions and passes (Plus, Trip Pass; Premium from year 2) | about 57% | Sold through the App Store at a 15% Apple commission (Small Business Program, under $1M a year in proceeds). Trip Pass is a non-renewing subscription in StoreKit, bound to the trip on the server. Expect it to be the most common first purchase. |
-| Affiliate (Travelpayouts: flights, hotels, eSIM, insurance, tours) | about 43% | Earned on free and paid users alike. Payout is delayed and lumpy. |
+| Subscriptions and passes (Plus, Trip Pass; Premium from year 2) | about 64% | Sold through the App Store at a 15% Apple commission (Small Business Program, under $1M a year in proceeds). Trip Pass is a non-renewing subscription in StoreKit, bound to the trip on the server. Expect it to be the most common first purchase. |
+| Affiliate (lodging first, then tours, flights, cars, transfers, eSIM, insurance, post-trip compensation) | about 36% | Earned on free and paid users alike, in the same places on every tier. Payout is delayed and lumpy. Lodging is about 60% of it. |
 | Credit packs ($2.99 for 50, $6.99 for 150, $14.99 for 400) | under 5%, treat as upside | Bought mostly by Plus payers who run out. A high pack-buying rate (over 15% of Plus payers buying agent-run credits) is a trigger to launch Premium. |
 
 Pack revenue is counted inside the subscription line in the scenarios.
@@ -95,12 +97,25 @@ Pack revenue is counted inside the subscription line in the scenarios.
 
 Decision: no ad networks. Affiliate links are labeled and never change fare ranking.
 
-### Affiliate reality check
+### Affiliate revenue
 
-- Airline commissions via aggregators are tiny (a flat few dollars or about 1% of the fare). Hotels, tours and insurance pay better but book less often.
-- Assumption: about $3 net per completed booking and 0.13 to 0.4 bookings per MAU per year, giving $0.40 (conservative), $0.80 (base) and $1.20 (optimistic) per MAU per year. These are guesses and the first thing to measure.
-- Apple allows links that open external booking of physical travel services; digital goods (our plans) must use in-app purchase. Confirm the current guideline text and US external-purchase rules before launch.
-- Travelpayouts terms and data-usage rights for a commercial multi-user app must be checked. Attribution rules are covered in [06-database-and-data-integrations.md](06-database-and-data-integrations.md).
+Affiliate links appear on every tier in the same places (see [02-pricing-tiers.md](02-pricing-tiers.md)). The full program research, placement map, compliance and tracking design are in [08-affiliate-revenue.md](08-affiliate-revenue.md). Summary:
+
+- **Categories, in order of expected money:** lodging first (about 60% of affiliate income), then tours and activities, flights, cars, transfers, eSIM, travel insurance, and post-trip flight-delay compensation. Flights are a service feature more than a revenue line: airline commissions are tiny (a flat few dollars or about 1% of the fare).
+- **Launch networks:** Travelpayouts (flights, Booking.com, Agoda, Trip.com and Hostelworld stays, cars, transfers, tours, eSIM, insurance), Viator's self-service partner API for things to do, and Stay22 as the lodging challenger. From month 3, apply directly to Expedia Group, Booking.com, Skyscanner, Airalo and GetYourGuide.
+- **Airbnb:** no affiliate program an app can join. The old Associates program closed in 2021, the current creator and demand tracks are invite-only for influencers and bloggers, and the host-referral reward pays for new hosts, not guest bookings. Airbnb listings get a plain link with no tracking, never a converted one.
+- **Vrbo:** reachable only through the Expedia Group affiliate program (which also covers Expedia and Hotels.com, run on Impact), with Stay22 as a second route. Reported Vrbo rates are about 2 to 6% and inconsistent, so the plan uses the low side.
+- **Tracking:** an own redirect (`/go/<click_id>`) with a random per-click sub-id, no ad or attribution SDKs and no device ids, so no App Tracking Transparency prompt. Attribution can still be lost in in-app browsers and across devices, which is built into the numbers below.
+- **Apple:** links to physical travel services are allowed; digital goods (our plans) must use in-app purchase. Confirm the current guideline text (3.1.1 and 3.1.3(e)) and US external-purchase rules before launch.
+
+Assumption per MAU per year, from the model in 08 (real trips per MAU x attribution survival x clicks x click-to-booking x net commission, summed over categories):
+
+| | Conservative | Base | Optimistic |
+|---|---|---|---|
+| Affiliate revenue per MAU per year | $0.10 | $0.60 | $1.50 |
+| Per MAU per month | about $0.01 | $0.05 | about $0.13 |
+
+The $0.60 base case is about $1 per planned trip. The per-MAU figures are guesses built from third-party rate reports (the official partner sites could not be read), and they are the first thing to measure. Treat them as a floor that pays for infrastructure, not the growth plan.
 
 ## Unit economics per tier
 
@@ -108,7 +123,7 @@ Net revenue is after Apple's 15%. The worst-case cost is the per-account monthly
 
 | Tier | Price | Net after Apple | Cost ceiling | Worst-case margin |
 |---|---|---|---|---|
-| Free | $0 | $0 | $0.25 a month; typical $0.01 to $0.02, offset by affiliate income of about $0.03 to $0.10 a month | Roughly break-even if usage stays typical. |
+| Free | $0 | $0 | $0.25 a month; typical $0.01 to $0.02, offset by affiliate income of about $0.01 to $0.13 a month ($0.05 in the base case) | Roughly break-even if usage stays typical. |
 | Plus monthly | $4.99 | $4.24 a month | $1.75 a month | About 59% |
 | Plus annual | $29.99 | $25.49 (about $2.12 a month) | $1.75 in each active month; use is concentrated in 2 to 4 months a year | Healthy at typical use; thin (about 17% of a month's net) only if the ceiling is hit every month |
 | Trip Pass | $9.99 once | $8.49 | $1.80 per pass (90 days, at most 60 live checks, 40 credits) | About 79% |
@@ -154,7 +169,7 @@ All three scenarios use the launch lineup: Free, Plus, Trip Pass and credit pack
 | Avg MAU year 1 / 2 / 3 | 1,000 / 5,000 / 12,000 | 3,000 / 20,000 / 60,000 | 8,000 / 60,000 / 200,000 |
 | Paid conversion (of MAU) | 2% | 3.5% | 5% |
 | Blended net ARPPU per year | $24 | $30 | $34 |
-| Affiliate per MAU per year | $0.40 | $0.80 | $1.20 |
+| Affiliate per MAU per year | $0.10 | $0.60 | $1.50 |
 | AI and data cost per free MAU per year | $0.15 | $0.15 | $0.15 |
 | AI and data cost per paying user per year | $6 | $8 | $8 |
 | Fixed infra, tools, legal (year 1 / 2 / 3) | $4k / $6k / $6k | $6k / $10k / $18k | $10k / $25k / $50k |
@@ -168,18 +183,27 @@ Marketing is deliberately low in the first two scenarios: they assume organic gr
 |---|---|---|---|---|---|---|---|---|---|
 | Paying users (avg) | 20 | 100 | 240 | 105 | 700 | 2,100 | 400 | 3,000 | 10,000 |
 | Subscription, pass and pack revenue | $0.5k | $2.4k | $5.8k | $3.2k | $21k | $63k | $13.6k | $102k | $340k |
-| Affiliate revenue | $0.4k | $2.0k | $4.8k | $2.4k | $16k | $48k | $9.6k | $72k | $240k |
-| Total revenue | $0.9k | $4.4k | $10.6k | $5.6k | $37k | $111k | $23k | $174k | $580k |
+| Affiliate revenue | $0.1k | $0.5k | $1.2k | $1.8k | $12k | $36k | $12k | $90k | $300k |
+| Total revenue | $0.6k | $2.9k | $7.0k | $5.0k | $33k | $99k | $25.6k | $192k | $640k |
 | Variable AI and data cost | $0.3k | $1.4k | $3.2k | $1.3k | $8.5k | $25.5k | $4.4k | $33k | $110k |
 | Fixed and marketing | $5k | $8k | $9k | $11k | $20k | $38k | $20k | $125k | $250k |
-| Net profit | about -$4.4k | about -$5.0k | about -$1.6k | about -$6.7k | about +$8.5k | about +$47k | about -$1.2k | about +$16k | about +$222k |
+| Net profit | about -$4.7k | about -$6.5k | about -$5.2k | about -$7.3k | about +$4.5k | about +$35k | about +$1.2k | about +$34k | about +$280k |
+
+Arithmetic, affiliate line = average MAU x affiliate per MAU:
+
+- Conservative: 1,000 x $0.10 = $100; 5,000 x $0.10 = $500; 12,000 x $0.10 = $1,200.
+- Base: 3,000 x $0.60 = $1,800; 20,000 x $0.60 = $12,000; 60,000 x $0.60 = $36,000.
+- Optimistic: 8,000 x $1.50 = $12,000; 60,000 x $1.50 = $90,000; 200,000 x $1.50 = $300,000.
+
+Totals and profit, year 3: conservative $5.8k + $1.2k = $7.0k, less $3.2k variable and $9k fixed = -$5.2k. Base $63k + $36k = $99k, less $25.5k and $38k = +$35.5k (about +$35k). Optimistic $340k + $300k = $640k, less $110k and $250k = +$280k. Year 2 base: $21k + $12k = $33k, less $8.5k and $20k = +$4.5k.
 
 The conservative case stays at or below break-even in year 3 even with a trimmed cost base. It is a side project, not a business.
 
 ### Break-even
 
-- Fixed costs of about $10k a year (base year 2) need about 330 paying users at $30 ARPPU, or about 12,500 MAU at $0.80 affiliate, or a mix. The base case breaks even monthly around month 16 to 20.
-- The conservative case breaks even on cash only if fixed costs stay under $6k a year.
+- Fixed costs of about $10k a year need about 330 paying users at $30 ARPPU, or about 16,700 MAU at $0.60 affiliate alone ($10k / $0.60), or a mix.
+- Base-case monthly break-even, with the year 2 cost base ($20k a year, about $1,670 a month): each MAU contributes 3.5% x $30 = $1.05 of subscription revenue plus $0.60 affiliate, less about $0.43 of variable cost (0.965 x $0.15 + 0.035 x $8), or about $1.23 a year ($0.102 a month). Break-even needs about 16,300 MAU (was about 14,000 at $0.80 affiliate). With MAU growing about 1,400 a month through year 2, that is roughly two months later than before: **about month 18 to 22** (was month 16 to 20). Year 2 as a whole is still slightly profitable (+$4.5k) because MAU ends the year well above the break-even level.
+- The conservative case does not break even on cash at its year 3 revenue: contribution is $7.0k - $3.2k = $3.8k, so fixed and marketing costs would have to stay under about $4k a year.
 - A funded team of two (about $240k a year loaded) needs about 8,000 paying users at $30. Only the optimistic case reaches that, in year 3.
 
 ### What has to be true
@@ -187,7 +211,7 @@ The conservative case stays at or below break-even in year 3 even with a trimmed
 1. Conversion of 3.5% needs a free tier limited enough to create a need and generous enough to hook users. Many consumer categories see lower free-to-paid rates, so 2% is the safer planning number.
 2. 60,000 MAU in 3 years needs a working acquisition loop. Paid installs for a travel app are expensive (an unverified $2 to $6) and would erase Plus margin. Organic loops (shared trips, SEO, invites) are mandatory.
 3. Retention is the structural problem. People use a trip app for 1 to 3 months before a trip, then leave. This is why Trip Pass and annual plans lead. Monthly plans churn 15 to 30% a month by design.
-4. Affiliate at $0.80 per MAU is unproven. At $0.20, base year 3 revenue falls by about $36k.
+4. Affiliate at $0.60 per MAU is unproven. At $0.20, base year 3 revenue falls by about $24k (60,000 x $0.40).
 5. Agent cost must be measured before Premium goes live: $0.60 or less per run over 200 runs. The cost ceilings limit the damage if it is not.
 6. Apple's 15% applies only under $1M a year in proceeds, which none of these scenarios exceeds. Above that it is 30%.
 
@@ -231,7 +255,7 @@ Effort is part time, solo, with Claude Code: about 5 to 6 months from the start 
 
 Scale decision at month 18 to 24: if MAU is above 15,000 and paying users above 500, invest in growth; otherwise run it as a lean side business.
 
-**Kill rule:** at month 9 after launch, if under 1% of monthly users pay and affiliate income is under $0.20 per monthly user, stop investing and keep it as a personal tool.
+**Kill rule:** at month 9 after launch, if under 1% of monthly users pay and affiliate income is under $0.20 per monthly user per year (annualized), stop investing and keep it as a personal tool.
 
 ## Risks and mitigations
 
@@ -247,7 +271,8 @@ Scale decision at month 18 to 24: if MAU is above 15,000 and paying users above 
 | Privacy (dates, places, who is traveling) | Medium | High | Data minimization, delete account and export, GDPR and CCPA basics, no selling data, encrypted backups. See [04-users-and-accounts.md](04-users-and-accounts.md). |
 | Rewrite from single-user local to multi-tenant slips | High | Medium | Scope tightly: auth, tenancy, quotas first; Premium and agents behind a flag. |
 | Solo founder support load | Medium | Medium | Self-serve help, in-app status, one platform at launch. |
-| Affiliate income much lower than assumed | High | Medium | Measure early; if under $0.20 per MAU, shift weight to Trip Pass and Plus. |
+| Affiliate income much lower than assumed | High | Medium | Measure early; if under $0.20 per MAU per year, shift weight to Trip Pass and Plus. |
+| Affiliate rates unverified, and attribution lost in in-app browsers | High | Medium | All rates come from third-party reports because the partner sites were unreadable; confirm each rate card and cookie window at sign-up, and replace the model inputs with measured data by month 3. Open links in SFSafariViewController, use a server-side sub-id per click and nightly conversion pulls instead of cookies alone, watch the unmatched-conversion share (over 10% means a tracking break), and treat attribution survival (0.60 to 0.90 in the model) as a key metric. See [08-affiliate-revenue.md](08-affiliate-revenue.md). |
 
 ## KPIs
 
@@ -286,10 +311,10 @@ Each point below records an earlier idea, the concern, and the final decision.
 2. **Premium price against rivals.** Rivals charge $40 to $50 a year (Wanderlog $39.99, TripIt $49, Layla about $49), and the first draft suggested testing $49.99 to $59.99. The concern stands: $99 is about double, so Premium must clearly offer something they lack. But at $49.99 to $59.99 a year the net is only $3.54 to $4.25 a month, too little for a $5.50 ceiling. Decision: $99 is the launch price because of the ceiling. Premium's price will be tested once measured agent cost drops, and credit packs carry heavy users meanwhile.
 3. **Live tracking as a headline.** Google Flights tracks prices free. Decision: Plus includes 3 live-tracked routes checked daily within 120 days of departure, but the pitch is "tracked with the reason and the source", and value comes from the workspace plus evidence-backed hunts.
 4. **Research per month.** Use is episodic, so a fixed monthly quota fits badly. Decision: AI is priced in credits (1 credit is up to $0.02 of provider spend). Trip Pass gives a burst of 40 credits for one trip over 90 days; Plus gives 40 a month; purchased credits last 12 months.
-5. **Affiliate as main free-tier income.** Plausible but unproven. At $0.40 to $1.20 per MAU per year it pays for infrastructure, not a salary. Decision: affiliate links are the free-tier income (no banner ads), treated as a floor, not the growth plan.
+5. **Affiliate as main free-tier income.** Plausible but unproven. At $0.10 to $1.50 per MAU per year it pays for infrastructure, not a salary. Decision: affiliate links are the free-tier income (no banner ads), treated as a floor, not the growth plan.
 6. **Apple's commission.** 15% is not an advantage on a $4.99 plan. Decision: lead with Trip Pass and annual Plus, and check whether web checkout for US users is allowed to save fees.
 7. **Monthly as the lead offer.** Wrong for episodic use. Decision: Trip Pass ($9.99 once) leads, annual Plus ($29.99, 7-day trial on annual only) is second, monthly Plus ($4.99) sits lower on the paywall.
 8. **Where the paywall triggers.** Not on the first trip, since the shared trip is the growth loop. Decision: Free keeps 2 active trips and lets people join others' trips free; the paywall appears on collaboration size, live routes and credits.
 9. **Banner ads.** Agreed to avoid them.
 10. **Launch lineup and order of work.** The first draft launched all three tiers and a rewrite before proof of demand. Decision: validate first (M0), launch with Free, Plus, Trip Pass and packs, build Premium behind a flag, and keep scheduled agents off until Premium.
-11. **Realism.** The base case ($47k profit in year 3) is a side income. A venture-style outcome needs the optimistic case and a sharing loop that is not yet proven.
+11. **Realism.** The base case ($35k profit in year 3) is a side income. A venture-style outcome needs the optimistic case and a sharing loop that is not yet proven.

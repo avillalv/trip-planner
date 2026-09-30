@@ -320,8 +320,9 @@ The `CLAUDE.md` rule still applies: read `.claude/rules/database-migrations.md` 
 | M0: validate | None. Waitlist data lives outside the app database. |
 | 0: foundations | Move to Postgres with the pre-deploy migration job. `provider_calls`, `ai_usage` metering (with `user_id` nullable until phase 1), `shared_research_cache`. |
 | 1: hosted web beta | Migration `0008` and backfill, `users`, `trip_members`, `invites`, `entitlements`, `credit_grants`, `fare_observations`, RLS with restricted-role tests, account ceilings. |
-| 2: iOS TestFlight | `user_devices`, `subscriptions`, `trip_passes`, `webhook_events`, credit pack grants, `link_clicks`, data export. |
-| 3: public launch | Account deletion purge job, retention jobs, monthly restore drill, affiliate conversion import. |
+| 1: hosted web beta (affiliate part) | `affiliate_programs`, `link_clicks` and the `/go/<click_id>` redirect from the start, so clicks are logged before the iOS app exists. |
+| 2: iOS TestFlight | `user_devices`, `subscriptions`, `trip_passes`, `webhook_events`, credit pack grants, data export, `checklist_items`. |
+| 3: public launch | Account deletion purge job, retention jobs, monthly restore drill, nightly `affiliate_conversions` import per network. |
 | 4: growth | Premium flag on (`premium` subscriptions, agent routines), Redis counters, `public_id` pages for shared trips, self-hosted places at scale, Android products. |
 
 ## 4. Data provider review
@@ -331,11 +332,15 @@ Confidence legend: **V** = read on a primary source; **S** = secondary source or
 | Provider | Used for | Current plan | Paid pricing | Cost per call | Commercial use and redistribution | Confidence |
 |---|---|---|---|---|---|---|
 | SerpApi (Google Flights, Google Hotels rentals) | Live fares, price insights, rentals | Free, 250/mo (app caps at 240) | Starter $25 (1,000), Developer $75 (5,000), Production $150 (15,000), Big Data $275 (30,000), Searcher $725 (100k), Volume $1,475 (250k) | $0.015 to $0.025 at low tiers, about $0.0072 at 100k, $0.0059 at 250k | API use is allowed; Google's content rights are the open question (4.1) | S, reported, verify (2026-09-30) |
-| Travelpayouts / Aviasales Data API | Cached cheapest fares, affiliate links | Data API token (free) | Free; earns commission | $0 | Data API reported open with no MAU threshold; Search API reported to need 50,000 MAU and conversion targets | S, reported, verify (2026-09-30) |
+| Travelpayouts / Aviasales Data API | Cached cheapest fares; also the launch affiliate network (flights, Booking.com, Agoda, Trip.com and Hostelworld stays, cars, transfers, tours, eSIM, insurance) | Data API token (free) | Free; earns commission | $0 | Data API reported open with no MAU threshold; Search API reported to need 50,000 MAU and conversion targets | S, reported, verify (2026-09-30) |
 | Geoapify | Autocomplete, geocoding, places | Free 3,000 request credits a day | API 10 $59/mo (10k/day), API 25 $109, API 50 $179, API 100 $299, API 250 $609, Custom from $860 | About $0.0002 to $0.002 per request depending on plan | Free plan is for testing and small use with attribution; storage and caching rules not verified | S and U |
 | Wikipedia, Wikidata, Commons | Destination summaries and hero images | Public API, no key | Free; Wikimedia Enterprise for high-volume commercial reuse | $0 | Text CC BY-SA 4.0 (attribution and share-alike); images have per-file licenses; identifying User-Agent required | V (Wikimedia docs via search summary) |
 | Frankfurter | FX (ECB reference rates) | Free, no key | Free, self-hostable | $0 | Open for commercial use | S |
-| Link previews (`providers/link_preview.py`) | Title, description, photo of a pasted URL, user-initiated | Direct fetch of the user's URL | n/a | $0 | User-initiated only; never applied to Airbnb, Vrbo or Booking automatically (project rule). Storing third-party photos is a copyright risk: hotlink, or store a thumbnail plus source link | Own code review |
+| Link previews (`providers/link_preview.py`) | Title, description, photo of a pasted URL, user-initiated | Direct fetch of the user's URL | n/a | $0 | User-initiated only. **Must be disabled for airbnb.*, vrbo.* and booking.* domains (and their short-link and regional variants) before the hosted launch:** the hosted server never fetches those pages, not even for a user-requested preview; for those hosts it shows only what the user typed or the bookmarklet sent. Storing third-party photos is a copyright risk: hotlink, or store a thumbnail plus source link | Own code review |
+| Stay22 | Lodging affiliate: link conversion, map widget, later Direct Travel API | Publisher account (verify app terms) | Free; publisher share about 30% of Stay22's commission (reported) | $0 | Does not cover Airbnb (reported); Direct Travel API access is contact-based | S, reported, verify (2026-09-30) |
+| Viator partner API | Things to do: search, product data, deep links | Self-service partner API (affiliate) | Free; commission per booking (reported about 8%) | $0 | Product content and image reuse limits to be read in the partner terms | S, reported, verify (2026-09-30) |
+| Expedia Group affiliate (on Impact) | Vrbo, Expedia, Hotels.com deep links and conversion reporting | Apply from month 3 | Free; commission per booking (Vrbo reported about 2 to 6%) | $0 | App eligibility to be confirmed in the program terms; Rapid API is out of scope at our scale | S, reported, verify (2026-09-30) |
+| Booking.com affiliate | Lodging deep links and conversion reporting | Current network unconfirmed (reported: moved from a direct program to Awin, then Awin reported ending in 2026); check the Affiliate Partner Center before applying. Until then Booking.com is available through Travelpayouts | Free; about 4% reported | $0 | Apps allowed with the mandatory disclosure line (reported) | S, reported, verify (2026-09-30) |
 | OurAirports | Airport reference | Bundled seed | Free | $0 | Public domain (per the seed's docstring) | S |
 
 "Geoapify request credits" are provider quota units and are unrelated to the user-facing AI credits, although Geoapify spend counts toward the $0.02 credit budget of an action.
@@ -380,15 +385,18 @@ Stay on Geoapify at 1k and 10k MAU (upgrading the plan as needed), get written c
 
 ### 4.4 Affiliate networks
 
-Affiliate links (flights, hotels, eSIM, insurance, tours) are the free-tier income; there are no banner ads.
+Affiliate links (lodging first, then tours, flights, cars, transfers, eSIM, insurance, post-trip compensation) are the free-tier income and appear on every tier in the same places; there are no banner ads. The full program research and placement map are in [08-affiliate-revenue.md](08-affiliate-revenue.md).
 
 | Network | Flights | Lodging | Access | Notes |
 |---|---|---|---|---|
-| Travelpayouts (Aviasales and many brands) | About 1.1% to 1.5% of booking value (reported, verify; flights are thin-margin everywhere) | Various (Booking.com, Hotellook and others, by program) | Instant signup | Best starting point; one dashboard; a statistics API for bookings |
+| Travelpayouts (Aviasales and many brands) | About 1.1% to 1.5% of booking value (reported, verify; flights are thin-margin everywhere) | Booking.com, Agoda, Trip.com, Hostelworld, Vrbo and others, by program | Instant signup | **Launch network.** One dashboard, one payout, a statistics API for bookings; also carries cars, transfers, tours, eSIM and insurance |
+| Stay22 | n/a | Link conversion for Booking.com, Expedia, Hotels.com, Vrbo (not Airbnb); maps | Self-serve publisher signup | Lodging challenger to Travelpayouts; A/B against it |
+| Viator partner API | n/a | n/a (things to do) | Self-service | Launch route for activities; GetYourGuide follows by direct application |
+| Expedia Group (Impact) | n/a | Vrbo, Expedia, Hotels.com | Application, from month 3 | The only legal route to Vrbo commission with real rates |
 | Skyscanner (Impact or partner API) | Commission on redirects and bookings; approval needed | Hotels via partners | Application | Licensed data plus attribution |
-| Expedia Group (Rapid or affiliate) | No flight commission unless packaged | Yes, revenue share | Partner-only, certification | Heavy integration; use affiliate links only, not Rapid, at our scale |
-| Booking.com affiliate | n/a | Yes | Affiliate programme or Travelpayouts | Outbound links only; our rule against fetching Booking pages is unaffected because deep links are links, not fetches |
-| GetYourGuide, Viator, Klook | n/a | Activities | Instant-ish | Fits itinerary activities; higher rates than flights |
+| Booking.com affiliate | n/a | Yes | Current network unconfirmed; Travelpayouts meanwhile | Outbound links only; our rule against fetching Booking pages is unaffected because deep links are links, not fetches. Rapid API and the Connectivity API are not used. |
+| Airbnb | n/a | No program an app can join | n/a | Plain link, never converted or tracked |
+| GetYourGuide, Klook | n/a | Activities | Direct application from month 3 | Fits itinerary activities; higher rates than flights |
 
 ## 5. Caching and dedup strategy
 
@@ -422,36 +430,67 @@ At 100k MAU the licensed source should already carry most live traffic. The per-
 
 ## 6. Affiliate integration
 
-Goal: outbound booking links that earn commission and attribute revenue to a user, trip and feature without tracking anything the App Store privacy label cannot support.
+Goal: outbound booking links that earn commission and attribute revenue to a user, trip and surface without tracking anything the App Store privacy label cannot support. Program research, placement map, disclosure and revenue estimates are in [08-affiliate-revenue.md](08-affiliate-revenue.md); this section is the data and service design.
 
 Flow:
-1. The user taps "Book" on a fare or stay.
-2. The app calls `POST /api/outbound` with `{quote_id | lodging_id, surface}`; the server creates a `link_clicks` row and returns the redirect URL with our affiliate id and a **sub-id** (`click_id`, an opaque uuid).
-3. The app opens the URL in `SFSafariViewController` (not an embedded WKWebView with injected JS).
-4. The network reports conversions (postback or statistics API poll) carrying the `click_id`; we upsert `affiliate_conversions`.
+1. The user taps a partner button (for example "Book on Vrbo") on a fare, stay, activity or checklist item.
+2. The app calls `POST /api/outbound` with `{entity_type, entity_id, surface, trip_id}`. The server checks trip access, picks the program (feature flags, geography, A/B cell), inserts a `link_clicks` row and returns `https://<host>/go/<click_id>`. The `click_id` is a random 128-bit id (base62, about 22 characters), never derived from the user or trip.
+3. The app opens that URL in `SFSafariViewController` (not an embedded WKWebView with injected JS).
+4. `GET /go/<click_id>` checks the row is fresh (about 10 minutes, not used twice), records `clicked_at`, and returns **HTTP 302** to a URL built from the stored `affiliate_programs.base_url_template`, our affiliate id, the per-click **sub-id** and the destination. It sends `Cache-Control: no-store` and `Referrer-Policy: no-referrer`, and never renders a page, so there is no third-party script, pixel or cookie from us.
+5. A nightly worker job per network pulls conversions and matches them to clicks by sub-id.
+
+Redirect rules:
+- **No open redirects.** The redirect target is only ever built from a stored template plus a validated destination for that program's own hosts. There is no `url=` parameter, and `/go/<click_id>` accepts only ids we minted.
+- **The sub-id is random per click.** It carries no user id, trip id, email or device id. The join from conversion to click to user and trip happens only in our database. Where a network limits sub-id length (Travelpayouts `sub_id` is text, limit reported, verify), use an 8 to 12 character `short_id` with a unique index. A second static field (Stay22 `campaign`, Impact `subId2`) carries the surface label only.
+- Rate-limit `/api/outbound` per user (about 60 an hour), dedupe repeat clicks within 30 seconds, and require the authenticated app call to mint a click id.
+- Airbnb URLs never go through `/go`; they open as plain links. Pasted listings stay exactly as pasted; a separate "Book via partner" button builds a partner link from the URL text without fetching the page.
 
 ```sql
-affiliate_programs (id, network text, program text, base_url_template text, marker_or_id text,
-                    commission_model text, cookie_days int, terms_url text, active bool)
+affiliate_programs (id, network text,   /* travelpayouts, impact, stay22, viator, direct */
+                    program text, base_url_template text, marker_or_id text,
+                    hosts text[],        /* destination hosts this template may point at */
+                    commission_model text, cookie_days int, subid_param text, subid_max_len int,
+                    campaign_param text null, terms_url text, api_credentials_ref text,
+                    disclosure_text text, active bool)
 link_clicks (
-  id uuid pk, user_id fk null, trip_id fk null, program_id fk,
-  entity_type text, entity_id bigint,   /* flight quote, lodging option, activity */
-  destination_url text, surface text, created_at, ip_hash text, device_id_hash text null
+  id uuid pk, click_id text unique,    /* random, base62, the sub-id we send */
+  short_id text null unique,           /* for networks with short sub-id limits */
+  user_id fk null, trip_id fk null, program_id fk,
+  entity_type text, entity_id bigint,  /* flight quote, lodging option, activity, checklist item */
+  checklist_item_kind text null, surface text, program_variant text null,   /* A/B cell */
+  destination_url text, opened_in text,          /* sfsvc or safari */
+  created_at, clicked_at null, redirect_status int,
+  country text, platform text, app_version text,
+  ip_hash text                          /* salted, rotated monthly; no advertising id, no device id */
 )
 affiliate_conversions (
-  id, program_id fk, network_txn_id text, click_id uuid null,  /* null if the network did not pass the sub-id back */
-  status text,  /* pending, approved, rejected, paid */
+  id, program_id fk, network text,
+  network_txn_id text,                 /* Travelpayouts action id, Impact action id, Stay22 booking id, Viator booking ref */
+  network_click_ref text null,         /* click or tracking id the network assigned */
+  sub_id_returned text null,           /* what the network echoed back */
+  click_id text null fk,               /* set when matched; null if the network did not pass the sub-id back */
+  match_status text,                   /* matched, unmatched */
+  status text,                         /* pending, approved, rejected, paid */
+  network_status_raw text,             /* processing, paid, cancelled (Travelpayouts); pending, locked, reversed (Impact) */
+  product_type text, product_ref text null,   /* flight, stay, tour; Viator product code, Stay22 partner, Impact campaign */
   booking_value numeric, currency char(3), commission numeric, commission_currency char(3),
-  event_at, approved_at, paid_at, raw jsonb,
+  booked_at, travel_date null,         /* check-in or tour date; stays pay after check-out */
+  checkout_date null, approved_at, paid_at, reversal_at null,
+  clicks_lag_hours numeric, status_history jsonb, raw jsonb,
   unique (program_id, network_txn_id)
 )
 affiliate_payouts (id, program_id, period, amount, currency, received_at, reference)
+checklist_items (id, trip_id fk, kind text, status text,   /* todo, done, skipped, not_needed */
+                 due_on date null, done_at null, program_id fk null, created_at)
 ```
-- A materialized view `revenue_by_month` joins conversions to clicks to users. Revenue per MAU and per tier shows whether affiliate income covers free-tier costs (the kill rule in the README uses $0.20 per monthly user).
-- Store only a hashed IP and no advertising identifier. Disclose affiliate links in-app ("we may earn a commission") near the button.
-- Never rewrite a user-pasted Airbnb, Vrbo or Booking URL with tracking silently; wrap outbound links only for programs we joined, and never fetch those pages automatically.
+- Conversion pulls run nightly and upsert idempotently on `(program_id, network_txn_id)`: the Travelpayouts statistics and payments API first, then the Impact Actions API for Expedia Group, Stay22 and Viator reports, and later any direct network. Each pull records status changes (pending, approved, rejected, paid) in `status_history`.
+- Match to clicks by sub-id. Unmatched conversions are a health metric: above 10% means a tracking break. Alert when clicks drop more than 50% day over day, when redirect 4xx or 5xx exceeds 1%, or when a conversion pull fails.
+- `checklist_items` stores the "Before you go" checklist state per trip (documents, visas, insurance, eSIM, transfers and similar). Only items that link to a partner create `link_clicks` rows, and the checklist itself works without any partner. The after-trip "Was your flight delayed?" prompt reads trip dates and flights, and creates no table of its own.
+- Materialized views `revenue_by_month`, `revenue_by_surface`, `revenue_by_partner` and `revenue_per_mau` join conversions to clicks to users. Revenue per MAU shows whether affiliate income covers free-tier costs; the kill rule in the README is under $0.20 per monthly user per year (annualized). These are for an internal admin page, not the user app.
+- Store only a hashed IP and no advertising identifier. Disclose affiliate links in-app ("We earn a commission if you book here.") next to every partner button, with an "Ad" label on UK and EU storefronts.
+- **The hosted server never fetches Airbnb, Vrbo or Booking.com pages.** That includes the existing user-triggered preview in `backend/tripplanner/providers/link_preview.py`, which must be disabled for those domains before hosted launch (a host denylist, checked after redirects). Partner links for those hosts are built from the URL text only, never from page content.
 - Booking physical travel outside the app is not subject to In-App Purchase, so the affiliate redirect is compliant. Plus, Trip Pass and credit packs must use StoreKit (see [07-local-to-app-store.md](07-local-to-app-store.md)).
-- Flight commissions are around 1% and lodging 3% to 8% on low booking rates (reported, verify). Model affiliate income as upside, not the plan; see [01-business-plan.md](01-business-plan.md).
+- Model affiliate income as a floor, not the plan: $0.10 / $0.60 / $1.50 per MAU per year (conservative / base / optimistic); see [01-business-plan.md](01-business-plan.md).
 
 ## 7. Retention, backups, analytics
 
