@@ -581,7 +581,7 @@ Rules: one test per surface at a time. Pre-register the metric. Randomize per us
 | 1: hosted web beta | Ship `/api/outbound` and `/go`, the nightly Travelpayouts import, the disclosure sentence and the "How we earn money" page. Disable link preview for Airbnb, Vrbo, Booking.com and partner hosts. Ship chosen-flight Book, the lodging "Book via partner" button, Viator things to do and the checklist (without insurance). Add the internal revenue dashboard. Start Stay22 on a share of users. |
 | 2: iOS TestFlight | SFSafariViewController through Capacitor, "Ad" label by storefront, privacy label entry, review notes text. Run A/B test 1 (container). Add a legal review for disclosure and insurance. |
 | 3: public launch | Confirm no ATT prompt and the review notes with Apple. Turn on gated insurance (EKTA or VisitorsCoverage) after legal sign-off. Submit direct applications at month 3: Expedia Group, Booking.com, Skyscanner, Airalo, GetYourGuide. Ship the after-trip prompt. |
-| 4: growth | Add approved direct programs and their reporting adapters. Run the A/B queue. Add Trainline, AirHelp, World Nomads and Heymondo where data supports it. Shareable trip pages carry the "Book the plan" section with labels. Revisit credit cards at about 100k MAU. |
+| 4: growth | Add approved direct programs and their reporting adapters. Run the A/B queue. Add Trainline, AirHelp, World Nomads and Heymondo where data supports it. Shareable trip pages carry the "Book the plan" section with labels. Revisit credit cards at about 100k MAU. Set up the concierge lane (host agency, registrations, E&O, request form) as in section 13, then group room-block requests. |
 
 Checklist:
 
@@ -616,6 +616,111 @@ Checklist:
 9. Airbnb: any change to creator or demand programs (reported "not accepting applications").
 10. ETIAS timing, and the Epic v. Apple outcome (effects on web checkout for Plus and Trip Pass only).
 11. Replace every attach rate and order value in this file with real click and conversion data by month 3.
+
+## 13. Higher-commission lanes
+
+Affiliate links pay $8 to $25 per completed booking. The lanes below pay 5 to 20 times that per booking, but each one brings a licence question, human labor or merchant duties, so none is a launch item. Evidence caveat: host-agency, bedbank and block figures come from search summaries (Fora's own site, Forbes and valueaddvc were blocked), so every number is "reported, verify". Per-trip figures are estimates from stated assumptions. The revenue math and scenarios are in [09-revenue-expansion.md](09-revenue-expansion.md) sections 3.1 to 3.3 and 6.4.
+
+| Lane | Net per booking | Attach (share of trips) | Per real trip | Effort | Regulatory burden | Hurts UX? |
+|---|---|---|---|---|---|---|
+| Concierge via host agency | Hotel $600 stay: $40 to $70. Cruise $3,000: $200 to $380. Package $2,500: $150 to $300 | 2 to 4% opt in | $2 to $6 | Low build, 30 to 60 minutes of founder time per booking | Medium: seller-of-travel registration in some states, host cover, E&O | No, if optional and perks are real |
+| Group room blocks and organizer tools | 30-room, 2-night block at $200: about $1,200 at 10%; $1 to $3 per traveler for collection | 0.3 to 1% of trips | $1.50 to $8 | Medium | Medium to high if Wayfold holds money; low if the hotel collects | No, free blocks help organizers |
+| In-app hotel booking (LiteAPI) | Margin 5 to 15% of $600 = $30 to $90 gross; $15 to $60 after card fees, refunds, support | 3 to 5% | $0.50 to $3 | High | Medium to high: merchant duties, consumer law, probably seller-of-travel | Mixed: smoother checkout, more support, less "we send you to the real site" |
+| Expedia TAAP under host credentials | Up to 13% hotels, 11.5% flights and activities, 7.5% cars, 6% packages | Part of the concierge lane | Inside the concierge figure | None beyond the concierge lane | Needs IATA, ARC, CLIA or TRUE, so only through a host | No |
+
+### 13.1 Why these and not the others
+
+Per trip the top three lanes stack to about $4 to $17 against $1.04 today. Skipped in years 1 to 3: flights as merchant (Duffel; net $5 to $25 per ticket, high tail risk), Expedia Rapid and Hotelbeds or WebBeds direct (partner-only, not solo work), credit cards (section 4.3), event tickets (StubHub 4%, SeatGeek 1%, Ticketmaster $0.30; under $0.30 per trip), and airport parking. Travel insurance stays a referral (section 7.5); a limited-lines licence would lift it from $8 to $25 to perhaps $20 to $60 but adds exams and conduct limits.
+
+### 13.2 Concierge via a host agency
+
+How it works (reported): suppliers pay travel agencies 7 to 20% per booking, typically 30 to 90 days after travel, and a host agency passes on a split. The advisor is an independent contractor under the host's IATA, ARC, CLIA or TRUE credentials and E&O cover. The founder joins a host as an advisor; Wayfold gets an optional "Have a human book this" button on shortlisted stays, cruises and complex trips. The user fills a brief and the founder books in the host's portal.
+
+| Host | Reported split and fees | Notes |
+|---|---|---|
+| Fora | 70/30 to start, 80/20 at $300,000 of annual sales, 90/10 at $2M. $299 a year or $99 a quarter. Average 12% per booking reported. 15,000+ advisors, $1B valuation July 2026 (reported) | Fora Reserve has 5,000+ preferred partners (Virtuoso properties, Four Seasons, Rosewood Elite). Portal covers booking, proposals, commission tracking. No partner or API program found; ask by email. |
+| Outside Agents | 80% rising to 90 or 95%; about $199 to start, $26 to $46 a month | Large and cheap |
+| KHM Travel Group | 80%, 90% after $5,000 of paid commission in a year | |
+| Avoya | About 80% on own clients, about 30% on leads it supplies; Elite 100 at $399 a month gives 100% | Lead-gen model |
+| Gifted Travel Network, Nexion | 80/20 to 90/10 and 70 to 100%; $0 to $50 and $0 to $200+ a month | Not researched in detail |
+| Cruise.com host program | Up to 100% split from $75 a month | Cruise-only option |
+
+Economics under Fora's 70/30: a $600 Virtuoso stay at 10% pays the agency $60 and Wayfold $42; a $3,000 cruise at 10 to 16% pays the agency $300 to $480 and Wayfold $210 to $340 at 70%. Cruise lines pay 10 to 16% (Royal Caribbean 10% at 0 to 24 passengers up to 16% at 250+), river cruises 15 to 20%, shore excursions 8 to 12%; the affiliate route (CruiseDirect, 3%, $60 to $100) pays less.
+
+Perks (reported): Virtuoso properties give daily breakfast, a property credit (for example $100 at Fairmont), possible upgrade and early check-in or late checkout, at the same or better rate than the hotel's flexible rate, with the hotel paying the advisor. Virtuoso is bookable only through a Virtuoso-affiliated advisor. This is why the lane does not hurt the UX: the user gets more and pays the same.
+
+Credentials and costs (reported): ARC application $2,300 plus $228 a year per location, TRUE $399 the first year, then $240; hosts let advisors ride on their numbers. E&O $400 to $1,200 a year solo at $1M per claim; get separate cover if using an LLC or passing $500,000 a year.
+
+Seller-of-travel registration (reported, verify): California $100 per location, filed 10 days before selling, with the number shown in ads; Florida $50 a year for independent agents (business categories $300 to $2,500); Washington $50 plus a $222 annual licence; Hawaii $146 or $215 and a trust account. Exemptions vary. Counsel confirms whether an app that only forwards a request to a human advisor is outside the rules (inference: referral only usually is; selling is not).
+
+Two hard limits (inference). Host contracts are between the agency and a named advisor, and supplier portals expect a human, so automated or mass booking by the app under host credentials would probably breach terms. The workable model is human in the loop: the app collects a brief and the founder, or a hired advisor, books. Capacity is about 300 bookings a year solo.
+
+Rules that keep it from degrading the planner: it is an opt-in button, never reorders results, discloses that the hotel pays Wayfold, shows the perk list beside the price, and is not gated behind a paid tier.
+
+### 13.3 Group room blocks
+
+- Groups360 says it is free to planners, lets planners request commissionable rates on RFP bookings, offers instant booking for 10 to 25 rooms, and connects 200,000+ properties (reported). Group hotel commission is typically up to 10% (reported generally; the Groups360 figure was not confirmed, verify). A 30-room, 2-night wedding block at $200 is $12,000 of room revenue and $600 to $1,200 of commission.
+- Whether an app can be the payee is unknown (often only registered planners or agencies are paid). Verify with Groups360 and Hotel Planner before counting it. The concierge host agency may be the route.
+- Attrition risk: unsold block rooms can be charged. Wayfold never signs a contract for users. Use the hotel's own reservation-link blocks, which carry no liability for the organizer.
+- Organizer payment collection: Tern uses per-traveler sub-trips, Lambus has expense splitting, Troupe charges the organizer $3.99 a month or $29.99 once (reported, verify). Wayfold uses Stripe Connect with the organizer as the connected account so it never holds funds; a fee of 1.5% of amounts collected (about $1 to $3 a traveler on a typical trip), shown before charging. Interchange income is nil unless Wayfold issues cards, which is out of scope. Legal review first.
+
+### 13.4 In-app hotel booking through LiteAPI (year 2 and later)
+
+LiteAPI (Nuitee) is the only bedbank a solo builder can realistically integrate: public REST API, 2M+ hotels, self-serve, no stated minimum, margin set per search, weekly payouts for confirmed bookings, and a choice between Nuitee as merchant of record through its payment SDK or Wayfold as merchant of record on net rates (reported, verify). Wayfold would use Nuitee as merchant of record to stay out of card-data scope. Margins are constrained by rate parity (inference: bedbank rates are often priced to match public prices), so the usable margin is probably the low end, and net after card fees, chargebacks, cancellations and support is about half of gross. Other providers: RateHawk (business approval needed), Hotelbeds (adds 15 to 22% to hotel net, commercial approval, Wayfold as merchant) and WebBeds (no public API) are not solo options. Build only after click data shows strong booking intent, a support process for "I arrived and there is no booking" exists, and counsel has confirmed the registration position.
+
+### 13.5 Expedia TAAP with host credentials
+
+The Expedia Travel Agent Affiliate Program pays up to 13% on hotels, 11.5% on flights and activities, 7.5% on cars and 6% on packages, in tiers by gross bookings (Platinum at $500,000+). It is free with no minimum sales but requires IATA, ARC, CLIA or TRUE credentials (reported, verify). Wayfold has none of its own, so the only fit is the founder booking manually as a host-agency advisor, which is part of the concierge lane. It does not replace the Expedia Group affiliate application of section 4.2 and it is not a way to link users straight to a TAAP link. Expedia Rapid stays skipped (section 4.3).
+
+### 13.6 Cashback rules and why Wayfold does not share commission as cash
+
+What programs say (reported, verify in each agreement): Booking.com requires its approval before promoting cashback to users; Expedia Group allows loyalty and cashback case by case with rules against unapproved voucher codes; other programs either prohibit cashback partners, allow them at a reduced tier or treat them as a separate segment. Viator, Travelpayouts and Stay22 terms were not found.
+
+Wayfold does not pay users a share of commission as cash or cash-like credit, for these reasons:
+
+1. A credit that varies by partner creates a payout-based ranking incentive, which breaks the rule in section 7.7. One flat rate would fix that but not the rest.
+2. Stored credit has gift-card, breakage and unclaimed-property rules, and insurance rebating is restricted in many states.
+3. Programs can treat self-purchase and incentivized traffic as a violation, and several require approval first.
+4. A reward for booking through an outside link connects outside purchases to app value, and section 7.1 says affiliate purchases never unlock app features. Apple guideline 3.1.1 adds risk if credit buys app features; confirm the current text before any test.
+5. It halves revenue on the trips where it applies, and adds accounting work.
+
+A compliant variant exists only as a test: a "trip fund" showing "You earned $12 toward your next trip", on one partner that has approved it in writing (email Booking.com or Stay22 first), with one flat rate and insurance excluded. Until a partner approves and Apple's text is confirmed, the answer is no.
+
+### 13.7 Other commission sources considered
+
+| Source | Reported | Verdict |
+|---|---|---|
+| Viator merchant API | Suppliers pay Viator 20 to 30%; affiliates get about 8% of the sale; the merchant route (markup or commission model) could roughly double or triple the take (inference). Needs certification | Later, after affiliate volume exists; dynamic packaging skipped |
+| point.me affiliate | Commission on subscriptions, rate not found (verify) | A small, honest tip inside the flight screen at most ($10 to $30 a subscription) |
+| Travel insurance licence | Commission 20 to 40% reported; limited-lines fees NC $100 plus $50, MD $54, MS $200, WA $20, CT $750, CA $4,540 for two years | Stay on referral in years 1 to 3 |
+| Vacation rental management referral | Not researched; managers often pay 5 to 10% (verify) | Low volume |
+| Sports travel packages | Usually sold by specialist agencies | A possible concierge niche |
+
+### 13.8 What the stacked upside depends on
+
+| | Affiliate links only | With the lanes |
+|---|---|---|
+| Revenue per real trip, base case | $1.04 (after attribution loss, lodging about 60%) | About $4 to $17 (concierge $2 to $6, groups $1.50 to $8, LiteAPI $0.50 to $3) |
+
+The range depends on:
+
+1. Founder hours. Concierge is capped at about 300 bookings a year solo (30 to 60 minutes each). Above that, contracted advisors keep half of the net. At the base case of 60,000 MAU in year 3 the capped lane earns about $27k, or $0.75 per trip, not $2 to $6.
+2. Attach rates that are assumptions: 2 to 4% of trips opt into concierge, 0.3 to 1% are group events with a block, 3 to 5% book in app.
+3. Payee and licence rules that are unverified: whether host agencies allow app-routed leads, whether an app can be paid a room-block commission, and whether forwarding a request needs seller-of-travel registration.
+4. LiteAPI margin after rate parity. Each in-app booking also replaces an affiliate commission of about $10 on the same stay, so the incremental figure in 09 is $20 a booking, not $30.
+5. A support process. Lanes 1 and 3 move blame for hotel problems onto Wayfold.
+
+Treat the range as a set of tests, not a forecast. The measure that matters first is the concierge ask rate and commission per booking in months 1 to 12.
+
+### 13.9 Open items to verify for the lanes
+
+1. Whether Fora, Outside Agents and KHM allow app-routed leads or automated booking.
+2. Whether Groups360 or Hotel Planner pay non-agency planners, and the percentage.
+3. Whether seller-of-travel registration applies when the app only forwards a booking request.
+4. LiteAPI margin caps, rate-parity rules, payout currencies and minimums.
+5. Viator merchant API certification requirements and timeline.
+6. Cashback and incentive clauses in Travelpayouts, Stay22, Viator and Expedia agreements.
+7. Travel Planners International, Duffel Stays and Travelfusion terms (not researched).
 
 ## Sources
 
@@ -657,3 +762,11 @@ Networks and benchmarks:
 - Travelpayouts support: https://support.travelpayouts.com/hc/en-us/articles/203955653-ID-and-SubID-Affiliate-marker-and-additional-marker ; https://support.travelpayouts.com/hc/en-us/articles/360019864079-API-of-affiliate-programs-booking-statistics ; https://support.travelpayouts.com/hc/en-us/articles/203956053-Travelpayouts-Affiliate-Agreement-The-public-offer
 - Networks: https://xark.io/resources/affiliate-network-comparison-impact-cj-partnerize-2026 ; https://affiliate-times.com/cj-affiliates-340m-merger-with-partnerize-reshapes-enterprise-cpa-landscape/
 - Benchmarks: https://track360.io/blog/best-travel-affiliate-programs-2026-operator-rate-card-benchmark ; https://foundrycro.com/blog/travel-hospitality-marketing-benchmarks-2026/
+
+Higher-commission lanes (section 13; search summaries, reported, verify):
+- Host agencies: https://www.foratravel.com/join/resources/travel-agent-commission ; https://www.foratravel.com/join/resources/fora-vs-outside-agents ; https://www.squadtrip.com/guides/what-is-a-host-travel-agency-pros-cons-top-picks/ ; https://travedeus.com/blog/marketing/outside-agents-vs-avoya-travel ; https://www.cruise.com/host-agency/earn-more/ ; https://mainstreetagencytravel.com/news/royal-caribbean-commission-rates-2026-guide
+- Credentials, registration and insurance: https://www.altexsoft.com/blog/travel-agency-accreditation/ ; https://www.foratravel.com/join/resources/travel-agent-insurance ; https://startpermit.com/blog/how-to-start-a-travel-agency/ ; https://www.ncdoi.gov/documents/agent-services/referral-fees-faqs/open
+- Perks programs and Expedia TAAP: https://onemileatatime.com/guides/virtuoso-hotels-travel-agent/ ; https://travedeus.com/blog/marketing/what-is-expedia-taap
+- Bedbanks: https://docs.liteapi.travel/docs/revenue-management-and-commission ; https://docs.liteapi.travel/docs/implementing-payment ; https://www.zentrumhub.com/blog/best-hotel-api-providers/
+- Groups: https://groups360.com/blog/event-planner-hotel-commissions-guide/ ; https://help.tern.travel/en/articles/10059452-a-guide-to-group-trip-functionality
+- Cashback: https://affiliates.support.booking.com/kb/s/article/Partner-Affiliate-Agreement ; https://getreditus.com/resources/glossary/cashback-affiliate
