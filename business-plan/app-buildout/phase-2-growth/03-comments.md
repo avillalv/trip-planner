@@ -25,8 +25,8 @@ unread markers and quiet notifications.
 
 - Phase 1 collaboration stops at hearts, an activity log and poll votes. Groups fall back to a
   separate chat thread to say "is the museum open Monday?", which is where the decision gets lost.
-- Competitive reasons. Wanderlog and Trippy both let collaborators discuss and react inside the plan
-  (group tools are their retention loop), and TripIt users' complaint about group coordination is the
+- Competitive reasons. Wanderlog and Trippy have group tools for collaborating inside the plan
+  (reported, verify), and TripIt users' complaint about group coordination is the
   same gap ([business plan](../../01-business-plan.md): group coordination "is still clumsy in TripIt
   and Google Docs"). Comments are table stakes for the friend-group persona and the cheapest feature in
   Phase 2 (about a week).

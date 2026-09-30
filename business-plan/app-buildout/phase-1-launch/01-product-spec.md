@@ -1536,7 +1536,7 @@ confirmations.
 ### 4.20 Public web pages (F-WEB)
 
 Public pages need no account and no app. They use the passport design and the same components as
-the app, follow the affiliate rules, and are screens 6.34 in [05-ui-ux-spec.md](05-ui-ux-spec.md).
+the app, follow the affiliate rules, and are screens 6.34 to 6.36 in [05-ui-ux-spec.md](05-ui-ux-spec.md).
 Only the page behavior is specified here; hosting and SEO plumbing are in
 [02-architecture.md](02-architecture.md) and the launch tasks in [09-build-roadmap.md](09-build-roadmap.md).
 
