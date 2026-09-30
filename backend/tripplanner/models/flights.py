@@ -111,6 +111,9 @@ class FlightQuote(Base):
     # Local departure time as shown by the source, e.g. "2026-11-05 11:30".
     depart_at_local: Mapped[str | None] = mapped_column(String(25))
     flight_numbers: Mapped[list[str] | None] = mapped_column(JSONB)
+    # A booked flight's legs: {direction, flight_number, origin, destination, depart_at, arrive_at},
+    # with times as local wall-clock "YYYY-MM-DDTHH:MM" at each airport.
+    segments: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)
     booking_url: Mapped[str | None] = mapped_column(Text)
     source_url: Mapped[str | None] = mapped_column(Text)
     source_domain: Mapped[str | None] = mapped_column(String(120))

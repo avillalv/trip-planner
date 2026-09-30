@@ -37,6 +37,8 @@ class Trip(TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(12), server_default="planning")
     home_currency: Mapped[str] = mapped_column(String(3))
     notes: Mapped[str] = mapped_column(Text, server_default="")
+    # What the travelers enjoy (e.g. "beaches", "street art"); AI suggestions are shaped by these.
+    interests: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list, server_default="{}")
 
     destinations: Mapped[list["TripDestination"]] = relationship(
         back_populates="trip", order_by="TripDestination.position", cascade="all, delete-orphan"

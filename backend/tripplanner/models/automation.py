@@ -22,6 +22,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 from tripplanner.models.base import Base, TimestampMixin
 
 ROUTINE_KINDS = ("flight_api", "flight_agent", "research_agent")
+# One-shot runs the travelers start from a page (AI ideas, lodging picks); never scheduled routines.
+ASSIST_KINDS = ("itinerary_agent", "lodging_agent")
+RUN_KINDS = ROUTINE_KINDS + ASSIST_KINDS
 RUN_TRIGGERS = ("schedule", "manual", "catch_up")
 RUN_STATUSES = (
     "queued",
@@ -61,7 +64,7 @@ class Run(Base):
 
     __tablename__ = "runs"
     __table_args__ = (
-        CheckConstraint(f"kind IN {ROUTINE_KINDS}", name="valid_kind"),
+        CheckConstraint(f"kind IN {RUN_KINDS}", name="valid_kind"),
         CheckConstraint(f"trigger IN {RUN_TRIGGERS}", name="valid_trigger"),
         CheckConstraint(f"status IN {RUN_STATUSES}", name="valid_status"),
         Index("ix_runs_status_queued_at", "status", "queued_at"),
