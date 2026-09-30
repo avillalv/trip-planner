@@ -36,6 +36,9 @@ STRIPPED_ENV = frozenset(
     }
 )
 
+CLAUDE_MISSING = "Claude Code wasn't found. Install it, or set CLAUDE_PATH in .env to claude.exe's full path."
+KEY_MISSING = "AGENT_INGEST_API_KEY isn't set in .env, so the agent couldn't save anything."
+
 # Keeps a console window from flashing up when the app runs in the background on Windows.
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 

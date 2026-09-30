@@ -10,7 +10,7 @@ from tests.factories import add_trip
 from tripplanner.models import Routine, Run
 from tripplanner.services.routines import last_slot_before, runs_per_day
 from tripplanner.services.runs import claim_next, enqueue, recover_interrupted
-from tripplanner.worker.scheduler import RoutineScheduler
+from tripplanner.worker.scheduler import LANES, RoutineScheduler
 
 
 def add_routine(db: Session, **overrides: object) -> Routine:
@@ -152,3 +152,43 @@ def test_agent_runs_have_their_own_lane(
 
     assert set(executed) == {first.id, agent_run.id}
     assert second.status == "queued"
+
+
+def test_runs_a_traveler_asked_for_never_wait_behind_scheduled_agents(
+    db_session: Session, scheduler: RoutineScheduler, executed: list[UUID]
+) -> None:
+    scout = add_routine(db_session, kind="flight_agent", name="Fare scout")
+    busy, _ = enqueue(
+        db_session, trip_id=scout.trip_id, kind="flight_agent", trigger="schedule", routine=scout
+    )
+    waiting, _ = enqueue(
+        db_session,
+        trip_id=scout.trip_id,
+        kind="flight_agent",
+        trigger="schedule",
+        routine=scout,
+        params={"n": 2},
+    )
+    ideas, _ = enqueue(db_session, trip_id=scout.trip_id, kind="itinerary_agent", trigger="manual")
+    lodging, _ = enqueue(db_session, trip_id=scout.trip_id, kind="lodging_agent", trigger="manual")
+
+    # One slot per lane: the first scheduled agent run and the first asked-for run start; the rest wait.
+    assert scheduler.dispatch() == 2
+    scheduler.close()
+
+    assert set(executed) == {busy.id, ideas.id}
+    assert (waiting.status, lodging.status) == ("queued", "queued")
+    assert LANES["assist"] == ["itinerary_agent", "lodging_agent"]
+
+
+def test_the_assist_lane_can_be_widened(db_session: Session, executed: list[UUID]) -> None:
+    trip = add_trip(db_session)
+    first, _ = enqueue(db_session, trip_id=trip.id, kind="itinerary_agent", trigger="manual")
+    second, _ = enqueue(db_session, trip_id=trip.id, kind="lodging_agent", trigger="manual")
+    wide = RoutineScheduler(
+        session_factory=lambda: nullcontext(db_session), execute=executed.append, max_assist_jobs=2
+    )
+
+    assert wide.dispatch() == 2
+    wide.close()
+    assert set(executed) == {first.id, second.id}

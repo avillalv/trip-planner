@@ -10,11 +10,12 @@ from tripplanner import __version__
 from tripplanner.config import get_settings
 from tripplanner.db import new_session
 from tripplanner.models import Run, Trip
+from tripplanner.models.automation import ASSIST_KINDS
 from tripplanner.services import fx
 from tripplanner.services.runs import RunLog, finish
 from tripplanner.worker.jobs.flight_prices import Cancelled, JobContext, run_flight_prices
 
-AGENT_KINDS = ("flight_agent", "research_agent")
+AGENT_KINDS = ("flight_agent", "research_agent", *ASSIST_KINDS)
 
 log = logging.getLogger(__name__)
 

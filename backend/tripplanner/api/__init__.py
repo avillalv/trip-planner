@@ -11,6 +11,7 @@ from tripplanner.api import (
     places,
     runs,
     settings,
+    suggestions,
     system,
     trips,
     weather,
@@ -30,6 +31,7 @@ for module in (
     geo,
     settings,
     agent,
+    suggestions,
     weather,
 ):
     api_router.include_router(module.router)

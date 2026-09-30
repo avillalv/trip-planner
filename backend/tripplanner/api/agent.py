@@ -19,6 +19,8 @@ from tripplanner.schemas.agent import (
     QuoteBatchIn,
     QuoteBatchResult,
     RunContext,
+    SuggestionBatchIn,
+    SuggestionBatchResult,
 )
 from tripplanner.schemas.geo import AirportOut
 from tripplanner.security import is_local_request
@@ -80,6 +82,20 @@ def lookup_airports(db: DbSession, q: str = Query(min_length=2, max_length=60)) 
 def submit_flight_quotes(run_id: UUID, body: QuoteBatchIn, db: DbSession) -> QuoteBatchResult:
     """Up to 50 prices. Each is accepted, rejected with reasons, or reported as a duplicate."""
     return agent_ingest.submit_quotes(db, _active_run(db, run_id), body.quotes)
+
+
+@router.post("/runs/{run_id}/activity-suggestions", response_model=SuggestionBatchResult)
+def submit_activity_suggestions(
+    run_id: UUID, body: SuggestionBatchIn, db: DbSession
+) -> SuggestionBatchResult:
+    """Up to 20 things to do. Each is accepted, rejected with reasons, or reported as a duplicate."""
+    run = _active_run(db, run_id)
+    if run.kind != "itinerary_agent":
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Only itinerary runs can suggest activities. Save findings with add_note instead.",
+        )
+    return agent_ingest.submit_suggestions(db, run, body.suggestions)
 
 
 @router.post("/runs/{run_id}/notes", response_model=NoteOut, status_code=status.HTTP_201_CREATED)

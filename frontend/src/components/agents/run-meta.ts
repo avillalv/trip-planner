@@ -1,5 +1,5 @@
 import { Ban, CircleAlert, CircleCheck, CircleX, Clock, Loader2, Pause, TimerOff, type LucideIcon } from 'lucide-react'
-import type { RoutineKind, RunStatus } from '@/lib/api/agents'
+import type { RunStatus } from '@/lib/api/agents'
 import type { Run } from '@/lib/api/flights'
 import { formatElapsed } from '@/lib/format'
 
@@ -24,10 +24,12 @@ export const TONE_TEXT: Record<Tone, string> = {
   live: 'text-violet',
 }
 
-export const KIND_LABEL: Record<RoutineKind, string> = {
+export const KIND_LABEL: Record<Run['kind'], string> = {
   flight_api: 'Price check',
   flight_agent: 'Flight search',
   research_agent: 'Research',
+  itinerary_agent: 'Trip ideas',
+  lodging_agent: 'Places to stay',
 }
 
 export const TRIGGER_LABEL: Record<Run['trigger'], string> = {

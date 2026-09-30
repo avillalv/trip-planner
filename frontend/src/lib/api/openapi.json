@@ -2296,7 +2296,9 @@
                   "enum": [
                     "flight_api",
                     "flight_agent",
-                    "research_agent"
+                    "research_agent",
+                    "itinerary_agent",
+                    "lodging_agent"
                   ],
                   "type": "string"
                 },
@@ -2482,7 +2484,7 @@
           "automation"
         ],
         "summary": "Run Outputs",
-        "description": "What the run saved (prices and notes) and what was rejected, with the reasons.",
+        "description": "What the run saved (prices, notes, suggested activities) and what was rejected, with the reasons.",
         "operationId": "run_outputs",
         "parameters": [
           {
@@ -3359,6 +3361,60 @@
         }
       }
     },
+    "/api/agent/v1/runs/{run_id}/activity-suggestions": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Submit Activity Suggestions",
+        "description": "Up to 20 things to do. Each is accepted, rejected with reasons, or reported as a duplicate.",
+        "operationId": "submit_activity_suggestions",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionBatchIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestionBatchResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/agent/v1/runs/{run_id}/notes": {
       "post": {
         "tags": [
@@ -3465,6 +3521,243 @@
         }
       }
     },
+    "/api/v1/trips/{trip_id}/ai/ideas": {
+      "post": {
+        "tags": [
+          "suggestions"
+        ],
+        "summary": "Ask For Ideas",
+        "description": "Queue a Claude run that suggests things to do. Poll the run, then read the trip's suggestions.",
+        "operationId": "ask_for_ideas",
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Trip Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IdeasIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trips/{trip_id}/suggestions": {
+      "get": {
+        "tags": [
+          "suggestions"
+        ],
+        "summary": "List Suggestions",
+        "description": "The trip's suggestions, newest run first. Without `status`, the new and added ones.",
+        "operationId": "list_suggestions",
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Trip Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "new",
+                      "added",
+                      "dismissed"
+                    ],
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SuggestionOut"
+                  },
+                  "title": "Response List Suggestions"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/suggestions/{suggestion_id}": {
+      "patch": {
+        "tags": [
+          "suggestions"
+        ],
+        "summary": "Update Suggestion",
+        "description": "Dismiss a suggestion, or bring a dismissed one back.",
+        "operationId": "update_suggestion",
+        "parameters": [
+          {
+            "name": "suggestion_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Suggestion Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/suggestions/{suggestion_id}/add": {
+      "post": {
+        "tags": [
+          "suggestions"
+        ],
+        "summary": "Add Suggestion",
+        "description": "Add the suggestion to the itinerary: planned at its day and time, or as an idea with `as_idea`.",
+        "operationId": "add_suggestion",
+        "parameters": [
+          {
+            "name": "suggestion_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Suggestion Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/AddSuggestionIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/trips/{trip_id}/weather": {
       "get": {
         "tags": [
@@ -3540,6 +3833,24 @@
           "flags"
         ],
         "title": "AcceptedItem"
+      },
+      "AcceptedSuggestion": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "index",
+          "id"
+        ],
+        "title": "AcceptedSuggestion"
       },
       "AccessInfo": {
         "properties": {
@@ -4156,6 +4467,17 @@
         ],
         "title": "ActivityUpdate",
         "description": "Only the fields sent are changed; send null to clear one (e.g. `day: null` makes it an idea)."
+      },
+      "AddSuggestionIn": {
+        "properties": {
+          "as_idea": {
+            "type": "boolean",
+            "title": "As Idea",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "AddSuggestionIn"
       },
       "AgentAck": {
         "properties": {
@@ -6029,6 +6351,46 @@
           "price"
         ],
         "title": "HistoryPoint"
+      },
+      "IdeasIn": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "brainstorm",
+              "surprise"
+            ],
+            "title": "Mode",
+            "default": "brainstorm"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000,
+                "minLength": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "day": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day"
+          }
+        },
+        "type": "object",
+        "title": "IdeasIn"
       },
       "IntegrationStatus": {
         "properties": {
@@ -9131,6 +9493,18 @@
             },
             "type": "array",
             "title": "Blocked Domains"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan"
           }
         },
         "type": "object",
@@ -9174,7 +9548,9 @@
             "enum": [
               "flight_api",
               "flight_agent",
-              "research_agent"
+              "research_agent",
+              "itinerary_agent",
+              "lodging_agent"
             ],
             "title": "Kind"
           },
@@ -9473,7 +9849,9 @@
             "enum": [
               "flight_api",
               "flight_agent",
-              "research_agent"
+              "research_agent",
+              "itinerary_agent",
+              "lodging_agent"
             ],
             "title": "Kind"
           },
@@ -9642,6 +10020,13 @@
             "type": "array",
             "title": "Notes"
           },
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/SuggestionOut"
+            },
+            "type": "array",
+            "title": "Suggestions"
+          },
           "rejections": {
             "items": {
               "$ref": "#/components/schemas/RejectionOut"
@@ -9654,6 +10039,7 @@
         "required": [
           "quotes",
           "notes",
+          "suggestions",
           "rejections"
         ],
         "title": "RunOutputs",
@@ -9739,6 +10125,261 @@
           "passcode_configured"
         ],
         "title": "SessionInfo"
+      },
+      "SuggestionBatchIn": {
+        "properties": {
+          "suggestions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Suggestions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "suggestions"
+        ],
+        "title": "SuggestionBatchIn"
+      },
+      "SuggestionBatchResult": {
+        "properties": {
+          "accepted": {
+            "items": {
+              "$ref": "#/components/schemas/AcceptedSuggestion"
+            },
+            "type": "array",
+            "title": "Accepted"
+          },
+          "rejected": {
+            "items": {
+              "$ref": "#/components/schemas/RejectedItem"
+            },
+            "type": "array",
+            "title": "Rejected"
+          },
+          "duplicates": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Duplicates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "accepted",
+          "rejected",
+          "duplicates"
+        ],
+        "title": "SuggestionBatchResult"
+      },
+      "SuggestionOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "trip_id": {
+            "type": "integer",
+            "title": "Trip Id"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "brainstorm",
+              "surprise"
+            ],
+            "title": "Mode"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "sights",
+              "museum",
+              "food",
+              "nature",
+              "nightlife",
+              "shopping",
+              "travel",
+              "other"
+            ],
+            "title": "Category"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "why": {
+            "type": "string",
+            "title": "Why"
+          },
+          "timing_note": {
+            "type": "string",
+            "title": "Timing Note"
+          },
+          "day": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day"
+          },
+          "start_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          },
+          "duration_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Min"
+          },
+          "location_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Name"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "added",
+              "dismissed"
+            ],
+            "title": "Status"
+          },
+          "activity_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activity Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "end_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time",
+            "readOnly": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "trip_id",
+          "run_id",
+          "mode",
+          "title",
+          "category",
+          "description",
+          "why",
+          "timing_note",
+          "day",
+          "start_time",
+          "duration_min",
+          "location_name",
+          "url",
+          "sources",
+          "status",
+          "activity_id",
+          "created_at",
+          "end_time"
+        ],
+        "title": "SuggestionOut"
+      },
+      "SuggestionUpdate": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "dismissed"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "SuggestionUpdate"
       },
       "SystemStatus": {
         "properties": {

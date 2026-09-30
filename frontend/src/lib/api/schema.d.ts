@@ -737,7 +737,7 @@ export interface paths {
         };
         /**
          * Run Outputs
-         * @description What the run saved (prices and notes) and what was rejected, with the reasons.
+         * @description What the run saved (prices, notes, suggested activities) and what was rejected, with the reasons.
          */
         get: operations["run_outputs"];
         put?: never;
@@ -1025,6 +1025,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agent/v1/runs/{run_id}/activity-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Activity Suggestions
+         * @description Up to 20 things to do. Each is accepted, rejected with reasons, or reported as a duplicate.
+         */
+        post: operations["submit_activity_suggestions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/agent/v1/runs/{run_id}/notes": {
         parameters: {
             query?: never;
@@ -1053,6 +1073,86 @@ export interface paths {
         put?: never;
         /** Finish Run */
         post: operations["finish_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/ai/ideas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask For Ideas
+         * @description Queue a Claude run that suggests things to do. Poll the run, then read the trip's suggestions.
+         */
+        post: operations["ask_for_ideas"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Suggestions
+         * @description The trip's suggestions, newest run first. Without `status`, the new and added ones.
+         */
+        get: operations["list_suggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suggestions/{suggestion_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Suggestion
+         * @description Dismiss a suggestion, or bring a dismissed one back.
+         */
+        patch: operations["update_suggestion"];
+        trace?: never;
+    };
+    "/api/v1/suggestions/{suggestion_id}/add": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Suggestion
+         * @description Add the suggestion to the itinerary: planned at its day and time, or as an idea with `as_idea`.
+         */
+        post: operations["add_suggestion"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1093,6 +1193,13 @@ export interface components {
             id: number;
             /** Flags */
             flags: string[];
+        };
+        /** AcceptedSuggestion */
+        AcceptedSuggestion: {
+            /** Index */
+            index: number;
+            /** Id */
+            id: number;
         };
         /**
          * AccessInfo
@@ -1243,6 +1350,14 @@ export interface components {
             url?: string | null;
             /** Notes */
             notes?: string | null;
+        };
+        /** AddSuggestionIn */
+        AddSuggestionIn: {
+            /**
+             * As Idea
+             * @default false
+             */
+            as_idea?: boolean;
         };
         /** AgentAck */
         AgentAck: {
@@ -1814,6 +1929,19 @@ export interface components {
             source: string;
             /** Price */
             price: string;
+        };
+        /** IdeasIn */
+        IdeasIn: {
+            /**
+             * Mode
+             * @default brainstorm
+             * @enum {string}
+             */
+            mode?: "brainstorm" | "surprise";
+            /** Message */
+            message?: string | null;
+            /** Day */
+            day?: string | null;
         };
         /**
          * IntegrationStatus
@@ -2695,6 +2823,10 @@ export interface components {
             rules: string[];
             /** Blocked Domains */
             blocked_domains: string[];
+            /** Plan */
+            plan?: {
+                [key: string]: unknown;
+            } | null;
         };
         /**
          * RunDetailOut
@@ -2714,7 +2846,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "flight_api" | "flight_agent" | "research_agent";
+            kind: "flight_api" | "flight_agent" | "research_agent" | "itinerary_agent" | "lodging_agent";
             /**
              * Trigger
              * @enum {string}
@@ -2802,7 +2934,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "flight_api" | "flight_agent" | "research_agent";
+            kind: "flight_api" | "flight_agent" | "research_agent" | "itinerary_agent" | "lodging_agent";
             /**
              * Trigger
              * @enum {string}
@@ -2852,6 +2984,8 @@ export interface components {
             quotes: components["schemas"]["QuoteOut"][];
             /** Notes */
             notes: components["schemas"]["NoteOut"][];
+            /** Suggestions */
+            suggestions: components["schemas"]["SuggestionOut"][];
             /** Rejections */
             rejections: components["schemas"]["RejectionOut"][];
         };
@@ -2880,6 +3014,83 @@ export interface components {
             local: boolean;
             /** Passcode Configured */
             passcode_configured: boolean;
+        };
+        /** SuggestionBatchIn */
+        SuggestionBatchIn: {
+            /** Suggestions */
+            suggestions: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** SuggestionBatchResult */
+        SuggestionBatchResult: {
+            /** Accepted */
+            accepted: components["schemas"]["AcceptedSuggestion"][];
+            /** Rejected */
+            rejected: components["schemas"]["RejectedItem"][];
+            /** Duplicates */
+            duplicates: number[];
+        };
+        /** SuggestionOut */
+        SuggestionOut: {
+            /** Id */
+            id: number;
+            /** Trip Id */
+            trip_id: number;
+            /** Run Id */
+            run_id: string | null;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "brainstorm" | "surprise";
+            /** Title */
+            title: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "sights" | "museum" | "food" | "nature" | "nightlife" | "shopping" | "travel" | "other";
+            /** Description */
+            description: string;
+            /** Why */
+            why: string;
+            /** Timing Note */
+            timing_note: string;
+            /** Day */
+            day: string | null;
+            /** Start Time */
+            start_time: string | null;
+            /** Duration Min */
+            duration_min: number | null;
+            /** Location Name */
+            location_name: string | null;
+            /** Url */
+            url: string | null;
+            /** Sources */
+            sources: string[];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "new" | "added" | "dismissed";
+            /** Activity Id */
+            activity_id: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** End Time */
+            readonly end_time: string | null;
+        };
+        /** SuggestionUpdate */
+        SuggestionUpdate: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "new" | "dismissed";
         };
         /** SystemStatus */
         SystemStatus: {
@@ -4502,7 +4713,7 @@ export interface operations {
             query?: {
                 trip_id?: number | null;
                 routine_id?: number | null;
-                kind?: ("flight_api" | "flight_agent" | "research_agent") | null;
+                kind?: ("flight_api" | "flight_agent" | "research_agent" | "itinerary_agent" | "lodging_agent") | null;
                 status?: ("queued" | "running" | "succeeded" | "partial" | "failed" | "timed_out" | "cancelled" | "interrupted") | null;
                 limit?: number;
             };
@@ -5206,6 +5417,41 @@ export interface operations {
             };
         };
     };
+    submit_activity_suggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuggestionBatchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestionBatchResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     add_note: {
         parameters: {
             query?: never;
@@ -5263,6 +5509,144 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentAck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ask_for_ideas: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IdeasIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_suggestions: {
+        parameters: {
+            query?: {
+                status?: ("new" | "added" | "dismissed")[] | null;
+            };
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_suggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                suggestion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuggestionUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_suggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                suggestion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AddSuggestionIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityOut"];
                 };
             };
             /** @description Validation Error */

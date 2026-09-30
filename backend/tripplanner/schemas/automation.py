@@ -8,12 +8,15 @@ from pydantic import BaseModel, ConfigDict, Field
 from tripplanner.schemas.agent import NoteOut, RejectionOut
 from tripplanner.schemas.common import text
 from tripplanner.schemas.flights import QuoteOut
+from tripplanner.schemas.suggestions import SuggestionOut
 
 RunStatus = Literal[
     "queued", "running", "succeeded", "partial", "failed", "timed_out", "cancelled", "interrupted"
 ]
 RoutineKind = Literal["flight_api", "flight_agent", "research_agent"]
 AgentKind = Literal["flight_agent", "research_agent"]
+# Every kind of run; the last two are one-shot runs a traveler starts from a page, never routines.
+RunKind = Literal["flight_api", "flight_agent", "research_agent", "itinerary_agent", "lodging_agent"]
 
 
 class RunOut(BaseModel):
@@ -22,7 +25,7 @@ class RunOut(BaseModel):
     id: UUID
     routine_id: int | None
     trip_id: int
-    kind: RoutineKind
+    kind: RunKind
     trigger: Literal["schedule", "manual", "catch_up"]
     status: RunStatus
     params: dict[str, Any]
@@ -65,6 +68,7 @@ class RunOutputs(BaseModel):
 
     quotes: list[QuoteOut]
     notes: list[NoteOut]
+    suggestions: list[SuggestionOut]
     rejections: list[RejectionOut]
 
 

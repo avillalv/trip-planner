@@ -12,13 +12,15 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from pydantic import Field
 
-from tripplanner.schemas.agent import AgentQuoteIn
+from tripplanner.schemas.agent import AgentQuoteIn, AgentSuggestionIn
 
 SERVER_NAME = "trip"
-INSTRUCTIONS = (
-    "Tools for this Trip Planner run. Call get_task first. Record prices with submit_flight_quotes "
-    "and findings with add_note as you go, then call finish_run once at the end."
-)
+# What to save, and with which tool, for each kind of run.
+SAVING = {
+    "itinerary_agent": "Save ideas with suggest_activities and tips with add_note",
+    "lodging_agent": "Save tips with add_note",  # the lodging slice adds suggest_lodging
+}
+DEFAULT_SAVING = "Record prices with submit_flight_quotes and findings with add_note"
 
 
 class IngestApi:
@@ -58,23 +60,28 @@ def _json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
 
 
-def build_server(api: IngestApi) -> MCPServer:
-    server = MCPServer(SERVER_NAME, instructions=INSTRUCTIONS)
+def build_server(api: IngestApi, kind: str = "flight_agent") -> MCPServer:
+    """The tools a run of this kind gets: the flight and research kinds price and research; the
+    itinerary kind suggests things to do."""
+    saving = SAVING.get(kind, DEFAULT_SAVING)
+    instructions = (
+        f"Tools for this Trip Planner run. Call get_task first. {saving} as you go, "
+        "then call finish_run once at the end."
+    )
+    server = MCPServer(SERVER_NAME, instructions=instructions)
 
-    @server.tool(structured_output=False)
     async def get_task() -> str:
-        """Your assignment: the trip, the routes to search (with ids and date rules), the cheapest
-        prices the app already knows, and the rules for this run."""
+        """Your assignment: the trip and the rules for this run, plus the routes to search and the
+        cheapest prices the app already knows (flight runs) or the days, weather, plans, interests, and
+        earlier suggestions (planning runs)."""
         return _json(await api.call("GET", f"/runs/{api.run_id}/context"))
 
-    @server.tool(structured_output=False)
     async def lookup_airports(
         query: Annotated[str, Field(min_length=2, max_length=60, description="City, airport name, or code")],
     ) -> str:
         """Find IATA airport codes by city or airport name."""
         return _json(await api.call("GET", "/airports", params={"q": query}))
 
-    @server.tool(structured_output=False)
     async def submit_flight_quotes(
         quotes: Annotated[list[AgentQuoteIn], Field(min_length=1, max_length=50)],
     ) -> str:
@@ -91,30 +98,57 @@ def build_server(api: IngestApi) -> MCPServer:
         )
         return f"{counts}\n{_json(result)}"
 
-    @server.tool(structured_output=False)
+    async def suggest_activities(
+        suggestions: Annotated[list[AgentSuggestionIn], Field(min_length=1, max_length=20)],
+    ) -> str:
+        """Save things to do for the travelers to review (up to 20 per call, 40 per run).
+
+        A good suggestion is a named place, tour, market, shop, or restaurant, with the day, start
+        time, and length that suit it best on this trip; why it fits these travelers; timing_note
+        saying why that day and time (hours, closures, weather, booking needs); and sources: the pages
+        that showed those facts. Leave out day, start time, or length you can't justify. Save in
+        batches as you go. The reply lists each item as accepted, rejected (with reasons), or a
+        duplicate of something already suggested. Fix a rejected item only if a page supports the
+        correction."""
+        payload = {"suggestions": [s.model_dump(mode="json", exclude_none=True) for s in suggestions]}
+        result = await api.call("POST", f"/runs/{api.run_id}/activity-suggestions", json=payload)
+        counts = (
+            f"{len(result['accepted'])} accepted, {len(result['rejected'])} rejected, "
+            f"{len(result['duplicates'])} duplicates."
+        )
+        return f"{counts}\n{_json(result)}"
+
     async def add_note(
         title: Annotated[str, Field(min_length=1, max_length=160)],
         body: Annotated[str, Field(min_length=1, max_length=4000, description="Plain text; be specific")],
         urls: Annotated[list[str], Field(max_length=10, description="Pages that support the note")] = [],  # noqa: B006
     ) -> str:
-        """Save a finding for the trip, e.g. a fare sale with its end date, a schedule change,
-        or an event during the trip dates. Include the pages you got it from."""
+        """Save a finding for the trip, e.g. a fare sale with its end date, a schedule change, an
+        event during the trip dates, or a tip like "book the hot springs a week ahead". Include the
+        pages you got it from."""
         note = await api.call(
             "POST", f"/runs/{api.run_id}/notes", json={"title": title, "body": body, "urls": urls}
         )
         return f"Saved note {note['id']}."
 
-    @server.tool(structured_output=False)
     async def finish_run(
         status: Literal["ok", "partial", "failed"],
         summary: Annotated[str, Field(min_length=1, max_length=2000, description="What you found, briefly")],
         sources_checked: Annotated[list[str], Field(max_length=40)] = [],  # noqa: B006
         issues: Annotated[list[str], Field(max_length=20, description="Problems, e.g. blocked sites")] = [],  # noqa: B006
     ) -> str:
-        """Report how the run went. Call once, at the very end. "ok" = searched as asked (finding
-        nothing is still ok), "partial" = some searches couldn't be done, "failed" = couldn't do the task."""
+        """Report how the run went. Call once, at the very end. "ok" = did the task as asked (finding
+        nothing is still ok), "partial" = part of it couldn't be done, "failed" = couldn't do the task."""
         body = {"status": status, "summary": summary, "sources_checked": sources_checked, "issues": issues}
         result = await api.call("POST", f"/runs/{api.run_id}/finish", json=body)
         return str(result["message"])
 
+    kind_tools = {
+        "flight_agent": [lookup_airports, submit_flight_quotes],
+        "research_agent": [lookup_airports, submit_flight_quotes],
+        "itinerary_agent": [suggest_activities],
+        "lodging_agent": [],  # the lodging slice adds suggest_lodging
+    }
+    for tool in [get_task, *kind_tools[kind], add_note, finish_run]:
+        server.tool(structured_output=False)(tool)
     return server

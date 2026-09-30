@@ -1,13 +1,14 @@
 """Shapes of the agent ingest API. The MCP bridge reuses these, so agents see the same schema."""
 
-from datetime import date, datetime
+from datetime import date, datetime, time
 from decimal import Decimal
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from tripplanner.schemas.common import CurrencyCode, IataCode, text
+from tripplanner.schemas.itinerary import ActivityCategory
 
 
 class AgentQuoteIn(BaseModel):
@@ -60,6 +61,44 @@ class RejectedItem(BaseModel):
 
 class QuoteBatchResult(BaseModel):
     accepted: list[AcceptedItem]
+    rejected: list[RejectedItem]
+    duplicates: list[int]
+
+
+class AgentSuggestionIn(BaseModel):
+    """One thing to do that the agent suggests for the trip, with the day, time, and length it thinks fit."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: text(200, min_length=1) = Field(description="A named place, tour, market, shop, or restaurant.")
+    category: ActivityCategory
+    description: text(1500, min_length=1) = Field(description="What it is and what to expect.")
+    why: text(600, min_length=1) = Field(
+        description="Why it suits these travelers: interests, weather, area."
+    )
+    timing_note: text(400) = Field("", description="Why this day and time; hours, closures, booking needs.")
+    day: date | None = Field(None, description="A date inside the trip; leave out if any day works.")
+    start_time: time | None = Field(None, description="Local time at the destination; needs a day.")
+    duration_min: int | None = Field(None, ge=15, le=720, description="How long it takes, in minutes.")
+    location_name: text(200) | None = None
+    url: str | None = Field(None, max_length=2000, description="The place's or operator's own page.")
+    sources: list[Annotated[str, Field(max_length=2000)]] = Field(
+        default_factory=list, max_length=6, description="Pages that showed the hours, prices, or closures."
+    )
+
+
+class SuggestionBatchIn(BaseModel):
+    # Items are validated one by one, so one bad suggestion doesn't reject the whole batch.
+    suggestions: list[dict[str, Any]] = Field(min_length=1, max_length=20)
+
+
+class AcceptedSuggestion(BaseModel):
+    index: int
+    id: int
+
+
+class SuggestionBatchResult(BaseModel):
+    accepted: list[AcceptedSuggestion]
     rejected: list[RejectedItem]
     duplicates: list[int]
 
@@ -126,6 +165,8 @@ class RunContext(BaseModel):
     instructions: str | None
     rules: list[str]
     blocked_domains: list[str]
+    # What a planning run works from: days, weather, plans, interests, earlier suggestions.
+    plan: dict[str, Any] | None = None
 
 
 class RejectionOut(BaseModel):

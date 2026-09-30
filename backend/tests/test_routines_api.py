@@ -67,6 +67,8 @@ def test_research_routines_do_not_need_routes(client: TestClient, db_session: Se
     [
         ({"schedule_cron": "every day at 8"}, 422),
         ({"kind": "flight_api"}, 422),
+        ({"kind": "itinerary_agent"}, 422),
+        ({"kind": "lodging_agent"}, 422),
         ({"config": {"max_turns": 500}}, 422),
         ({"config": {"route_ids": [999999]}}, 422),
     ],
@@ -178,6 +180,29 @@ def test_run_detail_and_outputs(client: TestClient, db_session: Session, trip: T
     assert [q["price_total"] for q in outputs["quotes"]] == ["1284.00"]
     assert [n["title"] for n in outputs["notes"]] == ["Sale"]
     assert outputs["rejections"][0]["errors"] == [{"field": "origin", "msg": "must be one of LAX"}]
+
+
+def test_runs_of_every_kind_can_be_listed_and_filtered(
+    client: TestClient, db_session: Session, trip: Trip
+) -> None:
+    ideas = add_run(db_session, trip, "itinerary_agent", trigger="manual", status="queued")
+    add_run(db_session, trip, "lodging_agent", status="queued")
+    add_run(db_session, trip, "flight_agent")
+
+    everything = client.get("/api/v1/runs", params={"trip_id": trip.id})
+    asked = client.get("/api/v1/runs", params={"trip_id": trip.id, "kind": "itinerary_agent"})
+    lodging = client.get("/api/v1/runs", params={"kind": "lodging_agent"})
+
+    assert everything.status_code == 200
+    assert sorted(r["kind"] for r in everything.json()) == [
+        "flight_agent",
+        "itinerary_agent",
+        "lodging_agent",
+    ]
+    assert [(r["id"], r["routine_id"]) for r in asked.json()] == [(str(ideas.id), None)]
+    assert [r["kind"] for r in lodging.json()] == ["lodging_agent"]
+    assert client.get("/api/v1/runs", params={"kind": "nonsense"}).status_code == 422
+    assert client.get(f"/api/v1/runs/{ideas.id}").json()["kind"] == "itinerary_agent"
 
 
 def test_runs_filter_by_status(client: TestClient, db_session: Session, trip: Trip) -> None:

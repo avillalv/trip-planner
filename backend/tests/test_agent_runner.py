@@ -4,6 +4,7 @@ import json
 import sys
 import time
 from collections.abc import Callable
+from datetime import date
 from pathlib import Path
 from uuid import uuid4
 
@@ -15,10 +16,11 @@ from sqlalchemy.orm import Session
 from tests.conftest import make_settings
 from tests.factories import add_route, add_run, add_trip
 from tripplanner.config import Settings
-from tripplanner.models import FlightRoute, Routine, Run, RunEvent
+from tripplanner.models import FlightRoute, Routine, Run, RunEvent, Trip
 from tripplanner.services.claude_cli import agent_env
 from tripplanner.services.runs import RunLog
 from tripplanner.worker.agents import runner
+from tripplanner.worker.agents.prompts import SYSTEM_PROMPT, system_prompt
 from tripplanner.worker.agents.runner import (
     AgentOutcome,
     build_command,
@@ -26,6 +28,7 @@ from tripplanner.worker.agents.runner import (
     prepare_run_dir,
     run_agent,
 )
+from tripplanner.worker.agents.stream import StreamParser
 
 FAKE_CLAUDE = Path(__file__).parent / "fake_claude.py"
 
@@ -85,6 +88,38 @@ def test_mcp_config_holds_no_secrets(test_settings: Settings) -> None:
 
     assert str(run_id) in text and "127.0.0.1:8000" in text
     assert test_settings.agent_ingest_api_key.get_secret_value() not in text
+
+
+def test_the_bridge_is_told_which_kind_of_run_it_serves() -> None:
+    args = mcp_config(uuid4(), "http://127.0.0.1:8000", "itinerary_agent")["mcpServers"]["trip"]["args"]
+
+    assert arg_after(args, "--kind") == "itinerary_agent"
+    assert (
+        arg_after(mcp_config(uuid4(), "http://x")["mcpServers"]["trip"]["args"], "--kind") == "flight_agent"
+    )
+
+
+def test_planning_tool_calls_are_summarized_for_the_log() -> None:
+    parser = StreamParser()
+
+    def summary(tool: str, args: dict) -> str:
+        block = {"type": "tool_use", "id": "t1", "name": f"mcp__trip__{tool}", "input": args}
+        [event] = parser.feed(json.dumps({"type": "assistant", "message": {"content": [block]}}))
+        return event.summary
+
+    assert summary("suggest_activities", {"suggestions": [{}, {}, {}]}) == "Suggested 3 things to do"
+    assert summary("suggest_activities", {"suggestions": [{}]}) == "Suggested 1 thing to do"
+    assert summary("suggest_lodging", {"places": [{}, {}]}) == "Picked 2 places to stay"
+    assert summary("suggest_lodging", {"places": [{}]}) == "Picked 1 place to stay"
+
+
+def test_house_rules_depend_on_the_kind_of_run() -> None:
+    assert system_prompt("flight_agent") == SYSTEM_PROMPT == system_prompt("research_agent")
+    planner = system_prompt("itinerary_agent")
+    assert "planning assistant" in planner and "- suggest_activities:" in planner and "{" not in planner
+    assert "suggest_lodging" in system_prompt("lodging_agent")
+    assert runner.DEFAULT_LIMITS["itinerary_agent"] == (30, 12)
+    assert runner.DEFAULT_LIMITS["lodging_agent"] == (25, 10)
 
 
 def test_only_recent_run_folders_are_kept(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -180,6 +215,42 @@ def test_the_prompt_command_and_environment_reach_claude(agent, db_session: Sess
     assert Path(seen["cwd"]) == run_dir
     assert {p.name for p in run_dir.iterdir()} >= {"system.md", "mcp.json", "prompt.md", "stream.jsonl"}
     assert "sk-must-not-reach-claude" not in json.dumps(run.argv_redacted)
+
+
+def test_an_itinerary_run_gets_the_planner_prompt_and_tools(agent, db_session: Session) -> None:
+    run: Run = agent.run
+    run.kind, run.routine_id = "itinerary_agent", None
+    run.params = {"mode": "surprise", "message": "We love waterfalls", "day": "2026-11-26"}
+    trip = db_session.get(Trip, run.trip_id)
+    trip.start_date, trip.end_date = date(2026, 11, 25), date(2026, 11, 27)
+    trip.interests = ["waterfalls"]
+    db_session.flush()
+
+    outcome = agent("success")
+    seen = json.loads(agent.record.read_text(encoding="utf-8"))
+    run_dir = Path(run.log_path)
+
+    assert outcome.status == "partial"  # the fake agent never calls finish_run
+    assert (run_dir / "system.md").read_text(encoding="utf-8") == system_prompt("itinerary_agent")
+    mcp = json.loads((run_dir / "mcp.json").read_text(encoding="utf-8"))
+    assert arg_after(mcp["mcpServers"]["trip"]["args"], "--kind") == "itinerary_agent"
+    assert arg_after(seen["argv"], "--max-turns") == "30"
+    assert seen["prompt"] == run.prompt
+    assert "# Task: surprise the travelers" in seen["prompt"]
+    assert "<request>We love waterfalls</request>" in seen["prompt"]
+    assert "Focus on Thursday, November 26." in seen["prompt"]
+    assert '"interests"' in seen["prompt"] and '"waterfalls"' in seen["prompt"]
+    assert '"plan"' in seen["prompt"] and '"routes"' not in seen["prompt"] and '"LAX"' not in seen["prompt"]
+
+
+def test_itinerary_runs_do_not_need_flight_routes(agent, db_session: Session) -> None:
+    run: Run = agent.run
+    run.kind, run.routine_id = "itinerary_agent", None
+    for route in db_session.scalars(select(FlightRoute).where(FlightRoute.trip_id == run.trip_id)):
+        route.active = False
+    db_session.flush()
+
+    assert agent("success").status == "partial"
 
 
 def test_a_run_without_a_report_is_partial(agent) -> None:

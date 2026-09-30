@@ -6,21 +6,31 @@ from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import select
 
 from tripplanner.api.deps import DbSession
-from tripplanner.models import AgentNote, FlightQuote, IngestRejection, Routine, Run, RunEvent, Trip
+from tripplanner.models import (
+    ActivitySuggestion,
+    AgentNote,
+    FlightQuote,
+    IngestRejection,
+    Routine,
+    Run,
+    RunEvent,
+    Trip,
+)
 from tripplanner.schemas.agent import NoteOut, RejectionOut
 from tripplanner.schemas.automation import (
     RoutineConfig,
     RoutineCreate,
-    RoutineKind,
     RoutineOut,
     RoutineUpdate,
     RunDetailOut,
     RunEventOut,
+    RunKind,
     RunOut,
     RunOutputs,
     RunStatus,
 )
 from tripplanner.schemas.flights import QuoteOut
+from tripplanner.schemas.suggestions import SuggestionOut
 from tripplanner.services import serpapi_budget
 from tripplanner.services.routines import (
     InvalidSchedule,
@@ -46,7 +56,7 @@ def list_runs(
     db: DbSession,
     trip_id: int | None = None,
     routine_id: int | None = None,
-    kind: RoutineKind | None = None,
+    kind: RunKind | None = None,
     run_status: Annotated[RunStatus | None, Query(alias="status")] = None,
     limit: int = Query(30, ge=1, le=200),
 ) -> list[RunOut]:
@@ -89,7 +99,7 @@ def run_events(run_id: UUID, db: DbSession, after_seq: int = Query(0, ge=0)) -> 
 
 @router.get("/runs/{run_id}/outputs", response_model=RunOutputs)
 def run_outputs(run_id: UUID, db: DbSession) -> RunOutputs:
-    """What the run saved (prices and notes) and what was rejected, with the reasons."""
+    """What the run saved (prices, notes, suggested activities) and what was rejected, with the reasons."""
     _run(db, run_id)
     quotes = db.scalars(
         select(FlightQuote)
@@ -97,12 +107,22 @@ def run_outputs(run_id: UUID, db: DbSession) -> RunOutputs:
         .order_by(FlightQuote.price_home, FlightQuote.id)
     )
     notes = db.scalars(select(AgentNote).where(AgentNote.run_id == run_id).order_by(AgentNote.id))
+    suggestions = db.scalars(
+        select(ActivitySuggestion)
+        .where(ActivitySuggestion.run_id == run_id)
+        .order_by(
+            ActivitySuggestion.day.nulls_last(),
+            ActivitySuggestion.start_time.nulls_last(),
+            ActivitySuggestion.id,
+        )
+    )
     rejections = db.scalars(
         select(IngestRejection).where(IngestRejection.run_id == run_id).order_by(IngestRejection.id)
     )
     return RunOutputs(
         quotes=[QuoteOut.model_validate(q) for q in quotes],
         notes=[NoteOut.model_validate(n) for n in notes],
+        suggestions=[SuggestionOut.model_validate(s) for s in suggestions],
         rejections=[RejectionOut.model_validate(r) for r in rejections],
     )
 

@@ -1,26 +1,31 @@
 """Checks and stores what agents submit. This is the only way agent output reaches the database."""
 
 import ipaddress
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 from urllib.parse import urlsplit
 from uuid import UUID
 
 from pydantic import ValidationError
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from tripplanner.models import AgentNote, FlightRoute, IngestRejection, Run, Trip
+from tripplanner.models import ActivitySuggestion, AgentNote, FlightRoute, IngestRejection, Run, Trip
+from tripplanner.models.itinerary import SUGGESTION_MODES
 from tripplanner.schemas.agent import (
     AcceptedItem,
+    AcceptedSuggestion,
     AgentQuoteIn,
+    AgentSuggestionIn,
     FieldError,
     FinishIn,
     NoteIn,
     QuoteBatchResult,
     RejectedItem,
+    SuggestionBatchResult,
 )
-from tripplanner.services import fx
+from tripplanner.services import fx, suggestions
 from tripplanner.services.agent_context import BLOCKED_DOMAINS
 from tripplanner.services.quotes import NewQuote, add_quote
 
@@ -29,6 +34,8 @@ MIN_PER_PERSON_USD = Decimal(30)
 MAX_PER_PERSON_USD = Decimal(15_000)
 # Prices must have been seen during the run (with some slack for clock differences).
 OBSERVED_SLACK = timedelta(minutes=10)
+# A run that suggests more than this is padding, not choosing.
+MAX_SUGGESTIONS_PER_RUN = 40
 
 
 class RunNotActive(Exception):
@@ -233,6 +240,102 @@ def submit_quotes(
             IngestRejection(
                 run_id=run.id,
                 entity="flight_quote",
+                item=raw if isinstance(raw, dict) else {"value": raw},
+                errors=[e.model_dump() for e in item.errors],
+            )
+        )
+    run.accepted_count += len(result.accepted)
+    run.rejected_count += len(result.rejected)
+    db.commit()
+    return result
+
+
+def _suggestion_errors(
+    s: AgentSuggestionIn, trip: Trip, booked: dict[date, list[tuple[int, int, str]]]
+) -> list[FieldError]:
+    errors = []
+    if s.day is not None:
+        if trip.start_date is None or trip.end_date is None:
+            errors.append(FieldError(field="day", msg="can't be used: the trip has no dates"))
+        elif not trip.start_date <= s.day <= trip.end_date:
+            errors.append(FieldError(field="day", msg=f"must be {trip.start_date} to {trip.end_date}"))
+    if s.start_time is not None and s.day is None:
+        errors.append(FieldError(field="start_time", msg="needs a day; give day too, or leave the time out"))
+    if (
+        not errors
+        and s.day
+        and s.start_time
+        and s.duration_min
+        and (label := suggestions.clash(booked, s.day, s.start_time, s.duration_min))
+    ):
+        errors.append(
+            FieldError(field="start_time", msg=f"overlaps {label}; choose a time that doesn't clash")
+        )
+    if s.url and (problem := source_problem(s.url)):
+        errors.append(FieldError(field="url", msg=problem))
+    for i, source in enumerate(s.sources):
+        if problem := source_problem(source):
+            errors.append(FieldError(field=f"sources.{i}", msg=problem))
+    return errors
+
+
+def submit_suggestions(db: Session, run: Run, items: list[dict[str, Any]]) -> SuggestionBatchResult:
+    """Validate each suggestion on its own; store the good ones and record why the others failed.
+    A title the trip already has (suggested before, dismissed, or already an activity) is a duplicate."""
+    trip = db.get(Trip, run.trip_id)
+    assert trip is not None
+    mode = (run.params or {}).get("mode")
+    mode = mode if mode in SUGGESTION_MODES else "brainstorm"
+    booked = suggestions.booked_by_day(db, trip.id)
+    known = suggestions.existing_titles(db, trip.id)
+    saved = db.scalar(
+        select(func.count()).select_from(ActivitySuggestion).where(ActivitySuggestion.run_id == run.id)
+    )
+    result = SuggestionBatchResult(accepted=[], rejected=[], duplicates=[])
+    rows: list[tuple[int, ActivitySuggestion]] = []
+
+    for index, raw in enumerate(items):
+        try:
+            s = AgentSuggestionIn.model_validate(raw)
+        except ValidationError as exc:
+            errors = [
+                FieldError(field=".".join(map(str, e["loc"])) or "item", msg=e["msg"]) for e in exc.errors()
+            ]
+            result.rejected.append(RejectedItem(index=index, errors=errors))
+            continue
+        title = s.title.strip().casefold()
+        if title in known:
+            result.duplicates.append(index)
+            continue
+        errors = _suggestion_errors(s, trip, booked)
+        if not errors and (saved or 0) + len(rows) >= MAX_SUGGESTIONS_PER_RUN:
+            errors.append(
+                FieldError(
+                    field="item",
+                    msg=f"this run already saved {MAX_SUGGESTIONS_PER_RUN} suggestions, the limit; finish up",
+                )
+            )
+        if errors:
+            result.rejected.append(RejectedItem(index=index, errors=errors))
+            continue
+        known.add(title)
+        row = ActivitySuggestion(
+            trip_id=trip.id,
+            run_id=run.id,
+            mode=mode,
+            **s.model_dump(),
+        )
+        db.add(row)
+        rows.append((index, row))
+
+    db.flush()
+    result.accepted = [AcceptedSuggestion(index=index, id=row.id) for index, row in rows]
+    for item in result.rejected:
+        raw = items[item.index]
+        db.add(
+            IngestRejection(
+                run_id=run.id,
+                entity="activity_suggestion",
                 item=raw if isinstance(raw, dict) else {"value": raw},
                 errors=[e.model_dump() for e in item.errors],
             )

@@ -50,6 +50,13 @@ def _tool_use_summary(name: str, args: dict[str, Any]) -> str:
         case "submit_flight_quotes":
             count = len(args.get("quotes") or [])
             return f"Submitted {count} price{'s' if count != 1 else ''}"
+        case "suggest_activities":
+            count = len(args.get("suggestions") or [])
+            return f"Suggested {count} thing{'s' if count != 1 else ''} to do"
+        case "suggest_lodging":
+            # The list's argument name is the lodging tool's to choose, so count whichever list it sends.
+            count = next((len(v) for v in args.values() if isinstance(v, list)), 0)
+            return f"Picked {count} place{'s' if count != 1 else ''} to stay"
         case "add_note":
             return f"Saved a note: {_clip(str(args.get('title', '')), 160)}"
         case "finish_run":

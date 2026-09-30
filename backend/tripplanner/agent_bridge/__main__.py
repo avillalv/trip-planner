@@ -1,4 +1,4 @@
-"""Entry point: `python -m tripplanner.agent_bridge --run-id <uuid> [--api-url http://127.0.0.1:8000]`.
+"""Entry point: `python -m tripplanner.agent_bridge --run-id <uuid> [--api-url URL] [--kind itinerary_agent]`.
 
 The API key comes from .env, so nothing secret appears in Claude's MCP config or command line.
 """
@@ -13,11 +13,14 @@ import httpx
 from tripplanner.agent_bridge import IngestApi, build_server
 from tripplanner.config import get_settings
 
+KINDS = ("flight_agent", "research_agent", "itinerary_agent", "lodging_agent")
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(prog="python -m tripplanner.agent_bridge")
     parser.add_argument("--run-id", required=True, type=UUID)
     parser.add_argument("--api-url", help="Trip Planner's address on this PC (default: from .env)")
+    parser.add_argument("--kind", default="flight_agent", choices=KINDS, help="The run's kind")
     args = parser.parse_args()
 
     # Claude keeps the bridge's stderr; per-request lines from httpx would only add noise there.
@@ -34,7 +37,7 @@ def main() -> None:
         timeout=30,
         trust_env=False,  # never send the key through a proxy
     )
-    build_server(IngestApi(http, str(args.run_id))).run()
+    build_server(IngestApi(http, str(args.run_id)), args.kind).run()
 
 
 if __name__ == "__main__":

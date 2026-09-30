@@ -29,9 +29,16 @@ from tripplanner.db import new_session
 from tripplanner.models import Routine, Run
 from tripplanner.paths import default_agent_runs_dir
 from tripplanner.services.agent_context import BLOCKED_DOMAINS, build_context, routine_config
-from tripplanner.services.claude_cli import NO_WINDOW, agent_env, auth_status, find_claude
+from tripplanner.services.claude_cli import (
+    CLAUDE_MISSING,
+    KEY_MISSING,
+    NO_WINDOW,
+    agent_env,
+    auth_status,
+    find_claude,
+)
 from tripplanner.services.runs import RunLog, cancel_requested
-from tripplanner.worker.agents.prompts import SYSTEM_PROMPT, task_prompt
+from tripplanner.worker.agents.prompts import system_prompt, task_prompt
 from tripplanner.worker.agents.stream import StreamParser, StreamState
 
 # Every agent run uses Sonnet 5.5, pinned by full id: the CLI's "sonnet" alias can lag behind (on
@@ -43,7 +50,12 @@ BACKGROUND_MODEL = MODEL
 WEB_TOOLS = ("WebSearch", "WebFetch")
 MCP_SERVER = "trip"
 # (max turns, timeout in minutes) when the routine doesn't set them.
-DEFAULT_LIMITS = {"flight_agent": (40, 20), "research_agent": (30, 15)}
+DEFAULT_LIMITS = {
+    "flight_agent": (40, 20),
+    "research_agent": (30, 15),
+    "itinerary_agent": (30, 12),
+    "lodging_agent": (25, 10),
+}
 KEEP_RUN_DIRS = 30
 WATCH_SECONDS = 2
 SECONDS_PER_MINUTE = 60  # tests shrink this to exercise timeouts quickly
@@ -51,7 +63,7 @@ SECONDS_PER_MINUTE = 60  # tests shrink this to exercise timeouts quickly
 AIRBNB_COUNTRY_TLDS = ("co.uk", "ca", "com.au", "fr", "de", "es", "it", "mx", "jp")
 SIGN_IN_HELP = (
     "Claude Code isn't signed in, or its sign-in expired. In a terminal on this PC, run claude and type "
-    "/login, then run the routine again."
+    "/login, then try again."
 )
 
 # Set when the worker stops; running agents are killed and their runs marked interrupted.
@@ -109,14 +121,23 @@ def build_command(claude: list[str], run_dir: Path, max_turns: int) -> list[str]
     ]
 
 
-def mcp_config(run_id: UUID, api_url: str) -> dict[str, Any]:
+def mcp_config(run_id: UUID, api_url: str, kind: str = "flight_agent") -> dict[str, Any]:
     """Claude starts the bridge with this. No secrets: the bridge reads the API key from .env."""
     return {
         "mcpServers": {
             MCP_SERVER: {
                 "type": "stdio",
                 "command": sys.executable,
-                "args": ["-m", "tripplanner.agent_bridge", "--run-id", str(run_id), "--api-url", api_url],
+                "args": [
+                    "-m",
+                    "tripplanner.agent_bridge",
+                    "--run-id",
+                    str(run_id),
+                    "--api-url",
+                    api_url,
+                    "--kind",
+                    kind,
+                ],
                 "env": {"PYTHONUTF8": "1"},
             }
         }
@@ -261,9 +282,9 @@ def explain_failure(text: str) -> str:
     if any(k in lower for k in ("authenticat", "oauth", "/login", "not logged in", "log in")):
         return SIGN_IN_HELP
     if "usage limit" in lower or "rate limit" in lower or "limit reached" in lower:
-        return "Your Claude usage limit was reached. The routine will try again at its next scheduled time."
+        return "Your Claude usage limit was reached. Try again after it resets."
     if "overloaded" in lower:
-        return "Claude was overloaded. The routine will try again at its next scheduled time."
+        return "Claude was overloaded. Try again in a few minutes."
     return text or "Claude Code reported an error."
 
 
@@ -330,11 +351,9 @@ def run_agent(
 
     claude = find_claude(settings)
     if claude is None:
-        return fail(
-            "Claude Code wasn't found. Install it, or set CLAUDE_PATH in .env to claude.exe's full path."
-        )
+        return fail(CLAUDE_MISSING)
     if not (settings.agent_ingest_api_key and settings.agent_ingest_api_key.get_secret_value()):
-        return fail("AGENT_INGEST_API_KEY isn't set in .env, so the agent couldn't save anything.")
+        return fail(KEY_MISSING)
     if auth_status(claude, os.environ).signed_in is False:
         return fail(SIGN_IN_HELP)
 
@@ -350,8 +369,9 @@ def run_agent(
     run_dir = prepare_run_dir(settings.agent_runs_dir or default_agent_runs_dir(), run.id)
     prompt = task_prompt(context, routine.name if routine else None)
     api_url = f"http://127.0.0.1:{settings.port}"
-    (run_dir / "system.md").write_text(SYSTEM_PROMPT, encoding="utf-8")
-    (run_dir / "mcp.json").write_text(json.dumps(mcp_config(run.id, api_url), indent=2), encoding="utf-8")
+    (run_dir / "system.md").write_text(system_prompt(run.kind), encoding="utf-8")
+    mcp = mcp_config(run.id, api_url, run.kind)
+    (run_dir / "mcp.json").write_text(json.dumps(mcp, indent=2), encoding="utf-8")
     (run_dir / "prompt.md").write_text(prompt, encoding="utf-8")
     argv = build_command(claude, run_dir, max_turns)
 

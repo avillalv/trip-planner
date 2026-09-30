@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from tripplanner.db import new_session
 from tripplanner.models import Routine, Run
+from tripplanner.models.automation import ASSIST_KINDS
 from tripplanner.services.routines import InvalidSchedule, last_slot_before, parse_cron
 from tripplanner.services.runs import claim_next, enqueue, recover_interrupted
 
@@ -24,8 +25,9 @@ log = logging.getLogger(__name__)
 
 # Slots missed by up to this long (e.g. the PC was asleep) still run once on wake.
 MISFIRE_GRACE_SECONDS = 6 * 3600
-# Runs are dispatched in lanes so a long agent run never holds up the quick API price checks.
-LANES = {"api": ["flight_api"], "agent": ["flight_agent", "research_agent"]}
+# Runs are dispatched in lanes so a long agent run never holds up the quick API price checks, and
+# a run a traveler asked for (AI ideas) never waits behind a scheduled agent run.
+LANES = {"api": ["flight_api"], "agent": ["flight_agent", "research_agent"], "assist": list(ASSIST_KINDS)}
 
 
 class RoutineScheduler:
@@ -35,6 +37,7 @@ class RoutineScheduler:
         execute: Callable[[UUID], None] | None = None,
         max_api_jobs: int = 2,
         max_agent_jobs: int = 1,
+        max_assist_jobs: int = 1,
     ) -> None:
         from tripplanner.worker.executor import execute_run
 
@@ -43,7 +46,7 @@ class RoutineScheduler:
         self._scheduler = BackgroundScheduler(
             job_defaults={"coalesce": True, "max_instances": 1, "misfire_grace_time": MISFIRE_GRACE_SECONDS}
         )
-        self._limits = {"api": max_api_jobs, "agent": max_agent_jobs}
+        self._limits = {"api": max_api_jobs, "agent": max_agent_jobs, "assist": max_assist_jobs}
         self._pools = {
             lane: ThreadPoolExecutor(max_workers=limit, thread_name_prefix=f"{lane}-run")
             for lane, limit in self._limits.items()

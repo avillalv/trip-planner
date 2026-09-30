@@ -153,6 +153,7 @@ describe('RunPage', () => {
   ]
   const outputs: RunOutputs = {
     quotes: [],
+    suggestions: [],
     notes: [
       {
         id: 1,
