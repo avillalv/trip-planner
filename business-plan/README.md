@@ -32,6 +32,7 @@ so in a closing section, so the reasoning stays visible.
 | [05-infrastructure.md](05-infrastructure.md) | Hosting, job queue, scheduling, CI/CD, observability, security, infra cost at each scale |
 | [06-database-and-data-integrations.md](06-database-and-data-integrations.md) | Schema changes, data migration, flight and places providers and their terms, caching, affiliate tracking |
 | [07-local-to-app-store.md](07-local-to-app-store.md) | Mobile approach, frontend changes, in-app purchases, App Review checklist, phased roadmap, launch plan |
+| [08-affiliate-revenue.md](08-affiliate-revenue.md) | Every affiliate program researched (lodging, flights, cars, trains, tours, eSIM, insurance and more), where each appears in the app, compliance, tracking, revenue estimates |
 
 Suggested reading order: this page, 01, 02, 07 (the roadmap), then 03 to 06 as each phase starts.
 
@@ -50,7 +51,7 @@ Every file uses these. If a number changes, change it here first.
 | Premium (later) | $11.99 a month or $99 a year. 240 credits a month (about 6 deep agent runs), 6 live routes, scheduled agent routines, priority queue. Launches when measured agent cost is $0.60 or less per run over 200 runs, or when more than 15% of Plus payers buy agent-run credits. |
 | Credit packs | $2.99 for 50, $6.99 for 150, $14.99 for 400. Purchased credits last 12 months and are spent last. |
 | Collaboration | Only the trip owner pays. Invitees join free and get the owner's tier on that trip. AI credits are charged to the person who starts the action. |
-| Ads | No banner ads. Affiliate links (flights, hotels, eSIM, insurance, tours) are the free-tier income. |
+| Ads | No banner ads. Affiliate commissions are the free-tier income; see the affiliate table below. |
 | Apple commission | 15% (Small Business Program, under $1M a year in proceeds) |
 
 ### AI credits and cost ceilings
@@ -65,6 +66,22 @@ Every file uses these. If a number changes, change it here first.
 | Models | Claude Haiku 4.5 for short answers and page summaries; Claude Sonnet 5.5 for drafting, research and agents |
 | Batch API | Only for offline jobs: shared-cache warming, nightly digests, scheduled fare scans. Never for multi-turn agents or anything a user is waiting on. |
 | Scheduled agents | Off for everyone until Premium. Scheduled work is API price checks plus cheap batch scans, not agents. |
+
+### Affiliate revenue
+
+| Decision | Value |
+|---|---|
+| Who sees affiliate links | Every tier, in the same places. Paid tiers never lose them and free results are never degraded. |
+| Launch networks | Travelpayouts (flights: Aviasales, Kiwi.com, Trip.com; stays: Booking.com, Agoda, Trip.com, Hostelworld; cars: DiscoverCars, Localrent; transfers; tours; eSIM; insurance), Viator's self-service partner API for things to do, Stay22 as the lodging challenger |
+| From month 3 | Apply directly to Expedia Group (the only route to Vrbo, plus Expedia and Hotels.com), Booking.com (confirm its current network), Skyscanner, Airalo and GetYourGuide |
+| Airbnb | No affiliate program an app can join (Associates closed in 2021; creator tracks are invite-only for influencers; host referrals pay for new hosts, not guest bookings). Airbnb listings get a plain link, never a converted one. |
+| Pasted listing links | Stay exactly as pasted. A separate, labeled "Book via partner" button offers a partner link built from the URL text (never by fetching the page). |
+| Pages of Airbnb, Vrbo and Booking.com | Never fetched by the hosted server, not even for a user-requested preview |
+| Tracking | Our own redirect (`/go/<click_id>`) with a random per-click sub-id. No ad or attribution SDKs, no device ids, so no App Tracking Transparency prompt. |
+| Disclosure | "We earn a commission if you book here." next to every partner button; an "Ad" label on UK and EU storefronts; lists say how they are sorted and are never ranked by commission |
+| New surfaces | A "Before you go" checklist (at least half its items unmonetized; visas link to official sites first; insurance uses insurer-approved copy only and AI never gives insurance advice) and an after-trip "Was your flight delayed?" compensation prompt |
+| Not at launch | Credit cards, VPNs, Amazon product data in the app |
+| Revenue assumption | $0.10 / $0.60 / $1.50 per monthly user per year (conservative / base / optimistic), about $1 per planned trip in the base case; lodging is about 60% of it |
 
 ### Technology
 
@@ -92,7 +109,7 @@ Every file uses these. If a number changes, change it here first.
 | 4: growth | Ongoing | Android, shareable trip pages for SEO, Premium |
 
 **Kill rule:** at month 9 after launch, if under 1% of monthly users pay and affiliate income is
-under $0.20 per monthly user, stop investing and keep it as a personal tool.
+under $0.20 per monthly user per year (annualized), stop investing and keep it as a personal tool.
 
 ## Open questions to verify before launch
 
@@ -101,7 +118,9 @@ These could not be confirmed from here and could change the numbers:
 1. SerpApi's current price per search and whether its terms allow use in a paid consumer app
    (Google sued SerpApi in December 2025; the case was still active in September 2026).
 2. Geoapify's commercial-use and caching terms on paid plans.
-3. Travelpayouts commission rates and in-app attribution rules.
+3. Affiliate commission rates, cookie windows and app eligibility for every program in
+   [08-affiliate-revenue.md](08-affiliate-revenue.md): the official partner sites were blocked
+   from here, so all rates came from third-party reports.
 4. The real cost of an API agent run: measure 200 runs before setting Premium live.
 5. Apple's current rules on linking out to web checkout in the US.
 6. Competitor prices (taken from third-party reviews on 2026-09-30).
