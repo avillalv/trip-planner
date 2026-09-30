@@ -113,7 +113,61 @@ As the founder or bookkeeper, I want the ledger to match Stripe, so that books c
 `payment_collections` and `settlements` are created in the first migrations (03 section 5.9, revision `0013_group_tools`), and the two Connect columns are on `users` (03 section 5.1). The Phase 1 and Phase 2 builds keep them dormant. If your database lacks them, apply this verbatim; otherwise skip to 4.2.
 
 ```sql
-@@SQL 1007 1061@@
+-- Phase 4 (flag group_payments, Group Trip Pass or Pro): one real-world cost that the organizer collects through Stripe.
+-- Each traveler's payment is a settlements row that points here. The table exists from the first migration so the schema does not change when the flag turns on.
+CREATE TABLE payment_collections (
+  id                        uuid PRIMARY KEY DEFAULT uuidv7(),
+  trip_id                   uuid NOT NULL REFERENCES trips (id) ON DELETE CASCADE,
+  organizer_user_id         uuid REFERENCES users (id) ON DELETE SET NULL,          -- the organizer; funds go to users.stripe_connect_account_id
+  organizer_person_id       uuid NOT NULL,                                           -- the payee on the settlements rows
+  title                     text NOT NULL CHECK (char_length(title) BETWEEN 1 AND 200),   -- "Villa deposit"
+  total_minor               bigint NOT NULL CHECK (total_minor > 0),
+  currency                  currency_code NOT NULL,                                  -- the trip currency
+  split_method              split_method NOT NULL DEFAULT 'equal',
+  fee_mode                  text NOT NULL DEFAULT 'payer_pays',                      -- who bears the Stripe processing fee
+  application_fee_bps       integer NOT NULL DEFAULT 0 CHECK (application_fee_bps BETWEEN 0 AND 10000),   -- copied from feature_flags.rules.fee_bps of group_payments when created (0 at launch)
+  stripe_account_id         text NOT NULL,                                           -- snapshot of the organizer's connected account
+  status                    text NOT NULL DEFAULT 'open',
+  due_on                    date,
+  closed_at                 timestamptz,
+  created_by                uuid REFERENCES users (id) ON DELETE SET NULL,
+  created_at                timestamptz NOT NULL DEFAULT now(),
+  updated_at                timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (trip_id, organizer_person_id) REFERENCES trip_people (trip_id, person_id) ON DELETE RESTRICT,
+  CONSTRAINT ck_payment_collections_fee_mode CHECK (fee_mode IN ('payer_pays', 'organizer_covers')),
+  CONSTRAINT ck_payment_collections_status CHECK (status IN ('open', 'closed', 'cancelled')),
+  CONSTRAINT ck_payment_collections_closed CHECK (status = 'open' OR closed_at IS NOT NULL),
+  CONSTRAINT uq_payment_collections_id_trip UNIQUE (id, trip_id)
+);
+CREATE INDEX ix_payment_collections_trip ON payment_collections (trip_id, status);
+SELECT add_updated_at_trigger('payment_collections');
+
+CREATE TABLE settlements (                                   -- a payment from one traveler to another, in the trip currency
+  id                          uuid PRIMARY KEY DEFAULT uuidv7(),
+  trip_id                     uuid NOT NULL REFERENCES trips (id) ON DELETE CASCADE,
+  from_person_id              uuid NOT NULL,
+  to_person_id                uuid NOT NULL,
+  amount_minor                bigint NOT NULL CHECK (amount_minor > 0),
+  currency                    currency_code NOT NULL,
+  method                      text NOT NULL DEFAULT 'manual',
+  status                      text NOT NULL DEFAULT 'recorded',   -- manual methods are inserted as 'pending' until the payee confirms (04 5.17)
+  collection_id               uuid,                               -- set for a Stripe collection payment (Phase 4)
+  stripe_payment_intent_id    text,
+  note                        text NOT NULL DEFAULT '',
+  settled_at                  timestamptz NOT NULL DEFAULT now(),
+  created_by                  uuid REFERENCES users (id) ON DELETE SET NULL,
+  created_at                  timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (trip_id, from_person_id) REFERENCES trip_people (trip_id, person_id) ON DELETE RESTRICT,
+  FOREIGN KEY (trip_id, to_person_id) REFERENCES trip_people (trip_id, person_id) ON DELETE RESTRICT,
+  FOREIGN KEY (collection_id, trip_id) REFERENCES payment_collections (id, trip_id) ON DELETE SET NULL (collection_id),
+  CONSTRAINT ck_settlements_distinct CHECK (from_person_id <> to_person_id),
+  CONSTRAINT ck_settlements_method CHECK (method IN ('manual', 'cash', 'bank_transfer', 'stripe')),
+  CONSTRAINT ck_settlements_status CHECK (status IN ('recorded', 'pending', 'succeeded', 'failed', 'refunded', 'disputed')),   -- disputed: charge.dispute.created, until Stripe resolves it
+  CONSTRAINT ck_settlements_collection_stripe CHECK (collection_id IS NULL OR method = 'stripe')
+);
+CREATE INDEX ix_settlements_trip ON settlements (trip_id, settled_at DESC);
+CREATE INDEX ix_settlements_collection ON settlements (collection_id) WHERE collection_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_settlements_stripe_pi ON settlements (stripe_payment_intent_id) WHERE stripe_payment_intent_id IS NOT NULL;
 ```
 
 Connect columns on `users` (already in the `users` definition):

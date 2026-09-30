@@ -878,6 +878,7 @@ type Evidence = { note_id: Uuid; run_id: Uuid | null; sources: Source[]; excerpt
 |---|---|---|---|---|
 | `GET /trips/{trip_id}/presentation` | viewer | none | `?redact=` to `Presentation` | Everything the full-screen walkthrough needs in one payload: cover, destinations, days with items, chosen flights, booked stays, weather, and the pre-trip checklist summary. `ETag`. |
 | `GET /trips/{trip_id}/presentation/pdf` | viewer | none | none to 202 `Job` then 302 to a signed file | PDF export. Free owners get a small "Made with Wayfold" footer (`plans.limits.hide_presentation_footer` false); paid trips have none. Partner buttons are omitted by default (`?links=true` keeps them live with the commission sentence printed). |
+| `GET /calendar/{token}.ics` | none (the token) | none | none to `text/calendar` | Live calendar subscription for the trip; token URL, rotation and content rules are in 5.29. |
 
 ```ts
 type Presentation = {

@@ -109,7 +109,75 @@ As an advisor or a client, I want to take my data, so that I am not locked in.
 03 section 5.19 defines the three org tables and the concierge foreign key (revision `0015_advisors`, with `concierge_requests` in `0016_services`). If they exist, skip this block; otherwise apply it verbatim before 4.2.
 
 ```sql
-@@SQL 2123 2191@@
+CREATE TABLE advisor_orgs (
+  id                       uuid PRIMARY KEY DEFAULT uuidv7(),
+  name                     text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 120),
+  slug                     text NOT NULL,
+  owner_user_id            uuid REFERENCES users (id) ON DELETE SET NULL,
+  host_agency_name         text,
+  host_agency_id           text,                                      -- IATAN or CLIA number of the host agency, when supplied
+  billing_email            citext,
+  stripe_customer_id       text,
+  brand                    jsonb NOT NULL DEFAULT '{}'::jsonb,        -- logo key, colors, contact line for branded presentations
+  commission_split_bps     integer NOT NULL DEFAULT 0 CHECK (commission_split_bps BETWEEN 0 AND 10000),
+  status                   text NOT NULL DEFAULT 'active',
+  created_at               timestamptz NOT NULL DEFAULT now(),
+  updated_at               timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_advisor_orgs_slug UNIQUE (slug),
+  CONSTRAINT ck_advisor_orgs_status CHECK (status IN ('active', 'suspended', 'closed'))
+);
+CREATE UNIQUE INDEX uq_advisor_orgs_stripe_customer ON advisor_orgs (stripe_customer_id) WHERE stripe_customer_id IS NOT NULL;
+SELECT add_updated_at_trigger('advisor_orgs');
+
+ALTER TABLE concierge_requests ADD CONSTRAINT fk_concierge_requests_advisor_org_id_advisor_orgs
+  FOREIGN KEY (advisor_org_id) REFERENCES advisor_orgs (id) ON DELETE SET NULL;
+
+CREATE TABLE advisor_seats (
+  id                        uuid PRIMARY KEY DEFAULT uuidv7(),
+  advisor_org_id            uuid NOT NULL REFERENCES advisor_orgs (id) ON DELETE CASCADE,
+  user_id                   uuid REFERENCES users (id) ON DELETE CASCADE,         -- null while an invite is pending
+  invited_email             citext,
+  role                      text NOT NULL DEFAULT 'advisor',
+  billing_period            text NOT NULL DEFAULT 'month',
+  stripe_subscription_id    text,
+  stripe_subscription_item_id text,
+  status                    text NOT NULL DEFAULT 'active',
+  started_at                timestamptz NOT NULL DEFAULT now(),
+  ended_at                  timestamptz,
+  created_at                timestamptz NOT NULL DEFAULT now(),
+  updated_at                timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT ck_advisor_seats_role CHECK (role IN ('admin', 'advisor')),
+  CONSTRAINT ck_advisor_seats_period CHECK (billing_period IN ('month', 'year')),
+  CONSTRAINT ck_advisor_seats_status CHECK (status IN ('invited', 'active', 'past_due', 'ended')),
+  CONSTRAINT ck_advisor_seats_user_or_email CHECK (user_id IS NOT NULL OR invited_email IS NOT NULL)
+);
+CREATE UNIQUE INDEX uq_advisor_seats_org_user ON advisor_seats (advisor_org_id, user_id) WHERE user_id IS NOT NULL AND status <> 'ended';
+CREATE INDEX ix_advisor_seats_user ON advisor_seats (user_id) WHERE user_id IS NOT NULL;
+SELECT add_updated_at_trigger('advisor_seats');
+
+CREATE TABLE advisor_clients (
+  id                          uuid PRIMARY KEY DEFAULT uuidv7(),
+  advisor_org_id              uuid NOT NULL REFERENCES advisor_orgs (id) ON DELETE CASCADE,
+  advisor_user_id             uuid REFERENCES users (id) ON DELETE SET NULL,      -- the advisor who owns the relationship
+  client_user_id              uuid REFERENCES users (id) ON DELETE SET NULL,      -- set when the client has a Wayfold account
+  client_name                 text NOT NULL CHECK (char_length(client_name) BETWEEN 1 AND 120),
+  client_email                citext,
+  trip_id                     uuid REFERENCES trips (id) ON DELETE SET NULL,
+  status                      text NOT NULL DEFAULT 'prospect',
+  proposal_status             text NOT NULL DEFAULT 'none',
+  commission_expected_minor   bigint,
+  commission_received_minor   bigint,
+  commission_currency         currency_code,
+  notes                       text NOT NULL DEFAULT '',
+  created_at                  timestamptz NOT NULL DEFAULT now(),
+  updated_at                  timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT ck_advisor_clients_status CHECK (status IN ('prospect', 'active', 'archived')),
+  CONSTRAINT ck_advisor_clients_proposal CHECK (proposal_status IN ('none', 'draft', 'sent', 'accepted', 'declined'))
+);
+CREATE INDEX ix_advisor_clients_org ON advisor_clients (advisor_org_id, status);
+CREATE INDEX ix_advisor_clients_advisor ON advisor_clients (advisor_user_id) WHERE advisor_user_id IS NOT NULL;
+CREATE INDEX ix_advisor_clients_trip ON advisor_clients (trip_id) WHERE trip_id IS NOT NULL;
+SELECT add_updated_at_trigger('advisor_clients');
 ```
 
 Already seeded (03 section 11): plan `advisor_seat` (kind `advisor_seat`, rank 35, 150 credits a month, pro-level limits, $3.40 monthly and $0.40 daily ceilings, `feature_flag_key = 'advisor_workspaces'`, inactive until launch), store products `advisor_seat_monthly` (2900) and `advisor_seat_annual` (28800), flag `advisor_workspaces`, `entitlements.source = 'advisor'`, the `advisor` CTE in the entitlement query (03 section 7.1), and the daily allowance grant for advisor entitlements (03 section 7.5). `my_advisor_orgs()` (orgs where the caller holds a non-ended seat) and the row policies are described in 03 section 6.4 and built in P3-016.
