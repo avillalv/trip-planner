@@ -4,7 +4,7 @@ Part of [Phase 3: scale](README.md). Tickets P3-071 to P3-081. Written 2026-09-3
 
 | | |
 |---|---|
-| Feature flags | `white_label` and `partner_api` (new, off). Both need `advisor_workspaces` on. |
+| Feature flags | `white_label` and `partner_api` (created by this pack, off). Both need `advisor_workspaces` on. |
 | Needs | A lawyer (master agreement, data-processing addendum, child-data rules before any school operator). An onboarding and support person: support per account is the real cost. A contractor engineer is sensible for custom domains. No funding. |
 | Builds on | **Pack 02 must be stable first** ([02-wayfold-for-advisors.md](02-wayfold-for-advisors.md)): this is the same code packaged for accounts rather than seats (09 section 3.7). Phase 1: presentation mode, share links, Resend, Cloudflare, Stripe webhook endpoint. |
 | Source names | Phase 1 files call this "year 3 and later". Spec of record: [07 section 11.5 (full spec)](../07-monetization-spec.md), which specifies only a direction ("a separate tenancy, API keys, annual contracts invoiced by Stripe"). This pack is the detailed contract. |
@@ -136,7 +136,7 @@ SELECT add_updated_at_trigger('advisor_seats');
 ### 4.2 New in this pack
 
 ```sql
--- Migration p3_white_label. New tables carry their own grants and policies (03 section 10). Pack 02's helpers my_advisor_orgs() and my_writable_advisor_orgs() are reused.
+-- Migration p3_white_label. New tables carry their own grants and policies (Phase 1 03 section 10). Pack 02's helpers my_advisor_orgs() and my_writable_advisor_orgs() are reused.
 
 ALTER TABLE advisor_orgs
   ADD COLUMN kind          text NOT NULL DEFAULT 'advisor',

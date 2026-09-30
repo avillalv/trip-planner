@@ -4,9 +4,9 @@ Part of [Phase 3: scale](README.md). Tickets P3-058 to P3-070. Written 2026-09-3
 
 | | |
 |---|---|
-| Feature flag | `inapp_hotel_booking` (seeded, off) |
+| Feature flag | `inapp_hotel_booking` (created by this pack, off) |
 | Needs | A lawyer before building (seller-of-travel position, consumer law, terms of sale). A support process and probably a support hire, because Wayfold then owns every hotel problem. A contractor engineer is sensible; this is the highest-effort pack. No funding if Nuitee stays merchant of record. |
-| Builds on | Phase 1: lodging shortlist, stay comparison, affiliate system and disclosure component, itinerary, email, admin console. Phase 2: concierge lane, direct affiliate programs (the affiliate options this sits beside). |
+| Builds on | Phase 1: lodging shortlist, stay comparison, affiliate system and disclosure component, itinerary, email, admin console. Phase 2: [concierge lane](../phase-2-growth/07-concierge-lane.md) and [direct affiliate programs](../phase-2-growth/08-direct-affiliate-programs.md) (the affiliate options this sits beside). |
 | Source names | Phase 1 files call this "year 2 and later" and "Phase 4", ticket WF-110. Spec of record: [07 section 11.1 (full spec)](../07-monetization-spec.md), [08-affiliate-revenue.md section 13.4](../../08-affiliate-revenue.md). |
 
 ## 1. Goal and revenue case

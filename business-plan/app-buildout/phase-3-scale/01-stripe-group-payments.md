@@ -4,7 +4,7 @@ Part of [Phase 3: scale](README.md). Tickets P3-001 to P3-014. Written 2026-09-3
 
 | | |
 |---|---|
-| Feature flags | `group_payments` (seeded, off), `event_workspaces` (new, off) |
+| Feature flags | `group_payments` (created off by Phase 2), `event_workspaces` (new, off) |
 | Needs | A lawyer before any build (money transmission, refunds, disputes, tax, sanctions). A support contractor once collections are live. No funding. |
 | Builds on | Phase 1: Stripe webhook endpoint, `webhook_events`, [entitlements](../phase-1-launch/07-monetization-spec.md), [admin console](../phase-1-launch/08-admin-control-center.md). Phase 2: Group Trip Pass, polls, manual cost splitting and the `settlements` table, room-block request ([Phase 2](../phase-2-growth/README.md)). |
 | Source names | The Phase 1 files call this "Phase 4" and ticket WF-102 and WF-103. This folder calls it Phase 3. The spec text of record is [07 section 10 (full spec)](../07-monetization-spec.md), [04 section 5.17 (full spec)](../04-api-spec.md), [08 section 6.9 (full spec)](../08-admin-control-center.md). |

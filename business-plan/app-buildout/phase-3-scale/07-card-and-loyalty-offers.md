@@ -6,9 +6,9 @@ Part of [Phase 3: scale](README.md). Tickets P3-082 to P3-091. Written 2026-09-3
 
 | | |
 |---|---|
-| Feature flags | `card_offers` and `loyalty_offers` (new, off) |
+| Feature flags | `card_offers` and `loyalty_offers` (created by this pack, off) |
 | Needs | A lawyer on retainer (consumer finance advertising, per-offer copy review). A specialist publisher network that will accept the app, and issuer approval of every page of copy. A compliance owner: part of the founder's time at first, a part-time person later. No engineering hire, no funding. |
-| Builds on | Phase 1: Before you go checklist (the `money` item), affiliate system (`/go`, conversions, disclosure component, link checker), admin console and audit log. Phase 2: direct affiliate programs ([Phase 2](../phase-2-growth/README.md)). |
+| Builds on | Phase 1: Before you go checklist (the `money` item), affiliate system (`/go`, conversions, disclosure component, link checker), admin console and audit log. Phase 2: [direct affiliate programs](../phase-2-growth/08-direct-affiliate-programs.md) (adds the `direct` and `impact` networks). |
 | Source names | Phase 1 files say "credit cards, VPNs and Amazon product data" are out of scope and that cards are revisited at about 100k MAU with counsel ([01 section 7](../phase-1-launch/01-product-spec.md), [09 section 3.8](../../09-revenue-expansion.md), [08-affiliate-revenue.md section 4.3](../../08-affiliate-revenue.md)). No ticket existed; this pack is new detail. |
 
 ## 1. Goal and revenue case
@@ -59,17 +59,17 @@ If any item fails, re-check every 6 months. The decision record is written in P3
 | D2 | No AI involvement | Offer copy is issuer-approved text stored verbatim and shown unchanged. No model writes, summarizes or recommends a card. AI answers never mention specific cards or issuers. Agents never cite offers. |
 | D3 | No ranking, no targeting | The section lists offers alphabetically by issuer and says so. Payout never affects order, inclusion or visibility. No personalization from trip data, spending or any financial signal. A user sees the same offers as anyone else in their region. |
 | D4 | No financial data collected | Wayfold never asks for or stores income, credit score, card numbers or identity numbers. The only data is the outbound click (random sub-id) and the network's approval status. |
-| D5 | Opt-out and quiet | "Hide money offers" setting. No push, no email, no paywall mention, no badge, no nudge. The checklist item itself is unchanged when offers are hidden. |
+| D5 | Opt-in and quiet | Nothing commercial loads or renders until the user taps "Show partner offers" in the Money item, which records the `offers` consent (Phase 1 03 section 14 names this consent value). Withdrawable at any time in Settings or in the section. No push, no email, no paywall mention, no badge, no nudge. The checklist item is unchanged for users who never opt in. |
 | D6 | Region first | United States only at launch. Other regions stay off until counsel clears their financial-promotion rules. |
 | D7 | Two-person approval | An offer goes live only after legal approval and, where required, an issuer approval reference, recorded in the console by two different admins. Offers carry an expiry and a re-review date. |
 | D8 | Loyalty offers use the same frame | Loyalty and points-service offers (for example program signups or a points-tracking service) follow the same rules, placement, labeling and approval flow. No loyalty numbers are stored. |
 
 ## 3. User stories and acceptance criteria
 
-**C-1. Traveler sees a labeled offer, optionally.**
+**C-1. Traveler chooses to see labeled offers.**
 As a traveler preparing for an international trip, I want to see money-related options in the Money checklist item, so that I can decide what to do about foreign card fees.
 - The Money item still shows the non-commercial guidance first (tell your bank, carry some cash, use a card without foreign transaction fees) with no links.
-- Below it, a labeled section "Offers from partners" (text, not color only; "Ad" on UK and EU storefronts when those regions are later enabled) lists live offers for the user's region, alphabetical by issuer, each with the issuer's approved headline, key terms shown verbatim, required disclosures inline, and a link to the issuer's terms.
+- Below it is one plain line, "Partner offers for travel cards and loyalty programs", and a [Show partner offers] button. Until the user taps it no offer is requested from the server or rendered. Tapping records the `offers` consent (`PUT /me/consents/offers`) and expands a labeled section "Offers from partners" (text, not color only; "Ad" on UK and EU storefronts when those regions are later enabled) lists live offers for the user's region, alphabetical by issuer, each with the issuer's approved headline, key terms shown verbatim, required disclosures inline, and a link to the issuer's terms.
 - A line above the list: "Wayfold earns a commission if you are approved. It does not change which offers we show or their order. Offers are listed alphabetically."
 - At most 4 offers are shown; none is pre-selected or highlighted.
 
@@ -78,9 +78,9 @@ As a traveler, I want to go to the issuer's page, so that I can read everything 
 - "View offer and terms" opens the issuer page through `/go/{click_id}` in the in-app browser with visible chrome; the disclosure sentence is next to the button; no application is taken inside Wayfold.
 - No data beyond the random sub-id is passed.
 
-**C-3. Traveler hides offers.**
-As a traveler, I want to switch them off, so that I never see them.
-- Settings toggle "Hide money offers" (stored in `users.prefs`); takes effect at once on every surface.
+**C-3. Traveler turns offers off.**
+As a traveler, I want to switch them off again, so that I never see them.
+- Settings toggle "Partner offers" (the `offers` consent, granted false when withdrawn); takes effect at once on every surface and the section collapses back to the one-line prompt.
 
 **C-4. Editor and legal approve an offer.**
 As the compliance owner, I want an approval trail, so that nothing goes live without review.
@@ -101,24 +101,32 @@ As a user or issuer, I want a way to report a problem with an offer, so that it 
 
 ## 4. Database additions
 
-### 4.1 Already defined in 03 (reuse)
+### 4.1 What exists and what this pack adds
 
-The affiliate tables and `money` category already exist (03 section 5.15); offers are stored as affiliate programs and link templates plus the new table below. The checklist already has a `money` kind (01 section 4.10, F-CHK-1). Reused: `affiliate_programs` (category `money` is allowed), `affiliate_link_templates`, `link_clicks`, `affiliate_conversions`, `checklist_items`, the `/go` redirect, kill switches named `affiliate.<code>`, and the `users.prefs` jsonb.
+Reused from Phase 1 and 2: the affiliate tables (`affiliate_programs`, `affiliate_link_templates`, `link_clicks`, `affiliate_conversions`, Phase 1 03 section 5.15), `consents` (append-only log, Phase 1 03 section 5.17), `checklist_items` with the `money` kind (F-CHK-1), the `/go` redirect, kill switches named `affiliate.<code>`, and the direct-network values from Phase 2. Phase 1 03 section 14 names this pack's additions: `card_offers` and `loyalty_accounts`, `affiliate_programs.category` value `cards`, and `consents.kind` value `offers`. The full 03 has no DDL for cards, so the DDL below is new. The Phase 1 category list already contains `money` (the plain "tell your bank" guidance kind); offers get the separate value `cards` so reports and kill switches never mix them with neutral money links.
 
 ```sql
--- affiliate_programs.category already allows 'money' (ck_affiliate_programs_category, 03 section 5.15).
--- affiliate_programs.network allows 'travelpayouts', 'impact', 'stay22', 'viator', 'awin', 'cj', 'direct'.
--- Seed today (03 section 11.4) has no card programs on purpose; 08-affiliate-revenue.md section 4.3 says "not at launch".
+-- Current Phase 1 constraints that 4.2 widens (swap the named constraint, keeping every value already allowed):
+-- ck_affiliate_programs_category: flights, lodging, tours, cars, transfers, trains, esim, insurance, compensation, luggage, restaurants, visas, money, other
+-- ck_consents_kind: terms, privacy, ai_processing, marketing_email, push_notifications, analytics (Phase 2 adds concierge_sharing)
 ```
 
 ### 4.2 New in this pack
 
 ```sql
--- Migration p3_card_offers. New tables carry their own grants and policies (03 section 10).
+-- Migration p3_card_offers. New tables carry their own grants and policies (Phase 1 03 section 10).
+
+ALTER TABLE affiliate_programs DROP CONSTRAINT ck_affiliate_programs_category;
+ALTER TABLE affiliate_programs ADD CONSTRAINT ck_affiliate_programs_category CHECK (category IN (
+  'flights', 'lodging', 'tours', 'cars', 'transfers', 'trains', 'esim', 'insurance',
+  'compensation', 'luggage', 'restaurants', 'visas', 'money', 'other', 'cards'));
+ALTER TABLE consents DROP CONSTRAINT ck_consents_kind;
+ALTER TABLE consents ADD CONSTRAINT ck_consents_kind CHECK (kind IN ('terms', 'privacy', 'ai_processing', 'marketing_email', 'push_notifications',
+  'analytics', 'concierge_sharing', 'offers'));   -- 'concierge_sharing' from Phase 2
 
 CREATE TABLE card_offers (
   id                     uuid PRIMARY KEY DEFAULT uuidv7(),
-  program_id             uuid NOT NULL REFERENCES affiliate_programs (id) ON DELETE RESTRICT,   -- category 'money'
+  program_id             uuid NOT NULL REFERENCES affiliate_programs (id) ON DELETE RESTRICT,   -- category 'cards'
   kind                   text NOT NULL,
   issuer_name            text NOT NULL CHECK (char_length(issuer_name) BETWEEN 1 AND 120),
   product_name           text NOT NULL CHECK (char_length(product_name) BETWEEN 1 AND 160),
@@ -179,16 +187,16 @@ ALTER TABLE card_offers ENABLE ROW LEVEL SECURITY;
 CREATE POLICY card_offers_live ON card_offers FOR SELECT
   USING (status = 'live' AND (valid_from IS NULL OR valid_from <= CURRENT_DATE) AND valid_to >= CURRENT_DATE);
 
--- Optional (C-6): "I already have this membership". No numbers, no balances.
-CREATE TABLE user_loyalty_programs (
+-- Optional (C-6): "I already have this membership". No numbers, no balances. (Phase 1 03 section 14 working name: loyalty_accounts.)
+CREATE TABLE loyalty_accounts (
   user_id        uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   brand          text NOT NULL CHECK (char_length(brand) BETWEEN 1 AND 80),
   has_membership boolean NOT NULL DEFAULT true,
   created_at     timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (user_id, brand)
 );
-ALTER TABLE user_loyalty_programs ENABLE ROW LEVEL SECURITY;
-CREATE POLICY user_loyalty_programs_own ON user_loyalty_programs FOR ALL
+ALTER TABLE loyalty_accounts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY loyalty_accounts_own ON loyalty_accounts FOR ALL
   USING (user_id = (SELECT app_user_id())) WITH CHECK (user_id = (SELECT app_user_id()));
 
 INSERT INTO feature_flags (key, description, enabled, rollout_pct, rules, variants) VALUES
@@ -205,12 +213,12 @@ Illustrative program seed (status stays `planned` until the network approves the
 
 ```sql
 INSERT INTO affiliate_programs (code, network, name, category, status, hosts, cookie_days, subid_param, api_credentials_ref, disclosure_text) VALUES
-('cards_network_primary', 'direct', 'Card referral network (publisher)', 'money', 'planned', '{}', 30, 'sub_id', 'CARDS_NETWORK_TOKEN',
+('cards_network_primary', 'direct', 'Card referral network (publisher)', 'cards', 'planned', '{}', 30, 'sub_id', 'CARDS_NETWORK_TOKEN',
  'We earn a commission if you are approved. This does not change which offers we show or their order.')
 ON CONFLICT (code) DO NOTHING;
 ```
 
-Add `CARDS_NETWORK_TOKEN` to `.env.example` and the secrets list ([02 section 7.1](../phase-1-launch/02-architecture.md)); never commit a value. Retention: `card_offers` and `card_offer_reviews` 7 years; `link_clicks` 25 months as usual; `user_loyalty_programs` with the account.
+Add `CARDS_NETWORK_TOKEN` to `.env.example` and the secrets list ([02 section 7.1](../phase-1-launch/02-architecture.md)); never commit a value. Retention: `card_offers` and `card_offer_reviews` 7 years; `link_clicks` 25 months as usual; `loyalty_accounts` with the account.
 
 ## 5. API additions
 
@@ -218,14 +226,14 @@ Base `/v1`, behind `card_offers` and `loyalty_offers` and the kill switch `card_
 
 | Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
 |---|---|---|---|---|
-| `GET /trips/{trip_id}/money-offers` | viewer | flags; empty when the user hides offers or the region is not allowed | to `MoneyOffers` | Returns live offers for the user's country (from the session, not the request), alphabetical by `issuer_name`, at most `max_offers`; no personalization input. `sorted_by` is always `"issuer name, alphabetical"`. |
+| `GET /trips/{trip_id}/money-offers` | viewer | flags; needs the `offers` consent; empty when the region is not allowed | to `MoneyOffers` | Without consent it returns `{ consent: "not_granted", offers: [] }` and reads no offer rows. Otherwise returns live offers for the user's country (from the session, not the request), alphabetical by `issuer_name`, at most `max_offers`; no personalization input. `sorted_by` is always `"issuer name, alphabetical"`. |
 | `POST /outbound` | user (viewer) | existing | `OutboundIn` with `entity_type: "card_offer"` | Existing flow: mints a `link_clicks` row with a random sub-id, checks kill switches (`card_offers`, `affiliate.<code>`) and the region; returns the `/go/{click_id}` URL. |
 | `POST /money-offers/{offer_id}/report` | user | 10 an hour | `{ reason, description? }` to 201 | Creates a moderation report; an accuracy report pages the owner. |
 | `PUT /me/loyalty-programs/{brand}` | user | `loyalty_offers` | `{ has_membership: boolean }` | Stops signup offers for that brand. |
-| `PATCH /me/settings` | user | none | `{ hide_money_offers?: boolean }` | Writes `users.prefs`. |
+| `PUT /me/consents/offers` | user | none | `{ version: string, granted: boolean }` to `Consent` | The existing consent endpoint (Phase 1 04 section 5.2) with the new kind; granting expands the section, withdrawing collapses it. |
 
 ```ts
-type MoneyOffers = { sorted_by: "issuer name, alphabetical"; disclosure: string; offers: MoneyOffer[] }
+type MoneyOffers = { consent: "granted" | "not_granted"; sorted_by: "issuer name, alphabetical"; disclosure: string; offers: MoneyOffer[] }
 type MoneyOffer = { offer_id: Uuid; kind: "credit_card" | "loyalty_program" | "points_service"; issuer_name: string; product_name: string
   headline: string; key_terms: { label: string; text: string }[]; required_disclosures: string; terms_url: string; image_url: string | null
   label: "Ad" | "Partner offer" }
@@ -237,21 +245,21 @@ Conversions: the existing nightly pull or postback stores approvals in `affiliat
 
 ## 6. UI screens
 
-**Money item in Before you go (extends 6.20).** Purpose: help with money before a trip; offers are a small, labeled extra. Layout: the checklist item detail shows the plain guidance (tell your bank, cash, cards without foreign transaction fees) and done or not needed actions first, with no commercial content. Below a rule, a section titled "Offers from partners" with the explainer line and up to 4 cards.
+**Money item in Before you go (extends 6.20).** Purpose: help with money before a trip; offers are a small, labeled extra. Layout: the checklist item detail shows the plain guidance (tell your bank, cash, cards without foreign transaction fees) and done or not needed actions first, with no commercial content. Below a rule, one plain line "Partner offers for travel cards and loyalty programs" with [Show partner offers]. After the user opts in (consent `offers`), a section titled "Offers from partners" appears with the explainer line and up to 4 cards.
 
-Offer card: issuer and product name, headline, key terms as a description list (for example annual fee, foreign transaction fee, rewards, as the issuer states them), required disclosures in body text, a text label "Ad" or "Partner offer", the sentence "Wayfold earns a commission if you are approved here.", a terms link, and [View offer and terms] opening through `/go`. Overflow menu: Hide money offers, Report this offer.
+Offer card: issuer and product name, headline, key terms as a description list (for example annual fee, foreign transaction fee, rewards, as the issuer states them), required disclosures in body text, a text label "Ad" or "Partner offer", the sentence "Wayfold earns a commission if you are approved here.", a terms link, and [View offer and terms] opening through `/go`. Overflow menu: Turn off partner offers, Report this offer.
 
-States: no live offers or region not allowed, the section is absent; loading skeleton; offline "Offers need a connection" (plain guidance still visible); hidden by the user, the section is absent with nothing in its place; expired offers vanish.
+States: no live offers or region not allowed, the section is absent; loading skeleton; offline "Offers need a connection" (plain guidance still visible); consent withdrawn, the section collapses to the one-line prompt; expired offers vanish.
 
-Loyalty signup cards (when enabled) use the same frame plus "I already have this" that hides that brand. No pop-ups, sheets, badges, banners or countdowns. Nothing appears on the trip overview, Discover, presentation, share pages or PDFs.
+Loyalty signup cards (when enabled) use the same frame plus "I already have this" that hides that brand. No pop-ups, sheets, badges, banners or countdowns; the opt-in prompt is one inline line. Nothing appears on the trip overview, Discover, presentation, share pages or PDFs.
 
 Copy rules: no claims beyond the issuer's approved text; no "best", "top", "pre-approved", "guaranteed", or urgency; sentence case; no em dashes. Accessibility: the label and the commission sentence are read with the card name before the headline; terms are a real description list; the link announces that it opens an external site.
 
-**Settings.** "Hide money offers" toggle next to "Hide booking links".
+**Settings.** "Partner offers" toggle (the `offers` consent) next to "Hide booking links".
 
 **Admin console.** See section 8.
 
-Events: `money_offers_viewed {count}`, `money_offer_opened {kind}`, `money_offer_reported`, `money_offers_hidden`. No event carries card names in a user-linked profile beyond the offer id, and none records any financial attribute.
+Events: `money_offers_viewed {count}`, `money_offer_opened {kind}`, `money_offer_reported`, `money_offers_consent_changed {granted}`. No event carries card names in a user-linked profile beyond the offer id, and none records any financial attribute.
 
 ## 7. Billing
 
@@ -271,7 +279,7 @@ New "Card and loyalty offers" screen (Control group), extends [08](../phase-1-la
 - **Workflow.** Editor drafts and submits; counsel or the compliance owner approves on the legal checklist (issuer text verbatim, required disclosures present, no banned phrases, region allowed, expiry and re-review dates set, terms link works, no ranking or targeting claim, no AI-written text); the owner publishes with step-up 2FA. The editor cannot be the legal approver (`ck_card_offers_live`). A copy change after approval creates a new version and returns the offer to review.
 - **Actions.** Pause (engineer or owner, immediate), expire, duplicate as a new version, record an issuer approval reference, open the complaint queue, engage the `card_offers` kill switch (owner or engineer).
 - **Permissions.** `cardoffers.edit` (content), `cardoffers.review` (owner or a designated compliance admin, never the author), `cardoffers.publish` (owner only), `cardoffers.payout.read` (finance and owner). The route-permission test covers them.
-- **Alerts.** An offer expires in 14 days or needs re-review in 7 days (notify), a live offer's destination host changed (page), a complaint about accuracy (page), hide rate of money offers above 10% of viewers in a week (notify), a live offer without a legal approval record (page; should be impossible).
+- **Alerts.** An offer expires in 14 days or needs re-review in 7 days (notify), a live offer's destination host changed (page), a complaint about accuracy (page), consent withdrawals above 10% of opted-in users in a week (notify), a live offer without a legal approval record (page; should be impossible).
 - **Finance and audit.** Revenue by offer and network, reversal rate, `audit_log` extended retention class for publish and pause actions (08 section 4.2).
 
 ## 9. Legal and compliance
@@ -291,16 +299,17 @@ This is the reason the pack is last. Counsel confirms each item before the first
 
 ## 10. Analytics
 
-Events in section 6. Metrics: users who opened the Money item, offers viewed per opener, offer opens (click-through), approvals and approval rate from the network, revenue per 1,000 MAU, hide rate, report rate, and trust indicators measured before and after (affiliate hide rate, support tickets with "ads" or "trust" tags, App Store rating, retention of those who saw the section versus those who did not). Stop rule after 6 months: if revenue per 1,000 MAU is under the low end of the model (500 x $100 per 100k MAU, about $0.50 per MAU a year) and the hide rate is above 10%, pause the section and write down why. No experiment may change copy, hide disclosure, reorder by payout or add targeting (the experiments guardrail in 07 section 6.7 applies).
+Events in section 6. Metrics: users who opened the Money item, offers viewed per opener, offer opens (click-through), approvals and approval rate from the network, revenue per 1,000 MAU, opt-in rate (users who tapped Show partner offers), withdrawal rate, report rate, and trust indicators measured before and after (affiliate hide rate, support tickets with "ads" or "trust" tags, App Store rating, retention of those who saw the section versus those who did not). Stop rule after 6 months: if revenue per 1,000 MAU is under the low end of the model (500 x $100 per 100k MAU, about $0.50 per MAU a year) and the withdrawal rate is above 10%, pause the section and write down why. No experiment may change copy, hide disclosure, reorder by payout or add targeting (the experiments guardrail in 07 section 6.7 applies).
 
 ## 11. Tests
 
+- **Consent gate.** Without the `offers` consent `GET /money-offers` reads no offer rows and the client renders only the one-line prompt; granting shows the section, withdrawing collapses it at once; the consent is recorded append-only with the copy version.
 - **Placement.** Crawl every screen, list, search, AI response, presentation, share page, PDF and print output: no offer text appears outside the Money item.
 - **Order and inclusion.** For shuffled payout values, the order is always alphabetical by issuer and the set never changes with payout; no personalization input is accepted by `GET /money-offers`.
 - **Copy integrity.** Snapshot tests: the rendered card contains the approved headline, terms and required disclosures byte for byte; the banned-phrase check rejects a draft containing "pre-approved", "guaranteed", "best"; no model call path exists for offers (static analysis and a test that agent tools never return offer content).
 - **Approval rules.** An offer cannot go live without legal approval by a different admin, a terms URL, an expiry and a review date; editing approved copy resets status; expired offers disappear without a release; re-review reminder job fires.
-- **Kill and hide.** `card_offers` switch hides all offers within a minute; `hide_money_offers` hides them for that user immediately; region not in `regions` hides the offer; guest accounts see none.
-- **Privacy.** The outbound URL carries only the random sub-id; `link_clicks` rows hold no financial attribute; the loyalty table stores no numbers; account deletion removes `user_loyalty_programs`.
+- **Kill and consent.** `card_offers` switch hides all offers within a minute; without the `offers` consent no offer row is read or rendered and withdrawing it collapses the section at once; region not in `regions` hides the offer; guest accounts see none.
+- **Privacy.** The outbound URL carries only the random sub-id; `link_clicks` rows hold no financial attribute; the loyalty table stores no numbers; account deletion removes `loyalty_accounts`.
 - **Link checker.** A destination that changes host pauses the offer and raises the alert.
 - **Grants.** The app role cannot read review, payout or approval columns or `card_offer_reviews`.
 - **Accessibility.** Label and commission sentence read before the headline; keyboard and VoiceOver pass on the card.
@@ -312,7 +321,7 @@ Events in section 6. Metrics: users who opened the Money item, offers viewed per
 | P3-082 | Gate review and decision record: MAU, economics quotes, network acceptance, trust metrics, counsel engagement, owner named | M | about 100k MAU | Founder, lawyer |
 | P3-083 | Publisher and network onboarding: apply through a specialist network, collect issuer terms and copy rules, sign agreements, create the program and link templates | M | P3-082 | Founder |
 | P3-084 | Schema (4.2): offers, review trail, loyalty table, flags, kill switch, grants and policy, tests | M | P3-082 | Engineer |
-| P3-085 | Money section UI in Before you go: offer cards, labels, states, settings toggle, accessibility | M | P3-084 | Engineer |
+| P3-085 | Money section UI in Before you go: opt-in prompt and consent, offer cards, labels, states, settings toggle, accessibility | M | P3-084 | Engineer |
 | P3-086 | Offers API and compliance enforcement: region and expiry filter, alphabetical order, no personalization, banned-phrase checks, `card_offer` entity type | M | P3-084 | Engineer |
 | P3-087 | Tracking: `/go` integration for offers, conversion import mapping, reporting lines, aggregate-only approvals | S | P3-086 | Engineer |
 | P3-088 | Loyalty and points-service offers (optional): membership flags without numbers, brand matching from the trip's own items, second flag | S | P3-086 | Engineer |
@@ -324,7 +333,7 @@ Events in section 6. Metrics: users who opened the Money item, offers viewed per
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Trust damage: users read it as ads or advice | Medium | High | One place only, alphabetical, no AI, hide setting, quiet by design, trust metrics with a stop rule |
+| Trust damage: users read it as ads or advice | Medium | High | One place only, alphabetical, no AI, opt-in consent, quiet by design, trust metrics with a stop rule |
 | Issuer or network rejects the publisher or the copy | Medium | Medium | Specialist network, written approvals before publish, no rewriting of issuer text |
 | Regulatory breach (advertising, consumer finance, financial promotion abroad) | Low | High | Counsel gate (P3-082, P3-090), US only, verbatim copy, two-person approval, expiry and re-review |
 | Copy drift or stale terms | Medium | High | Locked copy, version trail, expiry and re-review dates, link checker, alerts |

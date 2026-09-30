@@ -4,9 +4,9 @@ Part of [Phase 3: scale](README.md). Tickets P3-015 to P3-034. Written 2026-09-3
 
 | | |
 |---|---|
-| Feature flag | `advisor_workspaces` (seeded, off) |
+| Feature flag | `advisor_workspaces` (created by this pack, off) |
 | Needs | 15 advisor interviews before any code. Terms and a data-processing addendum reviewed by a lawyer (light review). A part-time support and advisor-success contractor at about 100 seats. No funding. |
-| Builds on | Phase 1: presentation mode, PDF export, share links, roles, Stripe webhook endpoint, entitlement resolver, admin console. Phase 2: concierge lane (creates `concierge_requests`, which this pack links to organizations). |
+| Builds on | Phase 1: presentation mode, PDF export, share links, roles, Stripe webhook endpoint, entitlement resolver, admin console. Phase 2: the [concierge lane](../phase-2-growth/07-concierge-lane.md) (creates `concierge_requests`, which this pack links to organizations). |
 | Source names | Phase 1 files call this "year 2" and "Phase 4", tickets WF-107 and WF-108. Spec of record: [07 section 11.4 (full spec)](../07-monetization-spec.md), [01 section 4.18 (full spec)](../01-product-spec.md), [03 section 5.19 (full spec)](../03-database-schema.md), [04 section 5.24 (full spec)](../04-api-spec.md). Those are summary level; this pack is the detailed contract. |
 
 ## 1. Goal and revenue case

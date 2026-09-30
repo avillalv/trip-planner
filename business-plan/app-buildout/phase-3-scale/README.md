@@ -6,9 +6,9 @@ Phase 1 is the launch app ([phase-1-launch/](../phase-1-launch/README.md)). Phas
 
 Scope is final: a feature is in Phase 3 because the "Not in Phase 1" table in the [Phase 1 README](../phase-1-launch/README.md) says so (Stripe group payments, Wayfold for Advisors, partner guides, printed trip books, in-app hotel booking, white-label and API, card and loyalty offers). The revenue numbers come from [09-revenue-expansion.md](../../09-revenue-expansion.md) and the affiliate lanes from [08-affiliate-revenue.md](../../08-affiliate-revenue.md).
 
-**Naming.** The Phase 1 spec files call this work "year 2 and later" or "Phase 4" (tickets WF-101 to WF-113 in [09-build-roadmap.md](../phase-1-launch/09-build-roadmap.md)). In this folder it is Phase 3, tickets are `P3-001` onward, and the pack files list which WF ticket each one replaces.
+**Naming.** The Phase 1 spec files call this work "year 2 and later" or "Phase 4" (tickets WF-101 to WF-113 in the full [09-build-roadmap.md](../09-build-roadmap.md), listed as moved in [Phase 1 section 7](../phase-1-launch/09-build-roadmap.md)). In this folder it is Phase 3, tickets are `P3-001` onward, and the pack files list which WF ticket each one replaces.
 
-**Links.** Links to `../phase-1-launch/` assume the Phase 1 files sit in that folder, as the Phase 1 README describes. Today files 01 to 10 live one level up, in `../`, so those links resolve after they are moved. Links to `../phase-2-growth/` resolve once Phase 2 is written.
+**Links.** Links to `../phase-1-launch/` point at the Phase 1 edition of each spec, which is trimmed to Phase 1 and numbers some sections differently. Section citations that exist only in the full specs (the files in `../`, for example the DDL in full 03 section 5.17 or the payments rules in full 07 section 10) link there and are marked "full spec". Links to `../phase-2-growth/` point at the Phase 2 packs; the Phase 2 README was not yet written when this folder was.
 
 ## Packs
 
@@ -113,34 +113,34 @@ Nothing in Phase 3 strictly needs outside funding if the gates above are respect
 
 - **Pack 06 needs pack 02** (same tenancy and code). **Pack 01's events workspace** reuses the pass machinery from Phase 2's Group Trip Pass. **Pack 05** is unrelated code but reuses the stay comparison and the affiliate disclosure from Phase 1 and the direct programs from Phase 2. **Pack 03** and **pack 07** reuse the affiliate redirect, disclosure component and admin console. **Pack 04** needs photos (Phase 2 memories or P3-046).
 - **Shared rule for selling:** advisors, white-label, the events workspace and print are sold on the web through Stripe. The iOS app never sells them and never links to their purchase pages (Apple 3.1.1; 3.1.3(e) covers the physical and real-world goods: print, payments, hotels). Re-read the current Apple text on each submission ([09 risk 7](../../09-revenue-expansion.md)).
-- **Migration order.** Each pack's DDL is a separate Alembic revision added after the last Phase 2 revision, following [03 section 10](../phase-1-launch/03-database-schema.md): a table added after the RLS revision carries its own grants and policies in the same migration. The tables already defined in 03 (`payment_collections`, `settlements`, `advisor_*`, `partner_guides`, `print_orders`) may exist dormant from Phase 1; each pack's section 4.1 says what to check and gives the definition.
+- **Migration order.** Each pack's DDL is a separate Alembic revision added after the last Phase 2 revision, following [03 section 10](../phase-1-launch/03-database-schema.md): a table added after the RLS revision carries its own grants and policies in the same migration. Phase 1 dropped the tables that belong to these packs (Phase 1 03 section 1.1), and Phase 2 creates only `polls`, `expenses`, `settlements`, `room_block_requests`, `concierge_requests` and their neighbors. Each pack's section 4.1 states what exists after Phase 2 and gives the definitions from the full 03, which it creates; the table names match Phase 1 03 section 14.
 
 ### Flags and kill switches
 
-| Flag | State in 03 | Pack |
+| Flag | Where it is created | Pack |
 |---|---|---|
-| `group_payments` | seeded, off | 01 |
-| `event_workspaces` | new | 01 |
-| `advisor_workspaces` | seeded, off | 02 (also gates 06) |
-| `partner_guides` | seeded, off | 03 |
-| `print_orders` | seeded, off | 04 |
-| `inapp_hotel_booking` | seeded, off | 05 |
-| `white_label`, `partner_api` | new | 06 |
-| `card_offers`, `loyalty_offers` | new | 07 |
+| `group_payments` | created off by Phase 2 | 01 |
+| `event_workspaces` | created by the pack | 01 |
+| `advisor_workspaces` | created by the pack | 02 (also gates 06) |
+| `partner_guides` | created by the pack | 03 |
+| `print_orders` | created by the pack | 04 |
+| `inapp_hotel_booking` | created by the pack | 05 |
+| `white_label`, `partner_api` | created by the pack | 06 |
+| `card_offers`, `loyalty_offers` | created by the pack | 07 |
 
-New kill switches: `group_payments.collect` (01), `advisors.billing` (02), `provider.printer` (04), `provider.liteapi` (05), `white_label.domains` and `partner_api` (06), `card_offers` (07). Existing: `provider.stripe`, `affiliate.<code>`.
+New kill switches: `group_payments.collect` (01), `advisors.billing` (02), `provider.printer` (04), `provider.liteapi` (05), `white_label.domains` and `provider.api` (06), `card_offers` (07). Existing or assumed: `provider.stripe` (create it in pack 01 if Phase 1 did not seed it), `affiliate.<code>` (one per program).
 
 ### New or extended tables
 
 | Pack | Tables |
 |---|---|
-| 01 | `payment_disputes`; columns on `settlements`; plan `event_workspace` |
-| 02 | `advisor_subscriptions`, `advisor_notes`, `advisor_proposals`, `advisor_bookings`, `advisor_templates`; columns on `advisor_orgs`; seat status `read_only` |
-| 03 | `partner_guide_versions`, `guide_metrics_daily`, `sponsor_reports`; columns on `partner_guides` |
-| 04 | `print_products`, `print_order_events`, `trip_photos` (if Phase 2 did not add one); columns on `print_orders` |
-| 05 | `hotel_bookings`, `hotel_booking_events`; `lodging_options.hotel_booking_id` |
-| 06 | `white_label_contracts`, `org_domains`, `api_keys`, `api_usage_daily`; `advisor_orgs.kind` |
-| 07 | `card_offers`, `card_offer_reviews`, `user_loyalty_programs` |
+| 01 | `payment_collections`, `payment_disputes`; columns on `settlements` and `users`; plan `event_workspace` |
+| 02 | `advisor_orgs`, `advisor_seats`, `advisor_clients` (from full 03), `advisor_subscriptions`, `advisor_notes`, `advisor_proposals`, `advisor_bookings`, `advisor_templates`; `concierge_requests.advisor_org_id`; plan `advisor_seat`; seat status `read_only` |
+| 03 | `partner_guides` (from full 03), `partner_guide_versions`, `guide_metrics_daily`, `sponsor_reports`; `itinerary_items.source` value `guide` |
+| 04 | `print_orders` (from full 03), `print_products`, `print_order_events`, `trip_photos` (if Phase 2 memories did not add one) |
+| 05 | `hotel_bookings`, `hotel_booking_events`; `lodging_options.hotel_booking_id`; `lodging_options.added_via` value `liteapi` |
+| 06 | `white_label_contracts`, `org_domains`, `api_clients`, `api_keys`, `api_usage_daily`; `advisor_orgs.kind` |
+| 07 | `card_offers`, `card_offer_reviews`, `loyalty_accounts`; `affiliate_programs.category` value `cards`; `consents.kind` value `offers` |
 
 ### Environment variables (document each in `.env.example`; values only in `.env`)
 
@@ -173,4 +173,6 @@ Resolve these before the affected pack starts; each is also marked in the pack.
 3. **Advisor seat allowance** (pack 02): 03 seeds 150 credits and a $3.40 ceiling per seat (86% worst-case margin); 09 assumes 60 credits and $2.25 (91%). The 03 seed is the default and the pilot decides.
 4. **Print margin** (pack 04): 07 targets 35 to 45% after vendor, shipping and Stripe fees; 09's $26.39 contribution is 59% of the book price with shipping passed through at cost. A price guard and real quotes settle it. 09's poster contribution of $16.47 also differs by one cent from its own inputs ($16.46).
 5. **Discover and partner cards** (pack 03): 05 section 6.23 says "No partner cards" while the sitemap lists guides under Discover. Pack 03 keeps Discover free of cards and adds a labeled section on destination pages and a Guides screen.
-6. **Phase naming and file locations:** Phase 1 files call this Phase 4, and the Phase 1 README describes files that currently sit in `app-buildout/` itself (see Links above).
+6. **Phase naming and section numbers:** the full specs call this work Phase 4 and "year 2", and the Phase 1 editions renumber some sections (for example the Phase 1 roadmap Definition of Done is in section 6, not 5). The packs cite the full specs for DDL and rules and the Phase 1 editions for conventions.
+7. **Names:** table and column names follow Phase 1 03 section 14 ("working names that the pack may refine"). The refinements are listed in each pack: pack 06 splits API credentials into `api_clients` and `api_keys` and adds domains and contracts; pack 07 adds the approval trail `card_offer_reviews` and makes offers opt-in through the `offers` consent.
+8. **Section 14 of Phase 1 03 lists `payment_collections` as a Phase 3 table**, while the full 03 creates it in the first migrations; the packs follow Phase 1 03 (created in pack 01).

@@ -4,7 +4,7 @@ Part of [Phase 3: scale](README.md). Tickets P3-035 to P3-044. Written 2026-09-3
 
 | | |
 |---|---|
-| Feature flag | `partner_guides` (seeded, off) |
+| Feature flag | `partner_guides` (created by this pack, off) |
 | Needs | Sales time (the real cost). A lawyer for a one-page sponsorship contract and disclosure terms (light review). An audience of about 50k MAU before the first paid deal. No funding, no engineering hire. |
 | Builds on | Phase 1: admin console and audit log, affiliate system (`/go`), disclosure component, itinerary items, first-party analytics. |
 | Source names | Phase 1 files call this "year 2 and later" and "Phase 4", ticket WF-106. Spec of record: [07 section 11.2 (full spec)](../07-monetization-spec.md), [08 section 6.10 (full spec)](../08-admin-control-center.md), [03 section 5.17 (full spec)](../03-database-schema.md), [04 section 5.22 (full spec)](../04-api-spec.md). |

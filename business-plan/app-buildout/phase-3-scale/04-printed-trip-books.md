@@ -4,7 +4,7 @@ Part of [Phase 3: scale](README.md). Tickets P3-045 to P3-057. Written 2026-09-3
 
 | | |
 |---|---|
-| Feature flag | `print_orders` (seeded, off) |
+| Feature flag | `print_orders` (created by this pack, off) |
 | Needs | No hire and no lawyer. An accountant for sales tax on physical goods (Stripe Tax does the calculation). Real vendor quotes before any price is final. |
 | Builds on | Phase 1: presentation mode data and PDF export, Stripe webhook endpoint, R2 storage, notifications. Phase 2: memories and sharing cards ([Phase 2](../phase-2-growth/README.md), which adds `trip_memories`); the book needs photos, and this pack adds a photo store if Phase 2 did not. |
 | Source names | Phase 1 files call this "year 2" and "Phase 4", ticket WF-109. Spec of record: [07 section 11.3 (full spec)](../07-monetization-spec.md), [01 section 4.19 (full spec)](../01-product-spec.md), [03 section 5.18 (full spec)](../03-database-schema.md), [04 section 5.23 (full spec)](../04-api-spec.md). |
