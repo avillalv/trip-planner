@@ -7,7 +7,7 @@ Part of [Phase 3: scale](README.md). Tickets P3-035 to P3-044. Written 2026-09-3
 | Feature flag | `partner_guides` (seeded, off) |
 | Needs | Sales time (the real cost). A lawyer for a one-page sponsorship contract and disclosure terms (light review). An audience of about 50k MAU before the first paid deal. No funding, no engineering hire. |
 | Builds on | Phase 1: admin console and audit log, affiliate system (`/go`), disclosure component, itinerary items, first-party analytics. |
-| Source names | Phase 1 files call this "year 2 and later" and "Phase 4", ticket WF-106. Spec of record: [07 section 11.2](../phase-1-launch/07-monetization-spec.md), [08 section 6.10](../phase-1-launch/08-admin-control-center.md), [03 section 5.17](../phase-1-launch/03-database-schema.md), [04 section 5.22](../phase-1-launch/04-api-spec.md). |
+| Source names | Phase 1 files call this "year 2 and later" and "Phase 4", ticket WF-106. Spec of record: [07 section 11.2 (full spec)](../07-monetization-spec.md), [08 section 6.10 (full spec)](../08-admin-control-center.md), [03 section 5.17 (full spec)](../03-database-schema.md), [04 section 5.22 (full spec)](../04-api-spec.md). |
 
 ## 1. Goal and revenue case
 
@@ -85,9 +85,9 @@ As the founder, I want a free pilot for one destination, so that I have numbers 
 
 ## 4. Database additions
 
-### 4.1 Already defined in 03 (reuse)
+### 4.1 Defined in the full 03 (reuse verbatim)
 
-03 section 5.17 defines `partner_guides` (revision `0016_services`), with the review workflow and sponsorship columns that the app role cannot read. If the table exists skip this block.
+03 section 5.17 defines `partner_guides`, with the review workflow and the sponsorship columns the app role cannot read. Phase 1 dropped the table (Phase 1 03 section 1.1) and Phase 2 does not create it, so this pack creates it. Apply 4.1 and 4.2 in one Alembic revision.
 
 ```sql
 CREATE TABLE partner_guides (
@@ -154,12 +154,22 @@ ALTER TABLE partner_guides ENABLE ROW LEVEL SECURITY;
 CREATE POLICY partner_guides_published ON partner_guides FOR SELECT USING (status = 'published');
 ```
 
-Already seeded: flag `partner_guides` (off).
+Flag and enum changes (Phase 1 seeds no later-phase flags; `itinerary_items.source` and `link_clicks.entity_type` gain the value `guide`, Phase 1 03 section 14):
+
+```sql
+INSERT INTO feature_flags (key, description, enabled, rollout_pct, rules, variants) VALUES
+('partner_guides', 'Labeled partner guides', false, 100, '{}', '{}')
+ON CONFLICT (key) DO NOTHING;
+ALTER TABLE itinerary_items DROP CONSTRAINT ck_itinerary_items_source;
+ALTER TABLE itinerary_items ADD CONSTRAINT ck_itinerary_items_source
+  CHECK (source IN ('manual', 'place_search', 'ai_draft', 'agent', 'import', 'guide'));
+-- link_clicks.entity_type is free text (Phase 1 03 section 5.15); add 'guide' to its comment and to OutboundIn.entity_type in the API schema.
+```
 
 ### 4.2 New in this pack
 
 ```sql
--- Migration p3_partner_guides. New tables carry their own grants.
+-- Same Alembic revision as 4.1 (p3_partner_guides). New tables carry their own grants.
 
 -- Version history for the admin diff view and the audit requirement (08 section 6.10: every publish writes before and after).
 CREATE TABLE partner_guide_versions (
@@ -229,11 +239,11 @@ CREATE TABLE sponsor_reports (
 REVOKE ALL ON sponsor_reports FROM wayfold_app;
 ```
 
-`itinerary_items.source` already allows `guide` per 04 section 5.22 (copies set `source: "guide"`); if the check constraint on `itinerary_items.source` does not list it, add it in this migration. User preference `hide_partner_guides` lives in `users.prefs` (no column). Retention: `guide_metrics_daily` 25 months (same as `link_clicks`); `sponsor_reports` 7 years with the contract; versions kept with the guide.
+User preference `hide_partner_guides` lives in `users.prefs` (no column). Retention: `guide_metrics_daily` 25 months (same as `link_clicks`); `sponsor_reports` 7 years with the contract; versions kept with the guide.
 
 ## 5. API additions
 
-Base `/v1`, behind the `partner_guides` flag. Reads extend [04 section 5.22](../phase-1-launch/04-api-spec.md); authoring is admin-only.
+Base `/v1`, behind the `partner_guides` flag. Reads extend [04 section 5.22 (full spec)](../04-api-spec.md); authoring is admin-only.
 
 | Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
 |---|---|---|---|---|
@@ -280,7 +290,7 @@ States, tokens and copy follow [05](../phase-1-launch/05-ui-ux-spec.md): sentenc
 
 ## 8. Admin additions
 
-Extends [08 section 6.10](../phase-1-launch/08-admin-control-center.md) (source ticket WF-106). Screens: Guides list (status, sponsor, destination, expiry, review state), editor, versions and diff, metrics, sponsor reports, finance tab. Roles: `content` edits and submits, a different admin reviews, the owner approves and publishes (08 section 3), finance edits sponsorship terms. Permissions: `guides.edit`, `guides.review`, `guides.publish`, `guides.sponsorship.write`, `guides.report.send`; the route-permission test covers them. Alerts: a guide expires in 14 days (notify), a published guide lacks a label or sources (page), any guide appears in a search or ranked response in the nightly audit (page), sponsor report unsent after the 5th (notify). Kill switch: `partner_guides` flag off hides every surface at once.
+Extends [08 section 6.10 (full spec)](../08-admin-control-center.md) (source ticket WF-106). Screens: Guides list (status, sponsor, destination, expiry, review state), editor, versions and diff, metrics, sponsor reports, finance tab. Roles: `content` edits and submits, a different admin reviews, the owner approves and publishes (08 section 3), finance edits sponsorship terms. Permissions: `guides.edit`, `guides.review`, `guides.publish`, `guides.sponsorship.write`, `guides.report.send`; the route-permission test covers them. Alerts: a guide expires in 14 days (notify), a published guide lacks a label or sources (page), any guide appears in a search or ranked response in the nightly audit (page), sponsor report unsent after the 5th (notify). Kill switch: `partner_guides` flag off hides every surface at once.
 
 ## 9. Legal and compliance
 

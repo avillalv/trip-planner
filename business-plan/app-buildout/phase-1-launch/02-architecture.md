@@ -6,11 +6,10 @@ This file says how Wayfold is put together for the launch app: the services, the
 
 Modules, tables and services that belong to Phase 2 or 3 are not built in Phase 1. They appear only as "added in Phase 2 or 3" or "Later: Phase 2 or 3" pointers.
 
-**Phase 1 additions to the shared design.** These names are the contract; 03, 04 and 05 define the DDL, routes and screens to match them.
+**Phase 1 additions to the shared design.** These names come from 03 and 04; this file only says where they live.
 
-- Tables: `import_jobs`, `import_feeds`, `calendar_feeds`, `referrals`.
-- Columns: `chosen_flights.paid_minor` and `paid_currency`, `price_alerts.kind = 'booked_fare_drop'`, `trip_passes.source` (`store` or `promo`) and `promo_key`, `itinerary_items.imported_uid` and `imported_hash`, `users.referral_code`.
-- Public routes: `GET /cal/{token}.ics` and `GET /r/{code}` (section 4.2).
+- Tables: `trip_imports`, `referral_codes`, `referral_rewards`. Columns and views: `trips.calendar_token_hash`, `trip_passes.source` (`purchase`, `import_reward` or `admin`), the booked-fare fields on `chosen_flights` and the view `booked_fare_drops`, `import_id` and `import_uid` on `itinerary_items` and `lodging_options`.
+- Public routes: `GET /calendar/{token}.ics` (section 4.2). Import, referral and calendar token routes are in 04 sections 5.26, 5.27 and 5.29.
 - Jobs: section 5.1. Import pipeline, SSRF guard, calendar feed and booked-fare alert: sections 5.4 to 5.6.
 - Flags, settings and kill switches: section 13.
 
@@ -36,7 +35,7 @@ flowchart LR
     IOS -->|"HTTPS, bearer JWT"| CF
     WEB --> CF
     ADM --> CF
-    CAL -->|"GET /cal/{token}.ics"| CF
+    CAL -->|"GET /calendar/{token}.ics"| CF
     CF --> PAGES
     CF -->|"api.wayfold.app"| API
 
@@ -181,17 +180,17 @@ Each module under `apps/api/wayfold/modules/<name>/` has the same five files: `r
 | Module | Owns (tables) | Responsibility | May call |
 |---|---|---|---|
 | `auth` | `users`, `auth_identities`, `devices`, `consents`, `data_exports`, `deletion_requests` | JWT verification, user bootstrap on first sign-in, guest claim, devices, consent records, account deletion and export orchestration, App Attest | `notifications`, `credits` (grant on signup), `referrals` (attribute a referral code at sign-up) |
-| `trips` | `trips`, `trip_destinations`, `people`, `trip_people`, `checklist_items`, `notes` | Trip CRUD, templates, traveler profiles, checklists, trash and restore, capabilities computed per trip (`trip_capabilities()`) | `billing` (entitlements), `collaboration` |
+| `trips` | `trips`, `trip_destinations`, `people`, `trip_people`, `checklist_items`, `notes` | Trip CRUD, templates, traveler profiles, checklists, trash and restore, capabilities computed per trip (`trip_capabilities()`), calendar token rotation (`trips.calendar_token_hash`) | `billing` (entitlements), `collaboration` |
 | `collaboration` | `trip_members`, `trip_invites`, `trip_share_links`, `activity_log` | Roles, invites, share links, activity feed, optimistic concurrency helpers, ownership transfer | `trips`, `notifications` |
-| `flights` | `flight_routes`, `fare_observations`, `trip_fare_links`, `chosen_flights`, `price_alerts`, `route_price_insights`, `airports`, `fx_rates` | Routes, fare ingest and dedup, cached-fare alerts, booked-fare drop watch (section 5.6), live-check scheduling inputs, chosen flight, FX conversion | `ai` (fare hunt), `credits`, `affiliate`, `providers` |
+| `flights` | `flight_routes`, `fare_observations`, `trip_fare_links`, `chosen_flights`, `price_alerts`, `route_price_insights`, `airports`, `fx_rates` | Routes, fare ingest and dedup, cached-fare alerts, the booked-fare drop alert (section 5.6), live-check scheduling inputs, chosen flight, FX conversion | `ai` (fare hunt), `credits`, `affiliate`, `providers` |
 | `lodging` | `lodging_options`, `lodging_votes` | Shortlist, pasted-link previews (no Airbnb, Vrbo or Booking.com fetches), hearts, compare, rental search | `places`, `affiliate`, `providers` |
-| `itinerary` | `itinerary_days`, `itinerary_items`, `calendar_feeds` | Days and items, ordering, times and time zones, conflicts, presentation data, calendar feed generation and feed tokens (section 5.5) | `places`, `trips` |
+| `itinerary` | `itinerary_days`, `itinerary_items` | Days and items, ordering, times and time zones, conflicts, presentation data, calendar feed generation (section 5.5) | `places`, `trips` |
 | `places` | `places_cache`, `saved_places` | Geoapify search and details, Wikipedia summaries, map data, cache expiry per provider terms | `providers` |
 | `ai` | `routines`, `runs`, `run_events`, `ai_usage`, `provider_calls`, `shared_research_cache` | `AgentLoop`, tool definitions, prompts, evidence rules, run lifecycle, metering, shared research cache, AI consent check, kill switches for AI, the pasted-text booking extraction call that `imports` uses (section 5.4) | `credits`, `flights`, `trips`, `providers.anthropic` |
-| `imports` | `import_jobs`, `import_feeds` | Import pipeline: ICS file, ICS feed polling and pasted text; proposals, confirm, first-import reward call, feed health (section 5.4) | `trips`, `itinerary`, `flights`, `lodging`, `ai`, `billing` (promo pass), `notifications`, `providers.feed_fetcher` |
-| `billing` | `plans`, `store_products`, `subscriptions`, `entitlements`, `trip_passes`, `store_transactions`, `webhook_events` | RevenueCat webhooks, entitlement computation, Trip Pass binding, promo Trip Pass grants, restore and reconcile | `credits` |
+| `imports` | `trip_imports` | Import pipeline: ICS file, ICS feed fetch and polling, pasted text; preview, confirm, undo, first-import reward call (section 5.4) | `trips`, `itinerary`, `flights`, `lodging`, `ai`, `billing` (promo pass), `notifications`, `providers.feed_fetcher` |
+| `billing` | `plans`, `store_products`, `subscriptions`, `entitlements`, `trip_passes`, `store_transactions`, `webhook_events` | RevenueCat webhooks, entitlement computation, Trip Pass binding, the first-import reward pass (`grant_import_reward()`), restore and reconcile | `credits` |
 | `credits` | `credit_ledger`, `credit_grants`, `credit_debts`, `credit_action_prices` | The only writer of credits: grants, reserve, settle, refund, expiry, spend ceilings | none (leaf) |
-| `referrals` | `referrals` | Referral links, attribution at sign-up, qualification, hold period, abuse signals, reward and void (07 section 9) | `credits`, `notifications` |
+| `referrals` | `referral_codes`, `referral_rewards` | Referral codes, redeeming a code, qualification, reward grants, abuse checks, reject (07 section 9) | `credits`, `notifications` |
 | `affiliate` | `affiliate_programs`, `affiliate_link_templates`, `link_clicks`, `affiliate_conversions`, `affiliate_payouts` | Link building from stored templates, the `/go/{click_id}` redirect, disclosure flags, conversion import, revenue reports | `providers` |
 | `notifications` | `devices` (read), notification preference and delivery rows | Push, email, digest building, preference checks, quiet hours, collapse ids, unsubscribe | `providers.apns`, `providers.resend` |
 | `admin` | `admin_users`, `feature_flags`, `kill_switches`, `audit_log`, `support_tickets`, `content_reports` | Admin console API, feature flags, kill switches, support tools, audit writes | every service (through audited functions) |
@@ -206,7 +205,7 @@ Boundary rules that tests enforce:
 - Only `providers/*` import `httpx` or the Anthropic SDK. Modules call provider classes, which record a `provider_calls` row for every outbound call (provider, endpoint, cost units, latency, status, cached).
 - Only `affiliate.service` builds outbound partner URLs. Templates come from `affiliate_link_templates`. No other module concatenates a partner URL.
 - No module imports `worker`. Jobs are deferred through `jobs.enqueue(name, **args)` in `wayfold/jobs.py`, which is a thin wrapper over Procrastinate's `defer_async` that uses the caller's transaction.
-- Only `imports.service` writes `import_jobs` and `import_feeds`. It creates trips and items only by calling the owning module services, never their repositories.
+- Only `imports.service` writes `trip_imports`. It creates trips and items only by calling the owning module services, never their repositories.
 - Only `providers/feed_fetcher.py` and `providers/link_preview.py` fetch a URL that a user supplied, and both go through `security/ssrf.py` (section 5.4). No other code opens a connection to a user-supplied host.
 
 ## 4. Request lifecycle
@@ -234,12 +233,12 @@ Boundary rules that tests enforce:
 | `POST /auth/session`, `GET /me` | JWT | Session bootstrap |
 | `/admin/*` | admin session | Separate middleware: SSO, 2FA, IP allowlist optional, every call writes `audit_log` |
 | `GET /i/{token}` | none | Universal link landing, JSON for the app, HTML for the web fallback |
-| `GET /cal/{token}.ics` | token | Calendar subscription feed for one trip, read-only, redacted, throttled per token (section 5.5) |
-| `GET /r/{code}` | none | Referral link landing: JSON for the app, HTML for the web fallback. Stores nothing; the code travels in the sign-up call |
+| `GET /calendar/{token}.ics` | token | Calendar subscription feed for one trip, read-only, throttled per token (section 5.5) |
+| `GET /referrals/{code}` | none | Landing data for a referral link (inviter first name and the reward sentence); identical `404` for unknown, disabled and capped codes (04 section 5.27) |
 
 ### 4.3 Row-level security in detail
 
-RLS is the second lock, not the first. Policies exist on: `trips`, `trip_members`, `trip_destinations`, `trip_people`, `flight_routes`, `chosen_flights`, `price_alerts`, `itinerary_days`, `itinerary_items`, `calendar_feeds`, `saved_places`, `lodging_options`, `lodging_votes`, `checklist_items`, `notes`, `routines`, `runs`, `run_events`. The standard policy is `EXISTS (SELECT 1 FROM trip_members m WHERE m.trip_id = <table>.trip_id AND m.user_id = current_setting('app.user_id')::uuid)`. User-owned tables (`devices`, `people` by `owner_user_id`, `consents`, `credit_ledger`, `credit_debts`, `idempotency_keys`, `import_jobs`, `import_feeds`) use a direct `user_id = current_setting(...)` policy; `referrals` is readable by its referrer and its referee only; `content_reports` (insert and read your own) has its own policy. A test connects as the API role with no variable set and expects zero rows from every table with a policy. DDL is in [03-database-schema.md](03-database-schema.md).
+RLS is the second lock, not the first. Policies exist on: `trips`, `trip_members`, `trip_destinations`, `trip_people`, `flight_routes`, `chosen_flights`, `price_alerts`, `itinerary_days`, `itinerary_items`, `saved_places`, `lodging_options`, `lodging_votes`, `checklist_items`, `notes`, `routines`, `runs`, `run_events`. The standard policy is `EXISTS (SELECT 1 FROM trip_members m WHERE m.trip_id = <table>.trip_id AND m.user_id = current_setting('app.user_id')::uuid)`. User-owned tables (`devices`, `people` by `owner_user_id`, `consents`, `credit_ledger`, `credit_debts`, `idempotency_keys`, `trip_imports`, `referral_codes`) use a direct `user_id = current_setting(...)` policy; `referral_rewards` is readable by its referrer and its referee only; `content_reports` (insert and read your own) has its own policy. A test connects as the API role with no variable set and expects zero rows from every table with a policy. DDL is in [03-database-schema.md](03-database-schema.md).
 
 ### 4.4 Web and iOS differences
 
@@ -272,20 +271,18 @@ Times are UTC unless marked local. "Key" is the idempotency key: a second run wi
 | Job | Lane | Trigger | Schedule | Idempotency key | Retries |
 |---|---|---|---|---|---|
 | `scan_due_routines` | api | Scheduler tick | Every 30 seconds (leader only) | `routines.last_slot_at` advanced in the same transaction | none |
-| `check_fare_route` | api | Routine tick, user "refresh", trip pass start (paid or promo) | Live routes daily within 120 days of departure, jittered in a 60 minute window by hash of route id | `(route_id, provider, time_bucket_6h)` on `provider_calls` | transient x5 |
+| `check_fare_route` | api | Routine tick, user "refresh", trip pass start (purchased or import reward) | Live routes daily within 120 days of departure, jittered in a 60 minute window by hash of route id | `(route_id, provider, time_bucket_6h)` on `provider_calls` | transient x5 |
 | `refresh_cached_fares` | api | Scheduler | Every 6 hours for routes with `price_alerts` or free cached-fare tracking | `(route_id, bucket_6h)` | transient x5 |
 | `evaluate_price_alerts` | notify | After `check_fare_route` or `refresh_cached_fares` writes `fare_observations` | Event | `(alert_id, observation_id)` | transient x3 |
-| `run_ai_action` | ai | User action (`explain`, `live_search`, `draft_day`, `draft_trip`, `research`) | Event | `Idempotency-Key` header, unique per user | transient x2, refunds credits on final failure |
+| `run_ai_action` | ai | User action (`explain`, `live_search`, `draft_day`, `draft_trip`, `research`, `packing_list`, `booking_import`) | Event | `Idempotency-Key` header, unique per user | transient x2, refunds credits on final failure |
 | `run_agent` | ai | User action | Event | `run_id` | transient x2 at turn boundaries only, never replays tool writes |
 | `warm_research_cache` | batch | Scheduler | Nightly 03:10 local to the US East region, Anthropic Batch API | `(destination, month, interest_bucket, model, prompt_version)` | transient x5 |
 | `collect_batch_results` | batch | Scheduler | Every 10 minutes while a batch is open | `batch_id` | transient x10 |
 | `settle_ai_usage` | ai | End of `run_ai_action` or `run_agent` | Event | `run_id` | transient x5 |
-| `import_trip_file` | api | `POST /imports` with an uploaded ICS file (object in R2) | Event | `import_jobs.id` | transient x3 for storage errors; parse errors are permanent |
-| `import_pasted_text` | ai | `POST /imports` with pasted text | Event | `import_jobs.id` | transient x2; the pasted text is wiped from the job row when it ends |
-| `poll_import_feeds` | batch | Scheduler | Every 15 minutes (leader only); enqueues one `fetch_import_feed` per due feed | `(feed_id, bucket_15m)` | none |
-| `fetch_import_feed` | batch | `poll_import_feeds`, or the user's "Refresh now" | Event | `(feed_id, bucket_15m)` | transient x3, then feed-level backoff; feed disabled after 5 consecutive failures |
-| `evaluate_booked_fare_drops` | notify | After `check_fare_route` or `refresh_cached_fares` writes `fare_observations` for a route with a booked-fare watch | Event | `(chosen_flight_id, observation_id)` | transient x3 |
-| `grant_referral_rewards` | api | Scheduler | Every 10 minutes; grants rewards for referrals past their hold that still qualify (07 section 9) | `(referral_id, 'reward')` unique on `credit_grants` | transient x5 |
+| `fetch_import_feed` | api | `POST /imports/ics-feed`, `POST /imports/{id}/refresh`, or `poll_import_feeds` | Event | `(import_id, bucket_15m)` | transient x2; the third consecutive failure marks the import `failed` |
+| `poll_import_feeds` | batch | Scheduler | Every 30 minutes (leader only); enqueues `fetch_import_feed` for feeds with polling on and `next_poll_at` due | `(bucket_30m)` | none |
+| `evaluate_booked_fare_drops` | notify | Scheduler | Nightly 09:00; reads the view `booked_fare_drops` and sends the alerts | `notifications.dedupe_key` `booked_drop:{chosen_flight_id}:{current_minor}` | transient x3 |
+| `grant_referral_rewards` | api | Scheduler | Every 10 minutes; marks `pending` rewards `qualified` when the referee met the rule, then calls `grant_referral_reward()` | `credit_grants` `period_key` `referral:{reward_id}` | transient x5 |
 | `reap_stale_jobs` | batch | Scheduler | Every minute | none (idempotent by nature) | none |
 | `process_webhook_event` | api | Row inserted in `webhook_events` | Event | `(provider, provider_event_id)` unique | transient x10 over 24 hours |
 | `reconcile_entitlements` | api | Scheduler | Every 6 hours, plus on demand from admin; calls RevenueCat REST for users with recent activity | `(user_id, day)` | transient x5 |
@@ -302,7 +299,7 @@ Times are UTC unless marked local. "Key" is the idempotency key: a second run wi
 | `export_user_data` | batch | `POST /me/export` | Event; max 1 per day per user | `data_exports.id` | transient x3; 7 day link |
 | `delete_account` | batch | `POST /me/delete` then 30 day timer | Event then day 30 | `deletion_requests.id` and a checklist row per step | transient x10, each step idempotent |
 | `purge_trash` | batch | Scheduler | Daily 04:30; hard deletes trips deleted more than 30 days ago | `(trip_id)` | transient x3 |
-| `retention_sweep` | batch | Scheduler | Daily 05:30; invites older than 30 days, IP hashing after 30 days, prompt content older than 30 days, import files 24 hours after the job ends, `import_jobs` rows after 90 days, `run_events` payloads older than 14 days, analytics older than 90 days, audit rows by `retention_class` (03 section 8) | `(table, day)` | transient x3 |
+| `retention_sweep` | batch | Scheduler | Daily 05:30; invites older than 30 days, IP hashing after 30 days, prompt content older than 30 days, import files and previews on the schedule in 03 section 5.9, `run_events` payloads older than 14 days, analytics older than 90 days, audit rows by `retention_class` (03 section 8) | `(table, day)` | transient x3 |
 | `purge_idempotency_keys` | api | Scheduler | Hourly; deletes `idempotency_keys` past `expires_at` | none | none |
 | `expire_kill_switches` | api | Scheduler | Every minute; disengages switches past `kill_switches.expires_at`, writes `audit_log` as `system`, and warns the owner 15 minutes before expiry (08 section 6.5) | `(key, expires_at)` | none |
 | `ai_spend_guard` | api | Scheduler | Every 5 minutes; sums `ai_usage`, trips the global circuit breaker, raises alerts | `(bucket_5m)` | none |
@@ -321,7 +318,7 @@ The scheduler is a loop inside `wayfold_worker/scheduler.py`. It enqueues work; 
 2. **Routine scan.** Every 30 seconds the leader runs `SELECT id FROM routines WHERE enabled AND next_run_at <= now() ORDER BY next_run_at LIMIT 500 FOR UPDATE SKIP LOCKED`. For each row it checks the kill switch for the routine's kind, checks the account's budget (reserve in the same transaction), inserts a `runs` row (`trigger = 'schedule'`), defers the job, and advances `next_run_at` to the next cron slot after now (never stacking missed slots). An outage of a day fires one check, not many.
 3. **Jitter.** `next_run_at` = cron slot plus `hash(routine_id) mod window`, window 60 minutes for daily checks. This spreads load and is stable per routine.
 4. **Periodic jobs.** Fixed-schedule jobs in section 5.1 use Procrastinate periodic tasks registered on the leader only, so they never double-fire. Each has the `slot` timestamp as its lock key.
-5. **Live-route eligibility.** A route is scheduled only if the trip's best capability allows it (Plus 3, Trip Pass 2 per trip, including a promo Trip Pass), the departure is within 120 days, and the trip pass has live checks left (60 max). When eligibility ends, `next_run_at` is cleared and the route keeps its last fares.
+5. **Live-route eligibility.** A route is scheduled only if the trip's best capability allows it (Plus 3, Trip Pass 2 per trip, including an import-reward Trip Pass), the departure is within 120 days, and the trip pass has live checks left (60 max). When eligibility ends, `next_run_at` is cleared and the route keeps its last fares.
 6. **Scheduled agents.** Not in Phase 1. Later: Phase 2 (Pro). The scan only enqueues live-route checks and no routine kind for agents exists yet.
 7. **Observability.** Each tick writes `scheduler_ticks` metrics (due count, enqueued, skipped by reason, tick duration). A heartbeat URL is pinged each minute; a missing ping for 3 minutes pages.
 
@@ -337,63 +334,62 @@ job starts -> set app.user_id (or system role) -> load run row -> check kill swi
 
 ### 5.4 Import pipeline and the SSRF guard
 
-Three sources feed one pipeline, and one rule governs it: an import only proposes. Nothing reaches a trip until the user confirms.
+Imports bring an existing plan into Wayfold from a calendar file, a calendar feed or pasted booking text. One rule governs all three: an import only proposes. Nothing reaches a trip until the user reviews a preview and confirms. Routes, limits and response shapes are in [04-api-spec.md](04-api-spec.md) section 5.26, the table is `trip_imports` (03 section 5.9), and the AI feature is `booking_import` (06 section 5.3).
 
-| Source | Entry | Job | Parsing |
+| Source | Entry (04) | Work | Parsing |
 |---|---|---|---|
-| ICS file (a TripIt single-trip export, a Google Calendar export, any `.ics`) | The app uploads to R2 by signed URL (max 2 MB, `text/calendar`), then `POST /imports` with the object key | `import_trip_file` (api) | A standards iCalendar parser library on the stored bytes; `VEVENT` components only |
-| ICS feed (a TripIt calendar feed, a Google Calendar secret address) | `POST /imports` with a `webcal://` or `https://` address | `fetch_import_feed` (batch), then the same mapping; the feed is saved in `import_feeds` and polled | Same parser |
-| Pasted booking text | `POST /imports` with text up to 20,000 characters | `import_pasted_text` (ai) | One Haiku extraction call, below |
+| ICS file (a TripIt single-trip export, a Google Calendar export, any `.ics`) | `POST /imports/ics-file`, multipart, max 2 MB | Parsed in a size-limited sandbox, inside the request for normal files | A maintained RFC 5545 library; `VEVENT` only; deterministic classification first |
+| ICS feed (a TripIt calendar feed, a Google Calendar secret address) | `POST /imports/ics-feed` with an address | Job `fetch_import_feed` (the route returns 202; the client polls `GET /imports/{id}`) | Same parser |
+| Pasted booking text | `POST /imports/paste`, text up to 12,000 characters | A `booking_import` run on the `ai` lane | One Haiku call, strict JSON schema, no tools |
 
 **Flow.**
 
-1. `POST /imports` (with `Idempotency-Key`) creates an `import_jobs` row (`source`, `status = 'queued'`, target `trip_id` or null for a new trip) and enqueues the job. Pasted text needs the AI consent (the same `consents` check as every AI action); file and feed imports never call AI.
-2. The job produces a proposal: candidate items (`kind` of `flight`, `stay`, `reservation`, `activity` or `note`) with normalized fields (start and end with time zones, place text, confirmation code text, source event UID, source hash) and a confidence flag. It is stored in `import_jobs.proposal` and the status becomes `ready`. Failures set `status = 'failed'` with an `error_code` (the codes are listed in 08 section 6.8).
-3. The app shows the review screen. The user unticks items, chooses a new trip or an existing trip they can edit, and confirms with `POST /imports/{id}/confirm`. One transaction creates the trip when needed and the `itinerary_items`, `flight_routes`, `chosen_flights` and `lodging_options`, by calling the owning module services, stamps each created item with `imported_uid` and `imported_hash`, and, when the import created a new trip and the user is eligible, calls `billing.service.grant_promo_pass` for the free first-import Trip Pass (07 section 10). The status becomes `applied`.
-4. Inputs are discarded: the R2 object 24 hours after the job ends, pasted text and raw model output when the job ends, the `import_jobs` row after 90 days (`retention_sweep`).
+1. **Preview.** The `trip_imports` row moves through `received`, `parsing` and `review`. Candidates are stored in `preview`. An uploaded file lives in R2 (`raw_key`); pasted text is never stored; a feed address is stored encrypted (below). Files and previews are deleted on the schedule in 03 section 5.9, by `retention_sweep`.
+2. **Confirm.** `POST /imports/{id}/confirm` runs one transaction. It creates the trip when the target is new, then creates `itinerary_items` (flights and reservations, `source = 'import'`) and `lodging_options` (stays) by calling the owning module services, each stamped with `import_id` and `import_uid`, and sets the status to `applied`. A flight with a paid amount can also create a cached-mode route and the booked-fare fields on `chosen_flights`, which starts the booked-fare drop alert (5.6). When the commit succeeds, `imports.service` calls `billing.service.grant_import_reward()` for the free first-import Trip Pass (07 section 10).
+3. **Undo.** Rows an import created carry `import_id`, so one tap removes them.
 
-**Mapping (files and feeds).** Deterministic code, not AI: `DTSTART` and `DTEND` with `TZID`, `SUMMARY`, `LOCATION`, `DESCRIPTION` and `UID`. TripIt's summary conventions identify flights, lodging and reservations; events that match nothing become itinerary items on their start day. A flight price found in the description sets `chosen_flights.paid_minor`. Limits: 500 events per import (`too_many_events`), events that ended more than 2 years ago are ignored, `RRULE` is expanded only for occurrences in the next 18 months (at most 50), attachments and alarms are ignored.
+**Pasted text and event descriptions.** `ai.service` runs the `booking_import` feature: personal data is replaced with placeholders locally first (06 section 12.3), Haiku (`AI_MODEL_FAST`) is called with no tools at all (no web search, no web fetch), the output must match a strict JSON schema, and every extracted value must appear in the source text. The pasted text is data, never instructions. One call costs 1 credit (the `explain` price, refunded when nothing is recognized) and the kill switch is `ai.import`. The text never appears in logs, `run_events`, Sentry or the shared research cache.
 
-**Pasted text extraction.** `ai.service.extract_bookings` calls `AI_MODEL_FAST` (Haiku) once, with no tools, no web search and no web fetch. The pasted text is data, never instructions: the system prompt says so, the output must validate against a fixed JSON schema, unknown fields are dropped, and every item must carry a `source_quote` that is a substring of the input, otherwise it is discarded (this stops invented bookings). Dates without a year resolve to the next occurrence and are flagged for the user. The call has a hard stop of $0.01, is recorded in `ai_usage` under the `import` metering action and counts against the account's daily ceiling, but charges no credits (06 defines the action). Limit: 10 pasted imports per user per day (`setting_import_pasted_per_day`). Kill switch `ai.import`. Booking confirmations hold personal data, so the text never appears in logs, `run_events`, Sentry or the shared research cache (the log filter masks the `pasted_text` key).
+**SSRF guard.** `security/ssrf.py` is the only way to fetch a user-supplied address. Its callers are `providers/feed_fetcher.py` and `providers/link_preview.py`. Rules, in order:
 
-**SSRF guard.** `security/ssrf.py` is the only way to fetch a user-supplied address (feeds, and the link preview of 14.1). Rules, in order:
+1. Scheme `https` only (`webcal://` is rewritten), port 443 only, no userinfo, the host is a DNS name and not an IP literal, at most 2,048 characters.
+2. Refuse the hosts of Airbnb, Vrbo and Booking.com (the `BLOCKED_HOSTS` constant, 06 section 2.4) and Wayfold's own hosts. Product rule 3: the user can download the file and upload it instead (`blocked_source`).
+3. Resolve DNS ourselves and refuse the fetch if any answer is not a public address: loopback, private (RFC 1918), link-local (including the cloud metadata address 169.254.169.254), carrier-grade NAT `100.64.0.0/10`, multicast, reserved, unspecified, IPv6 loopback, unique local and link-local, and IPv4-mapped, 6to4 or NAT64 forms of any of these.
+4. Connect to the validated IP address (pinned), send the original name in SNI and `Host`, and verify the certificate against that name, so DNS cannot change between the check and the connection.
+5. Follow at most 3 redirects and revalidate every hop from rule 1.
+6. Limits: 5 second connect timeout, 15 second total, body at most 2 MB (streamed and cut, also after decompression), and the body must start with `BEGIN:VCALENDAR`. No cookies and no authorization headers. `User-Agent: WayfoldCalendarImport/1.0`.
+7. The fetch job runs on a worker whose outbound traffic goes through a fixed egress proxy with its own deny rules for private ranges, the database and metadata services, as defense in depth ([10-quality-security-launch.md](10-quality-security-launch.md)).
+8. Every attempt writes a `provider_calls` row (provider `feed_fetcher`, host only, status, bytes, blocked reason).
+9. The address is stored encrypted with `FIELD_ENCRYPTION_KEY` in `trip_imports.feed_url` because feed addresses often carry a secret token. It is shown back as the host plus a masked path and deleted on discard, on expiry of an unconfirmed import and on account deletion. Logs and Sentry redact it.
+10. A table-driven suite of hostile addresses must all be refused in CI: decimal, octal and hex IPs, IPv6 forms, `localhost` variants, `@` userinfo, unicode hosts, DNS answers that flip to a private address, and redirects to the metadata address. The fake feed host is allowed only when `ENVIRONMENT` is `local` or `ci`.
 
-1. Normalize: `webcal://` becomes `https://`; only `https` is accepted; no userinfo in the address; port 443 only; the host is an IDNA-normalized DNS name or a public IP; at most 2,048 characters.
-2. Refuse the hosts of Airbnb, Vrbo and Booking.com and their subdomains (`blocked_host`, product rule 3; the user can download the file and upload it instead) and Wayfold's own hosts.
-3. Resolve DNS ourselves (A and AAAA) and refuse the fetch if any answer is loopback, private (RFC 1918), link-local (including the cloud metadata address 169.254.169.254 and `fe80::/10`), carrier-grade NAT (`100.64.0.0/10`), unique local (`fc00::/7`), multicast, reserved, unspecified, documentation, or an IPv4-mapped, 6to4 or NAT64 form of any of those (`blocked_address`).
-4. Connect to the vetted IP address itself, send the original host in `Host` and TLS SNI, and verify the certificate against the host name, so a second DNS lookup can never rebind to a private address.
-5. Follow at most 3 redirects and re-run rules 1 to 4 on every target (`redirect_limit`).
-6. Timeouts and size: connect 5 seconds, total 15 seconds, body streamed and cut at 2 MB (`fetch_too_large`), gzip decoded with a decompressed-size cap. Accept `text/calendar`, `text/plain` or `application/octet-stream`, and only when the body starts with `BEGIN:VCALENDAR` (`not_calendar`).
-7. No ambient credentials: no cookies, no `Authorization` header, no proxy variables, no referrer, and the fixed agent `WayfoldCalendarFetcher/1.0 (+https://wayfold.app/fetcher)`.
-8. Only a worker fetches, never the API process, and nothing from the remote body is ever echoed to a client except the parsed proposal.
-9. Every attempt writes a `provider_calls` row (provider `feed_fetcher`, host, status, bytes, blocked reason). The feed address is stored encrypted with `FIELD_ENCRYPTION_KEY` because Google and TripIt feed addresses are secret links; logs and Sentry show the host only.
-10. A table-driven test suite of hostile addresses must all be refused: decimal, octal and hex IPs, IPv6 forms, `localhost` variants, `@` userinfo, unicode hosts, a DNS answer that flips to a private address, and redirects to the metadata address. The fake feed host is allowed only when `ENVIRONMENT` is `local` or `ci`.
+**Feed polling.** A user can turn on "Keep checking this calendar" for a feed import. Polling adds these columns to `trip_imports` (03 defines them): `poll_enabled`, `next_poll_at`, `last_polled_at`, `last_content_hash` and `consecutive_failures`.
 
-**Feed polling.** `import_feeds` holds `user_id`, `trip_id`, `host`, `url_encrypted`, `etag`, `last_modified`, `last_hash`, `status` (`active`, `paused`, `disabled`), `last_polled_at`, `last_success_at`, `consecutive_failures` and `next_poll_at`. `poll_import_feeds` selects due active feeds (`FOR UPDATE SKIP LOCKED`, limit 500) and enqueues `fetch_import_feed`, which sends a conditional request (`If-None-Match`, `If-Modified-Since`) and does nothing if the body hash is unchanged.
-
-- Interval: every 6 hours (`IMPORT_FEED_POLL_HOURS`), 24 hours after 14 days without a change, and `paused` 7 days after the trip ends. "Refresh now" is allowed once every 15 minutes.
-- Applying changes: the first fetch goes through the review screen like any import. Later fetches apply automatically (the user agreed at setup that Wayfold checks the calendar and updates the items it added). Events are matched by `UID`; an item whose `imported_hash` still equals the feed's last hash is updated in place; an item a person has edited is left alone; new events are added; events that disappear are never deleted, they get the note "No longer in the calendar feed" and an `activity_log` entry. One collapsed push tells the user when a poll changed something.
-- Failures: 5 consecutive failures set `disabled`, tell the user "We stopped checking this calendar", and need the user to re-enable. Each user may have 3 feeds (`setting_import_feeds_per_user`), each attached to one trip they own or can edit. Kill switch `import.feeds`.
-- The feed is one way. Wayfold never writes to the user's calendar.
+- `poll_import_feeds` (batch lane, leader only, every 30 minutes) selects feeds with `poll_enabled` and `next_poll_at <= now()` (`FOR UPDATE SKIP LOCKED`, limit 500) and enqueues `fetch_import_feed` for each.
+- The interval is 6 hours (the same four a day as a manual refresh), 24 hours after 14 days without a change, and polling stops 7 days after the trip ends. The platform allows at most 60 fetches an hour to one destination host.
+- A fetch sends a conditional request and compares the content hash. If events are new or changed, the job builds a change preview (only new or changed events, the same result as `POST /imports/{id}/refresh`) and sends one push and in-app notice: "Your calendar changed: 3 updates to review".
+- Polling never applies anything by itself. The user reviews and confirms, and an unreviewed change preview expires.
+- Three consecutive failures turn polling off, mark the import `failed` with `feed_unreachable`, and tell the user. The kill switch `import.all` stops fetches. Polling is one way: Wayfold never writes to the user's calendar.
 
 ### 5.5 Calendar feed endpoint
 
-`GET /cal/{token}.ics` returns a live iCalendar feed of one trip that a calendar app can subscribe to. It is available on every tier.
+A trip can publish a live calendar subscription that phones and desktop calendars refresh on their own (04 section 5.29). It is available on every tier and does not count as a collaborator or a share link.
 
-- **Token.** 32 random bytes, base64url. `calendar_feeds` stores `token_hash` (SHA-256, used for lookup) and `token_encrypted` (so the owner can copy the link again), plus `trip_id`, `created_by`, `created_at`, `revoked_at`, `last_fetched_at` and `fetch_count`. One active feed per trip; the owner or an editor creates it, the owner rotates or revokes it. The app warns: "Anyone with this link can see these dates and places. Reset the link any time."
-- **Content.** One `VEVENT` per itinerary item, flight leg and stay (check-in and check-out), with stable `UID` (`{item_id}@wayfold.app`), `SEQUENCE` from the row version, `LAST-MODIFIED`, time zones, `SUMMARY`, `LOCATION` and a short `DESCRIPTION` with an "Open in Wayfold" link. Never included: notes, prices, confirmation codes, traveler names, affiliate links. The calendar name is the trip title; `REFRESH-INTERVAL` and `X-PUBLISHED-TTL` are 6 hours.
-- **HTTP.** `ETag` and `Last-Modified` (the newest item change), `If-None-Match` returns 304, `Cache-Control: max-age=300`, `Referrer-Policy: no-referrer`, `X-Robots-Tag: noindex`. A revoked or unknown token, or a trip in the trash, returns 404 with an empty body (never 403). The kill switch `calendar.feed` returns 503; the flag `calendar_feed` hides the feature.
-- **Protection.** 60 requests an hour per token and 600 an hour per IP (Cloudflare rule plus the Postgres bucket). The token is never logged: the access log records the route template `/cal/{token}.ics` only. Cloudflare caches the response for 300 seconds and purges by tag when the feed is revoked or rotated.
+- **Token.** 256 random bits, stored only as `trips.calendar_token_hash` (SHA-256, unique index `uq_trips_calendar_token`). The URL is returned once, by `POST /trips/{trip_id}/calendar-token`, which also rotates it. Rotating or `DELETE /trips/{trip_id}/calendar-token` stops the old URL at once.
+- **Endpoint.** `GET /calendar/{token}.ics`, served at `https://api.wayfold.app/v1/calendar/{token}.ics`. The token is the credential: no JWT, no cookie. Unknown, rotated or disabled tokens and deleted trips return an empty `404`, never `403`. Limits: 120 an hour per token and 600 an hour per IP, and unknown tokens count against the IP limit.
+- **Content.** Generated by the `itinerary` module from current rows: timed events in the destination's time zone, all-day events, booked stays from check-in to check-out, and chosen flights, with stable `UID` values, `SEQUENCE` from the row version, `REFRESH-INTERVAL` of one hour and at most 2,000 events. Never included: prices, paid amounts, confirmation numbers, private notes, people, partner links or click ids.
+- **HTTP.** `ETag` over the content with `If-None-Match` answered `304`, `Cache-Control: private, max-age=300`, `Referrer-Policy: no-referrer`. Cloudflare does not cache it, because the URL is a bearer secret.
+- **Logging.** The access log records only the route template `/v1/calendar/{token}.ics`. `last_fetched_at` is updated at most once a minute.
 
 ### 5.6 Booked-fare drop alert
 
-`evaluate_booked_fare_drops` tells a traveler when the fare on a flight they already booked has fallen, so they can check the airline's change and credit rules.
+The booked-fare drop alert tells a traveler when the fare for a flight they already booked has fallen, so they can check the airline's change and credit rules. It is a notification, not a refund promise.
 
-- **Setup.** The user enters what they paid (or an import sets it) on the chosen flight (`chosen_flights.paid_minor`, `paid_currency`) and taps "Watch this fare". That creates a `price_alerts` row with `kind = 'booked_fare_drop'`. It counts toward the `price_alerts` capability (Free 1 cached-fare alert, Plus 3, Trip Pass 2). The route is refreshed by `refresh_cached_fares` (every 6 hours) and, on a live route, by `check_fare_route`.
-- **Trigger.** After either job writes a `fare_observations` row for the route, the job enqueues one evaluation per active booked-fare alert whose chosen flight matches the observation: same origin and destination, same outbound date and, for round trips, the same return date, same cabin.
-- **Rule.** Convert the observed fare to `paid_currency` with the `fx_rates` row of that day. Alert when it is at least `max(5 percent of paid, $20 equivalent)` below what was paid (`setting_booked_fare_min_drop_pct` and `setting_booked_fare_min_drop_usd`), and only if it is at least as far below the last alerted price, so one dip does not repeat. The alert stops after departure or when the chosen flight is removed.
-- **Message.** "You paid $640, it is now $540. Check the airline's change and credit rules." The copy is fixed. It never says money will be refunded or that a change is free, shows the age and source of the fare ("seen 3 hours ago on Aviasales") and says cached fares may not include the exact flights. It opens the fare card in the app; there is no partner link in the alert.
-- **Delivery.** `send_push`, with email when push is unavailable, plus the in-app feed. Kill switches `provider.travelpayouts` (no new observations) and `push.all` apply.
+- **Setup.** When the user marks a chosen flight booked they can enter what they paid (`chosen_flights.paid_minor`, `paid_currency`, `booked_at`, `booked_by`), or an import fills it. `drop_alert_enabled` is on by default and the user can turn it off per flight. Flag `booked_fare_alerts`. It works on every tier, costs no credits and does not count toward the `price_alerts` cap.
+- **Data.** No extra provider calls: it reads the shared `fare_observations` that `refresh_cached_fares` (every 6 hours) and live checks on Plus and passes already write. A match has the same origin, destination, dates, cabin and party size as the chosen flight (04 section 5.8).
+- **Job.** `evaluate_booked_fare_drops` (notify lane, nightly at 09:00 UTC, worker role) reads the view `booked_fare_drops`: one row per booked flight with a matching observation from the last 48 hours priced below what the user paid, converted to the paid currency with `fx_convert_minor()`. It applies the thresholds in the setting `setting_booked_fare_drop` (`min_drop_pct` 5 and `min_drop_usd`), skips a row whose price is not lower than `last_drop_notified_minor`, and writes a `notifications` row with the dedupe key `booked_drop:{chosen_flight_id}:{current_minor}`, which makes a rerun harmless. A missing FX rate skips the row; no made-up number is ever shown.
+- **Message.** "You paid $412. It is now $368. Check the airline's change and credit rules." The copy is fixed. It never says a refund or free change is available, it says where and when the price was seen, and it links to the trip screen with no partner link. Delivery uses `send_push`, then `send_email`, honoring the price-alert preference.
+- **Stops.** After departure, when the paid amount is cleared, or when `drop_alert_enabled` is turned off. Kill switches `provider.travelpayouts` (no new observations) and `push.all` apply.
 
 ## 6. Caching layers
 
@@ -402,7 +398,7 @@ There is no Redis at launch. Every layer below is in Postgres, in process memory
 | Layer | What | Where | Key | TTL | Invalidation |
 |---|---|---|---|---|---|
 | Edge static | Web build, fonts, images, brand assets | Cloudflare CDN and Pages | Content hash in file name | 1 year immutable for hashed assets, `no-cache` for `index.html` | Deploy |
-| Edge API | Public GETs only: `GET /shared/{token}` JSON, `GET /cal/{token}.ics`, AASA file | Cloudflare | URL | 60 seconds for shared trips and 300 seconds for calendar feeds, `stale-while-revalidate` 5 minutes | Purge by tag on share link or calendar feed revoke |
+| Edge API | Public GETs only: `GET /shared/{token}` JSON, public sample trips, AASA file | Cloudflare | URL | 60 seconds, `stale-while-revalidate` 5 minutes | Purge by tag on share link revoke |
 | Client query cache | Trip data | TanStack Query, persisted to IndexedDB (SQLite later if needed) | Query key prefixed by user id | `gcTime` 30 days, `staleTime` 30 seconds on shared trips | Sign-out clears; `updated_since` poll merges |
 | JWKS | Supabase signing keys | Process memory | `kid` | 1 hour, refresh on unknown `kid` (max 1 per minute) | Key rotation |
 | Feature flags and kill switches | `feature_flags`, `kill_switches` | Process memory per instance | Flag key | 5 seconds | `NOTIFY flags_changed` from admin writes refreshes at once |
@@ -430,7 +426,6 @@ All configuration is environment variables, read once in `config.py` through `py
 | `ENVIRONMENT` | `local`, `ci`, `preview`, `staging`, `production`. Tests refuse to run when `production` | `staging` | No |
 | `RELEASE_SHA` | Git SHA of the image, tagged onto logs, Sentry and metrics | `a1b2c3d` | No |
 | `LOG_LEVEL` | Log verbosity | `INFO` | No |
-| `PUBLIC_MARKETING_URL` | Public marketing site, used in referral links and the feed fetcher's user agent | `https://wayfold.app` | No |
 | `PORT` | API listen port | `8000` | No |
 | `PUBLIC_API_URL` | Public base URL of the API, used in links and webhooks | `https://api.wayfold.app` | No |
 | `PUBLIC_WEB_URL` | Public web app URL, used in emails and invites | `https://app.wayfold.app` | No |
@@ -520,18 +515,6 @@ All configuration is environment variables, read once in `config.py` through `py
 | `ALERT_WEBHOOK_URL` | Chat channel for alerts | `https://hooks.slack.com/...` | Yes |
 
 
-**Imports and calendar feeds**
-
-| Name | Purpose | Example | Secret |
-|---|---|---|---|
-| `IMPORT_MAX_FILE_BYTES` | Largest ICS file accepted | `2097152` | No |
-| `IMPORT_MAX_EVENTS` | Events per import | `500` | No |
-| `IMPORT_PASTED_MAX_CHARS` | Longest pasted booking text | `20000` | No |
-| `IMPORT_FETCH_TIMEOUT_SECONDS` | Total time for one feed fetch | `15` | No |
-| `IMPORT_FETCH_MAX_BYTES` | Largest feed body | `2097152` | No |
-| `IMPORT_FEED_POLL_HOURS` | Default feed polling interval | `6` | No |
-| `SSRF_EXTRA_BLOCKED_HOSTS` | Hosts refused in addition to the built-in list (Airbnb, Vrbo, Booking.com, Wayfold) | empty | No |
-
 **Admin and web client**
 
 | Name | Purpose | Example | Secret |
@@ -574,7 +557,7 @@ All configuration is environment variables, read once in `config.py` through `py
 | Better Stack | Logs, uptime, heartbeats, status page | Logs also stay in Render for 7 days |
 | App Store Connect, TestFlight, Xcode Cloud | Release and review | Releases delayed; server stays backward compatible with the last 3 app versions |
 | Apple App Attest / DeviceCheck | Free-credit abuse control | If unavailable, fall back to stricter IP and email limits and halve free AI for unattested devices; never block normal use |
-| Calendar feed hosts (TripIt, Google Calendar, other addresses users supply) | Import feed polling | The feed shows "We could not reach this calendar", polling backs off, and the feed is disabled after 5 failures. File and pasted-text imports are unaffected |
+| Calendar feed hosts (TripIt, Google Calendar, other addresses users supply) | Import feed polling | The import shows "We could not reach this calendar"; polling turns off after 3 consecutive failures. File and pasted-text imports are unaffected |
 
 ## 9. Environments
 
@@ -642,13 +625,11 @@ Both live in Postgres (`feature_flags`, `kill_switches`), are cached 5 seconds p
 | `link_preview` (on) | User-initiated link preview; hosts on the denylist are never fetched |
 | `shared_research_cache` (on) | Shared research cache reads and writes |
 | `passkeys` (off) | Passkey sign-in |
-| `imports` (on) | Import pipeline (file, feed, pasted text) |
-| `import_feeds` (on) | Calendar feed polling |
-| `first_import_pass` (on) | The free Trip Pass for a first import |
-| `referrals` (on) | Referral links and rewards |
-| `calendar_feed` (on) | Calendar subscription feed per trip |
+| `trip_import` (on) | Import from a calendar file, a calendar feed or pasted confirmations |
+| `referrals` (on) | Referral codes and referral credits |
+| `booked_fare_alerts` (on) | Booked-fare drop alerts |
 
-Settings are flags with `kind = 'setting'` (keys starting `setting_`, the value in `rules`): `setting_ai_warm_daily_usd` (5), `setting_ai_global_daily_usd` (50), `setting_serpapi_monthly_quota` (5000), and the Phase 1 settings `setting_referral_referrer_credits` (20), `setting_referral_referee_credits` (10), `setting_referral_yearly_cap_credits` (200), `setting_referral_monthly_budget_credits` (5000), `setting_referral_hold_hours` (72), `setting_import_pasted_per_day` (10), `setting_import_feeds_per_user` (3), `setting_booked_fare_min_drop_pct` (5) and `setting_booked_fare_min_drop_usd` (20). Experiments start with `exp_`. The Phase 1 flags and settings above are additions to the 03 seed. Flags for later phases are added by the phase that ships them.
+Settings are flags with `kind = 'setting'` (keys starting `setting_`, the value in `rules`): `setting_ai_warm_daily_usd` (5), `setting_ai_global_daily_usd` (50), `setting_serpapi_monthly_quota` (5000), and the Phase 1 settings `setting_import_reward` (the free Trip Pass for a first import, `min_items_applied`), `setting_referral_credits` (credits for each side, the qualifying rule, the referrer caps) and `setting_booked_fare_drop` (`min_drop_pct`, `min_drop_usd`, `max_age_hours`). Experiments start with `exp_`. Flags for later phases are added by the phase that ships them.
 
 **Kill switches** (operational control, all off by default; turning one on disables the thing; an admin-set switch always has an expiry, 08 section 6.5)
 
@@ -674,9 +655,8 @@ Settings are flags with `kind = 'setting'` (keys starting `setting_`, the value 
 | `webhooks.process` | Keeps receiving webhooks but pauses processing, for a safe replay |
 | `maintenance` | Read-only mode: writes return 503 with a friendly body |
 | `user:<users.id>` | Per-account AI and live hold; created by an admin on demand, never seeded |
-| `import.feeds` | Stops calendar feed polling (file and pasted-text imports keep working) |
-| `calendar.feed` | `GET /cal/{token}.ics` returns 503; calendar apps keep their last copy |
-| `referrals.rewards` | Qualifying referrals wait as `pending`; no referral credits are granted until cleared |
+| `import.all` | Stops every trip import (files, feeds, pasted text), feed polling and the import reward |
+| `referrals.grant` | Pauses referral credit grants (abuse incident); codes can still be entered |
 
 Practice every switch in staging each quarter. Anthropic workspace spend limits are the backstop outside our code.
 
@@ -779,9 +759,9 @@ A script `infra/scripts/import_trip_planner.py` reads the personal Trip Planner 
 
 | New code | Where | Notes |
 |---|---|---|
-| Import pipeline | `modules/imports/`, `jobs/import_*.py`, `jobs/fetch_import_feed.py` | Section 5.4 |
+| Import pipeline | `modules/imports/`, `jobs/fetch_import_feed.py`, `jobs/poll_import_feeds.py` | Section 5.4 |
 | SSRF guard and feed fetcher | `security/ssrf.py`, `providers/feed_fetcher.py` | Also protects `providers/link_preview.py` |
-| Calendar feed generator | `modules/itinerary/ical.py`, route `GET /cal/{token}.ics` | Section 5.5 |
+| Calendar feed generator | `modules/itinerary/ical.py`, route `GET /calendar/{token}.ics` | Section 5.5 |
 | Booked-fare drop evaluator | `modules/flights/booked_fare.py`, `jobs/evaluate_booked_fare_drops.py` | Section 5.6 |
 | Referrals | `modules/referrals/`, `jobs/grant_referral_rewards.py` | 07 section 9 |
-| Promo Trip Pass grant | `modules/billing/service.py` (`grant_promo_pass`) | 07 section 10 |
+| First-import reward pass | `modules/billing/service.py` (calls `grant_import_reward()`) | 07 section 10 |

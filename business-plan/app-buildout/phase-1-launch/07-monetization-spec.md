@@ -53,7 +53,7 @@ Rules:
 
 ### 2.2 Tier limits (the capability table)
 
-The entitlement service resolves to this table, which mirrors the `plans.limits` seed in 03 section 11.1. Values the README states are final; others are defaults. A free promo Trip Pass (section 10) has exactly the `trip_pass` column.
+The entitlement service resolves to this table, which mirrors the `plans.limits` seed in 03 section 11.1. Values the README states are final; others are defaults. The free first-import Trip Pass (section 10) has exactly the `trip_pass` column.
 
 | Capability key (`plans.limits`) | `free` | `plus` | `trip_pass` (on its trip) |
 |---|---|---|---|
@@ -135,7 +135,7 @@ Each handler runs in one database transaction with the ledger writes, so a half-
 
 ### 3.5 Server endpoints (contract only; full shapes in [04-api-spec.md](04-api-spec.md))
 
-`POST /v1/webhooks/revenuecat`, `POST /v1/purchases/sync`, `GET /v1/me/entitlements` (tier, status, period end, auto_renew, pass list, credit balance by pool, capability values), `POST /v1/purchases/restore`, `GET /v1/me/passes`, `GET /v1/trips/{trip_id}/pass`, `POST /v1/me/passes/{pass_id}/bind`, `POST /v1/me/passes/{pass_id}/move`, `GET /v1/me/credits`, `GET /v1/me/credits/ledger`, `GET /v1/credits/packs`, `POST /v1/credits/packs/claim`, `GET /v1/paywall/offer`, `POST /v1/paywall/events`, `GET /v1/me/referral`, `POST /v1/me/referral/redeem`. `POST /v1/imports/{id}/confirm` returns the `promo_pass` when a first import earned one (section 10). A visible "Restore purchases" button is on every paywall and in Settings (App Review checks it); it calls `Purchases.restorePurchases()` then `POST /v1/purchases/restore`.
+`POST /v1/webhooks/revenuecat`, `POST /v1/purchases/sync`, `GET /v1/me/entitlements` (tier, status, period end, auto_renew, pass list, credit balance by pool, capability values), `POST /v1/purchases/restore`, `GET /v1/me/passes`, `GET /v1/trips/{trip_id}/pass`, `POST /v1/me/passes/{pass_id}/bind`, `POST /v1/me/passes/{pass_id}/move`, `GET /v1/me/credits`, `GET /v1/me/credits/ledger`, `GET /v1/credits/packs`, `POST /v1/credits/packs/claim`, `GET /v1/paywall/offer`, `POST /v1/paywall/events`, `GET /v1/me/referral`, `GET /v1/me/referral/rewards`, `POST /v1/me/referral/redeem`. `POST /v1/imports/{id}/confirm` returns the reward pass when a first import earned one (section 10). A visible "Restore purchases" button is on every paywall and in Settings (App Review checks it); it calls `Purchases.restorePurchases()` then `POST /v1/purchases/restore`.
 
 ## 4. Entitlement resolution
 
@@ -143,7 +143,7 @@ Each handler runs in one database transaction with the ledger writes, so a half-
 
 - `subscriptions`: one row per store subscription: `user_id`, `store` (`apple` in Phase 1), `product_id`, `plan_code` (`plus`), `status` (`active`, `in_trial`, `in_grace`, `billing_retry`, `paused`, `expired`, `refunded`, `revoked`), `period_start`, `period_end`, `auto_renew`, `is_trial`, `original_transaction_id`.
 - `entitlements`: a materialized, per-user result of the algorithm below: `user_id`, `tier_code` (`free` or `plus`), `source` (`none`, `subscription`, `comp`), `subscription_id`, `in_grace`, `valid_until`, `limits` (snapshot of `plans.limits`), `computed_at`. It is a cache that can always be recomputed; it is rewritten on every relevant event and by a nightly sweep.
-- `trip_passes`: `id`, `trip_id`, `purchaser_user_id`, `plan_code` (`trip_pass`), `source` (`store` or `promo`), `promo_key` (null for store passes, `first_import` for the free pass), `store_transaction_id` (null for promo), `original_transaction_id`, `starts_at`, `expires_at`, `live_routes_max`, `live_checks_max`, `live_checks_used`, `collaborators_max`, `travelers_max`, `credits_granted`, `status` (`active`, `expired`, `refunded`, `revoked`), `move_count`. A row exists only once the pass has a trip; a paid pass with no trip yet is a `store_transactions` row (`kind = 'pass'`, `trip_id` null) and is shown to the client as "unapplied". At most one pass is active per trip.
+- `trip_passes`: `id`, `trip_id`, `purchaser_user_id`, `plan_code` (`trip_pass`), `source` (`purchase`, `import_reward` or `admin`), `store_transaction_id` (null unless purchased), `original_transaction_id`, `starts_at`, `expires_at`, `live_routes_max`, `live_checks_max`, `live_checks_used`, `collaborators_max`, `travelers_max`, `credits_granted`, `status` (`active`, `expired` or `refunded`), `move_count`. A row exists only once the pass has a trip; a paid pass with no trip yet is a `store_transactions` row (`kind = 'pass'`, `trip_id` null) and is shown to the client as "unapplied". At most one pass is active per trip.
 
 Tier rank: `free` 0, `plus` 1. A trip pass is an overlay on one trip, not a tier. Later: Phase 2: `family` 2 and `pro` 3.
 
@@ -160,7 +160,7 @@ def user_tier(user) -> Tier:
     return Tier("free", source="none", until=None)
 
 def trip_capabilities(trip) -> Capabilities:
-    """What the trip itself can do: best of its owner's tier and any active pass on it (paid or promo)."""
+    """What the trip itself can do: best of its owner's tier and any active pass on it (purchased or import reward)."""
     caps = [TIER_CAPS[user_tier(trip.owner).code]]
     for p in passes_on_trip(trip.id):            # status active, expires_at > now
         caps.append(PASS_CAPS[p.plan_code])
@@ -189,7 +189,7 @@ def actor_context(actor, trip) -> ActorContext:
 
 Rules that the algorithm encodes:
 
-1. **Best-of on a trip.** Capabilities on a trip are the per-capability best of the owner's tier and the active pass on the trip, paid or promo (03 allows one active pass per trip, `uq_trip_passes_one_active`; `merge_best` stays generic). Live check budgets are the maximum, not the sum, because they are a cost cap. This is the same merge as 03 section 7.1.
+1. **Best-of on a trip.** Capabilities on a trip are the per-capability best of the owner's tier and the active pass on the trip, purchased or import reward (03 allows one active pass per trip, `uq_trip_passes_one_active`; `merge_best` stays generic). Live check budgets are the maximum, not the sum, because they are a cost cap. This is the same merge as 03 section 7.1.
 2. **Invitees.** Collaborators and viewers get the trip's capabilities on that trip only. They do not gain tier benefits elsewhere. They do not pay and cannot buy passes for a trip they do not own (they can buy their own membership).
 3. **Personal limits follow the person.** Active trips (the count a user may own), personal alerts and personal credits depend on `user_tier(actor)`, not on the trip.
 4. **Owner lapse.** If the owner's tier drops, the trip keeps its data; capabilities recompute. Existing live routes beyond the new limit are paused (not deleted), oldest first kept; collaborators above the limit stay as viewers; AI on the trip continues to draw from whoever acts.
@@ -213,18 +213,18 @@ One credit is a budget of up to $0.02 of provider spend. Credit action codes, pr
 |---|---|---|---|---|---|
 | `monthly` (Free) | Lazily at first use in a month (`period_key` `YYYY-MM`) | 12 | user | End of calendar month (UTC) | 1 |
 | `monthly` (Plus) | Subscription period or monthly tick | 60 | user | End of that month's period | 1 |
-| `promo` | Free taster, referral rewards (section 9) | Taster: the `agent_run` price (40) with `restricted_action = 'agent_run'`. Referral: 20 for the referrer, 10 for the referee, no restriction | user | Taster: none. Referral: 180 days after the grant (default) | 2 |
-| `trip_pass` | Pass start (paid or promo) | 40, from `plans.credits_granted` | trip (`trip_id`; spendable by any member acting on that trip) | Pass expiry (90 days) | 3 |
+| `promo` | Free taster, referral rewards (section 9) | Taster: the `agent_run` price (40) with `restricted_action = 'agent_run'`. Referral: 20 for each person (`setting_referral_credits`), no restriction | user | Taster: none. Referral: 12 months after the grant | 2 |
+| `trip_pass` | Pass start (purchased or import reward) | 40, from `plans.credits_granted` | trip (`trip_id`; spendable by any member acting on that trip) | Pass expiry (90 days) | 3 |
 | `adjustment` | Support goodwill | any | user | Set by admin (default 12 months) | 4 |
 | `purchase` | Pack purchase | 50, 150 or 400 | user | 12 months after purchase | 5 (oldest expiry first) |
 
-`credit_grants` columns used: `id`, `user_id`, `trip_id` (required for `trip_pass` grants), `kind`, `credits`, `remaining`, `restricted_action`, `period_key`, `expires_at`, `store_transaction_id`, `created_at`. Idempotency comes from the unique indexes on (`user_id`, `kind`, `period_key`) and `store_transaction_id`. The spend order is the `ORDER BY` inside `reserve_credits` (03 section 5.13). Period keys for the growth grants: `pass:{trip_pass_id}` for a promo pass and `referral:{referral_id}:referrer` or `referral:{referral_id}:referee` for referral rewards.
+`credit_grants` columns used: `id`, `user_id`, `trip_id` (required for `trip_pass` grants), `kind`, `credits`, `remaining`, `restricted_action`, `period_key`, `expires_at`, `store_transaction_id`, `created_at`. Idempotency comes from the unique indexes on (`user_id`, `kind`, `period_key`) and `store_transaction_id`. The spend order is the `ORDER BY` inside `reserve_credits` (03 section 5.13). Period keys for the growth grants: `import_reward:{import_id}` for the first-import pass and `referral:{reward_id}` for referral rewards.
 
 ### 5.2 Purchase grants
 
 - A pack purchase arrives as `NON_RENEWING_PURCHASE` or a consumable transaction. The handler writes a `credit_grants` row (kind `purchase`, `credits` from `plans.credits_granted` of the product's `plan_code`, `store_transaction_id`, `expires_at` = purchase time plus `credits_valid_days`, 365) and a `credit_ledger` row (`entry_type = 'grant'`, positive `delta`, `idempotency_key` `store:{transaction_id}`); the unique index on `credit_grants.store_transaction_id` means a replayed webhook never grants twice.
 - The pack screen states: "Purchased credits last 12 months and are spent after your monthly credits."
-- Purchased credits and referral credits (section 9) also raise the account's spend ceiling by their cost value ([06-ai-agents-spec.md](06-ai-agents-spec.md) section 6.5).
+- Purchased credits also raise the account's spend ceiling by their cost value ([06-ai-agents-spec.md](06-ai-agents-spec.md) section 6.5).
 
 ### 5.3 Grants on renewal
 
@@ -266,7 +266,7 @@ A reservation that spans pools records each draw (`credit_ledger` rows with `gra
 | Refund of a trip pass | Status `refunded`; the trip drops to the owner's tier capabilities; remaining pass credits are removed; live checks stop. |
 | AI action failed, refused, timed out or saved nothing | Automatic refund to the same pools ([06-ai-agents-spec.md](06-ai-agents-spec.md) section 6.3), never a support task. |
 | Support goodwill | `adjustment` grant with a reason (ledger `entry_type = 'adjust'`); every adjustment writes `audit_log`. |
-| Referral or promo abuse | An admin void claws back the unspent referral credits of that referral; an admin revokes a promo pass and removes its unspent credits ([08-admin-control-center.md](08-admin-control-center.md) sections 6.2 and 6.9). Spent credits stay spent. |
+| Referral or import-reward abuse | An admin reject claws back the unspent referral credits of that reward; an admin revokes an import-reward pass and removes its unspent credits ([08-admin-control-center.md](08-admin-control-center.md) sections 6.2 and 6.9). Spent credits stay spent. |
 
 ### 5.7 Ledger entries and balance
 
@@ -322,7 +322,7 @@ Trigger ids are the same as in [05-ui-ux-spec.md](05-ui-ux-spec.md) section 6.27
 | `ninth_stay` | Save the 9th lodging option | Free limit | `trip_first`; keep saving to a "later" list | Later list |
 | `lifecycle_14d` | 14 days before departure | Free trip with dates | `trip_first` via email or in-app card, not a modal | Dismiss |
 
-No trigger exists for the first session, for presentation playback, for actions after an affiliate booking, or for the first-import reward (a promo Trip Pass is a gift, not an upsell). Hard limits (third trip) are a block with the free alternative, not a nag. A trip that already has an active pass, paid or promo, never gets a Trip Pass offer, and triggers that pass already covers do not fire. The API `reason` for each trigger ([04-api-spec.md](04-api-spec.md) section 2.2): `third_trip` is `trip_limit`; `second_route`, `track_live` and `alert_limit` are `live_routes`; `invite` is `sharing`; the three `out_of_credits_*` triggers are `credits` (the taster is `agent_taster_used`). `export_footer`, `ninth_stay` and `lifecycle_14d` are client-initiated and are sent as `reason` by their trigger code.
+No trigger exists for the first session, for presentation playback, for actions after an affiliate booking, or for the first-import reward (the free Trip Pass is a gift, not an upsell). Hard limits (third trip) are a block with the free alternative, not a nag. A trip that already has an active pass, paid or promo, never gets a Trip Pass offer, and triggers that pass already covers do not fire. The API `reason` for each trigger ([04-api-spec.md](04-api-spec.md) section 2.2): `third_trip` is `trip_limit`; `second_route`, `track_live` and `alert_limit` are `live_routes`; `invite` is `sharing`; the three `out_of_credits_*` triggers are `credits` (the taster is `agent_taster_used`). `export_footer`, `ninth_stay` and `lifecycle_14d` are client-initiated and are sent as `reason` by their trigger code.
 
 Later: Phase 2 or 3: the triggers `routine`, `group_tools`, `group_pass`, `collect_payments` and `household`, and the offerings `group`, `family` and `pro`.
 
@@ -431,7 +431,7 @@ Refunds happen through Apple (reportaproblem.apple.com); we cannot issue them. O
 | Trip Pass (paid) | Status `refunded`; the pass stops granting capabilities; its unspent credits are removed; live checks stop. The trip and its data stay. |
 | Credit pack | Clawback (5.6); negative balance blocks paid AI until positive |
 | Pattern | 3 refunds in 90 days: block pack purchases for that user for 180 days (`users.pack_purchases_blocked_until`) and flag for review (default) |
-| Promo Trip Pass | Nothing was paid, so there is no refund. An admin may revoke it for abuse (section 10) |
+| Import-reward Trip Pass | Nothing was paid, so there is no refund. An admin may revoke it for abuse (section 10) |
 
 Support can grant goodwill credits (an `adjustment` grant) but never reverse a refund into a free pass.
 
@@ -439,12 +439,12 @@ Support can grant goodwill credits (an `adjustment` grant) but never reverse a r
 
 1. On purchase the store transaction is written (`store_transactions`, `kind = 'pass'`). If the purchase started from a trip, the app sent its `trip_id` and the `trip_passes` row is written at once. Otherwise the app asks "Which trip is this for?" and lists the owner's trips; until then the pass is unapplied (a `store_transactions` row with `trip_id` null and no `trip_passes` row) and waits in Settings, Purchases, for 12 months (default), then lapses.
 2. Binding (`trip_id` on `POST /v1/purchases/sync`, or `POST /v1/me/passes/{pass_id}/bind`) inserts `trip_passes` with `starts_at = now()` and `expires_at = starts_at + 90 days`, sets `store_transactions.trip_id`, copies `live_routes_max`, `live_checks_max`, `collaborators_max`, `travelers_max` and `credits_granted` from `plans.limits` of the purchased plan, writes the `trip_pass` credit grant (40, with `trip_id`) and recomputes the trip's capabilities. Only the trip owner may bind, and the purchaser must be the owner. A trip holds one active pass (`uq_trip_passes_one_active`); binding a second pass is refused with `409 state_conflict`.
-3. A pass can be moved once (`move_count` 0 to 1, `POST /v1/me/passes/{pass_id}/move`) to another trip that the same owner owns; moving keeps the original `expires_at`, changes `trip_id` on the pass and on its unspent `trip_pass` grant, and pauses live routes on the old trip. A second move is refused. A `promo` pass cannot be moved.
+3. A pass can be moved once (`move_count` 0 to 1, `POST /v1/me/passes/{pass_id}/move`) to another trip that the same owner owns; moving keeps the original `expires_at`, changes `trip_id` on the pass and on its unspent `trip_pass` grant, and pauses live routes on the old trip. A second move is refused.
 4. Live check counters (`live_checks_used` against `live_checks_max`) belong to the pass and move with it.
 5. Expiry at `expires_at`: `status` becomes `expired`, capabilities drop to the owner's tier, unspent pass credits expire, the trip stays. The app shows the pass status and expiry date in the trip's settings, a notice 7 days before, and offers renewal by buying a new pass (a new pass starts a new 90 days).
 6. A pass is tied to the purchaser's Apple ID through the transaction; it is restorable, because it is a non-renewing subscription and not a consumable.
 7. If the bound trip is deleted by the owner, the trip sits in trash for 30 days and keeps its pass; restoring the trip restores the pass. When the trip is purged, the `trip_passes` row goes with it (`trip_id` cascades), the pass is not refunded and the `store_transactions` row stays as the record.
-8. A `promo` pass (section 10) is written by the server with no store transaction, so it is not restorable through the store; it stays on the account and on its trip.
+8. An import-reward pass (section 10) is written by the server with no store transaction (`source = 'import_reward'`), so it is not restorable through the store; it stays on the account and on its trip, and can move once like any pass.
 
 ### 7.8 Family membership changes
 
@@ -578,79 +578,77 @@ Queue in priority order (one per surface at a time, pre-registered metric, serve
 
 ## 9. Referral credits
 
-Referral credits reward people who bring a friend who actually plans a trip. They are a growth cost, not revenue, and they are paid only in AI credits: never cash, never a discount on a purchase. They are available to every tier. Flag `referrals`; kill switch `referrals.rewards`.
+Referral credits reward people who bring a friend who actually plans a trip. They are a growth cost, not revenue, and they are paid only in AI credits: never cash, never a discount on a purchase. They are available to every tier. The routes are in [04-api-spec.md](04-api-spec.md) section 5.27, the tables `referral_codes` and `referral_rewards` in 03 section 5.9. Flag `referrals`; kill switch `referrals.grant`.
 
-### 9.1 Links and attribution
+### 9.1 Codes, links and redeeming
 
-- Every user has a `users.referral_code` (8 characters, base32 without look-alike letters), created at sign-up. The share link is `https://wayfold.app/r/{code}` (a universal link that opens the app, with a web fallback). The app shares it through the native share sheet; Wayfold never reads the contact list.
-- The code is captured at sign-up: on the web from the landing page, on iOS from the universal link or a field in onboarding. A guest keeps it locally and sends it with `POST /me/claim`. A person can also redeem a code once within 7 days of sign-up (`POST /v1/me/referral/redeem`). One referrer per account, set once, and never the account itself.
-- `GET /v1/me/referral` returns the user's code and link, the referral counts by state, credits earned, and credits left under the yearly cap.
+- Every user has one code (`referral_codes`: 8 characters from an alphabet without 0, O, 1 and I) and a link `https://wayfold.app/r/{code}`. The link is a page on the marketing site that opens the app through a universal link; its text comes from `GET /referrals/{code}`. The app shares it through the native share sheet and never reads the contact list.
+- A code is redeemed by a signed-in, non-guest account, either in `POST /me/bootstrap` at sign-up or with `POST /me/referral/redeem` within 14 days of sign-up. A guest keeps the code locally and it travels with the claim. One referrer per account, set once (`uq_referral_rewards_referee`).
+- `GET /me/referral` returns the code, link, counts and credits earned; `GET /me/referral/rewards` returns the history.
 
-### 9.2 Lifecycle and grant rules
+### 9.2 Grant rules
 
-| State | Meaning |
+| Status (`referral_rewards.status`) | Meaning |
 |---|---|
-| `pending` | The referee account exists and is attributed to the referrer |
-| `qualified` | The referee completed the qualifying action (below) |
-| `rewarded` | Both grants are written |
-| `void` | Not counted: an automatic rule or an admin voided it (`void_reason`) |
+| `pending` | The code was redeemed |
+| `qualified` | The referred person did the qualifying thing |
+| `granted` | Credits were given to both people |
+| `rejected` | Abuse or not eligible (`reject_reason`) |
 
-- **Qualifying action.** The referee has a verified sign-in (Apple, Google or a confirmed email code) and creates a trip with at least 3 items (flights, stays, itinerary items or imported items) within 14 days of sign-up. For a guest who claims an account, the 14 days start at the claim.
-- **Hold.** Rewards are granted `setting_referral_hold_hours` (72 hours) after qualification, only if the referee account is still `active` and no abuse signal is open. The job `grant_referral_rewards` (02 section 5.1) does this, so a review window always exists.
-- **Reward.** The referrer gets 20 credits and the referee gets 10 (`setting_referral_referrer_credits`, `setting_referral_referee_credits`). Each is a `promo` grant in `credit_grants` with the period key `referral:{referral_id}:referrer` or `:referee` (a unique key, so a reward can never be granted twice), expiring 180 days after the grant (default), with a `grant` entry in `credit_ledger`. Both people get a push and an in-app notice: "Your friend planned their first trip. You both got credits."
-- **Spending.** Referral credits are spent after the monthly allowance and before pass and purchased credits (5.4). They can be used for any AI action. They cannot be bought, sold or transferred, and have no cash value.
-- **Spend ceiling.** Referral credits raise the account's spend ceiling by their cost value, like purchased credits (06 section 6.5), so a Free user can actually spend them. The most one referrer can add in a year is 200 credits, about $4 of provider spend.
+- **Qualifying.** The referred person has a verified email (an Apple relay address counts) and, within 30 days of redeeming, creates a first trip with at least 3 itinerary items or confirms a first import. On iOS the device must have passed App Attest, or the stricter fallback in [02-architecture.md](02-architecture.md) section 8.
+- **Reward.** The amounts live in the setting `setting_referral_credits`: 20 credits for each person. Each is a `promo` grant in `credit_grants` with `period_key = 'referral:{reward_id}'` (a unique key, so a reward can never be granted twice), expiring 12 months after the grant, with a `grant` entry in `credit_ledger`. Both people get a notification. The job `grant_referral_rewards` (02 section 5.1) marks rewards `qualified` and calls `grant_referral_reward()`.
+- **Spending.** Referral credits are spent after the monthly allowance and before pass and purchased credits (5.4), on any AI action. They cannot be bought, sold or transferred and have no cash value. They are spent inside the normal provider-spend ceilings and do not raise them ([06-ai-agents-spec.md](06-ai-agents-spec.md) section 6.5), so on Free they are used across several months rather than at once.
 
 ### 9.3 Abuse limits
 
-All values are defaults kept in `feature_flags` (`setting_referral_*`) and can change without a release.
+All values are defaults in the setting `setting_referral_credits` and can change without a release.
 
 | Limit | Rule |
 |---|---|
-| Referrer standing | The referrer account is at least 7 days old, `active`, and has created a trip |
-| Yearly cap per referrer | 200 credits in a rolling 12 months (10 rewarded referrals). After the cap a referral is marked `cap_hit`: the referee still gets their 10 credits, the referrer gets nothing more |
-| Velocity | At most 5 attributed sign-ups from one code in 24 hours and 25 in 30 days. More than that stay `pending` and go to the admin abuse view |
-| New people only | The referee must be a new person: no existing `auth_identities` row for that Apple ID, Google account or normalized email (lowercased, dots and plus suffix removed for mailbox providers that ignore them), and none of those identities may belong to an account deleted in the last 90 days (kept only as a salted hash for this check) |
-| Same device | If the referee's device (App Attest key id or device id in `devices`) has ever signed in to the referrer's account, or was used by another referee of the same referrer, the referral is voided with signal `same_device` |
-| Same network | More than 2 qualified referrals from one hashed IP within 24 hours are held for review (`same_ip_24h`). This is a hold, not a void, because people share Wi-Fi |
-| Disposable email | Addresses on a disposable-domain denylist cannot give or earn rewards (`disposable_domain`). Apple's private relay addresses are allowed |
-| Program budget | At most `setting_referral_monthly_budget_credits` (5,000 credits, about $100 of provider spend) are granted in a calendar month. At 100 percent new rewards stay `pending` until the next month or an admin raises the setting; an alert fires at 80 percent ([08-admin-control-center.md](08-admin-control-center.md) section 10) |
-| Deleted referee | If the referee deletes the account before the reward, the referral is voided. After the reward nothing is clawed back automatically |
-| Admin void | An admin can void a referral or block a code; unspent referral credits of that referral are clawed back from both sides (spent credits stay spent). Three voids of one referrer in 90 days queue an owner review ([08-admin-control-center.md](08-admin-control-center.md) section 6.9) |
+| Referrer caps | At most 5 rewards granted to one referrer in a rolling 30 days and 10 in a calendar year (`referrer_monthly_cap` and `referrer_yearly_cap`). Past a cap the referred person still gets their credits and the referrer gets nothing more |
+| New people only | The code must be redeemed within 14 days of sign-up. The referred person must not share an identity (Apple or Google subject, or a normalized email with case, dots and plus suffix removed where the provider ignores them) with an existing account, or with an account deleted in the last 90 days (kept only as a salted hash for this check) |
+| Self-referral | Not your own code; not the same device key (App Attest key or device id) as the referrer; not the same hashed IP within 30 days; not the same normalized email. No chains between two accounts (A refers B, then B refers A) |
+| Real activity | No reward without a verified email and the qualifying action above |
+| Disposable email | Addresses on a disposable-domain denylist cannot earn or give rewards. Apple's private relay addresses are allowed |
+| Velocity | More than 5 redemptions of one code in 24 hours stay `pending` until an admin reviews them in the abuse view ([08-admin-control-center.md](08-admin-control-center.md) section 6.9) |
+| Reversal | A refund or an abuse flag on the referred account before the grant sets `rejected`. After the grant, an admin reject claws back the unspent credits of both people; spent credits stay spent |
+| Stopping abuse | An admin can disable one code (`referral_codes.disabled_at`). The kill switch `referrals.grant` pauses every grant: codes can still be redeemed and rewards wait as `qualified` |
+| Detection | Daily alerts for a referrer with a high reward rate, shared device keys across accounts, and referred accounts that never return ([08-admin-control-center.md](08-admin-control-center.md) section 10) |
 
-Signals recorded on each referral (`referrals.signals`): `same_device`, `same_ip_24h`, `email_alias`, `disposable_domain`, `young_referrer`, `velocity`, `cap_hit`. The referrer sees only "We could not count this referral" for a voided one, never the reason.
+The referrer sees only "We could not count this referral" for a rejected reward, never the reason.
 
 ### 9.4 Where it appears
 
-- Settings, "Invite friends": the link, a plain rule line ("You and your friend each get credits when they plan their first trip. Credits are for AI features and expire after 6 months."), and progress ("2 friends planned a trip, 40 credits earned, 160 left this year").
+- Settings, "Invite friends": the link, a plain rule line ("You and your friend each get credits when they plan their first trip. Credits are for AI features."), and progress.
 - A quiet "Invite a friend for credits" line in the free path of the out-of-credits paywalls (6.2). Never a modal, never a push that exists only to ask for invites, never pre-selected contacts.
-- Analytics events: `referral_link_opened`, `referral_qualified`, `referral_rewarded`, `referral_voided` (12.4).
+- Analytics events: `referral_link_shared`, `referral_signup_attributed`, `referral_reward_granted` (12.4).
 
 ### 9.5 Data
 
-`referrals` holds `id`, `referrer_user_id`, `referee_user_id` (unique), `code`, `state`, `signals`, `attributed_at`, `qualified_at`, `rewarded_at`, `voided_at`, `void_reason`, `referrer_grant_id` and `referee_grant_id`. Only `referrals.service` writes it; credits are written only through `credits.service` ([02-architecture.md](02-architecture.md) section 3). 03 defines the DDL.
+`referral_codes` and `referral_rewards` with the functions `ensure_referral_code`, `redeem_referral` and `grant_referral_reward` (03 section 5.9). Only `referrals.service` calls them, and credits are written only through `credits.service` ([02-architecture.md](02-architecture.md) section 3).
 
 ## 10. Free Trip Pass for a first import
 
-The free Trip Pass rewards people who switch from another planner by importing a real trip. It is a `promo` pass: the same 90 days, limits and 40 credits as a paid Trip Pass, given once per user, so the first trip they bring over shows what a paid trip can do.
+The free Trip Pass rewards people who switch from another planner by importing a real trip. It is a promo pass: a real Trip Pass (90 days, the same limits, 40 credits) with no store transaction, stored as `trip_passes.source = 'import_reward'`. It is given once per user, so the first trip they bring over shows what a paid trip can do.
 
 ### 10.1 Rules
 
-- **Eligible.** A signed-in user (not a guest) who confirms the first import that creates a new trip, from a calendar file, a calendar feed or pasted text ([02-architecture.md](02-architecture.md) section 5.4). The pass goes on that new trip. An import into an existing trip earns nothing and does not use up the offer.
-- **Conditions at confirm.** The new trip is owned by the user, at least 2 imported items were kept, and the trip is undated or ends no more than 30 days in the past.
-- **Once per user.** `trip_passes` has a unique index on (`purchaser_user_id`, `promo_key`) for `promo_key = 'first_import'`. Deleting the trip does not bring the offer back.
-- **Once per device.** If another account on the same App Attest key already received the pass, none is granted. The app shows the offer only when the server says `promo_pass_eligible` in the import proposal, so an ineligible user never sees a promise.
-- **Grant.** `billing.service.grant_promo_pass(user, trip, 'first_import')` runs in the confirm transaction. It inserts a `trip_passes` row (`plan_code = 'trip_pass'`, `source = 'promo'`, `promo_key = 'first_import'`, no `store_transaction_id`, `starts_at = now()`, `expires_at = starts_at + 90 days`, the `*_max` columns and `credits_granted` copied from the `trip_pass` row of `plans.limits`, `move_count = 1` so it cannot be moved), writes the `trip_pass` credit grant (40, period key `pass:{trip_pass_id}`) and recomputes the trip's capabilities. Only `billing.service` writes `trip_passes`.
-- **What the user sees.** One note on the import result: "Your trip has a free Trip Pass for 90 days: 2 live fare routes, up to 6 people to plan with, and 40 credits." It is not a paywall and not a subscription: no card, no trial that converts, nothing to cancel.
-- **Expiry.** Like any pass: a notice 7 days before, capabilities drop to the owner's tier, unspent pass credits expire, the trip stays. The 7-day notice may offer a Trip Pass or Plus, under the normal mute rules (6.5).
-- **Not refundable, not restorable, not stackable.** There is no store transaction. A trip holds one active pass, so a trip with a promo pass cannot also bind a paid one until it expires; the paywall does not offer a Trip Pass on such a trip.
+- **Once per user.** The first confirmed import earns it, once for life (gate `import_reward`). The unique index `uq_trip_imports_one_reward` and `grant_import_reward()` enforce it, and the reward flag lives on the import row, so deleting the trip and importing again never grants a second pass.
+- **Conditions.** All must hold, otherwise nothing is granted and, where noted, the reward is not consumed:
+  - The confirm saved at least 3 items, at least one a flight or a stay (the setting `setting_import_reward` holds the minimum). An empty, duplicate or junk import earns nothing, and the same file hash (`trip_imports.content_hash`) or the same set of event `UID` values cannot earn it twice across accounts.
+  - The trip is owned by the importer, is not in the trash, and has no active pass (otherwise nothing is consumed and the reward stays for the next import).
+  - The owner has no active Plus subscription, because Plus already carries these capabilities (nothing is consumed).
+  - The account has a verified email (an Apple relay address counts), and no earlier reward went to this user, this normalized email, or this Apple or Google subject.
+- **Grant.** `grant_import_reward()` inserts a `trip_passes` row (`plan_code = 'trip_pass'`, `source = 'import_reward'`, no `store_transaction_id`, `starts_at` now, `expires_at` 90 days later, and the limits of the `trip_pass` plan: 2 live routes, 60 live checks, 6 collaborators, 8 travelers), writes the `trip_pass` credit grant (40 credits, `period_key = 'import_reward:{import_id}'`, expiring with the pass), and sets `trip_imports.reward_granted_at` and `reward_pass_id`. A concurrent second call does nothing. Only `billing.service` writes `trip_passes`.
+- **A gift.** No card is asked, it is not a trial that converts, it is not refundable, and it is not restorable through the store because there is no transaction. It can move to another trip once, like any pass (7.7). It expires like any pass: a notice 7 days before, capabilities drop to the owner's tier, unspent pass credits expire, the trip stays.
+- **What the user sees.** `GET /me/import-reward` drives the onboarding card and the import screen copy, and the confirm response carries the pass. One note on the result: "Your trip has a free Trip Pass for 90 days: 2 live fare routes, up to 6 people to plan with, and 40 credits." It is never a paywall. The 7-day expiry notice may offer a Trip Pass or Plus under the normal mute rules (6.5), and a trip with an active pass never gets a Trip Pass offer.
 
 ### 10.2 Cost and abuse control
 
-- Worst case per pass is the Trip Pass ceiling ($1.80 of provider spend over 90 days); typical use is far lower. Promo passes are counted at $0 revenue and their exposure is reported as a promotional cost ([08-admin-control-center.md](08-admin-control-center.md) section 6.15).
-- An alert fires when first-import passes exceed 5 percent of a day's sign-ups. An admin can revoke a `promo` pass (`passes.revoke`), which removes its unspent credits.
-- The kill switch is the flag `first_import_pass`. The import itself stays available when it is off; only the reward stops.
-- Analytics: `promo_pass_granted` with `promo_key`. Attribution of later purchases to promo passes uses the trip's `trip_passes.source`.
+- Worst case per pass is the Trip Pass ceiling ($1.80 of provider spend over 90 days); typical use is far lower. These passes count at $0 revenue and their exposure is reported as a promotional cost ([08-admin-control-center.md](08-admin-control-center.md) section 6.15).
+- An admin can revoke an import-reward pass (`passes.revoke`): the pass ends, its unspent credits are removed, and the ledger is reversed. An alert fires when the day's rewards exceed 5 percent of sign-ups.
+- The kill switch `import.all` stops every import path and the reward. Setting `enabled = false` on `setting_import_reward` stops only the reward.
+- Analytics: `import_reward_granted`.
 
 ## 11. Later lanes
 
@@ -671,7 +669,7 @@ None of these changes the principles in section 1.
 | Affiliate networks | Commissions | `affiliate_conversions` |
 | `ai_usage`, `provider_calls` | Variable cost | [06-ai-agents-spec.md](06-ai-agents-spec.md) |
 | PostHog | Funnels, paywall views (frequency-cap state is in `users.prefs`) | |
-| `import_jobs`, `referrals`, `trip_passes` (promo) | Growth funnel and promotional cost | Our tables, with PostHog funnels |
+| `trip_imports`, `referral_rewards`, `trip_passes` (`source = 'import_reward'`) | Growth funnel and promotional cost | Our tables, with PostHog funnels |
 
 All amounts are stored in minor units with an ISO currency and converted to USD with `fx_rates` at the event date for reports. Apple revenue is reported net of Apple's 15% commission (Small Business Program, under $1M in annual proceeds; above that, standard rates apply and the model is rerun).
 
@@ -699,10 +697,10 @@ All amounts are stored in minor units with an ISO currency and converted to USD 
 | Revenue per trip | All revenue attributed to a real trip (passes bought for it, affiliate conversions from its clicks) divided by the number of real trips in the period; also per trip by tier of owner |
 | Gross margin | Net revenue minus variable cost (AI, provider calls, infrastructure allocation, payment fees) divided by net revenue |
 | Free cost per MAU | (Free-tier AI plus provider cost) divided by Free MAU; guard value about $0.02 a month for AI |
-| Import activation | New users who confirm an import within 7 days of sign-up, divided by new users; by source (file, feed, pasted text) |
-| Promo pass conversion | Promo passes granted; share whose owner buys a Trip Pass, Plus or a pack within 30 days after the pass ends; promo cost per converted user |
-| Referral funnel | Links opened, sign-ups attributed, qualified, rewarded and voided; void rate; credits granted against the monthly budget; referred users' 30-day retention and paid conversion versus organic |
-| Promotional cost | (Referral credits granted plus promo pass credits granted) times $0.02, as a share of net revenue |
+| Import activation | New users who confirm an import within 7 days of sign-up, divided by new users; by method (`ics_file`, `ics_feed`, `pasted`) |
+| Import reward conversion | Import-reward passes granted; share whose owner buys a Trip Pass, Plus or a pack within 30 days after the pass ends; promotional cost per converted user |
+| Referral funnel | Links shared, sign-ups attributed, rewards `pending`, `qualified`, `granted` and `rejected`; reject rate; referred users' 30-day retention and paid conversion versus organic |
+| Promotional cost | (Referral credits granted plus import-reward pass credits granted) times $0.02, as a share of net revenue |
 
 Kill rule: at month 9 after launch, if under 1% of monthly users pay and affiliate income is under $0.20 per monthly user per year (annualized), stop investing. Both numbers are tracked monthly from launch.
 
@@ -713,7 +711,7 @@ Kill rule: at month 9 after launch, if under 1% of monthly users pay and affilia
 - **Plans.** Active by tier, trials, churn and reasons, upgrade and downgrade flows, pass binding rate and time to bind, unapplied passes.
 - **Credits.** Balances by pool, burn by action code, expiry, negative balances, packs sold, credit margin by action.
 - **Affiliate.** Section 8.8.
-- **Growth.** Imports started and completed, first-import passes granted and their conversion, the referral funnel, referral credits against budget, void rate, and promotional cost.
+- **Growth.** Imports started and completed, import-reward passes granted and their conversion, the referral funnel, reject rate, and promotional cost.
 - **Cohorts.** Revenue per user by signup month, by acquisition source, by first paywall trigger.
 - **Alerts** (to email and the on-call channel): MRR drop over 10% month on month, webhook failures, reconcile mismatches, refund rate above 5% for a product, cost per active Plus payer above $2, negative credit balances above 20 accounts, affiliate import failures.
 
@@ -721,4 +719,4 @@ Weekly Monday review uses the same tiles: installs, activation, import activatio
 
 ### 12.4 Events (first-party, sent to PostHog)
 
-`paywall_viewed`, `paywall_dismissed`, `purchase_started`, `purchase_completed` (with `is_trial` for a trial start), `purchase_failed`, `restore_tapped`, `subscription_started`, `subscription_renewed`, `trial_converted`, `subscription_canceled`, `subscription_changed` (monthly and annual switches), `trip_pass_applied`, `trip_pass_moved`, `trip_pass_expired`, `ai_action_started` and `ai_action_completed` (credit reserve, settle and refund, with `outcome: refunded`), `credits_expired`, `purchase_completed` with a `credits_*` product (a pack), `partner_link_tapped` (an outbound click). Phase 1 adds `import_started`, `import_completed`, `import_failed`, `promo_pass_granted`, `referral_link_opened`, `referral_qualified`, `referral_rewarded`, `referral_voided`, `booked_fare_alert_sent` and `calendar_feed_created`; they are added to `packages/shared/src/events.ts` and to the catalogue in [10-quality-security-launch.md](10-quality-security-launch.md) section 4. No event carries names, emails, feed addresses, pasted text or other free text; session replay is off or masked.
+`paywall_viewed`, `paywall_dismissed`, `purchase_started`, `purchase_completed` (with `is_trial` for a trial start), `purchase_failed`, `restore_tapped`, `subscription_started`, `subscription_renewed`, `trial_converted`, `subscription_canceled`, `subscription_changed` (monthly and annual switches), `trip_pass_applied`, `trip_pass_moved`, `trip_pass_expired`, `ai_action_started` and `ai_action_completed` (credit reserve, settle and refund, with `outcome: refunded`), `credits_expired`, `purchase_completed` with a `credits_*` product (a pack), `partner_link_tapped` (an outbound click). Phase 1 adds `import_started`, `import_previewed`, `import_completed`, `import_failed`, `import_reward_granted`, `referral_link_shared`, `referral_signup_attributed`, `referral_reward_granted`, `calendar_feed_enabled`, `calendar_feed_rotated`, `calendar_feed_read` and `booked_fare_drop_sent`; the catalogue with their properties is in [10-quality-security-launch.md](10-quality-security-launch.md) section 4. No event carries names, emails, feed addresses, pasted text or other free text; session replay is off or masked.

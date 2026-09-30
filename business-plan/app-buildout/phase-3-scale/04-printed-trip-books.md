@@ -6,8 +6,8 @@ Part of [Phase 3: scale](README.md). Tickets P3-045 to P3-057. Written 2026-09-3
 |---|---|
 | Feature flag | `print_orders` (seeded, off) |
 | Needs | No hire and no lawyer. An accountant for sales tax on physical goods (Stripe Tax does the calculation). Real vendor quotes before any price is final. |
-| Builds on | Phase 1: presentation mode data and PDF export, Stripe webhook endpoint, R2 storage, notifications. Phase 2: memories and sharing cards ([Phase 2](../phase-2-growth/README.md)); the book needs photos, and this pack adds a photo store if Phase 2 did not. |
-| Source names | Phase 1 files call this "year 2" and "Phase 4", ticket WF-109. Spec of record: [07 section 11.3](../phase-1-launch/07-monetization-spec.md), [01 section 4.19](../phase-1-launch/01-product-spec.md), [03 section 5.18](../phase-1-launch/03-database-schema.md), [04 section 5.23](../phase-1-launch/04-api-spec.md). |
+| Builds on | Phase 1: presentation mode data and PDF export, Stripe webhook endpoint, R2 storage, notifications. Phase 2: memories and sharing cards ([Phase 2](../phase-2-growth/README.md), which adds `trip_memories`); the book needs photos, and this pack adds a photo store if Phase 2 did not. |
+| Source names | Phase 1 files call this "year 2" and "Phase 4", ticket WF-109. Spec of record: [07 section 11.3 (full spec)](../07-monetization-spec.md), [01 section 4.19 (full spec)](../01-product-spec.md), [03 section 5.18 (full spec)](../03-database-schema.md), [04 section 5.23 (full spec)](../04-api-spec.md). |
 
 ## 1. Goal and revenue case
 
@@ -85,22 +85,68 @@ As a traveler, I want a single printed page, so that I can put the trip on the w
 
 ## 4. Database additions
 
-### 4.1 Already defined in 03 (reuse)
+### 4.1 Defined in the full 03 (reuse verbatim)
 
-03 section 5.18 defines `print_orders` (revision `0016_services`) with its row policies. If the table exists skip this block.
+03 section 5.18 defines `print_orders` with its row policies. Phase 1 dropped the table (Phase 1 03 section 1.1) and no Phase 2 pack creates it, so this pack creates it. Apply 4.1 and 4.2 in one Alembic revision (4.2 amends two of these definitions).
 
 ```sql
-@@SQL 2083 2115@@
+CREATE TABLE print_orders (
+  id                          uuid PRIMARY KEY DEFAULT uuidv7(),
+  trip_id                     uuid REFERENCES trips (id) ON DELETE SET NULL,
+  user_id                     uuid REFERENCES users (id) ON DELETE SET NULL,
+  status                      text NOT NULL DEFAULT 'draft',
+  product                     text NOT NULL DEFAULT 'trip_book',
+  format                      text NOT NULL DEFAULT 'softcover',
+  page_count                  smallint CHECK (page_count IS NULL OR page_count BETWEEN 8 AND 400),
+  copies                      smallint NOT NULL DEFAULT 1 CHECK (copies BETWEEN 1 AND 20),
+  pdf_key                     text,                                          -- object key in R2
+  shipping_address            jsonb,                                         -- scrubbed after retention
+  amount_minor                bigint CHECK (amount_minor IS NULL OR amount_minor >= 0),      -- items, before shipping and tax
+  shipping_minor              bigint CHECK (shipping_minor IS NULL OR shipping_minor >= 0),
+  tax_minor                   bigint CHECK (tax_minor IS NULL OR tax_minor >= 0),            -- Stripe Tax result; null until calculated
+  currency                    currency_code,
+  quote_expires_at            timestamptz,                                                   -- a draft row is the quote (04 5.23): its id is PrintQuote.id, valid 30 minutes
+  stripe_payment_intent_id    text,
+  printer                     text,
+  printer_order_id            text,
+  carrier                     text,
+  tracking_number             text,
+  shipped_at                  timestamptz,
+  delivered_at                timestamptz,
+  created_at                  timestamptz NOT NULL DEFAULT now(),
+  updated_at                  timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT ck_print_orders_status CHECK (status IN ('draft', 'awaiting_payment', 'paid', 'submitted', 'printing', 'shipped', 'delivered', 'cancelled', 'refunded')),
+  CONSTRAINT ck_print_orders_format CHECK (format IN ('softcover', 'hardcover')),
+  CONSTRAINT ck_print_orders_quote CHECK (status <> 'draft' OR quote_expires_at IS NOT NULL)
+);
+CREATE UNIQUE INDEX uq_print_orders_pi ON print_orders (stripe_payment_intent_id) WHERE stripe_payment_intent_id IS NOT NULL;
+CREATE INDEX ix_print_orders_user ON print_orders (user_id, created_at DESC);
+CREATE INDEX ix_print_orders_status ON print_orders (status, created_at) WHERE status IN ('paid', 'submitted', 'printing', 'shipped');
+SELECT add_updated_at_trigger('print_orders');
 
-@@SQL 2696 2699@@
+ALTER TABLE print_orders ENABLE ROW LEVEL SECURITY;
+CREATE POLICY print_orders_select ON print_orders FOR SELECT USING (user_id = (SELECT app_user_id()));
+CREATE POLICY print_orders_insert ON print_orders FOR INSERT WITH CHECK (user_id = (SELECT app_user_id()) AND (trip_id IS NULL OR can_edit_trip(trip_id)));
+CREATE POLICY print_orders_update ON print_orders FOR UPDATE USING (user_id = (SELECT app_user_id()) AND status = 'draft');
 ```
 
-Already seeded: flag `print_orders` (off). The print order status machine (`draft`, `awaiting_payment`, `paid`, `submitted`, `printing`, `shipped`, `delivered`, `cancelled`, `refunded`) and retention rules (7 years for financial fields, address nulled 90 days after delivery, unordered drafts deleted after `quote_expires_at`) are as in 03.
+Flag and constraint changes (Phase 1 seeds no later-phase flags):
+
+```sql
+INSERT INTO feature_flags (key, description, enabled, rollout_pct, rules, variants) VALUES
+('print_orders', 'Printed trip books', false, 100, '{}', '{}')
+ON CONFLICT (key) DO NOTHING;
+ALTER TABLE store_transactions DROP CONSTRAINT ck_store_transactions_kind;
+ALTER TABLE store_transactions ADD CONSTRAINT ck_store_transactions_kind
+  CHECK (kind IN ('subscription', 'pass', 'credit_pack', 'print_order', 'advisor_seat', 'group_payment'));   -- keep values added by other packs
+```
+
+The print order status machine (`draft`, `awaiting_payment`, `paid`, `submitted`, `printing`, `shipped`, `delivered`, `cancelled`, `refunded`) and retention rules (7 years for financial fields, address nulled 90 days after delivery, unordered drafts deleted after `quote_expires_at`) are as in 03.
 
 ### 4.2 New in this pack
 
 ```sql
--- Migration p3_print. New tables carry their own grants and policies (03 section 10).
+-- Same Alembic revision as 4.1 (p3_print). New tables carry their own grants and policies.
 
 -- Posters and printed itineraries need a flat format and a product check.
 ALTER TABLE print_orders DROP CONSTRAINT ck_print_orders_format;
@@ -192,8 +238,8 @@ CREATE POLICY trip_photos_delete ON trip_photos FOR DELETE USING (can_edit_trip(
 
 -- The vendor's webhook needs its own provider value.
 ALTER TABLE webhook_events DROP CONSTRAINT ck_webhook_events_provider;
-ALTER TABLE webhook_events ADD CONSTRAINT ck_webhook_events_provider
-  CHECK (provider IN ('revenuecat', 'apple', 'stripe', 'travelpayouts', 'impact', 'viator', 'stay22', 'print'));
+ALTER TABLE webhook_events ADD CONSTRAINT ck_webhook_events_provider   -- Phase 1 values, 'impact' from Phase 2, plus 'print'; keep values other packs add
+  CHECK (provider IN ('revenuecat', 'apple', 'stripe', 'travelpayouts', 'viator', 'stay22', 'impact', 'print'));
 
 UPDATE feature_flags SET rules = '{"countries":["US"],"min_photo_px_warn":1600,"min_photo_px_block":800,"max_photos_per_trip":200}'::jsonb WHERE key = 'print_orders';
 ```
@@ -202,7 +248,7 @@ Keep photos within limits: 10 MB per upload (existing upload cap), 200 per trip.
 
 ## 5. API additions
 
-Base `/v1`, behind the `print_orders` flag. The order routes are already specified in [04 section 5.23](../phase-1-launch/04-api-spec.md) (`POST /print-orders/quote`, `POST /print-orders`, `GET /print-orders`, `GET /print-orders/{id}`, `POST /print-orders/{id}/cancel`); this pack adds the rest.
+Base `/v1`, behind the `print_orders` flag. The order routes are already specified in [04 section 5.23 (full spec)](../04-api-spec.md) (`POST /print-orders/quote`, `POST /print-orders`, `GET /print-orders`, `GET /print-orders/{id}`, `POST /print-orders/{id}/cancel`); this pack adds the rest.
 
 | Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
 |---|---|---|---|---|

@@ -6,8 +6,8 @@ Part of [Phase 3: scale](README.md). Tickets P3-015 to P3-034. Written 2026-09-3
 |---|---|
 | Feature flag | `advisor_workspaces` (seeded, off) |
 | Needs | 15 advisor interviews before any code. Terms and a data-processing addendum reviewed by a lawyer (light review). A part-time support and advisor-success contractor at about 100 seats. No funding. |
-| Builds on | Phase 1: presentation mode, PDF, share links, roles, Stripe webhook endpoint, entitlement resolver, admin console. Phase 2: concierge lane (shares the `advisor_orgs` table). |
-| Source names | Phase 1 files call this "year 2" and "Phase 4", tickets WF-107 and WF-108. Spec of record: [07 section 11.4](../phase-1-launch/07-monetization-spec.md), [01 section 4.18](../phase-1-launch/01-product-spec.md), [03 section 5.19](../phase-1-launch/03-database-schema.md), [04 section 5.24](../phase-1-launch/04-api-spec.md). Those are summary level; this pack is the detailed contract. |
+| Builds on | Phase 1: presentation mode, PDF export, share links, roles, Stripe webhook endpoint, entitlement resolver, admin console. Phase 2: concierge lane (creates `concierge_requests`, which this pack links to organizations). |
+| Source names | Phase 1 files call this "year 2" and "Phase 4", tickets WF-107 and WF-108. Spec of record: [07 section 11.4 (full spec)](../07-monetization-spec.md), [01 section 4.18 (full spec)](../01-product-spec.md), [03 section 5.19 (full spec)](../03-database-schema.md), [04 section 5.24 (full spec)](../04-api-spec.md). Those are summary level; this pack is the detailed contract. |
 
 ## 1. Goal and revenue case
 
@@ -96,7 +96,7 @@ As an advisor, I want to reuse a trip skeleton, so that I am not retyping.
 As an org admin, I want clear billing states, so that I am not surprised.
 - Failed payment: banner and email at once, Stripe smart retries for 14 days, seats stay active during retries, then `read_only`.
 - Cancel in the Stripe customer portal; access runs to the period end, then read-only and export only.
-- Renewal reminder email before each annual renewal and one-click cancel (state auto-renew rules, [10 section 3.10](../phase-1-launch/10-quality-security-launch.md)).
+- Renewal reminder email before each annual renewal and one-click cancel (state auto-renew rules, [10 section 3.10 (full spec)](../10-quality-security-launch.md)).
 
 **A-8. Leave and export.**
 As an advisor or a client, I want to take my data, so that I am not locked in.
@@ -104,9 +104,9 @@ As an advisor or a client, I want to take my data, so that I am not locked in.
 
 ## 4. Database additions
 
-### 4.1 Already defined in 03 (reuse)
+### 4.1 Defined in the full 03 (reuse verbatim)
 
-03 section 5.19 defines the three org tables and the concierge foreign key (revision `0015_advisors`, with `concierge_requests` in `0016_services`). If they exist, skip this block; otherwise apply it verbatim before 4.2.
+03 section 5.19 defines the three organization tables. Phase 1 dropped them (Phase 1 03 section 1.1) and Phase 2 does not create them, so this pack creates them. Apply 4.1 and 4.2 in one Alembic revision (4.2 amends two of these definitions).
 
 ```sql
 CREATE TABLE advisor_orgs (
@@ -129,8 +129,7 @@ CREATE TABLE advisor_orgs (
 CREATE UNIQUE INDEX uq_advisor_orgs_stripe_customer ON advisor_orgs (stripe_customer_id) WHERE stripe_customer_id IS NOT NULL;
 SELECT add_updated_at_trigger('advisor_orgs');
 
-ALTER TABLE concierge_requests ADD CONSTRAINT fk_concierge_requests_advisor_org_id_advisor_orgs
-  FOREIGN KEY (advisor_org_id) REFERENCES advisor_orgs (id) ON DELETE SET NULL;
+
 
 CREATE TABLE advisor_seats (
   id                        uuid PRIMARY KEY DEFAULT uuidv7(),
@@ -178,14 +177,65 @@ CREATE INDEX ix_advisor_clients_org ON advisor_clients (advisor_org_id, status);
 CREATE INDEX ix_advisor_clients_advisor ON advisor_clients (advisor_user_id) WHERE advisor_user_id IS NOT NULL;
 CREATE INDEX ix_advisor_clients_trip ON advisor_clients (trip_id) WHERE trip_id IS NOT NULL;
 SELECT add_updated_at_trigger('advisor_clients');
+
+-- concierge_requests exists from Phase 2; the full 03 adds its advisor link here (Phase 1 03 section 14).
+ALTER TABLE concierge_requests ADD COLUMN advisor_org_id uuid REFERENCES advisor_orgs (id) ON DELETE SET NULL;
 ```
 
-Already seeded (03 section 11): plan `advisor_seat` (kind `advisor_seat`, rank 35, 150 credits a month, pro-level limits, $3.40 monthly and $0.40 daily ceilings, `feature_flag_key = 'advisor_workspaces'`, inactive until launch), store products `advisor_seat_monthly` (2900) and `advisor_seat_annual` (28800), flag `advisor_workspaces`, `entitlements.source = 'advisor'`, the `advisor` CTE in the entitlement query (03 section 7.1), and the daily allowance grant for advisor entitlements (03 section 7.5). `my_advisor_orgs()` (orgs where the caller holds a non-ended seat) and the row policies are described in 03 section 6.4 and built in P3-016.
+Plan, product and constraint changes from the full 03 (sections 5.12, 5.14 and 11; none of these rows exist before this pack, because Phase 1 seeds only Phase 1 plan codes):
+
+```sql
+ALTER TABLE plans DROP CONSTRAINT ck_plans_kind;
+ALTER TABLE plans ADD CONSTRAINT ck_plans_kind CHECK (kind IN ('tier', 'pass', 'credit_pack', 'advisor_seat'));
+ALTER TABLE entitlements DROP CONSTRAINT ck_entitlements_source;
+ALTER TABLE entitlements ADD CONSTRAINT ck_entitlements_source CHECK (source IN ('none', 'subscription', 'household', 'comp', 'advisor'));   -- 'household' from Phase 2
+ALTER TABLE store_transactions DROP CONSTRAINT ck_store_transactions_kind;
+ALTER TABLE store_transactions ADD CONSTRAINT ck_store_transactions_kind
+  CHECK (kind IN ('subscription', 'pass', 'credit_pack', 'advisor_seat', 'group_payment', 'print_order'));   -- keep the values other packs add
+
+-- Seat plan: pro-level limits on the org's client trips only, 150 credits a month, $3.40 monthly and $0.40 daily ceilings (defaults the admin can change).
+INSERT INTO plans (code, kind, name, rank, monthly_credits, credits_granted, credits_valid_days, duration_days, feature_flag_key, is_active, sort_order, limits) VALUES
+('advisor_seat', 'advisor_seat', 'Wayfold for Advisors seat', 35, 150, 0, NULL, NULL, 'advisor_workspaces', false, 70,
+ '{"active_trips":50,"active_trips_bonus":0,"routes_per_trip":8,"live_routes":6,"live_window_days":120,"price_alerts":6,"live_alerts":true,
+   "collaborators":12,"travelers_per_trip":12,"can_invite":true,"saved_lodging_per_trip":100,"lodging_compare":4,
+   "places_searches_per_day":200,"polls":true,"cost_splitting":true,"room_block_request":false,"group_payments":false,
+   "hide_presentation_footer":true,"scheduled_routines":false,"priority_queue":false,"credit_rollover_cap":0,"taster_agent_runs":0,
+   "monthly_ceiling_micros":3400000,"daily_ceiling_micros":400000}')
+ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO store_products (product_id, store, plan_code, period, price_minor, currency, trial_days, is_active) VALUES
+('advisor_seat_monthly', 'stripe', 'advisor_seat', 'month',  2900, 'USD', 0, false),
+('advisor_seat_annual',  'stripe', 'advisor_seat', 'year',  28800, 'USD', 0, false)     -- $24 a seat a month, billed yearly
+ON CONFLICT (product_id) DO NOTHING;
+
+INSERT INTO feature_flags (key, description, enabled, rollout_pct, rules, variants) VALUES
+('advisor_workspaces', 'Wayfold for Advisors', false, 100, '{}', '{}')
+ON CONFLICT (key) DO NOTHING;
+```
+
+Entitlement query. Add the advisor branch to the effective-entitlement query that Phase 1 built (full 03 section 7.1): the seat applies to client trips only, through this extra CTE and union branch, and the owner-tier CTE must not treat an advisor-sourced entitlement as a personal tier.
+
+```sql
+-- in owner_tier: the seat never raises the advisor's own trips
+--   JOIN plans pl ON pl.code = CASE WHEN e.source = 'advisor' THEN 'free' ELSE COALESCE(e.tier_code, 'free') END
+), advisor AS (                                         -- an advisor seat gives pro-level limits on the org's client trips only
+  SELECT t.id AS trip_id, pl.code, pl.limits
+    FROM trips t
+    JOIN advisor_clients c ON c.trip_id = t.id
+    JOIN advisor_seats s ON s.advisor_org_id = c.advisor_org_id AND s.user_id = t.owner_user_id AND s.status IN ('active', 'past_due')
+    JOIN plans pl ON pl.code = 'advisor_seat'
+   WHERE t.id = :trip_id AND t.deleted_at IS NULL
+-- and in candidates:
+--   UNION ALL
+--   SELECT 'advisor', code, limits FROM advisor
+```
+
+The daily allowance job (03 section 7.5, "monthly allowance grant for entitlements that have no store billing cycle") must include `e.source = 'advisor'`; the rest of the plumbing (`credit_grants.period_key` idempotency, per-user ceilings) is unchanged. `my_advisor_orgs()` and the row policies are in 4.2.
 
 ### 4.2 New in this pack
 
 ```sql
--- Migration p3_advisors. Every table carries its own grants and row policies (03 section 10: tables added after 0017).
+-- Same Alembic revision as 4.1 (p3_advisors). Every table carries its own grants and row policies (Phase 1 03 section 10: tables added after the RLS revision).
 
 ALTER TABLE advisor_seats DROP CONSTRAINT ck_advisor_seats_status;
 ALTER TABLE advisor_seats ADD CONSTRAINT ck_advisor_seats_status
@@ -349,7 +399,7 @@ Retention (03 section 8): `advisor_clients` and its children 24 months after the
 
 ## 5. API additions
 
-Base `/v1`, all behind the `advisor_workspaces` flag (404 when off, [04 section 5.24](../phase-1-launch/04-api-spec.md)). Advisor routes require a seat in the org; write routes require `status` active or past_due and the org not read-only.
+Base `/v1`, all behind the `advisor_workspaces` flag (404 when off, [04 section 5.24 (full spec)](../04-api-spec.md)). Advisor routes require a seat in the org; write routes require `status` active or past_due and the org not read-only.
 
 | Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
 |---|---|---|---|---|
@@ -428,7 +478,7 @@ States, accessibility and copy follow Phase 1 rules: loading skeletons, offline 
 - **Entitlement.** An active or past-due seat gives pro-level limits on the org's client trips only, plus 150 credits a month (03 default; tune in P3-033).
 - **Web only.** The iOS app neither sells nor links to seat purchase. Reviewer notes state that advisor sign-up is a separate business product on the web.
 - **Design partners.** A Stripe coupon (100% for a stated period) on a real subscription, so the billing and dunning paths are exercised; track `advisor_subscriptions.coupon_code`.
-- **Auto-renew rules.** Renewal reminder email before each annual renewal and one-click cancel in the portal ([10 section 3.10](../phase-1-launch/10-quality-security-launch.md)).
+- **Auto-renew rules.** Renewal reminder email before each annual renewal and one-click cancel in the portal ([10 section 3.10 (full spec)](../10-quality-security-launch.md)).
 
 ## 8. Admin additions
 
@@ -480,7 +530,7 @@ Metrics (first party, admin finance view): paid seats, MRR, net revenue per seat
 | P3-016 | Schema and RLS (4.2): new tables, `read_only` status, `my_advisor_orgs()` helpers, policies and grants, leak tests | L | P3-015 | Engineer |
 | P3-017 | Org creation and Stripe Billing: Checkout, per-seat quantity subscriptions, portal, proration, tax, VAT ids | L | P3-016 | Engineer |
 | P3-018 | Stripe webhook handlers for subscriptions and invoices, `advisor_subscriptions`, seat state, dunning to `read_only` | M | P3-017 | Engineer |
-| P3-019 | Seat entitlement wiring: resolver check, credit allowance job, ceilings, plan activation behind the flag | M | P3-016 | Engineer |
+| P3-019 | Seat entitlement wiring: advisor branch in the entitlement query, plan and product seeds, credit allowance job, ceilings, activation behind the flag | M | P3-016 | Engineer |
 | P3-020 | Client workspaces: clients API, create client trip, invite client, private notes, ownership transfer on seat removal | L | P3-016, P3-019 | Engineer |
 | P3-021 | Branded presentation: brand settings, logo upload, themed presentation, share page and PDF, footer rules | M | P3-016 | Engineer |
 | P3-022 | Proposals: schema use, builder API, send, public page, respond, versions, emails | L | P3-020, P3-021 | Engineer |

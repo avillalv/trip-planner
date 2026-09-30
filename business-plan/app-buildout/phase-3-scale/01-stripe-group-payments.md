@@ -6,8 +6,8 @@ Part of [Phase 3: scale](README.md). Tickets P3-001 to P3-014. Written 2026-09-3
 |---|---|
 | Feature flags | `group_payments` (seeded, off), `event_workspaces` (new, off) |
 | Needs | A lawyer before any build (money transmission, refunds, disputes, tax, sanctions). A support contractor once collections are live. No funding. |
-| Builds on | Phase 1: Stripe webhook endpoint, `webhook_events`, `settlements`, [entitlements](../phase-1-launch/07-monetization-spec.md), [admin console](../phase-1-launch/08-admin-control-center.md). Phase 2: Group Trip Pass, polls, manual cost splitting, room-block request ([Phase 2](../phase-2-growth/README.md)). |
-| Source names | The Phase 1 files call this "Phase 4" and ticket WF-102 and WF-103. This folder calls it Phase 3. The spec text of record is [07 section 10](../phase-1-launch/07-monetization-spec.md), [04 section 5.17](../phase-1-launch/04-api-spec.md), [08 section 6.9](../phase-1-launch/08-admin-control-center.md). |
+| Builds on | Phase 1: Stripe webhook endpoint, `webhook_events`, [entitlements](../phase-1-launch/07-monetization-spec.md), [admin console](../phase-1-launch/08-admin-control-center.md). Phase 2: Group Trip Pass, polls, manual cost splitting and the `settlements` table, room-block request ([Phase 2](../phase-2-growth/README.md)). |
+| Source names | The Phase 1 files call this "Phase 4" and ticket WF-102 and WF-103. This folder calls it Phase 3. The spec text of record is [07 section 10 (full spec)](../07-monetization-spec.md), [04 section 5.17 (full spec)](../04-api-spec.md), [08 section 6.9 (full spec)](../08-admin-control-center.md). |
 
 ## 1. Goal and revenue case
 
@@ -108,13 +108,11 @@ As the founder or bookkeeper, I want the ledger to match Stripe, so that books c
 
 ## 4. Database additions
 
-### 4.1 Already defined in 03 (reuse)
+### 4.1 State after Phase 2, and the definitions reused from the full 03
 
-`payment_collections` and `settlements` are created in the first migrations (03 section 5.9, revision `0013_group_tools`), and the two Connect columns are on `users` (03 section 5.1). The Phase 1 and Phase 2 builds keep them dormant. If your database lacks them, apply this verbatim; otherwise skip to 4.2.
+Phase 2 ([Group Trip Pass and group tools](../phase-2-growth/02-group-trip-pass-and-group-tools.md)) already creates `polls`, `poll_votes`, `expenses`, `expense_shares` and `settlements`, with `settlements.method` allowing `stripe`, `settlements.status` allowing `disputed`, `settlements.collection_id` as a plain nullable column with no foreign key, `settlements.stripe_payment_intent_id` with its unique index, the `group_tools` and `group_payments` flags (the latter off, `rules.fee_bps` 0), the `group_trip_pass` plan with limit key `group_payments` true, and `trip_passes.upgraded_from_id` with `ck_trip_passes_upgrade`. Phase 1 has none of the Stripe Connect objects (Phase 1 03 section 1.1 lists `payment_collections` and `users.stripe_connect_*` as dropped), so this pack creates them. Definitions come from the full 03 (section 5.9 and 5.1):
 
 ```sql
--- Phase 4 (flag group_payments, Group Trip Pass or Pro): one real-world cost that the organizer collects through Stripe.
--- Each traveler's payment is a settlements row that points here. The table exists from the first migration so the schema does not change when the flag turns on.
 CREATE TABLE payment_collections (
   id                        uuid PRIMARY KEY DEFAULT uuidv7(),
   trip_id                   uuid NOT NULL REFERENCES trips (id) ON DELETE CASCADE,
@@ -142,48 +140,31 @@ CREATE TABLE payment_collections (
 CREATE INDEX ix_payment_collections_trip ON payment_collections (trip_id, status);
 SELECT add_updated_at_trigger('payment_collections');
 
-CREATE TABLE settlements (                                   -- a payment from one traveler to another, in the trip currency
-  id                          uuid PRIMARY KEY DEFAULT uuidv7(),
-  trip_id                     uuid NOT NULL REFERENCES trips (id) ON DELETE CASCADE,
-  from_person_id              uuid NOT NULL,
-  to_person_id                uuid NOT NULL,
-  amount_minor                bigint NOT NULL CHECK (amount_minor > 0),
-  currency                    currency_code NOT NULL,
-  method                      text NOT NULL DEFAULT 'manual',
-  status                      text NOT NULL DEFAULT 'recorded',   -- manual methods are inserted as 'pending' until the payee confirms (04 5.17)
-  collection_id               uuid,                               -- set for a Stripe collection payment (Phase 4)
-  stripe_payment_intent_id    text,
-  note                        text NOT NULL DEFAULT '',
-  settled_at                  timestamptz NOT NULL DEFAULT now(),
-  created_by                  uuid REFERENCES users (id) ON DELETE SET NULL,
-  created_at                  timestamptz NOT NULL DEFAULT now(),
-  FOREIGN KEY (trip_id, from_person_id) REFERENCES trip_people (trip_id, person_id) ON DELETE RESTRICT,
-  FOREIGN KEY (trip_id, to_person_id) REFERENCES trip_people (trip_id, person_id) ON DELETE RESTRICT,
-  FOREIGN KEY (collection_id, trip_id) REFERENCES payment_collections (id, trip_id) ON DELETE SET NULL (collection_id),
-  CONSTRAINT ck_settlements_distinct CHECK (from_person_id <> to_person_id),
-  CONSTRAINT ck_settlements_method CHECK (method IN ('manual', 'cash', 'bank_transfer', 'stripe')),
-  CONSTRAINT ck_settlements_status CHECK (status IN ('recorded', 'pending', 'succeeded', 'failed', 'refunded', 'disputed')),   -- disputed: charge.dispute.created, until Stripe resolves it
-  CONSTRAINT ck_settlements_collection_stripe CHECK (collection_id IS NULL OR method = 'stripe')
-);
-CREATE INDEX ix_settlements_trip ON settlements (trip_id, settled_at DESC);
+-- Phase 2 left settlements.collection_id as a plain column; attach the foreign key now (full 03 section 5.9).
+ALTER TABLE settlements ADD CONSTRAINT fk_settlements_collection_id_payment_collections
+  FOREIGN KEY (collection_id, trip_id) REFERENCES payment_collections (id, trip_id) ON DELETE SET NULL (collection_id);
 CREATE INDEX ix_settlements_collection ON settlements (collection_id) WHERE collection_id IS NOT NULL;
-CREATE UNIQUE INDEX uq_settlements_stripe_pi ON settlements (stripe_payment_intent_id) WHERE stripe_payment_intent_id IS NOT NULL;
+
+-- Stripe Connect Express account of the organizer (never bank details); written by the billing service, not by the app role.
+ALTER TABLE users
+  ADD COLUMN stripe_connect_account_id text,
+  ADD COLUMN stripe_connect_ready boolean NOT NULL DEFAULT false;      -- charges_enabled, from the account.updated webhook
+CREATE UNIQUE INDEX uq_users_stripe_connect ON users (stripe_connect_account_id) WHERE stripe_connect_account_id IS NOT NULL;
+
+-- Trip-child policies (the generated loop in full 03 section 6.4 lists payment_collections; Phase 2 extended the loop for its own tables).
+ALTER TABLE payment_collections ENABLE ROW LEVEL SECURITY;
+CREATE POLICY payment_collections_select ON payment_collections FOR SELECT USING (trip_id IN (SELECT visible_trip_ids()));
+CREATE POLICY payment_collections_insert ON payment_collections FOR INSERT WITH CHECK (can_edit_trip(trip_id));
+CREATE POLICY payment_collections_update ON payment_collections FOR UPDATE USING (can_edit_trip(trip_id)) WITH CHECK (can_edit_trip(trip_id));
+CREATE POLICY payment_collections_delete ON payment_collections FOR DELETE USING (can_edit_trip(trip_id));
 ```
 
-Connect columns on `users` (already in the `users` definition):
-
-```sql
--- users.stripe_connect_account_id text     (Express account id, never bank details)
--- users.stripe_connect_ready boolean NOT NULL DEFAULT false   (charges_enabled, from account.updated)
--- CREATE UNIQUE INDEX uq_users_stripe_connect ON users (stripe_connect_account_id) WHERE stripe_connect_account_id IS NOT NULL;
-```
-
-Row-level security for both tables comes from the generic trip-children loop in 03 section 6.4 (they are in its list). Settlement inserts and status changes that come from Stripe are written by the billing service (worker role), not the app role.
+Also from the full 03: `store_transactions.kind` gains `group_payment` (each succeeded Stripe settlement writes one row for the finance ledger, `store = 'stripe'`, amount charged, net after Stripe's fee; see 4.2), and the kill switch `provider.stripe` exists (create it if Phase 1 did not seed it).
 
 ### 4.2 New in this pack
 
 ```sql
--- Migration p3_group_payments. A table added after revision 0017 carries its own grants and policies.
+-- Migration p3_group_payments (same revision as 4.1). A table added after the RLS revision carries its own grants and policies.
 
 ALTER TABLE settlements
   ADD COLUMN stripe_checkout_session_id text,
@@ -236,9 +217,14 @@ GRANT UPDATE (status, note, settled_at, last_reminded_at) ON settlements TO wayf
 Events workspace seed (a pass, so the existing resolver in 03 section 7.1 needs no change beyond the upgrade check):
 
 ```sql
+ALTER TABLE trip_passes DROP CONSTRAINT ck_trip_passes_plan;
+ALTER TABLE trip_passes ADD CONSTRAINT ck_trip_passes_plan CHECK (plan_code IN ('trip_pass', 'group_trip_pass', 'event_workspace'));
 ALTER TABLE trip_passes DROP CONSTRAINT ck_trip_passes_upgrade;
 ALTER TABLE trip_passes ADD CONSTRAINT ck_trip_passes_upgrade
   CHECK (upgraded_from_id IS NULL OR plan_code IN ('group_trip_pass', 'event_workspace'));
+ALTER TABLE store_transactions DROP CONSTRAINT ck_store_transactions_kind;
+ALTER TABLE store_transactions ADD CONSTRAINT ck_store_transactions_kind
+  CHECK (kind IN ('subscription', 'pass', 'credit_pack', 'group_payment', 'advisor_seat', 'print_order'));   -- keep values added by other packs
 
 INSERT INTO plans (code, kind, name, rank, monthly_credits, credits_granted, credits_valid_days, duration_days, feature_flag_key, is_active, sort_order, limits) VALUES
 ('event_workspace', 'pass', 'Events workspace', 27, 0, 80, 90, 90, 'event_workspaces', false, 55,
@@ -253,13 +239,13 @@ INSERT INTO store_products (product_id, store, plan_code, period, price_minor, c
 ('event_workspace_once', 'stripe', 'event_workspace', 'once', 7900, 'USD', 0, false)
 ON CONFLICT (product_id) DO NOTHING;
 
-UPDATE feature_flags SET rules = '{"fee_bps":0,"max_payment_minor":250000,"max_collection_minor":2500000}'::jsonb WHERE key = 'group_payments';
+UPDATE feature_flags SET rules = rules || '{"max_payment_minor":250000,"max_collection_minor":2500000}'::jsonb WHERE key = 'group_payments';   -- fee_bps stays 0 until P3-013 has data
 INSERT INTO feature_flags (key, description, enabled, rollout_pct, rules, variants) VALUES
 ('event_workspaces', 'Events workspace pass (up to 40 travelers), web checkout only', false, 100, '{}', '{}')
 ON CONFLICT (key) DO NOTHING;
 ```
 
-The `group_payments` limit key is already true for `pro` and `group_trip_pass` (03 section 11.1) and is now true for `event_workspace`. `store_transactions.kind` already allows `pass` and `group_payment`; a Stripe-paid events workspace is written as `store = 'stripe'`, `kind = 'pass'`. Retention: `settlements` and `payment_collections` live with the trip (cascade); `store_transactions` 7 years; `payment_disputes` 7 years; `payer_token_hash` is nulled when the settlement is final.
+The `group_payments` limit key is already true for `pro` and `group_trip_pass` (Phase 2) and is true for `event_workspace`. A Stripe-paid events workspace is written to `store_transactions` as `store = 'stripe'`, `kind = 'pass'`; a succeeded collection payment is written as `kind = 'group_payment'`. Retention: `settlements` and `payment_collections` live with the trip (cascade); `store_transactions` 7 years; `payment_disputes` 7 years; `payer_token_hash` is nulled when the settlement is final.
 
 ## 5. API additions
 
@@ -331,7 +317,7 @@ Events: `payout_setup_started`, `payout_setup_completed`, `payment_collection_cr
 
 ## 8. Admin additions
 
-Extends [08 section 6.9](../phase-1-launch/08-admin-control-center.md) (Group payments and settlements), which is read only until this pack ships.
+Extends [08 section 6.9 (full spec)](../08-admin-control-center.md) (Group payments and settlements), which is read only until this pack ships.
 
 - **Screen: Group payments.** Per trip: collections, settlements with live Stripe state, payout status, fees, open disputes (reason, evidence due date, evidence status).
 - **Actions:** open in Stripe (deep link), refund (finance up to $100, owner above, typed confirmation), attach evidence notes (finance), mark a settlement settled outside the app (reason), resend a payment request, freeze a collection (engineer or owner, reason).

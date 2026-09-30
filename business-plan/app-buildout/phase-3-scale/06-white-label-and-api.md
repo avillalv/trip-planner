@@ -7,7 +7,7 @@ Part of [Phase 3: scale](README.md). Tickets P3-071 to P3-081. Written 2026-09-3
 | Feature flags | `white_label` and `partner_api` (new, off). Both need `advisor_workspaces` on. |
 | Needs | A lawyer (master agreement, data-processing addendum, child-data rules before any school operator). An onboarding and support person: support per account is the real cost. A contractor engineer is sensible for custom domains. No funding. |
 | Builds on | **Pack 02 must be stable first** ([02-wayfold-for-advisors.md](02-wayfold-for-advisors.md)): this is the same code packaged for accounts rather than seats (09 section 3.7). Phase 1: presentation mode, share links, Resend, Cloudflare, Stripe webhook endpoint. |
-| Source names | Phase 1 files call this "year 3 and later". Spec of record: [07 section 11.5](../phase-1-launch/07-monetization-spec.md), which specifies only a direction ("a separate tenancy, API keys, annual contracts invoiced by Stripe"). This pack is the detailed contract. |
+| Source names | Phase 1 files call this "year 3 and later". Spec of record: [07 section 11.5 (full spec)](../07-monetization-spec.md), which specifies only a direction ("a separate tenancy, API keys, annual contracts invoiced by Stripe"). This pack is the detailed contract. |
 
 ## 1. Goal and revenue case
 
@@ -41,7 +41,7 @@ Worked: base year 5 is 6 x $6,000 = $36.0k. One account equals about 19 advisor 
 | D2 | Version 1 scope of branding | Branded client-facing surfaces on the customer's domain: share pages, presentation, proposals, client portal by emailed link, and branded emails. Staff sign in at Wayfold's advisor domain as in pack 02. Full sign-in on the customer's domain (auth redirect allow-lists, cookie scope) is deferred until a signed customer needs it, because it multiplies identity risk. |
 | D3 | Disclosure cannot be branded away | Required disclosures stay: partner-link commission sentence, AI-source labels, privacy and terms links. The "Made with Wayfold" footer can be removed. |
 | D4 | Partner links default off | On white-label surfaces affiliate links are off unless the contract turns them on; if on, commissions follow the contract and the disclosure sentence stays. Decide the default in P3-071. |
-| D5 | API acts as an org principal | Each API key belongs to one org and acts as an org admin seat (`acts_as_user_id`) with scopes; it inherits the same row-level security as that seat. A key is revoked when its admin seat ends. |
+| D5 | API acts as an org principal | Each API client belongs to one org and acts as an org admin seat (`acts_as_user_id`) with scopes; its keys inherit the same row-level security as that seat. A client is suspended when its admin seat ends. |
 | D6 | No school operators until cleared | Child data (COPPA, FERPA) is a gate (P3-080); no account type for schools before counsel signs off. |
 | D7 | Minimal service levels | Target 99.5% monthly availability stated as a goal, no credits, response times by plan in the contract (09 section 3.7: service-level promises kept minimal). |
 
@@ -64,7 +64,7 @@ As a client of the agency, I want a clean branded page, so that I trust it.
 
 **W-4. API keys.**
 As a developer at the agency, I want keys with limited scopes, so that my system can read and write trips safely.
-- Org admins create named keys with scopes and an optional expiry; the secret is shown once; only a hash and a short prefix are stored; keys can be rotated and revoked; last-used time is visible.
+- Org admins create a named API client with scopes, then issue keys for it (two active at once to allow rotation); each secret is shown once; only a hash and a short prefix are stored; keys can be revoked; last-used time is visible.
 
 **W-5. Use the API.**
 As a developer, I want a documented REST API for clients, trips, items, share links and proposals, so that I can integrate.
@@ -86,7 +86,51 @@ As an agency owner, I want my data back if I leave, so that I am not locked in.
 `advisor_orgs` and `advisor_seats` (03 section 5.19, pack 02 section 4.1) are the base. Apply the block below only if pack 02 has not created them.
 
 ```sql
-@@SQL 2123 2167@@
+CREATE TABLE advisor_orgs (
+  id                       uuid PRIMARY KEY DEFAULT uuidv7(),
+  name                     text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 120),
+  slug                     text NOT NULL,
+  owner_user_id            uuid REFERENCES users (id) ON DELETE SET NULL,
+  host_agency_name         text,
+  host_agency_id           text,                                      -- IATAN or CLIA number of the host agency, when supplied
+  billing_email            citext,
+  stripe_customer_id       text,
+  brand                    jsonb NOT NULL DEFAULT '{}'::jsonb,        -- logo key, colors, contact line for branded presentations
+  commission_split_bps     integer NOT NULL DEFAULT 0 CHECK (commission_split_bps BETWEEN 0 AND 10000),
+  status                   text NOT NULL DEFAULT 'active',
+  created_at               timestamptz NOT NULL DEFAULT now(),
+  updated_at               timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_advisor_orgs_slug UNIQUE (slug),
+  CONSTRAINT ck_advisor_orgs_status CHECK (status IN ('active', 'suspended', 'closed'))
+);
+CREATE UNIQUE INDEX uq_advisor_orgs_stripe_customer ON advisor_orgs (stripe_customer_id) WHERE stripe_customer_id IS NOT NULL;
+SELECT add_updated_at_trigger('advisor_orgs');
+
+ALTER TABLE concierge_requests ADD CONSTRAINT fk_concierge_requests_advisor_org_id_advisor_orgs
+  FOREIGN KEY (advisor_org_id) REFERENCES advisor_orgs (id) ON DELETE SET NULL;
+
+CREATE TABLE advisor_seats (
+  id                        uuid PRIMARY KEY DEFAULT uuidv7(),
+  advisor_org_id            uuid NOT NULL REFERENCES advisor_orgs (id) ON DELETE CASCADE,
+  user_id                   uuid REFERENCES users (id) ON DELETE CASCADE,         -- null while an invite is pending
+  invited_email             citext,
+  role                      text NOT NULL DEFAULT 'advisor',
+  billing_period            text NOT NULL DEFAULT 'month',
+  stripe_subscription_id    text,
+  stripe_subscription_item_id text,
+  status                    text NOT NULL DEFAULT 'active',
+  started_at                timestamptz NOT NULL DEFAULT now(),
+  ended_at                  timestamptz,
+  created_at                timestamptz NOT NULL DEFAULT now(),
+  updated_at                timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT ck_advisor_seats_role CHECK (role IN ('admin', 'advisor')),
+  CONSTRAINT ck_advisor_seats_period CHECK (billing_period IN ('month', 'year')),
+  CONSTRAINT ck_advisor_seats_status CHECK (status IN ('invited', 'active', 'past_due', 'ended')),
+  CONSTRAINT ck_advisor_seats_user_or_email CHECK (user_id IS NOT NULL OR invited_email IS NOT NULL)
+);
+CREATE UNIQUE INDEX uq_advisor_seats_org_user ON advisor_seats (advisor_org_id, user_id) WHERE user_id IS NOT NULL AND status <> 'ended';
+CREATE INDEX ix_advisor_seats_user ON advisor_seats (user_id) WHERE user_id IS NOT NULL;
+SELECT add_updated_at_trigger('advisor_seats');
 ```
 
 ### 4.2 New in this pack
@@ -156,43 +200,61 @@ CREATE INDEX ix_org_domains_org ON org_domains (advisor_org_id, status);
 CREATE INDEX ix_org_domains_active ON org_domains (hostname) WHERE status = 'active' AND purpose = 'web';
 SELECT add_updated_at_trigger('org_domains');
 
-CREATE TABLE api_keys (
-  id                uuid PRIMARY KEY DEFAULT uuidv7(),
-  advisor_org_id    uuid NOT NULL REFERENCES advisor_orgs (id) ON DELETE CASCADE,
-  acts_as_user_id   uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,        -- an org admin seat holder (D5)
-  name              text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 80),
-  prefix            text NOT NULL,                                                 -- first characters, shown in the UI and logs
-  key_hash          bytea NOT NULL,                                                -- SHA-256 of a 32-byte random secret; the secret is shown once
-  scopes            text[] NOT NULL,
+-- Phase 1 03 section 14 names `api_clients` and `api_keys`: a client is the integration (scopes, rate limit, acting seat); keys are its credentials, so a key can rotate without changing the client.
+CREATE TABLE api_clients (
+  id                 uuid PRIMARY KEY DEFAULT uuidv7(),
+  advisor_org_id     uuid NOT NULL REFERENCES advisor_orgs (id) ON DELETE CASCADE,
+  acts_as_user_id    uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,        -- an org admin seat holder (D5)
+  name               text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 80),
+  scopes             text[] NOT NULL,
   rate_limit_per_min integer NOT NULL DEFAULT 120 CHECK (rate_limit_per_min BETWEEN 1 AND 6000),
-  created_by        uuid REFERENCES users (id) ON DELETE SET NULL,
-  last_used_at      timestamptz,
-  expires_at        timestamptz,
-  revoked_at        timestamptz,
-  created_at        timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT uq_api_keys_hash UNIQUE (key_hash),
-  CONSTRAINT uq_api_keys_prefix UNIQUE (prefix),
-  CONSTRAINT ck_api_keys_scopes CHECK (scopes <@ ARRAY['clients:read', 'clients:write', 'trips:read', 'trips:write', 'items:write',
-                                                        'shares:write', 'proposals:read', 'bookings:read']::text[] AND cardinality(scopes) > 0)
+  status             text NOT NULL DEFAULT 'active',
+  created_by         uuid REFERENCES users (id) ON DELETE SET NULL,
+  created_at         timestamptz NOT NULL DEFAULT now(),
+  updated_at         timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT ck_api_clients_status CHECK (status IN ('active', 'suspended', 'revoked')),
+  CONSTRAINT ck_api_clients_scopes CHECK (scopes <@ ARRAY['clients:read', 'clients:write', 'trips:read', 'trips:write', 'items:write',
+                                                          'shares:write', 'proposals:read', 'bookings:read']::text[] AND cardinality(scopes) > 0)
 );
-CREATE INDEX ix_api_keys_org ON api_keys (advisor_org_id) WHERE revoked_at IS NULL;
+CREATE INDEX ix_api_clients_org ON api_clients (advisor_org_id) WHERE status = 'active';
+SELECT add_updated_at_trigger('api_clients');
+REVOKE ALL ON api_clients FROM wayfold_app;
+
+CREATE TABLE api_keys (
+  id              uuid PRIMARY KEY DEFAULT uuidv7(),
+  api_client_id   uuid NOT NULL REFERENCES api_clients (id) ON DELETE CASCADE,
+  prefix          text NOT NULL,                                                   -- first characters, shown in the UI and logs
+  key_hash        bytea NOT NULL,                                                  -- SHA-256 of a 32-byte random secret; the secret is shown once
+  last_used_at    timestamptz,
+  expires_at      timestamptz,
+  revoked_at      timestamptz,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_api_keys_hash UNIQUE (key_hash),
+  CONSTRAINT uq_api_keys_prefix UNIQUE (prefix)
+);
+CREATE INDEX ix_api_keys_client ON api_keys (api_client_id) WHERE revoked_at IS NULL;
 REVOKE ALL ON api_keys FROM wayfold_app;                                          -- the API process looks keys up through the function below only
-CREATE FUNCTION api_key_lookup(p_prefix text) RETURNS TABLE (id uuid, advisor_org_id uuid, acts_as_user_id uuid, key_hash bytea, scopes text[], rate_limit_per_min integer)
+CREATE FUNCTION api_key_lookup(p_prefix text)
+RETURNS TABLE (key_id uuid, api_client_id uuid, advisor_org_id uuid, acts_as_user_id uuid, key_hash bytea, scopes text[], rate_limit_per_min integer)
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT k.id, k.advisor_org_id, k.acts_as_user_id, k.key_hash, k.scopes, k.rate_limit_per_min
-    FROM api_keys k JOIN advisor_orgs o ON o.id = k.advisor_org_id AND o.status = 'active'
+  SELECT k.id, c.id, c.advisor_org_id, c.acts_as_user_id, k.key_hash, c.scopes, c.rate_limit_per_min
+    FROM api_keys k
+    JOIN api_clients c ON c.id = k.api_client_id AND c.status = 'active'
+    JOIN advisor_orgs o ON o.id = c.advisor_org_id AND o.status = 'active'
    WHERE k.prefix = p_prefix AND k.revoked_at IS NULL AND (k.expires_at IS NULL OR k.expires_at > now())
 $$;
 REVOKE ALL ON FUNCTION api_key_lookup(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION api_key_lookup(text) TO wayfold_app;
 
+-- Request rate limits reuse the Phase 1 Postgres-backed rate_limit_counters with one bucket per key ('api:<key id>').
+-- This table is reporting only (usage charts, billing conversations).
 CREATE TABLE api_usage_daily (
-  api_key_id     uuid NOT NULL REFERENCES api_keys (id) ON DELETE CASCADE,
+  api_client_id  uuid NOT NULL REFERENCES api_clients (id) ON DELETE CASCADE,
   day            date NOT NULL,
   requests       integer NOT NULL DEFAULT 0,
   errors         integer NOT NULL DEFAULT 0,
   rate_limited   integer NOT NULL DEFAULT 0,
-  PRIMARY KEY (api_key_id, day)
+  PRIMARY KEY (api_client_id, day)
 );
 REVOKE ALL ON api_usage_daily FROM wayfold_app;
 
@@ -220,7 +282,7 @@ INSERT INTO feature_flags (key, description, enabled, rollout_pct, rules, varian
 ON CONFLICT (key) DO NOTHING;
 INSERT INTO kill_switches (key, description) VALUES
 ('white_label.domains', 'Stop serving custom domains (pages fall back to a notice)'),
-('partner_api', 'Stop all partner API requests')
+('provider.api', 'Stop all partner API requests (name from Phase 1 03 section 14)')
 ON CONFLICT (key) DO NOTHING;
 ```
 
@@ -238,8 +300,10 @@ Two surfaces, both behind their flags and kill switches.
 | `GET/POST /advisor-orgs/{org_id}/domains` | org admin | `white_label`, domains within the contract | `{ hostname, purpose }` to `OrgDomain` | Creates the Cloudflare custom hostname or the Resend domain, returns `dns_records`. `409` if the hostname is used by another org; `422` for blocked names (see section 9). |
 | `POST /advisor-orgs/{org_id}/domains/{id}/check` | org admin | 10 an hour | to `OrgDomain` | Re-checks DNS and certificate state. |
 | `DELETE /advisor-orgs/{org_id}/domains/{id}` | org admin | none | 204 | Stops serving immediately and deletes the Cloudflare hostname. |
-| `GET/POST /advisor-orgs/{org_id}/api-keys` | org admin | `partner_api`, at most 10 active keys | `{ name, scopes, expires_at?, rate_limit_per_min? }` to `ApiKey` with `secret` once | |
-| `DELETE /advisor-orgs/{org_id}/api-keys/{id}` | org admin | none | 204 | Revokes at once; cache invalidated. |
+| `GET/POST /advisor-orgs/{org_id}/api-clients` | org admin | `partner_api`, at most 10 active clients | `{ name, scopes, rate_limit_per_min? }` to `ApiClient` | Creates the integration; the acting seat is the caller. |
+| `PATCH /api-clients/{id}` | org admin | none | `{ name?, scopes?, rate_limit_per_min?, status? }` | Scope or status changes apply at once. |
+| `POST /api-clients/{id}/keys` | org admin | at most 2 active keys per client (rotation) | `{ expires_at? }` to `ApiKey` with `secret` once | |
+| `DELETE /api-keys/{id}` | org admin | none | 204 | Revokes at once; cache invalidated. |
 | `GET /advisor-orgs/{org_id}/api-usage` | org admin | none | `?days=` to `{ day, requests, errors, rate_limited }[]` | |
 | `GET /advisor-orgs/{org_id}/contract` | org admin | none | to `{ plan, fee, seats_included, domains_included, ends_on, auto_renew, status }` | Read only; changes go through the admin console. |
 
@@ -264,7 +328,8 @@ type BrandIn = { logo_key?: string; favicon_key?: string; primary: string; secon
   hide_wayfold_footer?: boolean }
 type OrgDomain = { id: Uuid; hostname: string; purpose: "web" | "email"; status: "pending" | "verifying" | "active" | "failed" | "removed"
   dns_records: { type: "CNAME" | "TXT" | "MX"; name: string; value: string }[]; ssl_status: string | null; last_error: string | null }
-type ApiKey = { id: Uuid; name: string; prefix: string; scopes: string[]; expires_at: string | null; last_used_at: string | null; secret?: string }
+type ApiClient = { id: Uuid; name: string; scopes: string[]; rate_limit_per_min: number; status: "active" | "suspended" | "revoked"; keys: ApiKey[] }
+type ApiKey = { id: Uuid; prefix: string; expires_at: string | null; last_used_at: string | null; secret?: string }
 ```
 
 Request pipeline for a custom hostname: Cloudflare terminates TLS for the hostname and forwards to the public page service; the service resolves `Host` through `org_for_hostname()`, rejects unknown hosts with a generic 404, applies the org theme, and generates every absolute link from the matched host. CORS and CSP allow-lists are built from active `org_domains` only.
@@ -275,7 +340,7 @@ Request pipeline for a custom hostname: Cloudflare terminates TLS for the hostna
 
 **Domains.** List with status chips, an add form, a records table with copy buttons ("Add these two records at your DNS provider"), a "Check now" action and the last error in plain words ("The CNAME points somewhere else. It should point to {target}."). Domain removal has a typed confirmation.
 
-**API keys.** List (name, prefix, scopes, last used, expiry), create sheet with scope checkboxes and expiry, one-time secret display with a copy button and the warning "You will not see this again", revoke with confirmation, usage chart (requests, errors, rate limited), link to the API docs.
+**API clients and keys.** List of clients (name, scopes, status) with their keys (prefix, last used, expiry), create sheet with scope checkboxes, one-time secret display with a copy button and the warning "You will not see this again", revoke with confirmation, usage chart (requests, errors, rate limited), link to the API docs.
 
 **Contract and billing.** Plan, term, seats used of included, domains used of included, renewal date, invoices link, and "Contact us to change your plan".
 
@@ -294,7 +359,7 @@ Design-system note: theming is token driven ([05 section 2](../phase-1-launch/05
 - **Net revenue.** Card payments net about 97%; bank transfer nets more. 09 counts $6,000 per account.
 - **Tax.** Stripe Tax on invoices; business VAT ids captured.
 - **Web only.** Never sold or linked in the iOS app (Guideline 3.1.1).
-- **Renewal.** Reminder email 60 days before the end; one-click cancel in the contract view (auto-renew rules, [10 section 3.10](../phase-1-launch/10-quality-security-launch.md)).
+- **Renewal.** Reminder email 60 days before the end; one-click cancel in the contract view (auto-renew rules, [10 section 3.10 (full spec)](../10-quality-security-launch.md)).
 - **Cost control.** Custom hostnames, email domains and storage have small per-account costs (Cloudflare for SaaS hostname pricing and Resend domains: verify); they are included in the fee.
 
 ## 8. Admin additions
@@ -342,11 +407,11 @@ Events: `wl_org_created`, `wl_brand_saved`, `wl_domain_added`, `wl_domain_active
 | ID | Title | Size | Needs | Who |
 |---|---|---|---|---|
 | P3-071 | Gate check and contract pack: entry criteria, pricing and included usage, partner-link default, master agreement, DPA, SLA-lite, acceptable use, API terms; lawyer review | M | Pack 02 live | Founder, lawyer |
-| P3-072 | Schema, flags and row policies (4.2): `kind`, contracts, domains, keys, usage, `org_for_hostname()`, kill switches, leak tests | M | P3-071 | Engineer |
+| P3-072 | Schema, flags and row policies (4.2): `kind`, contracts, domains, API clients, keys, usage, `org_for_hostname()`, kill switches, leak tests | M | P3-071 | Engineer |
 | P3-073 | Theming engine: token-driven per-org theme, logo and favicon, font allow-list, contrast validation, disclosures preserved, branded presentation, share page and proposal | L | P3-072 | Engineer |
 | P3-074 | Custom domains: Cloudflare for SaaS integration, DNS record guidance, verification and certificate polling, host routing, dynamic CORS and CSP allow-lists, takeover checks, blocked names | L | P3-072 | Engineer |
 | P3-075 | Branded email: Resend sending domains, SPF and DKIM status, branded templates, reply-to, fallback | M | P3-073 | Engineer |
-| P3-076 | API keys: issuance, hashing, scopes, prefix lookup, revoke, expiry, per-key rate limits, usage counters, org admin UI | M | P3-072 | Engineer |
+| P3-076 | API clients and keys: issuance, hashing, scopes, prefix lookup, rotation, revoke, expiry, per-key limits in `rate_limit_counters`, usage counters, org admin UI | M | P3-072 | Engineer |
 | P3-077 | Partner API v1: clients, trips, items, presentation, share links, proposals and bookings reads, OpenAPI document, docs site and examples; stretch: outbound webhooks | L | P3-076 | Engineer |
 | P3-078 | Contracts and billing: contract records, Stripe invoice or subscription, seat and domain limits, renewal reminders, dunning and read-only | M | P3-072 | Engineer |
 | P3-079 | Admin screens, alerts, onboarding and domain-incident runbooks, support macros | M | P3-074, P3-076, P3-078 | Engineer, founder |

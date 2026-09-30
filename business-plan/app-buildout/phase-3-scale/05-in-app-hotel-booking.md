@@ -7,7 +7,7 @@ Part of [Phase 3: scale](README.md). Tickets P3-058 to P3-070. Written 2026-09-3
 | Feature flag | `inapp_hotel_booking` (seeded, off) |
 | Needs | A lawyer before building (seller-of-travel position, consumer law, terms of sale). A support process and probably a support hire, because Wayfold then owns every hotel problem. A contractor engineer is sensible; this is the highest-effort pack. No funding if Nuitee stays merchant of record. |
 | Builds on | Phase 1: lodging shortlist, stay comparison, affiliate system and disclosure component, itinerary, email, admin console. Phase 2: concierge lane, direct affiliate programs (the affiliate options this sits beside). |
-| Source names | Phase 1 files call this "year 2 and later" and "Phase 4", ticket WF-110. Spec of record: [07 section 11.1](../phase-1-launch/07-monetization-spec.md), [08-affiliate-revenue.md section 13.4](../../08-affiliate-revenue.md). |
+| Source names | Phase 1 files call this "year 2 and later" and "Phase 4", ticket WF-110. Spec of record: [07 section 11.1 (full spec)](../07-monetization-spec.md), [08-affiliate-revenue.md section 13.4](../../08-affiliate-revenue.md). |
 
 ## 1. Goal and revenue case
 
@@ -91,23 +91,14 @@ As a buyer, I want guest details used only to make the booking.
 
 ## 4. Database additions
 
-### 4.1 Already defined in 03 (reuse)
+### 4.1 What exists and what this pack adds
 
-03 defines no table for this lane; 07 section 11.1 names the new table (`hotel_bookings`, "migration added then") and 03 seeds the flag `inapp_hotel_booking`. The pieces this pack reuses:
-
-```sql
--- lodging_options (03 section 5.8): the confirmed stay is stored as a lodging_options row with status 'booked'.
--- CREATE TYPE lodging_status AS ENUM ('candidate', 'shortlisted', 'booked', 'rejected');
--- lodging_options.added_via CHECK (added_via IN ('bookmarklet', 'paste', 'partner_search', 'agent', 'manual'))
--- lodging_options.program_id uuid   -- null for in-app bookings
--- feature_flags row: ('inapp_hotel_booking', 'In-app hotel booking through LiteAPI (Phase 4)', false, 100, '{}', '{}')
--- env var LITEAPI_KEY (02 section 7.1, empty until used)
-```
+The full 03 defines no table for this lane; 07 section 11.1 (full spec) names the new table (`hotel_bookings`, "migration added then"), and Phase 1 03 section 14 lists the additions: `hotel_bookings`, `lodging_options.added_via` value `liteapi`, the flag `inapp_hotel_booking` and the env var `LITEAPI_KEY` (02 section 7.1, empty until used). Reused as they are: `lodging_options` (Phase 1 03 section 5.8; the confirmed stay is stored there with status `booked`), `lodging_status`, the affiliate and disclosure components, `provider_calls`, `webhook_events`, and the itinerary. Nothing is seeded before this pack.
 
 ### 4.2 New in this pack
 
 ```sql
--- Migration p3_hotel_booking. New tables carry their own grants and policies (03 section 10).
+-- Migration p3_hotel_booking. New tables carry their own grants and policies (Phase 1 03 section 10).
 
 CREATE TABLE hotel_bookings (
   id                      uuid PRIMARY KEY DEFAULT uuidv7(),
@@ -182,12 +173,17 @@ REVOKE ALL ON hotel_booking_events FROM wayfold_app;
 
 ALTER TABLE lodging_options DROP CONSTRAINT ck_lodging_options_added_via;
 ALTER TABLE lodging_options ADD CONSTRAINT ck_lodging_options_added_via
-  CHECK (added_via IN ('bookmarklet', 'paste', 'partner_search', 'agent', 'manual', 'wayfold_booking'));
+  CHECK (added_via IN ('bookmarklet', 'paste', 'partner_search', 'agent', 'manual', 'import', 'liteapi'));   -- 'liteapi' is the value Phase 1 03 section 14 names
+ALTER TABLE webhook_events DROP CONSTRAINT ck_webhook_events_provider;
+ALTER TABLE webhook_events ADD CONSTRAINT ck_webhook_events_provider   -- keep values other packs add
+  CHECK (provider IN ('revenuecat', 'apple', 'stripe', 'travelpayouts', 'viator', 'stay22', 'impact', 'print', 'liteapi'));
 ALTER TABLE lodging_options ADD COLUMN hotel_booking_id uuid REFERENCES hotel_bookings (id) ON DELETE SET NULL;
 
 -- Kill switch and flag rules.
-UPDATE feature_flags SET rules = '{"margin_bps":800,"max_margin_bps":1500,"allow_list":[],"countries":["US"],"max_total_minor":500000}'::jsonb
- WHERE key = 'inapp_hotel_booking';
+INSERT INTO feature_flags (key, description, enabled, rollout_pct, rules, variants) VALUES
+('inapp_hotel_booking', 'In-app hotel booking through LiteAPI', false, 100,
+ '{"margin_bps":800,"max_margin_bps":1500,"allow_list":[],"countries":["US"],"max_total_minor":500000}', '{}')
+ON CONFLICT (key) DO NOTHING;
 INSERT INTO kill_switches (key, description) VALUES ('provider.liteapi', 'Disables hotel search and booking through LiteAPI')
 ON CONFLICT (key) DO NOTHING;
 ```
@@ -210,7 +206,7 @@ Base `/v1`, behind the `inapp_hotel_booking` flag and kill switch `provider.lite
 | `POST /hotel-bookings/{id}/cancel` | requester | status `confirmed`, before `refundable_until` or explicit non-refundable acknowledgment | `{ confirm_refund: Money }` with `Idempotency-Key` to `HotelBooking` | Calls supplier cancel, records the refund amount returned; `409 state_conflict` when not cancellable; `422 refund_changed` if the amount differs from the preview. |
 | `GET /hotel-bookings/{id}/voucher` | requester | status `confirmed` | to 302 signed URL | Supplier voucher or our generated PDF. |
 | `POST /hotel-bookings/{id}/problem` | requester | none | `{ kind, description }` to 201 | Priority support ticket linked to the booking; stays starting within 24 hours page the on-call. |
-| `POST /webhooks/liteapi` | supplier | signature or shared secret (verify what LiteAPI offers) | status events | Stored in `webhook_events` (add `'liteapi'` to the provider check in the migration); a polling fallback reconciles any missed event. |
+| `POST /webhooks/liteapi` | supplier | signature or shared secret (verify what LiteAPI offers) | status events | Stored in `webhook_events` (the migration adds `'liteapi'` to the provider check); a polling fallback reconciles any missed event. |
 
 ```ts
 type HotelSearchIn = { destination?: string; lat?: number; lon?: number; check_in: string; check_out: string
@@ -267,7 +263,7 @@ New screen and support tooling; extends [08](../phase-1-launch/08-admin-control-
 
 ## 9. Legal and compliance
 
-1. **Seller of travel.** As a seller rather than a referrer, Wayfold probably needs seller-of-travel registration in some states and must follow consumer-protection and refund rules (inference; counsel to confirm). California, Florida, Hawaii, Washington and Iowa regulate sellers of travel ([10 section 3.8](../phase-1-launch/10-quality-security-launch.md)). Do not launch in a state until counsel confirms the position; the flag's `countries` rule and a per-state block list enforce it.
+1. **Seller of travel.** As a seller rather than a referrer, Wayfold probably needs seller-of-travel registration in some states and must follow consumer-protection and refund rules (inference; counsel to confirm). California, Florida, Hawaii, Washington and Iowa regulate sellers of travel ([10 section 3.8 (full spec)](../10-quality-security-launch.md)). Do not launch in a state until counsel confirms the position; the flag's `countries` rule and a per-state block list enforce it.
 2. **Merchant of record.** Nuitee is the seller and processes the payment; Wayfold's terms of sale say it arranges the booking and earns a fee. Get Nuitee's API and reseller terms reviewed, including liability for supplier failure, rate parity obligations, and permitted marketing.
 3. **Price display and fees.** Show the total price including mandatory fees; list pay-at-property charges clearly. The FTC rule on unfair or deceptive fees covers short-term lodging (verify scope and effective date with counsel). EU and UK price-transparency and "drip pricing" rules apply to European users.
 4. **No ranking by margin.** Uniform margin, user-chosen sort, statement of the sort basis (EU Omnibus and the plan's non-negotiable rule 2). The ordering test in section 11 guards it.

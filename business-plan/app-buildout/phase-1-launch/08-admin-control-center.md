@@ -90,10 +90,10 @@ Legend: `R` read, `r` read with fields removed or aggregated (noted), `W` write 
 | Affiliate revenue reports | R | R | - | R | r | Content sees clicks and disclosure audit only |
 | Affiliate programs, templates, link checker | W | W | - | - | - | Template edits need a second admin's approval (two-person) |
 | Imports monitoring | R | R | r | - | - | Support sees status, counts and error codes, never file, feed address or pasted text content |
-| Imports: retry a job, disable a feed | W | W | W | - | - | Support can only disable a feed of the user being helped; retry is engineer and owner |
+| Imports: retry a fetch, turn off feed polling | W | W | W | - | - | Support can only turn off polling for the user being helped; retry is engineer and owner |
 | Referral abuse view | R | R | r | r | - | Support sees one user's referrals inside the profile; finance sees totals only |
-| Referrals: void, block a referral code | X | X | - | - | - | Voiding claws back unspent referral credits (section 6.9) |
-| Promo passes: revoke | X | X | - | - | - | For abuse only; the pass credits that are unspent are removed |
+| Referrals: reject a reward, disable a code | X | X | - | - | - | Rejecting claws back unspent referral credits (section 6.9) |
+| Import-reward passes: revoke | X | X | - | - | - | For abuse only; the unspent pass credits are removed |
 | Support inbox | W | W | W | - | - | Reply needs the ticket's email, which is revealed inside the ticket and audited |
 | Content moderation (shared and public trip pages) | W | W | W | - | W | Content role cannot suspend sharing or escalate |
 | Provider and system health | R | R | - | r | - | Finance sees provider cost only; engineer can retry jobs |
@@ -102,7 +102,7 @@ Legend: `R` read, `r` read with fields removed or aggregated (noted), `W` write 
 | Audit log | R | R | r | r | r | Non-owners see their own actions; engineers also see all non-security actions |
 | Admin users and roles | X | - | - | - | - | Owner only |
 
-Permission names in code follow `resource.action`, for example `users.reveal`, `credits.grant`, `killswitch.set`, `settings.ceilings.write`, `imports.retry`, `referrals.void`, `passes.revoke`. The matrix above is the source for `admin/permissions.py`, and a test asserts that every `/v1/admin` route has a permission and that the table and code agree.
+Permission names in code follow `resource.action`, for example `users.reveal`, `credits.grant`, `killswitch.set`, `settings.ceilings.write`, `imports.retry`, `referrals.reject`, `passes.revoke`. The matrix above is the source for `admin/permissions.py`, and a test asserts that every `/v1/admin` route has a permission and that the table and code agree.
 
 ## 4. Audit log
 
@@ -125,7 +125,7 @@ Every admin write, reveal, export and sign-in writes one `audit_log` row. Reads 
 | `impersonation_id` | Set on every row written during an impersonation session |
 | `result`, `error_code` | `ok`, `denied` or `error`, with an error code for the last two |
 | `user_agent` | The admin browser's user agent |
-| `retention_class` | `extended` for money, security and control actions (prefixes `credits.`, `refund.`, `comp.`, `admin_user.`, `killswitch.`, `impersonation.`, `deletion.`, `settings.`, `referral.`, `promo_pass.`), otherwise `standard` (4.2) |
+| `retention_class` | `extended` for money, security and control actions (prefixes `credits.`, `refund.`, `comp.`, `admin_user.`, `killswitch.`, `impersonation.`, `deletion.`, `settings.`, `referral.`, `pass.`), otherwise `standard` (4.2) |
 
 ### 4.2 Rules
 
@@ -162,11 +162,11 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
   - MAU (distinct non-test `users` with an authenticated request in the trailing 30 days) and DAU (trailing 24 hours), with 7 and 30 day sparklines [`users`, rollup].
   - New signups today and this week; trials started (`subscriptions` with `is_trial`); trial to paid conversions this week; free to paid conversion of MAU [`subscriptions`, `store_transactions`].
   - MRR: monthly-normalized active Plus subscriptions, gross and net of Apple's 15 percent fee, split by monthly and annual [`subscriptions`].
-  - Revenue today by stream: subscriptions, Trip Pass (paid, with a separate count of promo passes at $0), credit packs, affiliate (estimated from approved plus pending, labeled "estimate") [`store_transactions`, `trip_passes`, `affiliate_conversions`].
+  - Revenue today by stream: subscriptions, Trip Pass (purchased, with a separate count of import-reward passes at $0), credit packs, affiliate (estimated from approved plus pending, labeled "estimate") [`store_transactions`, `trip_passes`, `affiliate_conversions`].
   - AI spend today versus budget: sum of `ai_usage` cost plus `provider_calls` cost against the global daily budget setting, with a bar that turns amber at 80 percent and red at 95 percent (the same thresholds that trigger the automatic breakers).
   - Affiliate clicks today and EPC (earnings per click: approved commission in the last 30 days divided by clicks in the same window) [`link_clicks`, `affiliate_conversions`].
-  - Imports today: started, completed, failed, and promo passes granted for a first import [`import_jobs`, `trip_passes`].
-  - Referrals today: links opened, signups attributed, qualified, rewarded, voided [`referrals`].
+  - Imports today: started, applied, failed, and import-reward passes granted for a first import [`trip_imports`, `trip_passes`].
+  - Referrals today: codes redeemed, qualified, granted, rejected [`referral_rewards`].
   - Kill rule card: share of MAU that pays and affiliate income per MAU annualized, with months since launch (month 9 is the decision point).
   - Active kill switches and breakers, with expiry countdowns.
   - Alerts list (section 10): open alerts with severity, age and a link to the screen.
@@ -183,10 +183,10 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
 - **Profile (detail) tabs:**
   - Summary: tier, sign-in providers (`auth_identities` provider names only), locale, created, last seen, consents (`consents`: AI consent timestamp, marketing opt-in), flags that apply.
   - Trips: `trips` and `trip_members` roles, owner or guest, title truncated, dates, pass attached.
-  - Entitlements: current `entitlements`, `subscriptions`, `trip_passes` (store or promo) with source and expiry.
+  - Entitlements: current `entitlements`, `subscriptions`, `trip_passes` (`purchase`, `import_reward` or `admin`) with expiry.
   - Credits: balance by bucket (`monthly`, `trip_pass`, `promo`, `purchase`, from `credit_balances`), `credit_ledger` history, `credit_grants`, month and day spend against ceiling.
-  - Imports: the user's `import_jobs` and `import_feeds` (status, counts, error codes; never content), and whether the first-import Trip Pass was granted.
-  - Referrals: `referrals` where the user is referrer or referee, with state, signals and credits.
+  - Imports: the user's `trip_imports` (source, status, counts, `error_code`; never content), and whether the first-import Trip Pass was granted.
+  - Referrals: the user's `referral_codes` row and the `referral_rewards` where they are referrer or referee, with status, signals and credits.
   - Devices: `devices` (platform, app version, last seen, push enabled); no tokens shown.
   - Support history: `support_tickets` linked to this user.
   - Privacy: `data_exports`, `deletion_requests`, consent history.
@@ -200,7 +200,7 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
   - *Process deletion*: lists the `deletion_requests` row; "process now" is owner only and shows what will be removed, the Apple subscription warning (deleting an account does not cancel an Apple subscription) and any shared trips that will transfer or be deleted.
   - *Impersonate read-only*: see below.
   - *Hold AI for this user*: a `kill_switches` row with the user-scoped key `user:<users.id>` (created on demand, never seeded, with the same mandatory expiry as any manual switch), for abuse or a runaway (engineer and owner).
-  - *Revoke a promo pass* (`passes.revoke`, engineer and owner): ends a `promo` pass for abuse, removes its unspent credits and logs before and after. Store-bought passes cannot be revoked here.
+  - *Revoke an import-reward pass* (`passes.revoke`, engineer and owner): ends a pass with `source = 'import_reward'` for abuse (status `expired`), removes its unspent credits and logs before and after. Purchased passes cannot be revoked here.
   - *Open referrals*: jump to the referral abuse view (section 6.9) filtered to this user.
 - **Impersonation, read-only, with consent:**
   1. Support opens the request and picks a reason category; the user gets an in-app prompt and an email: "Wayfold support asks to view your account to help with ticket 4821. They cannot change anything." with Approve and Decline.
@@ -261,9 +261,8 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
 | `user:<users.id>` (a per-account hold; created on demand, never seeded) | AI and live actions for one account | Everything else for that account |
 | `affiliate.all`, `affiliate.{program code}` | Partner links (plain links only) | Everything else |
 | `signups`, `purchases` | New account creation; paywalls and purchase buttons | Existing accounts and restores |
-| `import.feeds` | Polling of calendar feeds (file and pasted-text imports keep working) | Everything else |
-| `calendar.feed` | Serving `GET /cal/{token}.ics` (returns 503; calendar apps keep their last copy) | Everything else |
-| `referrals.rewards` | Granting referral credits (qualifying referrals wait as `pending` and are granted when the switch clears) | Referral links, sign-up |
+| `import.all` | Every trip import (files, feeds, pasted text), feed polling and the import reward | Everything else |
+| `referrals.grant` | Granting referral credits (qualified rewards wait and are granted when the switch clears) | Sign-up, redeeming codes |
 
 - **Breakers (automatic):** the system flips switches itself and records them with `actor_type = system`: at 80 percent of the daily global Anthropic budget `ai.free_tier` engages; at 95 percent `ai.all_but_paid` engages (the `auto_rule` values in 03); at 90 percent of the SerpApi monthly quota `provider.serpapi` narrows live checks to top-value routes (a chosen flight or an active alert), then cached only; any provider error rate over 50 percent for 5 minutes trips that provider's switch to "half-open" (one probe a minute) until it recovers. Automatic trips page the owner.
 - **Data shown:** each switch with state (on, off manual, off automatic), who set it, reason, set time, expiry countdown, the effect on users (count of requests blocked in the last hour), and history of the last 20 changes.
@@ -275,7 +274,7 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
 
 - **Purpose:** roll features out gradually and test paywall and onboarding changes without a release.
 - **Data shown:** `feature_flags` rows with key, `kind` (`flag`, `experiment` for `exp_` keys, `setting` for `setting_` keys; a check constraint keeps it in step with the prefix), `enabled`, `rollout_pct`, `rules` (`tiers`, `platforms`, `countries`, `user_ids`, `min_app_version`, `max_app_version`), `variants`, `updated_by`, created and changed times, and a stale-flag warning (unchanged 90 days at 100 percent or 0 percent).
-- **Flags at launch** (03 section 11.5): `serpapi_live_fares` (on behind legal review), `guest_mode`, `shared_research_cache`, `link_preview`, `affiliate_lodging_test` and `min_app_version` (all on), plus the Phase 1 flags `imports`, `import_feeds`, `first_import_pass`, `referrals` and `calendar_feed` (all on). Flags for features of later phases are added by the phase that ships them. There is deliberately no flag that turns affiliate links or their disclosure off for a tier.
+- **Flags at launch** (03 section 11.5): `serpapi_live_fares` (on behind legal review), `guest_mode`, `shared_research_cache`, `link_preview`, `affiliate_lodging_test`, `min_app_version`, `trip_import`, `referrals` and `booked_fare_alerts` (all on), and `insurance_cards` and `visa_assist` (off). Flags for features of later phases are added by the phase that ships them. There is deliberately no flag that turns affiliate links or their disclosure off for a tier.
 - **Experiments:** name, hypothesis, variants with allocation, primary metric, guardrail metrics, start and end dates, status (draft, running, stopped, concluded). Results table per variant: exposures, conversions, conversion rate, relative lift, probability to beat control (Bayesian), minimum detectable effect, and guardrails (refund rate, AI cost per user, 7-day retention). Exposure and conversion events come from PostHog (03 has no `analytics_events` table); revenue figures come from `store_transactions`.
 - **Paywall experiments** in the roadmap: Trip Pass price points, annual-first versus pass-first ordering, trial copy. A price test uses separate store products or RevenueCat offerings (the console cannot change App Store prices); the console only assigns users to offerings.
 - **Filters:** kind, state, owner, tier, stale.
@@ -312,29 +311,29 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
 
 ### 6.8 Imports monitoring
 
-- **Purpose:** keep the switching path (calendar file, calendar feed, pasted booking text) working and safe, find broken sources fast, and see every blocked fetch.
-- **Data shown** (`import_jobs`, `import_feeds`, `provider_calls`, `ai_usage`):
-  - Funnel by source (ICS file, ICS feed, pasted text): started, completed, failed, abandoned before the user confirmed; share of new users who import within 7 days; first-import Trip Pass grants (`trip_passes` with `source = 'promo'`).
-  - Pasted-text quality: items proposed versus items kept at confirm (keep rate), median Haiku cost per import, p95 latency, refusal rate. An alert fires when the keep rate is under 60 percent over the last 100 imports (default).
-  - Failure reasons by error code: `file_too_large`, `not_calendar`, `parse_error`, `too_many_events`, `blocked_host`, `blocked_address`, `fetch_timeout`, `fetch_too_large`, `redirect_limit`, `extraction_failed`, `consent_missing`, `budget`.
-  - Feed health: active feeds, polls per hour, median poll duration, success rate, feeds disabled after repeated failures, feeds by host (host only, because the full address is a secret link), oldest last success.
-  - Blocked fetches (the SSRF guard in [02-architecture.md](02-architecture.md) section 5.4): count by reason (private or reserved address, redirect to a private address, blocked host list, bad scheme or port), and the accounts with the most blocks.
-  - Recent jobs: short id, masked user, source, status, events found, items created, duration, error code. Never file names, feed addresses, event titles or pasted text; only sizes, counts and hashes.
-- **Filters:** source, status, error code, date range, tier, feed host.
-- **Actions:** retry a failed job (only for transient errors, at most 3 attempts per job), disable a feed (`import_feeds.status = 'disabled'`, with a reason the user sees as "We stopped checking this calendar"), open the user, open the kill switch dialog for `import.feeds` or `ai.import`.
-- **Guardrails:** content is never visible here; a retry cannot change the input; only the feed's owner can re-enable a disabled feed; an account with more than 20 blocked fetches in an hour is queued for review and its feeds are disabled until support clears it.
+- **Purpose:** keep the switching path (calendar file, calendar feed, pasted booking text) working and safe, find broken sources fast, and see every blocked fetch. The pipeline is in [02-architecture.md](02-architecture.md) section 5.4.
+- **Data shown** (`trip_imports`, `provider_calls`, `ai_usage`):
+  - Funnel by source (`ics_file`, `ics_feed`, `pasted_text`): started, reached `review`, `applied`, `failed`, `discarded`; share of new users who import within 7 days; first-import Trip Pass grants (`reward_granted_at` set).
+  - Pasted-text quality: items found versus items applied (keep rate), median Haiku cost per import, p95 latency, how often nothing was recognized. An alert fires when the keep rate is under 60 percent over the last 100 imports (default).
+  - Failure reasons by `error_code`: `unreadable_file`, `no_events`, `feed_unreachable`, `nothing_found`, `provider_error`, `blocked_source`.
+  - Feed health: feeds with polling on, polls per hour, median fetch time, success rate, feeds switched off after 3 consecutive failures, feeds by host (host only, because the full address is a secret link), oldest last success.
+  - Blocked fetches (the SSRF guard in [02-architecture.md](02-architecture.md) section 5.4): count by reason (private or reserved address, redirect to a private address, blocked host list, bad scheme or port) and the accounts with the most blocks.
+  - Recent imports: short id, masked user, source, status, items found and applied, duration, `error_code`. Never file names, feed addresses, event titles or pasted text; only sizes, counts and hashes.
+- **Filters:** source, status, `error_code`, date range, tier, feed host.
+- **Actions:** retry a failed fetch (only for `feed_unreachable` and `provider_error`, at most 3 attempts per import), turn off polling for a feed (`poll_enabled = false`, with a reason the user sees as "We stopped checking this calendar"), open the user, open the kill switch dialog for `import.all` or `ai.import`.
+- **Guardrails:** content is never visible here; a retry cannot change the input; only the feed's owner can turn polling back on; an account with more than 20 blocked fetches in an hour is queued for review and its feed polling is turned off until support clears it.
 
 ### 6.9 Referral abuse view
 
-- **Purpose:** referral credits cost real provider money, so watch for self-referral, farms and throwaway emails, and void what is not genuine. Grant rules and limits are in [07-monetization-spec.md](07-monetization-spec.md) section 9.
-- **Data shown** (`referrals`, `credit_grants` with a `referral:` period key, `devices`, `users`):
-  - Funnel by day: links opened, signups attributed, qualified, rewarded, voided, pending; credits granted today and this month against the monthly program budget (`setting_referral_monthly_budget_credits`).
-  - Top referrers: qualified referrals, credits earned, void rate, account age, tier, and how close each is to the yearly cap.
-  - Signals on each referral: `same_device` (same App Attest key or device id), `same_ip_24h` (same hashed IP within 24 hours), `email_alias` (same normalized mailbox), `disposable_domain`, `young_referrer`, `velocity` (more than 5 signups from one link in 24 hours) and `cap_hit`.
-  - Referral rows: short id, masked referrer, masked referee, state (`pending`, `qualified`, `rewarded`, `void`), signals, credits, dates.
-- **Filters:** state, signal, referrer short id, date range, country.
-- **Actions:** void a referral (X; reason category self referral, farm, disposable email or other; claws back unspent referral credits from both sides with `credit_ledger` `clawback` rows; spent credits stay spent), block a referral code (`users.referral_blocked_at`; the link still opens but no longer earns rewards), open the user. Engage `referrals.rewards` from the kill switch screen to pause all rewards.
-- **Guardrails:** voiding never suspends an account by itself; three voids of one referrer in 90 days queue an owner review; more than 50 voids in one action need the owner; the referrer sees only a neutral "We could not count this referral"; every action is audited with a `referral.` action name.
+- **Purpose:** referral credits cost real provider money, so watch for self-referral, farms and throwaway emails, and reject what is not genuine. Grant rules and limits are in [07-monetization-spec.md](07-monetization-spec.md) section 9.
+- **Data shown** (`referral_codes`, `referral_rewards`, `credit_grants` with a `referral:` period key, `devices`, `users`):
+  - Funnel by day: codes redeemed, `qualified`, `granted`, `rejected`, `pending`, and credits granted today and this month.
+  - Top referrers: rewards granted in the rolling 30 days and the calendar year against the caps (`referrer_monthly_cap`, `referrer_yearly_cap`), reject rate, account age, tier.
+  - Signals on each reward, computed when the view loads: `same_device` (same App Attest key or device id), `same_ip` (same hashed IP within 30 days), `email_alias` (same normalized mailbox), `disposable_domain`, `chain` (A refers B and B refers A), `velocity` (more than 5 redemptions of one code in 24 hours) and `cap_hit`.
+  - Reward rows: short id, masked referrer, masked referee, status, signals, credits, dates.
+- **Filters:** status, signal, referrer short id, date range, country.
+- **Actions:** reject a reward (X; reason category self referral, farm, disposable email or other; sets `status = 'rejected'` and `reject_reason`, and claws back the unspent referral credits of both people with `credit_ledger` `clawback` rows; spent credits stay spent), disable a code (`referral_codes.disabled_at`; the link still opens but no longer earns rewards), open the user. Engage `referrals.grant` from the kill switch screen to pause every grant.
+- **Guardrails:** rejecting never suspends an account by itself; three rejects of one referrer in 90 days queue an owner review; more than 50 rejects in one action need the owner; the referrer sees only a neutral "We could not count this referral"; every action is audited with a `referral.` action name.
 
 ### 6.10 Later: Phase 2 or 3
 
@@ -352,10 +351,10 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
 
 ### 6.12 Content moderation
 
-- **Purpose:** satisfy App Review Guideline 1.2 and protect people: act quickly on reports of shared trip pages and public trip pages. This is the basic Phase 1 queue.
-- **Queue** (`content_reports` with `target_type` `shared_trip`, joined to `trip_share_links`, or `public_trip`, for the public sample trips and search-indexed trip pages): page, reason, reporter count, content preview (titles and text with notes bodies hidden until opened), owner (masked). Every shared and public trip page has a "Report this page" link; web visitors can report without an account, rate limited to 5 an hour per hashed IP (default).
+- **Purpose:** satisfy App Review Guideline 1.2 and protect people: act quickly on reports of shared and public trip pages. This is the basic Phase 1 queue.
+- **Queue** (`content_reports`): reports with `target_type = 'shared_trip'`, joined to `trip_share_links`, show the page, reason, reporter count, a content preview (titles and text, with notes bodies hidden until opened) and the owner (masked). Every shared trip page, and every public page (a shared link with `indexable` turned on, or a sample trip), has a "Report this page" link that works without an account, rate limited per hashed IP. Reports on `indexable` links are listed first because search engines can see them. The same queue also receives the AI report targets that 03 defines (`agent_note`, `ai_answer`, `research_cache`).
 - **Filters:** target type, reason (spam, harmful, wrong info, copyright, privacy), age, status, repeat offender.
-- **Actions:** dismiss with reason; disable a share link (sets `trip_share_links.revoked_at`); unpublish a public trip page; ask the user to edit; warn; suspend sharing for a user (`users.sharing_suspended_at`); escalate to owner (the owner may then set `users.status = 'suspended'`, which the API answers with `403 account_inactive`). The content role cannot suspend sharing or escalate.
+- **Actions:** dismiss with reason; hide (for a shared trip, turns `indexable` off so the page leaves search and the sitemap); disable a share link (sets `trip_share_links.revoked_at`); flag a shared research cache entry (sets `stale_until` to now so it is re-run and not served); ask the user to edit; warn; suspend sharing for a user (`users.sharing_suspended_at`); escalate to owner (the owner may then set `users.status = 'suspended'`, which the API answers with `403 account_inactive`). The content role cannot suspend sharing or escalate.
 - **Guardrails:** reports are answered within 24 hours (the dashboard alerts at 12); reporter identity is never revealed to the reported user; every action is audited; repeat violations (3 in 30 days, counted from `content_reports`) queue a suspension for owner review.
 
 ### 6.13 Provider health
@@ -379,10 +378,10 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
 ### 6.15 Finance reports
 
 - **Purpose:** the monthly close and the kill rule, without a spreadsheet.
-  - Monthly revenue by stream: subscriptions (Plus), Trip Pass (paid; promo passes counted at $0), credit packs, affiliate by network (Travelpayouts, Viator, Stay22).
+  - Monthly revenue by stream: subscriptions (Plus), Trip Pass (purchased; import-reward passes counted at $0), credit packs, affiliate by network (Travelpayouts, Viator, Stay22).
   - Fees: Apple at 15 percent (Small Business Program; shown as computed and flagged if the program status changes) and the RevenueCat fee.
   - Cost: AI spend (from `ai_usage`), provider spend (SerpApi, Geoapify, Travelpayouts), infrastructure and other costs (entered monthly by finance as `feature_flags` rows with a `setting_` key, for example `setting_finance_cost_2026_11`).
-  - Promotional cost: promo passes granted and referral credits granted, valued at credits times $0.02, so the price of growth is visible next to margin.
+  - Promotional cost: import-reward passes granted and referral credits granted, valued at credits times $0.02, so the price of growth is visible next to margin.
   - Gross margin per month and per tier: revenue after store and payment fees, minus AI and provider cost, minus infrastructure. Targets from the plan are shown as a reference line.
   - Kill rule tracker: percent of MAU that pays and affiliate income per MAU annualized, month counter since launch.
   - Cash versus recognized: affiliate pending, approved, paid.
@@ -398,15 +397,13 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
   - Prices display: `store_products.price_minor` for Plus, Trip Pass and credit packs, used on the web pricing page and paywall fallback. The real prices live in App Store Connect; the screen shows a check that these values match the store prices (from RevenueCat offerings) and flags a mismatch.
   - Credit prices per action in `credit_action_prices` (`explain` 1, `live_search` 1, `draft_day` 1, `draft_trip` 4, `research` 8 with `credits_cached` 1, `agent_run` 40 with `credits_cached` 8, plus `hard_stop_micros`, `max_turns`, `max_searches`, `max_fetches`) and monthly allowances in `plans.monthly_credits` and `plans.credits_granted` (Free 12, Plus 60, Trip Pass 40).
   - Ceilings: `plans.limits` keys `monthly_ceiling_micros` and `daily_ceiling_micros` per tier and pass. The global daily Anthropic budget (`setting_ai_global_daily_usd`, seeded at $50), per-provider quotas (`setting_serpapi_monthly_quota`, seeded at 5,000) and alert thresholds are `setting_` rows in `feature_flags` (03 section 11.5 seeds these and `setting_ai_warm_daily_usd`; the console creates the others).
-  - Growth settings (all `setting_` rows): `setting_referral_referrer_credits` (20), `setting_referral_referee_credits` (10), `setting_referral_yearly_cap_credits` (200), `setting_referral_monthly_budget_credits` (5000), `setting_referral_hold_hours` (72), `setting_import_pasted_per_day` (10), `setting_import_feeds_per_user` (3), `setting_booked_fare_min_drop_pct` (5) and `setting_booked_fare_min_drop_usd` (20).
+  - Growth settings (`setting_` rows, 03 section 11.5): `setting_import_reward` (`enabled`, `min_items_applied`), `setting_referral_credits` (`referrer` 20, `referee` 20, `referrer_monthly_cap` 5, `referrer_yearly_cap` 10, `qualify_event`, `qualify_min_items`) and `setting_booked_fare_drop` (`min_drop_pct` 5, `min_drop_usd`, `max_age_hours` 48).
   - Admin limits used in section 3 (grant caps, extension caps), also `setting_` rows.
 - **Filters:** group, changed in the last 30 days.
 - **Actions:** edit a value with reason (engineer within plus or minus 20 percent of the current value, owner beyond), schedule a change for a future time, revert to a previous value from history.
 - **Guardrails:** bounds per setting (a ceiling cannot be set above 2 times the plan default, a credit price cannot be 0 or negative, allowances cannot be raised above the level where ceiling covers them) a single referral reward cannot exceed 50 credits, all enforced by the API; changes apply within 60 seconds and never alter reservations already made; history shows who, when, before, after and reason; changes to ceilings post to the on-call channel.
 
 ## 7. Wireframes
-
-### 7.1 Overview dashboard
 
 ### 7.1 Overview dashboard
 
@@ -435,8 +432,8 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
 | CONTROL     |  Total today        $322.45     |  Amber at 80%, red at 95%        |
 |  Kill sw.   |                                                                    |
 |  Flags      | Imports today                   | Referrals today                  |
-|  Settings   |  Started 64  Done 58  Failed 3  |  Opened 210  Signups 31          |
-| AUDIT       |  Promo passes granted   17      |  Qualified 9  Voided 1           |
+|  Settings   |  Started 64  Done 58  Failed 3  |  Redeemed 31  Qualified 12       |
+| AUDIT       |  Reward passes given    17      |  Granted 9  Rejected 1           |
 |             |                                                                    |
 |             | KILL SWITCHES  all on, none off | KILL RULE (month 4 of 9)         |
 |             |  [Manage]                       |  Paying 2.6%  Affiliate $0.41/MAU|
@@ -509,7 +506,7 @@ Base path `/v1/admin`. All routes require an admin session (section 2). Conventi
 | `POST /users/{id}/reveal` | Reveal email or name (audited) | support |
 | `POST /users/{id}/credits/grant` | Grant credits | support |
 | `POST /users/{id}/passes/{pass_id}/extend` | Extend a trip pass | support |
-| `POST /users/{id}/passes/{pass_id}/revoke` | Revoke a promo pass (`X`) | engineer |
+| `POST /users/{id}/passes/{pass_id}/revoke` | Revoke an import-reward pass (`X`) | engineer |
 | `POST /users/{id}/comp` | Comp a subscription | engineer |
 | `POST /users/{id}/sign-out` | Force sign-out | support |
 | `POST /users/{id}/export` | Start a data export | support |
@@ -551,14 +548,13 @@ Base path `/v1/admin`. All routes require an admin session (section 2). Conventi
 | `GET /affiliate/disclosure-audit` | Disclosure audit results | content |
 | `POST /affiliate/payouts` | Record a payout received (`affiliate_payouts` row) | finance |
 | `GET /imports` | Import jobs list with filters (no content) | support |
-| `GET /imports/summary` | Funnel, failure reasons, blocked fetches | engineer |
-| `POST /imports/{id}/retry` | Retry a failed job (transient only, max 3) | engineer |
-| `GET /import-feeds` | Feed health, by host | engineer |
-| `POST /import-feeds/{id}/disable` | Disable a feed with a reason | support |
+| `GET /imports/summary` | Funnel, failure reasons, feed health, blocked fetches | engineer |
+| `POST /imports/{id}/retry` | Retry a failed fetch (transient errors only, max 3) | engineer |
+| `POST /imports/{id}/disable-polling` | Turn off feed polling with a reason | support |
 | `GET /referrals` | Referral list with states and signals (masked) | support |
 | `GET /referrals/summary` | Funnel, credits against budget, top referrers, clusters | engineer |
-| `POST /referrals/{id}/void` | Void a referral and claw back unspent credits (`X`) | engineer |
-| `POST /referral-codes/{code}/block` | Block a code from earning rewards (`X`) | engineer |
+| `POST /referrals/{id}/reject` | Reject a reward and claw back unspent credits (`X`) | engineer |
+| `POST /referral-codes/{code}/disable` | Disable a code (`X`) | engineer |
 | `GET /tickets` | Support inbox | support |
 | `GET /tickets/{id}` | Thread and user card | support |
 | `POST /tickets/{id}/reply` | Reply with optional macro | support |
@@ -618,10 +614,10 @@ Alerts are evaluated by a scheduled job every minute (spend and health) or every
 | Moderation report older than 12 hours | notify |
 | Support ticket past SLA | notify |
 | Kill switch expiring in 15 minutes | info to owner |
-| Import job failure rate above 20 percent over 1 hour, or pasted-text keep rate under 60 percent over 100 imports | notify |
-| More than 20 blocked fetches in an hour from one account, or more than 10 feeds failing polls at once | notify |
-| More than 10 referral signups from one hashed IP or device in 24 hours, referral credits above 80 percent of the monthly budget | notify |
-| First-import promo passes above 5 percent of the day's signups (farming signal) | notify |
+| Import failure rate above 20 percent over 1 hour, or pasted-text keep rate under 60 percent over 100 imports | notify |
+| More than 20 blocked fetches in an hour from one account, or more than 10 feeds failing at once | notify |
+| More than 5 redemptions of one code in 24 hours, or referral credits granted in one day above 1,000 | notify |
+| Import-reward passes above 5 percent of the day's sign-ups (farming signal) | notify |
 
 ## 11. Build order and tests
 
@@ -645,4 +641,4 @@ Tests required for the console as a whole:
 - No list endpoint response contains a raw email or name (a serializer test scans for the patterns).
 - A test fails the build if any ranking or ordering code for affiliate placements reads payout or commission fields.
 - Import and referral screens never return file content, feed addresses, event titles, pasted text, raw emails or names (the serializer scan covers them).
-- Voiding a referral claws back only unspent referral credits and writes one `audit_log` row per action.
+- Rejecting a referral reward claws back only unspent referral credits and writes one `audit_log` row per action.
