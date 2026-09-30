@@ -66,6 +66,12 @@ def _decimal(value: Any) -> Decimal | None:
         return None
 
 
+def _rating(value: Any) -> Decimal | None:
+    """Google sometimes sends ratings like 4.6614; a saved option keeps two decimals (e.g. 4.66)."""
+    rating = _decimal(value)
+    return rating.quantize(Decimal("0.01")) if rating is not None else None
+
+
 def _count(details: list[str], pattern: str) -> Decimal | None:
     for item in details:
         match = re.fullmatch(pattern, item.strip(), flags=re.IGNORECASE)
@@ -114,7 +120,7 @@ def to_offer(item: dict[str, Any], currency: str) -> RentalOffer | None:
         price_total=_decimal((item.get("total_rate") or {}).get("extracted_lowest")),
         price_per_night=_decimal((item.get("rate_per_night") or {}).get("extracted_lowest")),
         currency=currency.upper(),
-        rating=_decimal(item.get("overall_rating")),
+        rating=_rating(item.get("overall_rating")),
         review_count=item.get("reviews"),
         lat=gps.get("latitude"),
         lon=gps.get("longitude"),

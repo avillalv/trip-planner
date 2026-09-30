@@ -256,6 +256,16 @@ def rentals_fixture() -> dict:
     return json.loads((FIXTURES / "serpapi_vacation_rentals.json").read_text(encoding="utf-8"))
 
 
+def test_long_ratings_are_rounded_so_an_offer_can_be_saved(client: TestClient, trip: Trip) -> None:
+    data = rentals_fixture()
+    data["properties"][0]["overall_rating"] = 4.6614
+    [offer, *_] = serpapi_rentals.parse(data, "USD")
+
+    assert offer.rating == Decimal("4.66")
+    body = {"title": offer.title, "url": offer.link, "rating": str(offer.rating), "added_via": "serpapi"}
+    assert client.post(f"/api/v1/trips/{trip.id}/lodging", json=body).status_code == 201
+
+
 def test_rental_results_are_parsed() -> None:
     [first, second, third, *_] = serpapi_rentals.parse(rentals_fixture(), "USD")
 
