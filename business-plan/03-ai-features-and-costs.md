@@ -25,8 +25,11 @@ until 200 production agent runs are measured.
 - Cost control is a stack: API-first data, a shared research cache, tight caps, medium effort, a credit ledger, a dollar stop
   per run, and monthly and daily ceilings per account covering all provider spend, not only AI.
 - Scheduled agents are off until Premium. Scheduled work is API price checks plus cheap Batch scans.
-- At the mix in section 8, AI cost is $0.046 to $0.051 per MAU with Premium live (year 2) and $0.037 to $0.040 before it: 20%
-  to 22% of net revenue in year 2 and 17% to 18% in year 1.
+- Every Free user gets one deep run for life, a taster, served from the shared cache when possible. It costs about $0.11 to $0.17
+  per new Free user (section 5.7).
+- At the mix in section 8, AI cost is $0.064 to $0.078 per MAU with Pro live (year 2) and $0.055 to $0.067 before it: 24% to
+  29% of net revenue in year 2 and 21% to 26% in year 1. The taster is 5 to 8 points of that; without it the shares are 19% to
+  21% and 16% to 17%.
 
 ## 2. What runs today and how it maps to production
 
@@ -122,7 +125,7 @@ Sonnet 5.5 constraints that shape the design:
      search-only source cannot be grounded and stays `indicative`.
    - Keep the fetched document hash and URL in `raw` for disputes.
 4. **User instructions** stay wrapped in `<instructions>` tags, are the only user-controlled text the model sees, and never
-   reach the shared cache (6.5). **Site terms:** the app never fetches Airbnb, Vrbo or Booking pages, the Anthropic-side fetch is
+   reach the shared cache (6.5). **Site terms:** Wayfold never fetches Airbnb, Vrbo or Booking pages, the Anthropic-side fetch is
    blocked by the list above, and no scraper libraries are used; this stays in the system prompt and the production terms.
 
 ### 3.4 Rollout, by roadmap phase
@@ -160,8 +163,9 @@ each fetched page (`max_content_tokens: 5000`) up to about 6k.
 | 11 | Trip digest, weekly | Haiku 4.5, Batch | Single call | 3k / 500 | 0 | $0.003 | Not sold: included with Plus and up |
 
 Other credit-priced actions have no LLM cost: live flight search (1 credit, SerpApi about $0.015) and rental search (1 credit).
-A deep run served from the shared cache costs 8 credits ([02-pricing-tiers.md](02-pricing-tiers.md), 4.2); it is expected to be
-rare and is left out of section 8.
+A deep run served from the shared cache costs 8 credits ([02-pricing-tiers.md](02-pricing-tiers.md), 4.2); outside the taster it
+is expected to be rare and is left out of section 8. The free taster is a deep run (feature 10) that costs the user 0 credits,
+once per Apple ID; it is costed in 5.7 and counted in section 8.
 
 - Every credit price sits at or above real cost against the $0.02 budget (the whole-trip draft is $0.048 against $0.08). Chat at
   1 credit a message is generous to us, which nudges heavy chat users toward research questions and packs.
@@ -201,10 +205,13 @@ Cost = in/1M x input price + cached/1M x read price + out/1M x output price + se
 
 ## 5. Credits, hard stops and ceilings
 
-Allowances (Free 8, Plus 40, Trip Pass 40 for its 90 days, Premium 240 a month) and packs ($2.99 for 50, $6.99 for 150, $14.99
-for 400) are set in the README and [02-pricing-tiers.md](02-pricing-tiers.md). In AI terms: 8 credits is one research question or
-8 short answers; 40 is one draft plus 4 research questions or one deep run; 240 is about 6 deep runs. An allowance costs at most
-credits x $0.02: Free $0.16, Plus and Trip Pass $0.80, Premium $4.80.
+Allowances (Free 12 plus one lifetime taster run, Plus 60, Family 150 pooled, Trip Pass 40 and Group Trip Pass 80 for their 90
+days, Pro 240 a month) and packs ($2.99 for 50, $6.99 for 150, $14.99 for 400) are set in the README and
+[02-pricing-tiers.md](02-pricing-tiers.md). In AI terms: 12 credits is one research question plus 4 short answers, or 12 short
+answers; 40 is one draft plus 4 research questions or one deep run; 60 is one deep run plus a draft, a research question and 8
+short answers, or 7 research questions; 80 is 2 deep runs; 150 is 3 deep runs plus 3 research questions plus 6 short answers;
+240 is about 6 deep runs. An allowance costs at most credits x $0.02: Free $0.24 (the taster is outside it), Plus $1.20, Family
+$3.00, Trip Pass $0.80, Group Trip Pass $1.60, Pro $4.80.
 
 ### 5.1 Credit prices and refunds
 
@@ -217,6 +224,7 @@ credits x $0.02: Free $0.16, Plus and Trip Pass $0.80, Premium $4.80.
 | Research question | 8 | $0.085 to $0.155 | 5 searches, 8 fetches, $0.16 |
 | Research question from the shared cache | 1 | about $0.003 | none needed |
 | Deep agent run | 40 | $0.56 typical | 20 turns, 10 searches, 10 fetches, $0.80 |
+| Deep agent run, free taster (once per Apple ID) | 0 | $0.56 typical, about $0.05 from the shared cache | Same caps, $0.80; own ledger line (5.7) |
 
 Any action that fails, is refused, times out or saves nothing is refunded automatically. A deep run stopped by the user is billed
 pro rata by turns used (minimum 8 credits); one stopped at the $0.80 limit is billed in full only if it saved something.
