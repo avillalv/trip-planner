@@ -2,7 +2,7 @@
 
 Part of the [business plan](README.md). The decisions of record in the README override anything here.
 
-Written 2026-09-30. Apple policy and US court rulings move fast, so every rule marked "verify" must be re-read on the day of submission.
+Written 2026-09-30, updated for the product name Wayfold and the new tiers and revenue lanes. The app is called Wayfold from here on; the repository and the personal install keep the working name Trip Planner. Apple policy and US court rulings move fast, so every rule marked "verify" must be re-read on the day of submission.
 
 This file is the master transition checklist: every change needed to go from the local Windows app to a public App Store launch, phase by phase, with a pointer to the file that holds the detail. It also covers the mobile approach, frontend changes, in-app purchases, the App Review checklist and the launch plan. Business case: [01-business-plan.md](01-business-plan.md). Tiers and credits: [02-pricing-tiers.md](02-pricing-tiers.md). AI: [03-ai-features-and-costs.md](03-ai-features-and-costs.md). Accounts: [04-users-and-accounts.md](04-users-and-accounts.md). Hosting: [05-infrastructure.md](05-infrastructure.md). Data and providers: [06-database-and-data-integrations.md](06-database-and-data-integrations.md). Affiliate revenue: [08-affiliate-revenue.md](08-affiliate-revenue.md).
 
@@ -34,7 +34,7 @@ Effort assumes one developer with Claude Code, about 25 to 35 focused hours a we
 | 1: hosted web beta | 6 to 8 weeks | Weeks 5 to 12 | Accounts, sharing, entitlements, ledger; 4-week retention measured |
 | 2: iOS TestFlight | 5 to 7 weeks | Weeks 13 to 19 | Capacitor app, purchases, push, account deletion |
 | 3: public launch | 3 to 4 weeks (includes review cycles) | Weeks 20 to 23 | App Review passed, support and monitoring in place |
-| 4: growth | Ongoing | Week 24 on | Android, shareable trip pages for SEO, Premium |
+| 4: growth | Ongoing | Week 24 on | Android, shareable trip pages for SEO, Pro, group payments, concierge (if not live earlier), Wayfold for Advisors |
 
 Total to public launch: about 5 to 6 months part time, about 3 to 4 months full time. The biggest schedule risk is Phase 1 (multi-tenancy and entitlements), not the mobile work. Do not start a phase until the previous gate is met.
 
@@ -44,10 +44,10 @@ Goal: find out whether anyone wants this before rewriting anything. No app code 
 
 | Change | Detail in |
 |---|---|
-| Pick a working brand name, check trademarks and App Store name, buy the domain | [01-business-plan.md](01-business-plan.md) |
+| Confirm the name Wayfold (trademark search, App Store name and subtitle availability) and buy the domain | [01-business-plan.md](01-business-plan.md) |
 | Landing page with waitlist capture and email set up (support, no-reply; SPF, DKIM, DMARC) | [01-business-plan.md](01-business-plan.md), [05-infrastructure.md](05-infrastructure.md) |
 | 10 user interviews with couples and small groups; write down the signal that counts as "yes" before starting | [01-business-plan.md](01-business-plan.md) |
-| Paywall and price test copy shown to interviewees (Trip Pass $9.99, Plus $4.99 a month or $29.99 a year) | [02-pricing-tiers.md](02-pricing-tiers.md) |
+| Paywall and price test copy shown to interviewees (Trip Pass $9.99, Group Trip Pass $19.99, Plus $5.99 a month or $39.99 a year, Family $8.99 a month or $59.99 a year) | [02-pricing-tiers.md](02-pricing-tiers.md) |
 | Answer the open provider questions that could change the numbers (SerpApi terms, Geoapify terms, Travelpayouts rates) | [06-database-and-data-integrations.md](06-database-and-data-integrations.md) |
 
 Gate: a clear signal that people want it. If not, stop here and keep the app personal.
@@ -60,7 +60,7 @@ Goal: make the codebase safe to open up, and move the AI off the owner's subscri
 |---|---|
 | Move agents from the Claude Code CLI to the Claude Messages API with tool use, run in our own worker. `submit_flight_quotes`, `add_note` and `finish_run` become in-process client tools; evidence rules and blocked domains (Airbnb, Vrbo, Booking) stay | [03-ai-features-and-costs.md](03-ai-features-and-costs.md) |
 | Metering: per-run caps (20 turns, 10 searches, 10 fetches, `medium` effort, $0.80 hard stop, one run at a time per account), cost logging, prompt caching | [03-ai-features-and-costs.md](03-ai-features-and-costs.md) |
-| Turn scheduled agent routines off for hosted mode (they return with Premium); scheduled work becomes API price checks plus batch scans | [03-ai-features-and-costs.md](03-ai-features-and-costs.md), [05-infrastructure.md](05-infrastructure.md) |
+| Turn scheduled agent routines off for hosted mode (they return with Pro); scheduled work becomes API price checks plus batch scans | [03-ai-features-and-costs.md](03-ai-features-and-costs.md), [05-infrastructure.md](05-infrastructure.md) |
 | Split "personal mode" from "hosted mode" by config; remove Windows-only assumptions from hosted paths | [05-infrastructure.md](05-infrastructure.md) |
 | Docker image for API and worker; CI on Linux (pytest, vitest, lint, Playwright) | [05-infrastructure.md](05-infrastructure.md) |
 | Staging and production on Render behind Cloudflare; Postgres-backed queue (Procrastinate); secrets in the host, `.env.example` updated | [05-infrastructure.md](05-infrastructure.md) |
@@ -80,14 +80,14 @@ Goal: a real product on the web that strangers can sign up for, with payments of
 | Accounts on Supabase Auth (Sign in with Apple, Google, email code); our own `users` table; token handling in `client.ts` | [04-users-and-accounts.md](04-users-and-accounts.md), 4.1 |
 | Schema: `trip_members`, UUID public ids, `owner_user_id` and `linked_user_id` on `people`, row-level security behind app checks; migrate the existing local data | [06-database-and-data-integrations.md](06-database-and-data-integrations.md) |
 | Trip sharing and invites by link; roles; only the owner pays, invitees join free | [04-users-and-accounts.md](04-users-and-accounts.md) |
-| Entitlements table, server-side limit checks and the credit ledger (Free limits, 8 credits a month) | [02-pricing-tiers.md](02-pricing-tiers.md), [06-database-and-data-integrations.md](06-database-and-data-integrations.md) |
+| Entitlements table, server-side limit checks and the credit ledger (Free limits, 12 credits a month and the lifetime taster run) | [02-pricing-tiers.md](02-pricing-tiers.md), [06-database-and-data-integrations.md](06-database-and-data-integrations.md) |
 | Upgrade screens are a waitlist or "coming with the app" page; no web payments | [02-pricing-tiers.md](02-pricing-tiers.md) |
 | Flight data: Travelpayouts cached fares as the free baseline; live fares behind the provider interface (SerpApi under a feature flag) | [06-database-and-data-integrations.md](06-database-and-data-integrations.md) |
 | Join Travelpayouts (also the launch affiliate network); build the `/go/<click_id>` redirect with stored link templates only (no open redirects), a random per-click sub-id, the `affiliate_programs` and `link_clicks` tables, and the nightly conversion pull; disable link previews for Airbnb, Vrbo and Booking.com domains on the hosted server | [06-database-and-data-integrations.md](06-database-and-data-integrations.md) section 6, [08-affiliate-revenue.md](08-affiliate-revenue.md) |
 | Frontend: `VITE_API_BASE_URL`, new sign-in and onboarding screens replacing the passcode login, empty and error states, responsive layout with bottom tab bar (4.3) | 4.1, 4.3, section 7 |
 | AI consent screen, account deletion backend, data export, privacy policy and terms | [04-users-and-accounts.md](04-users-and-accounts.md), 6.3 to 6.6 |
 | Observability (Sentry, PostHog, uptime monitor, structured logs), point-in-time recovery with a tested restore | [05-infrastructure.md](05-infrastructure.md) |
-| Abuse controls: rate limits per user and IP, email verification, provider-spend ceilings (Free $0.25, Plus $1.75 a month) | [02-pricing-tiers.md](02-pricing-tiers.md), [05-infrastructure.md](05-infrastructure.md) |
+| Abuse controls: rate limits per user and IP, email verification, provider-spend ceilings (Free $0.25, Plus $2.25 a month) | [02-pricing-tiers.md](02-pricing-tiers.md), [05-infrastructure.md](05-infrastructure.md) |
 | Beta: 50 to 200 invited users from the M0 waitlist; weekly feedback loop | [01-business-plan.md](01-business-plan.md) |
 
 Gate: accounts, sharing, entitlements and ledger working; 4-week retention measured and recorded. Also require zero cross-tenant leaks in automated tests, AI cost per active user within the modeled ceilings, a restore-from-backup drill done once, and mobile web usable on iPhone Safari.
@@ -109,11 +109,14 @@ Goal: a native app that passes the "not a website" test, with purchases working 
 | Affiliate click redirect (`/go/<click_id>`, built in Phase 1) used from the app, so no tracking SDKs and no ATT prompt | 6.5, [06-database-and-data-integrations.md](06-database-and-data-integrations.md) |
 | In-app browser choice for affiliate links: `SFSafariViewController` through the Capacitor Browser plugin (not an embedded WKWebView, not an injected-JS webview); measure attribution loss against opening in Safari | 3, 6.5, [08-affiliate-revenue.md](08-affiliate-revenue.md) |
 | Affiliate disclosure text ("We earn a commission if you book here.") beside every partner button, an "Ad" label on UK and EU storefronts, and lists that say how they are sorted | 6.5, [08-affiliate-revenue.md](08-affiliate-revenue.md) |
-| App Review notes that explain affiliate links under Guideline 3.1.3(e): they lead to physical travel services consumed outside the app, while Plus, Trip Pass and credit packs use in-app purchase; no ATT prompt because there is no cross-app tracking | 6.5, 6.9 |
+| App Review notes that explain affiliate links under Guideline 3.1.3(e): they lead to physical travel services consumed outside the app, while Plus, Family, Trip Pass, Group Trip Pass and credit packs use in-app purchase; no ATT prompt because there is no cross-app tracking | 6.5, 6.9 |
 | App Privacy labels updated to mention click logging (which partner button was tapped, linked to the user, for app functionality and analytics, not used for tracking) | 6.4 |
+| Family plan: household invites inside the app, pooled credits, payer rules, leave and cooldown limits; Apple Family Sharing stays off | 5.2, 5.8, [04-users-and-accounts.md](04-users-and-accounts.md) section 3.6 |
+| Group features behind the Group Trip Pass: polls, cost splitting (expense and settle-up records only, no money moves in the app yet), room-block request form behind a flag | [04-users-and-accounts.md](04-users-and-accounts.md) section 3.7, [06-database-and-data-integrations.md](06-database-and-data-integrations.md) section 2.9 |
+| Stripe account in test mode, webhook route and event table (no live payments) | 5.8, [05-infrastructure.md](05-infrastructure.md) section 5.6 |
 | TestFlight: internal from week 1, external (30 to 100 testers) from week 4 | 6.10 |
 
-Gate: Capacitor app, purchases, push, account deletion. Also require crash-free sessions of at least 99.5 percent over 100 or more sessions, every sandbox purchase scenario passing (purchase, cancel, upgrade, refund, restore on a second device, billing retry, Trip Pass bound to a trip), a trip fully browsable in airplane mode on a real device, and a self-check against Guidelines 4.2, 4.8, 5.1.1(v), 3.1.2 and 1.2.
+Gate: Capacitor app, purchases, push, account deletion. Also require crash-free sessions of at least 99.5 percent over 100 or more sessions, every sandbox purchase scenario passing (purchase, cancel, upgrade from Plus to Family, downgrade, refund, restore on a second device, billing retry, Trip Pass and Group Trip Pass bound to a trip, a Family member joining and leaving a household), a trip fully browsable in airplane mode on a real device, and a self-check against Guidelines 4.2, 4.8, 5.1.1(v), 3.1.2 and 1.2.
 
 ### Phase 3: public launch (3 to 4 weeks)
 
@@ -128,6 +131,8 @@ Goal: approved, live, with the launch machinery ready.
 | Support live (inbox, macros, FAQ); refund and cancellation guidance | 7, 8.2 |
 | Provider recheck: SerpApi flag decision and Skyscanner Partners application status | [06-database-and-data-integrations.md](06-database-and-data-integrations.md) |
 | Prepare the direct affiliate applications (Expedia Group for Vrbo, Booking.com after confirming its current network, Skyscanner, Airalo, GetYourGuide): live App Store link, screenshots of disclosure and placement, traffic numbers from the beta | [08-affiliate-revenue.md](08-affiliate-revenue.md) |
+| Concierge ("Have a human book this") and the group room-block request go live if the host travel agency agreement is signed (consent screen, request queue, admin page); otherwise they move to Phase 4 and the launch build hides them | [04-users-and-accounts.md](04-users-and-accounts.md) section 3.9, [05-infrastructure.md](05-infrastructure.md) section 4.7 |
+| Review notes cover Stripe-paid real-world services and the absence of advisor purchases in the app | 5.8, 6.9 |
 | Launch content and phased release | 8.1 |
 
 Gate: App Review passed; support and monitoring in place. Also require crash-free at least 99.5 percent, API error rate under 1 percent, and no P0 in the first 72 hours.
@@ -136,8 +141,13 @@ Gate: App Review passed; support and monitoring in place. Also require crash-fre
 
 | Change | Detail in |
 |---|---|
-| Premium ($11.99 a month or $99 a year) launches when measured agent cost is $0.60 or less per run over 200 runs, or when more than 15% of Plus payers buy agent-run credits. Add its products to the existing subscription group | 5.2, [02-pricing-tiers.md](02-pricing-tiers.md), [03-ai-features-and-costs.md](03-ai-features-and-costs.md) |
+| Pro ($11.99 a month or $99 a year) launches when measured agent cost is $0.60 or less per run over 200 runs, or when more than 15% of Plus payers buy agent-run credits. Add its products to the existing subscription group | 5.2, [02-pricing-tiers.md](02-pricing-tiers.md), [03-ai-features-and-costs.md](03-ai-features-and-costs.md) |
 | Shareable public trip pages and SEO guides (server-rendered, separate from the SPA) | [01-business-plan.md](01-business-plan.md) |
+| Group payments through Stripe: pay your share of real-world trip costs, reminders, settle-up records. Needs counsel's opinion on money transmission first (Stripe Connect or supplier payment links) | 5.8, [05-infrastructure.md](05-infrastructure.md) section 5.6 |
+| Concierge and room blocks, if not live at launch; first commission statements reconciled | [04-users-and-accounts.md](04-users-and-accounts.md) section 3.9, [08-affiliate-revenue.md](08-affiliate-revenue.md) |
+| Wayfold for Advisors (year 2, web only): org and seat tables, client trip workspaces, Stripe Billing at $29 a seat a month or $24 annual, no advisor purchase or sign-up inside the iOS app | 5.8, [04-users-and-accounts.md](04-users-and-accounts.md) section 3.8 |
+| Printed trip books and posters (year 2, ordered on the web, physical goods through Stripe) and labeled partner guides | 5.8, [06-database-and-data-integrations.md](06-database-and-data-integrations.md) section 2.10 |
+| LiteAPI in-app hotel booking (year 2 or later, only after click data shows strong booking intent): needs its own review of Apple rules for booking physical services and of merchant-of-record terms | [06-database-and-data-integrations.md](06-database-and-data-integrations.md) section 4.5 |
 | Android: Capacitor Android, Play Billing through RevenueCat, FCM, App Links; 4 to 6 weeks | 3, 5.1 |
 | Retention loop: paywall experiments, win-back offers, lifecycle messages, referral | [01-business-plan.md](01-business-plan.md) |
 | From month 3 after launch: submit the direct network applications (Expedia Group, Booking.com, Skyscanner, Airalo, GetYourGuide) and replace the model's affiliate inputs with measured clicks, conversions and attribution loss | [08-affiliate-revenue.md](08-affiliate-revenue.md), [01-business-plan.md](01-business-plan.md) |
@@ -278,18 +288,21 @@ Launch products:
 
 | Product | Type | Price | Notes |
 |---|---|---|---|
-| `plus_monthly` | Auto-renewable subscription, group "Membership" | $4.99 | |
-| `plus_annual` | Auto-renewable subscription, same group | $29.99 | 7-day free trial (annual only) |
-| `trip_pass_90d` | Non-renewing subscription | $9.99 | 90 days, bound to one trip on the server (5.3) |
+| `plus_monthly` | Auto-renewable subscription, group `wayfold_membership` | $5.99 | |
+| `plus_annual` | Auto-renewable subscription, same group | $39.99 | 7-day free trial (annual only) |
+| `family_monthly` | Auto-renewable subscription, same group | $8.99 | Up to 6 people in one household, 150 pooled credits (5.3a) |
+| `family_annual` | Auto-renewable subscription, same group | $59.99 | No trial at launch |
+| `trip_pass` | Non-renewing subscription | $9.99 | 90 days, bound to one trip on the server (5.3) |
+| `group_trip_pass` | Non-renewing subscription | $19.99 | 90 days, bound to one trip, up to 12 travelers, polls, cost splitting, room-block request (5.3) |
 | `credits_50` | Consumable | $2.99 | 50 credits |
 | `credits_150` | Consumable | $6.99 | 150 credits |
 | `credits_400` | Consumable | $14.99 | 400 credits |
 
-Later (Phase 4, behind a flag until then): `premium_monthly` ($11.99) and `premium_annual` ($99), added to the same "Membership" group as a higher level than Plus. Upgrades apply immediately with a prorated refund; downgrades apply at the next renewal.
+Later (Phase 4, behind a flag until then): `pro_monthly` ($11.99) and `pro_annual` ($99), formerly named premium, added to the same `wayfold_membership` group. Set the levels in the group as Pro, then Family, then Plus, with each tier's monthly and annual on one level. Moving up a level applies immediately with a prorated refund; moving down applies at the next renewal; moving between monthly and annual of the same tier is a crossgrade.
 
-- One subscription group, so nobody holds Plus and Premium at once. Apple allows one introductory offer per group per user; trial Plus annual only, never Premium at launch. Win-back and promotional offers wait for Phase 4.
-- Every product needs localized names and descriptions and a paywall review screenshot. Use Apple's automatic regional pricing first, then tune India, Brazil, Mexico and Turkey by hand. Leave Family Sharing off.
-- Paywall shows at most three visible choices: Trip Pass (lead offer), Plus annual (highlighted, with the trial), and Plus monthly under "More options". Credit packs appear when a user runs out of credits. Premium is not shown until it launches.
+- One subscription group, so nobody holds Plus, Family or Pro at once. Apple allows one introductory offer per group per user; trial Plus annual only, never Family or Pro at launch. Win-back and promotional offers wait for Phase 4.
+- Every product needs localized names and descriptions and a paywall review screenshot. Use Apple's automatic regional pricing first, then tune India, Brazil, Mexico and Turkey by hand. Leave Apple Family Sharing off for every product; it cannot be turned off again once enabled, and Family plan members are invited inside Wayfold instead (5.3a).
+- Paywall shows at most three visible choices: Trip Pass (lead offer), Plus annual (highlighted, with the trial), and Plus monthly and Family under "More options". Group Trip Pass appears on a trip when its owner adds a poll, splits a cost or has more than 6 people. Credit packs appear when a user runs out of credits. Pro is not shown until it launches.
 
 ### 5.3 Trip Pass
 
@@ -299,11 +312,20 @@ Trip Pass is a **non-renewing subscription** with a 90-day duration, decided in 
 - The pass gives that trip 2 live routes, at most 60 live checks, 40 credits and up to 6 collaborators. Only the owner buys it; invitees get the owner's tier on that trip. Credits are charged to whoever starts the action.
 - Expiry and binding are our job (Apple only records the purchase). Show pass status and expiry in the trip's settings, and keep the ledger server-side.
 
+**Group Trip Pass** uses the same mechanics: a non-renewing subscription bought by the trip owner, bound to one trip, 90 days, for up to 12 travelers, 80 credits, polls, cost splitting and the room-block request. The polls and cost-splitting tools are digital features, so the pass is sold through In-App Purchase. The money that travelers owe each other for real-world costs is a different thing and follows 5.8.
+
+### 5.3a Family plan
+
+- The payer buys `family_monthly` or `family_annual` with their own Apple ID. RevenueCat knows only the payer; our server derives every other member's Family entitlement from the household record ([04-users-and-accounts.md](04-users-and-accounts.md) section 3.6). Members do not buy anything and need no Apple Family group.
+- The product description says "up to 6 people", names the payer's role, and says members are invited in the app. The paywall says the same before purchase.
+- Review risk (verify on the day of submission): Apple's Family Sharing is the sanctioned way to share a subscription, and in-app multi-seat plans are common but not guaranteed to pass. Mitigate with clear copy, one payer, a hard 6-person cap, and a review note explaining that the plan is one paying account with invited members and no extra purchase path.
+- The payer cancelling ends the household at the end of the paid period. Members fall back to their own tier and keep their data.
+
 ### 5.4 Credit packs
 
 - Grant credits only after the server verifies the transaction (RevenueCat webhook or the App Store Server API). Key the grant by `transaction_id`; never grant twice.
 - Purchased credits last 12 months and are spent after monthly allowance credits. Say so on the pack screen. Monthly allowances reset on the renewal event for subscribers and on the calendar month for Free.
-- Refunds (`REFUND`): reverse the grant, allow the balance to go negative, and block AI use until it is positive.
+- Refunds (`REFUND`): reverse the grant, allow the balance to go negative, and block AI use until it is positive. A refunded Family subscription ends the household pool the same way.
 - One credit is a budget of up to $0.02 of provider spend, so the worst-case cost is $1.00, $3.00 and $8.00 against $2.54, $5.94 and $12.74 net of Apple's 15 percent. Show balance and history in the app. Ledger schema: [06-database-and-data-integrations.md](06-database-and-data-integrations.md).
 
 ### 5.5 Server side
@@ -318,13 +340,34 @@ Trip Pass is a **non-renewing subscription** with a 90-day duration, decided in 
 Uncertain and moving; date-stamped 2026-09-30.
 
 - After the April 2025 ruling in Epic v. Apple, US apps may link to external purchase without Apple's commission, and Apple appealed. Later rulings left open whether Apple may charge some reduced commission. Outside the US the rules differ (EU, Japan, South Korea).
-- **Decision: IAP only at launch, no web checkout.** IAP converts better on iOS; the 15 percent rate lowers the value of avoiding it; the legal picture may reverse. Design the paywall so a web option could be added later, and test it in the US only in Phase 4 if the picture is clear. Recheck on the day of submission (README open question 5).
+- **Decision: for digital plans, IAP only at launch, no web checkout.** (Stripe is used only for the non-digital lanes in 5.8.) IAP converts better on iOS; the 15 percent rate lowers the value of avoiding it; the legal picture may reverse. Design the paywall so a web option could be added later, and test it in the US only in Phase 4 if the picture is clear. Recheck on the day of submission (README open question 5).
 - Whichever route: keep cancellation easy and disclose renewals per Guideline 3.1.2.
 
 ### 5.7 Subscription review requirements (3.1.2)
 
 - The paywall shows price and billing period (largest and clearest), trial length and the price after it, auto-renewal terms, links to Terms of Use and Privacy Policy, and Restore. No misleading "free" wording.
 - In App Store Connect: localized subscription info, privacy policy URL, and a review screenshot per product. Apple's standard EULA is fine.
+
+### 5.8 Payments outside In-App Purchase: Stripe for real-world services
+
+Rule of thumb: if the buyer gets a digital feature inside Wayfold, it is In-App Purchase. If the money pays for something in the real world, or for software bought and used on the web, it goes through Stripe.
+
+| Money | Route | Why, and the Apple rule |
+|---|---|---|
+| Plus, Family, Pro, Trip Pass, Group Trip Pass, credit packs | In-App Purchase | Digital features and content consumed in the app (Guideline 3.1.1) |
+| Group trip payments: a traveler paying their share of a hotel deposit or dinner | Stripe Checkout, opened in `SFSafariViewController` | A real-world cost that is consumed outside the app, so Guideline 3.1.3(e) (goods and services outside of the app) applies. The payment must never unlock app features or buy credits |
+| Concierge bookings | Paid to the supplier or the host agency, never through Wayfold or the app | A physical travel service consumed outside the app (3.1.3(e)). The app only collects the request |
+| Printed trip books and posters | Stripe Checkout | Physical goods shipped to the buyer (3.1.3(e)) |
+| Wayfold for Advisors seats | Stripe Billing on the web only | Web software sold to a business. The iOS app does not sell it, link to it, or unlock advisor features; advisors sign up on the web. This avoids Guideline 3.1.3(b), which would otherwise require the same items to be offered through In-App Purchase |
+| Partner guide sponsorship | Invoiced on the web | Business to business, never in the app |
+| LiteAPI hotel booking (later) | Its own checkout | A physical service consumed outside the app; decide the flow with Apple's rules in hand when the time comes |
+
+- Do not cite Guideline 3.1.5 for any of this; it covers cryptocurrencies and does not apply.
+- Keep the wording honest: group payment screens say "Pay your share of the trip costs", never "Unlock" or "Upgrade". Any in-app mention of a web purchase of a digital product (for example an advisor plan) is off limits in the iOS build.
+- Stripe rules on the web: hosted Checkout, webhook-granted fulfillment, refunds through the admin console. Detail in [05-infrastructure.md](05-infrastructure.md) section 5.6.
+- The US external-link question in 5.6 concerns digital purchases only and does not change this table.
+- Apple's commission does not apply to Stripe revenue; Stripe's own fees do ([05-infrastructure.md](05-infrastructure.md) section 8).
+- Re-read 3.1.1, 3.1.3(b) and 3.1.3(e) on the day of submission (verify), and have the review notes (6.9) ready to explain each row.
 
 ## 6. App Store requirements checklist
 
@@ -356,6 +399,8 @@ Deletion must be in the app, easy to find in Settings, confirm intent, delete th
 | Identifiers (user ID, device ID for push) | Yes | App functionality, analytics |
 | Purchases | Yes | App functionality |
 | Usage data (first-party analytics, and affiliate click logging: which partner link was tapped, when, on which screen) | Yes | Analytics, app functionality |
+| Contact info and user content sent in a concierge or room-block request, shared with a host travel agency only when the user sends it | Yes | App functionality (not used for tracking). Declare the third-party recipient |
+| Financial info (group expense records; payments are taken by Stripe, so no card data) | Yes | App functionality |
 | Diagnostics | Optional | App functionality |
 | Location | Only if device location is used | App functionality |
 
@@ -377,13 +422,13 @@ Answer the 2025 age rating questionnaire honestly. Expect 4+ or 9+ without open 
 
 ### 6.8 Store listing assets
 
-- App name (30 characters), subtitle (30), promotional text (170), description, keywords (100, no spaces after commas), category Travel (secondary Lifestyle or Productivity), copyright.
+- App name "Wayfold" (30 characters max), subtitle "Plan together. Know the fare." (29 characters; check that the name and subtitle are available), promotional text (170), promotional text (170), description, keywords (100, no spaces after commas), category Travel (secondary Lifestyle or Productivity), copyright.
 - Screenshots: 6.9 inch iPhone (1320 by 2868), up to 10: trip overview, itinerary on map, price-drop alert, AI plan, offline mode, shared trip. Icon 1024 by 1024, no alpha. App preview video and custom product pages in Phase 4.
 
 ### 6.9 Review notes and demo account
 
 - Provide a demo account (email and password or a "Demo mode" button; do not require Sign in with Apple for reviewers) with a loaded trip and an entitlement path that works in sandbox, since reviewers buy in sandbox.
-- Notes explain AI features, where deletion lives, how push and affiliate links behave, and that servers are live. Affiliate note, roughly: "Partner buttons open hotel, tour, flight, car and eSIM booking pages in an in-app browser. These are physical travel services consumed outside the app, so they are outside In-App Purchase under Guideline 3.1.3(e); all digital plans and credits use In-App Purchase. Each button is labeled as a commission link. The app does not track users across other companies' apps or sites and shows no ATT prompt." Include a phone number and email. Keep the backend up and rate limits generous during review.
+- Notes explain AI features, where deletion lives, how push and affiliate links behave, and that servers are live. Add a second note: "Group payment and print order screens take money for real-world costs and physical goods through Stripe (Guideline 3.1.3(e)); they never unlock features or credits. A concierge request collects no payment. Family plan members are invited by the one paying account. Advisor plans are sold on the web only and are not available in this app." Affiliate note, roughly: "Partner buttons open hotel, tour, flight, car and eSIM booking pages in an in-app browser. These are physical travel services consumed outside the app, so they are outside In-App Purchase under Guideline 3.1.3(e); all digital plans and credits use In-App Purchase. Each button is labeled as a commission link. The app does not track users across other companies' apps or sites and shows no ATT prompt." Include a phone number and email. Keep the backend up and rate limits generous during review.
 - Expect 24 to 48 hours per submission and often one rejection. Common causes: broken login, a paywall missing Restore or terms links, missing deletion, privacy label mismatch, 4.2.
 
 ### 6.10 TestFlight
@@ -405,7 +450,7 @@ iOS builds need macOS and Xcode. Buy a Mac mini (about $600) for development plu
 | Loading | Skeletons, optimistic updates | Consistent across routes. |
 | Analytics | PostHog: signup, trip_created, first_itinerary_item, ai_used, paywall_viewed, purchase_started, purchase_completed, restore_tapped, push_opt_in, invite_sent, invite_accepted | Session replay off or masked; respect opt-out; no cross-app tracking. |
 | Crash reporting | Sentry, JS and native, source maps and dSYM upload in CI | Alerts to email or Slack. |
-| Feature flags | PostHog or a config endpoint | Kill switches for AI features, SerpApi live fares, each affiliate partner, Premium; minimum app version. |
+| Feature flags | PostHog or a config endpoint | Kill switches for AI features, SerpApi live fares, each affiliate partner, Pro, group payments, concierge requests, print orders; minimum app version. |
 | Support | `support@<domain>`, in-app "Contact support" attaching version, device, user ID and error id, static FAQ | Reply within 2 business days. |
 | Ratings prompt | `@capacitor-community/in-app-review` | After a positive moment, at most 3 a year, never after an error or paywall; "Send feedback" first for unhappy users. |
 | Notifications | Preferences by type, quiet hours, per-trip mute | Batch price alerts; no marketing pushes without opt-in. |
@@ -455,15 +500,18 @@ Positioning: "the trip planner that follows your trip offline", price alerts, AI
 | Policy churn (external links, AI disclosure, age assurance) | High | Re-read guidelines before each submission; IAP only; follow Apple Developer news |
 | Solo bus factor and burnout | High | Strict gates; cut Android and widgets before cutting quality |
 | Credit refund or fraud abuse | Low | Server ledger, refund reversal, velocity checks |
+| Apple objects to Stripe group payments or the Family plan's in-app invites | Medium | Copy that ties payments to real-world costs, no unlock language, review notes (6.9), hold group payments until after launch (Phase 4), keep Apple Family Sharing off and cap households at 6 |
+| Money transmission or seller-of-travel rules apply to group payments or concierge | Medium | Counsel before building collection; Stripe Connect or supplier payment links; the host agency carries travel registrations; concierge takes no payment |
+| Advisor product pulled into the app by Apple's multi-platform rule | Low | Advisor features exist only on the web; the iOS app sells and exposes nothing for advisors |
 | Existing two-person local install breaks | Low | Keep the personal-mode config path and its tests until hosted mode is stable |
 
 ## 10. Where this plan changed the initial idea
 
-1. **Agents on the owner's Claude Code subscription cannot survive into the product.** Moving to the Claude API is a Phase 0 gate, not a Phase 1 detail, because it drives unit economics and the AI disclosure Apple requires. Scheduled agents stay off for everyone until Premium.
+1. **Agents on the owner's Claude Code subscription cannot survive into the product.** Moving to the Claude API is a Phase 0 gate, not a Phase 1 detail, because it drives unit economics and the AI disclosure Apple requires. Scheduled agents stay off for everyone until Pro.
 2. **Validate before building.** The first idea went straight to an App Store rewrite. M0 (landing page, waitlist, 10 interviews) comes first, and the kill rule stops spending if paying users and affiliate income stay low after launch.
-3. **IAP only, no external web checkout at launch.** The US external link option exists, but the commission question is unsettled and the 15 percent rate reduces the gain. Revisit in Phase 4.
+3. **IAP only for digital plans, no external web checkout at launch.** Stripe is used only for real-world money and web software (5.8). The US external link option for digital purchases exists, but the commission question is unsettled and the 15 percent rate reduces the gain. Revisit in Phase 4.
 4. **Trip Pass is a non-renewing subscription, 90 days, bound to one trip.** The earlier debate (consumable, or 30 or 60 days) is closed: Apple can restore it, it carries an expiry, and the server ties it to a trip.
-5. **Premium waits.** It is built behind a flag and launches only when measured agent cost is $0.60 or less per run over 200 runs, or more than 15% of Plus payers buy agent-run credits. It costs $11.99 a month or $99 a year, and joins the existing subscription group. The launch paywall shows Trip Pass, Plus annual and Plus monthly under "More options", plus credit packs when credits run out.
+5. **Pro waits (it was called Premium).** It is built behind a flag and launches only when measured agent cost is $0.60 or less per run over 200 runs, or more than 15% of Plus payers buy agent-run credits. It costs $11.99 a month or $99 a year, and joins the existing subscription group. The launch paywall shows Trip Pass, Plus annual, and Plus monthly and Family under "More options", plus credit packs when credits run out. Group Trip Pass appears on group trips.
 6. **Price alerts are launch pushes, but cheap.** Alerts run on cached Travelpayouts fares, with one alert on Free. Live checks are batched by route and shared across users, because per-user paid searches scale badly ([06-database-and-data-integrations.md](06-database-and-data-integrations.md)).
 7. **Hosted web before iOS.** No public App Store submission until the web beta has shown 4-week retention. It de-risks the backend before paying Apple's review and support cost, and the same web app powers invites, universal links, the privacy policy and SEO.
 8. **A Mac is required.** The repo is built for Windows 11, but iOS builds need macOS: budget a Mac mini or Xcode Cloud and a changed workflow.
