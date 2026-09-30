@@ -182,7 +182,7 @@ Success: account exists, trip is saved, no data was lost, no paywall was shown.
 ### 3.10 Travel
 
 1. A "Today" view shows the current day's plan, local time, and next item. (F-TRV-1)
-2. The trip is readable offline (see section 14.2). (F-TRV-2)
+2. The trip is readable offline (see section 6.2). (F-TRV-2)
 3. Group expenses are logged as they happen. (F-GRP-2)
 
 ### 3.11 After the trip
@@ -291,7 +291,7 @@ action code and price, or "none". Acceptance bullets are testable at API or UI l
 - Acceptance:
   - Required: one destination. Optional: name, dates (or flexible month), party size, currency.
   - Dates can be empty; with a chosen flight, dates are locked to the flight (F-FLT-5).
-  - Trip ids exposed to clients are UUIDs (`trips.public_id`).
+  - Trip ids exposed to clients are UUIDs (`trips.id`).
   - Editing is optimistic with version checks; a stale edit returns 409 with the latest row and
     the UI shows a merge prompt.
 - Tier: `free` 2 active trips; `plus`, `family`, `pro` unlimited (fair use 25); `trip_pass` and
@@ -673,7 +673,7 @@ rewritten; no ranking by commission.
   - Times are in the destination's local time regardless of device time zone; an evening can end
     after midnight.
   - Item types: activity, meal, transport, lodging check-in or check-out, free time.
-  - Keyboard alternative exists for every drag action (see section 14.3).
+  - Keyboard alternative exists for every drag action (see section 6.3).
 - Tier: all.
 
 #### F-ITN-3 Ideas
@@ -945,6 +945,13 @@ Reuse note: extends the existing `presentation` page.
 Real-world money handling is through Stripe, never Apple In-App Purchase, and never for digital
 features.
 
+Gating rule for the whole section: polls and manual cost splitting (expenses, balances, "mark as
+paid") are included in `plus`, `family`, `pro`, `trip_pass` and `group_trip_pass`. A `free` user
+uses them on any trip whose capabilities include them (for example a trip they joined, or a trip
+with a pass); a `free` owner's own trip shows a preview and the paywall moment. The Group Trip Pass
+adds up to 12 travelers and the room-block request. Collecting money through Stripe (F-GRP-4,
+Phase 4) is for `group_trip_pass` and `pro` only.
+
 #### F-GRP-1 Polls
 
 - Story: As an organizer, I want a quick vote on dates, stays or activities, so that the group
@@ -957,8 +964,9 @@ features.
     and can apply the winner (for example, marks the winning stay "Shortlisted").
   - Viewers can vote.
   - Reminder notification to members who have not voted, at most once per poll per day.
-- Tier: `group_trip_pass` and `pro`. A `plus` or `family` owner sees polls as a preview with the
-  Group Trip Pass paywall moment. Credits: none.
+- Tier: `plus`, `family`, `pro`, `trip_pass`, `group_trip_pass`, and `free` users on trips that
+  have them. A `free` owner sees polls as a preview with the `trip_pass` paywall moment. Credits:
+  none.
 
 #### F-GRP-2 Expenses
 
@@ -971,9 +979,9 @@ features.
     and store both.
   - Editors and owners can add; every member can view their own balance.
   - Deleting an expense keeps an audit line.
-- Tier: `group_trip_pass` and `pro` on the trip; `plus`, `family` and `trip_pass` owners can log
-  expenses for up to 2 travelers as a preview. (Decision: basic logging is free for two people;
-  the group features are paid.) Credits: none.
+- Tier: `plus`, `family`, `pro`, `trip_pass`, `group_trip_pass`, and `free` users on trips that
+  have them; the traveler cap is the trip's own limit (8, or 12 on a Group Trip Pass or `pro`).
+  A `free` owner sees a preview with the `trip_pass` paywall moment. Credits: none.
 
 #### F-GRP-3 Cost splitting
 
@@ -996,7 +1004,8 @@ features.
   - Status: proposed, paid, confirmed, disputed. Confirmed settlements reduce balances.
   - Payment is only for real-world trip costs; nothing digital is sold through it.
   - Payees must complete Stripe onboarding to receive; manual marking works without it.
-- Tier: `group_trip_pass` and `pro` for Stripe; manual marking in F-GRP-2 tiers.
+- Tier: Stripe collection is `group_trip_pass` and `pro` only and ships in Phase 4 (flag
+  `group_payments`); manual marking is in every F-GRP-2 tier from launch.
 - Edge cases: a member leaves with a balance: the balance stays and the owner can write it off
   with an audit line; currency mismatch settles in the trip currency.
 
@@ -1008,11 +1017,12 @@ features.
   - A form (`room_block_requests`) takes hotel (from the shortlist or typed), dates, rooms, guest
     count, budget and notes.
   - Submission is routed to the concierge team (host agency), who reply by email within 2
-    business days; status is visible (submitted, in progress, quoted, closed).
+    business days; status is visible (submitted, in review, quoted, accepted, declined, expired, cancelled).
   - The form shows a plain disclosure: "Wayfold may earn a commission from the hotel or our host
     agency. It does not change what you pay."
   - Request creates no charge and no obligation.
-- Tier: `group_trip_pass` and `pro`. Credits: none.
+- Tier: `group_trip_pass` only (a trip with a Group Trip Pass, including for its invited members).
+  Credits: none.
 
 ### 4.12 Concierge request (F-CON)
 
@@ -1205,8 +1215,9 @@ Global rules (each is a testable requirement):
 - Acceptance:
   - A Trip Pass or Group Trip Pass is bound to one trip on the server (`trip_passes`), lasts 90
     days from purchase, and can be moved to another trip at most once.
-  - Trip Pass: 2 live routes, at most 60 live checks, 40 credits, up to 6 collaborators. Group
-    Trip Pass: up to 12 travelers, 80 credits, polls, cost splitting, room-block request.
+  - Trip Pass: 2 live routes, at most 60 live checks, 40 credits, up to 6 collaborators, polls and
+    manual cost splitting. Group Trip Pass: the same plus up to 12 travelers, 80 credits and the
+    room-block request.
   - A trip's capabilities are the best of its owner's tier and any pass on it.
   - Pass credits go to the purchaser's ledger with a 90 day expiry and are spent before
     purchased credits.
@@ -1258,7 +1269,9 @@ paywall before first value, none beside an affiliate card.
 | Invite a collaborator | `free` owner | `trip_pass` ("They join free") |
 | Draft or research out of credits | 0 credits | Credit pack or `plus` |
 | Scheduled routine | Not `pro` | Sample result, credit-based manual run |
-| Polls, splitting, room block | Not group pass | `group_trip_pass` |
+| Polls or cost splitting on a `free` owner's trip | `free` owner | `trip_pass` or `plus` |
+| More than 8 travelers, or room-block request | Not group pass | `group_trip_pass` |
+| Collect payments through Stripe (Phase 4) | Not group pass or `pro` | `group_trip_pass` |
 | Presentation footer and PDF watermark | `free` share | `trip_pass` (soft, at export) |
 | Saving the 9th stay | `free` limit | Keep in "Later", `trip_pass` |
 | 14 days before departure on a `free` trip | Lifecycle | `trip_pass` (email or push, opt-in) |
@@ -1289,7 +1302,7 @@ paywall before first value, none beside an affiliate card.
 #### F-TRV-2 Offline read
 
 - Acceptance: itinerary, stay details, checklist, notes and maps tiles for the trip area are
-  cached for reading; the offline state is shown; edits queue per section 14.2.
+  cached for reading; the offline state is shown; edits queue per section 6.2.
 - Tier: all.
 
 #### F-AFT-1 Delay prompt
@@ -1375,10 +1388,10 @@ applies to the passed trip only.
 | Deep agent run taster | one, lifetime | no | no | no | no | no |
 | Scheduled agent routines | no | no | no | yes, 3 per trip | no | no |
 | Priority queue | no | no | no | yes | no | no |
-| Polls | preview | preview | preview | yes | preview | yes |
-| Expenses and cost splitting | 2 travelers, manual | 2 travelers, manual | 2 travelers, manual | yes | 2 travelers, manual | yes, up to 12 |
-| Stripe settlements | no | no | no | yes | no | yes |
-| Room-block request | no | no | no | yes | no | yes |
+| Polls | on trips that have them (own trip: preview) | yes | yes | yes | yes | yes |
+| Expenses and manual cost splitting | on trips that have them (own trip: preview) | yes, 8 travelers | yes, 8 travelers | yes, 12 travelers | yes, 8 travelers | yes, up to 12 |
+| Stripe settlements (Phase 4) | no | no | no | yes | no | yes |
+| Room-block request | no | no | no | no | no | yes |
 | Concierge request | yes | yes | yes | yes | yes | yes |
 | Data export (JSON, ICS, PDF) | yes | yes | yes | yes | yes | yes |
 | Delete account in app | yes | yes | yes | yes | yes | yes |
@@ -1394,7 +1407,13 @@ Notes:
   pass on that trip; AI credits are charged to the person who starts the action; cached data
   always keeps working when a ceiling hits.
 - `pro` features are built behind a feature flag and appear only when the flag is on.
-- Polls, splitting and room-block are also included for `pro` users on any trip they own.
+- Group tools: polls and manual cost splitting are in every paid plan and both passes, and a
+  `free` user has them on any trip that has them. The Group Trip Pass adds up to 12 travelers and
+  the room-block request. Stripe collection is `group_trip_pass` and `pro` only and arrives in
+  Phase 4.
+- Launch scope: `free`, `plus`, `family`, `trip_pass`, `group_trip_pass` and credit packs are sold
+  at launch; `pro` stays behind its flag until its launch gate; Stripe group payments, advisors,
+  print and LiteAPI are Phase 4.
 
 ## 6. Non-functional requirements
 

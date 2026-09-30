@@ -22,7 +22,7 @@ Principle: test what loses money or trust first (tenant leaks, entitlements, cre
 | iOS smoke | Maestro on simulator, XCUITest for native pieces | Launch, sign in, offline trip, purchase in sandbox, push permission, deep link | Nightly on the main branch, and before every TestFlight build | Zero failures |
 | Migration | CI job | Empty to head, previous release to head, single head, no model drift | Every pull request | Pass |
 | Load | k6 | API and queue targets (section 1.8) | Before Phase 1 gate, before launch, then quarterly | Targets met |
-| Accessibility | `@axe-core/playwright`, VoiceOver manual pass | Web pages, sheets, paywall | Nightly (axe), before each release (manual) | No serious or critical axe findings |
+| Accessibility | `@axe-core/playwright`, a contrast unit test over the token pairs in [05-ui-ux-spec.md](05-ui-ux-spec.md) section 2.3, VoiceOver manual pass | Web pages, sheets, paywall; every token pair including `--tp-edge` (control borders, 3 to 1) and `--tp-warning-ink` (small warning text, 4.5 to 1) | Every pull request (contrast test), nightly (axe), before each release (manual) | No serious or critical axe findings; every token pair meets its ratio |
 
 ### 1.2 Integration test rules
 
@@ -47,6 +47,7 @@ Required integration scenarios (each is a named test file):
 10. Data export contains every table that holds the user's data (checked against a list generated from the schema; a new table without an export rule fails the test).
 11. `/go/{click_id}` never redirects to a host outside `affiliate_link_templates`.
 12. Scheduler: two instances, one leader; 500 due routines fire exactly once; outage of a day fires one check.
+13. Group tools gating: polls and manual cost splitting work for `plus`, `family`, `pro`, `trip_pass` and `group_trip_pass` owners and for a Free invitee on such a trip; a Free owner with no pass gets 402 with the `group_tools` paywall body; the room-block request and a ninth traveler need `group_trip_pass` (`group_pass` paywall); a Stripe settlement is refused unless the trip has `group_trip_pass` or `pro` and the `group_payments` flag is on (Phase 4).
 
 ### 1.3 Tenant-isolation test (the most important test)
 
@@ -114,14 +115,14 @@ Smoke set (runs on every labeled pull request and nightly):
 9. Delete account flow requires re-authentication and lists effects.
 10. Present mode opens full screen and swipes through days.
 
-Full set adds: paywall states for each tier, out-of-credits state, offline banner, 409 conflict UI, share link read-only view, admin console login gate, empty and error states. Every test file also runs an axe scan on its main screen.
+Full set adds: paywall states for each tier, out-of-credits state, offline banner, 409 conflict UI, share link read-only view, admin console login gate, empty and error states. Every test file also runs an axe scan on its main screen, in light and dark, so the `--tp-edge` control borders and `--tp-warning-ink` warning text are checked on real screens.
 
 ### 1.7 iOS tests
 
 - **Capacitor smoke (Maestro, simulator):** cold launch, sign in with a test account, open a cached trip with the network off (airplane mode on the simulator), add a note offline, restore network and see it sync, open `https://app.wayfold.app/i/<token>` as a universal link, accept notification permission after the first invite, purchase `plus_monthly` with a StoreKit configuration file, restore purchases.
 - **XCUITest:** only for native pieces the web view cannot reach: the Sign in with Apple sheet with a sandbox account, the share sheet, the StoreKit purchase sheet, push permission prompts, and the Keychain-backed session after app restart.
 - **Manual device pass before each release** (30 minutes): iPhone 12 or newer on the lowest supported iOS, poor network (Network Link Conditioner), VoiceOver on, Dynamic Type at the largest size, dark mode, low power mode, background app refresh off.
-- **Sandbox purchase matrix:** purchase, cancel, upgrade Plus to Family, downgrade, refund, restore on a second device, billing retry, Trip Pass bound to a trip, credit packs, expired pass. Each row passes before each submission.
+- **Sandbox purchase matrix:** purchase, cancel, upgrade Plus to Family, downgrade, refund, restore on a second device, billing retry, Trip Pass and Group Trip Pass each bound to a trip, credit packs, expired pass. Each row passes before each submission.
 - **Performance budgets:** cold start to interactive under 2 seconds on an iPhone 12 with a cached trip; main JS chunk under 500 kB gzip; crash-free sessions at least 99.5 percent (Sentry).
 
 ### 1.8 Load test targets
@@ -168,7 +169,7 @@ Status values: `build` = must be built and tested before the named gate, `verify
 | V11 Business logic | Credits reserved and settled in one transaction; idempotency keys on purchases, grants and AI actions; per-account ceilings; one agent run at a time; refund reversals; limits on invites, members, text and uploads; no owner or role change through public APIs | Phase 1 |
 | V12 Files | Uploads go straight to R2 with signed URLs, size cap 10 MB, allowed types (JPEG, PNG, WebP, PDF), malware scan job before a file becomes visible, random object keys, no user-controlled paths | Phase 2 |
 | V13 API | Versioned routes; strict CORS list; content types enforced; rate limits per route class; `If-Match` on updates; mass assignment prevented by explicit schemas; OpenAPI is the contract and drift is a CI failure | Phase 1 |
-| V14 Configuration | Hardened container (non-root, read-only file system); `/docs` off in production; security headers (CSP, `X-Content-Type-Options`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, `frame-ancestors 'none'`); separate keys per environment; least-privilege database roles (`wayfold_app`, `wayfold_system`, `wayfold_migrator`, `wayfold_readonly`) | Phase 1 |
+| V14 Configuration | Hardened container (non-root, read-only file system); `/docs` off in production; security headers (CSP, `X-Content-Type-Options`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, `frame-ancestors 'none'`); separate keys per environment; least-privilege database roles (`wayfold_owner` for migrations only, `wayfold_app`, `wayfold_worker`, `wayfold_admin`; see [03-database-schema.md](03-database-schema.md) section 6.1) | Phase 1 |
 
 CSP for the web app: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' fonts.googleapis.com; img-src 'self' data: blob: https://*.tile-host https://upload.wikimedia.org; connect-src 'self' api host, Supabase, PostHog, Sentry; frame-ancestors 'none'`. The exact tile and image hosts are listed in `infra/cloudflare/rules.md` and tested in e2e with CSP violation reporting to Sentry.
 
@@ -230,7 +231,7 @@ The AI `web_fetch` tool is Anthropic's server tool, so it does not run on our ne
 
 - `/go/{click_id}` accepts only an opaque id. There is no `url`, `to`, `next` or `redirect` parameter anywhere.
 - The id refers to a `link_clicks` row created by an authenticated call (`POST /affiliate/clicks`), which names a program, a placement and a destination reference (a stored place, lodging option or route). The redirect target is built on the server from `affiliate_link_templates` plus the destination reference, with a random per-click sub-id. No user id or device id is sent to partners.
-- The built URL is checked against the host allowlist of the program (`affiliate_programs.allowed_hosts`) before the 302. A mismatch logs a security event, returns the user to the trip page and never redirects off-site.
+- The built URL is checked against the host allowlist of the program (`affiliate_programs.hosts`) before the 302. A mismatch logs a security event, returns the user to the trip page and never redirects off-site.
 - Expired (over 15 minutes) or unknown ids redirect to the web app home. Responses send `Referrer-Policy: no-referrer` and `Cache-Control: no-store`.
 - Pasted lodging links are never rewritten and never routed through `/go`; they open directly and carry no disclosure.
 - A test generates 1,000 random and hostile ids and asserts every response is a 302 to an allowlisted host or the app home.
@@ -264,7 +265,7 @@ Every webhook: read the raw body first (before any JSON parsing), verify, insert
 The admin console (see [08-admin-control-center.md](08-admin-control-center.md)) is the most powerful surface, so it has its own controls.
 
 1. **SSO only.** Admins sign in through the company identity provider (OIDC). Only emails on `ADMIN_ALLOWED_DOMAIN` with a matching row in `admin_users` get a session. No passwords, no Supabase Auth users for admins.
-2. **2FA required.** The identity provider enforces a phishing-resistant second factor (passkey or hardware key). An `admin_users` row records `mfa_verified_at`; sessions older than 12 hours or without a recent factor check are refused. Step-up (fresh factor within 10 minutes) is required for refunds, credit grants over 100, flag changes, kill switch changes, user suspension, data export access and deletion.
+2. **2FA required.** The identity provider enforces a phishing-resistant second factor (passkey or hardware key). An `admin_users` row records `mfa_enrolled`; the time of the last factor check comes from the identity provider's token, and sessions older than 12 hours or without a recent factor check are refused. Step-up (fresh factor within 10 minutes) is required for refunds, credit grants over 100, flag changes, kill switch changes, user suspension, data export access and deletion.
 3. **Roles.** `support` (read users and trips by id, view tickets, resend emails), `ops` (kill switches, feature flags, queue tools), `finance` (credits, refunds, affiliate revenue), `owner` (all, manage admins). Two admins must approve granting `owner`.
 4. **Scope of view.** Support sees account metadata by default. Trip contents need a ticket id and a reason, logged, and expire after 30 minutes.
 5. **Audit.** Every admin call writes `audit_log` (admin, action, target, before and after, reason, IP, request id). The log is append-only at the database level (no update or delete grants) and is exported weekly to R2. Alerts fire on off-hours use, bulk actions, and any admin change to `admin_users`.
@@ -358,7 +359,7 @@ Apple guideline 5.1.2(i) requires disclosure and permission before personal data
 
 The concierge lane ("Have a human book this") is fulfilled by an advisor under a host travel agency. Several US states (California, Florida, Hawaii, Washington, Iowa) regulate sellers of travel.
 
-- The concierge feature is behind the flag `concierge`, enabled per region only after counsel confirms the host agency's registration covers that region. The state list is in `concierge_regions` config.
+- The concierge feature is behind the flag `concierge_requests`, enabled per region only after counsel confirms the host agency's registration covers that region. The state list is in `concierge_regions` config.
 - Every request shows who fulfills it: "Booked by [host agency name], seller of travel registration [number]" with the state registrations that apply, in the request screen, the confirmation email and the terms.
 - Wayfold does not hold customer funds for bookings. Payment to suppliers goes through the host agency or the supplier directly. Wayfold's own fee (if any) and commission arrangement are disclosed in plain words before the user submits.
 - Consent is explicit and separate from app terms: the user agrees to share trip details and traveler names needed for booking with the advisor. Passport numbers are never collected in the app.
@@ -382,7 +383,7 @@ The concierge lane ("Have a human book this") is fulfilled by an advisor under a
 | Push | Permission requested in context after the first invite or alert, with a reason screen; no marketing pushes without opt-in |
 | Subscriptions | Price, period, trial length and renewal terms visible on the paywall; Terms and Privacy links; Restore button; easy path to cancel through Apple (guideline 3.1.2) |
 | Auto-renew laws | State rules on cancellation and reminders are handled by Apple for in-app subscriptions; Stripe-billed advisor seats get a renewal reminder email and one-click cancel |
-| Accessibility | Accessibility statement, VoiceOver pass, Dynamic Type, reduced motion, AA contrast; accessibility nutrition labels in App Store Connect if required at submission |
+| Accessibility | Accessibility statement, VoiceOver pass, Dynamic Type, reduced motion, AA contrast (including `--tp-edge` and `--tp-warning-ink`); accessibility nutrition labels in App Store Connect if required at submission |
 | Sales tax and VAT | Apple is merchant of record for in-app purchases. Stripe Tax for advisor seats and print orders |
 | Maps and data attributions | OpenStreetMap, Wikimedia and provider attributions in a licenses screen |
 | Terms of providers | Never fetch Airbnb, Vrbo or Booking.com pages; no scrapers; review SerpApi and Geoapify terms before scaling; cache only within each provider's terms |
@@ -432,7 +433,7 @@ Common properties on every event (not repeated below): `app_version`, `platform`
 | `ai_feedback_given` | `action`, `rating` (`up`, `down`), `reason` (enum) | Thumbs tapped |
 | `fare_marked_wrong` | none | "Price was different" tapped |
 | `credits_low_shown` | `balance_bucket` | Low credit banner shown |
-| `paywall_viewed` | `placement` (`invite`, `live_routes`, `credits`, `trip_limit`, `settings`, `onboarding`), `offer_shown` (list of product codes) | Paywall displayed |
+| `paywall_viewed` | `placement` (a trigger id from [05-ui-ux-spec.md](05-ui-ux-spec.md) section 6.27, such as `invite`, `track_live`, `group_tools`, `group_pass`, `third_trip`, or `settings`, `onboarding`), `offer_shown` (list of product codes) | Paywall displayed |
 | `paywall_dismissed` | `placement` | Closed without purchase |
 | `purchase_started` | `product` (`plus`, `family`, `pro`, `trip_pass`, `group_trip_pass`, `credits_50`, `credits_150`, `credits_400`), `period` | StoreKit sheet shown |
 | `purchase_completed` | `product`, `period`, `is_trial` (bool) | Server confirms entitlement |
@@ -481,7 +482,7 @@ JSON to stdout, one line per event, shipped to Better Stack and kept 14 days hot
 | Business | Signups, activation, invites, paywall conversion, MAU, MRR, credits sold, affiliate clicks and conversions, gross margin per tier |
 | Client | Crash-free sessions (Sentry), cold start time, JS errors, API errors seen by the app |
 
-Platform metrics plus Sentry until 10k MAU, then Prometheus style metrics into Grafana Cloud. The AI and business dashboards are built before launch (Metabase on the read-only role).
+Platform metrics plus Sentry until 10k MAU, then Prometheus style metrics into Grafana Cloud. The AI and business dashboards are built before launch (Metabase on a read replica through a SELECT-only login that is not one of the application roles).
 
 ### 5.3 Alerts
 
@@ -522,10 +523,10 @@ The most likely way to lose money is a runaway agent or a loop. Alerts run from 
 |---|---|---|---|
 | Global daily spend (absolute) | Over `AI_GLOBAL_DAILY_CAP_USD` (launch value $150) | page | Circuit breaker pauses the `ai` and `batch` lanes for non-urgent work and notifies |
 | Global daily spend (relative) | Over 1.5 times the trailing 7 day average after noon UTC | page | None; founder decides |
-| Hourly spend | Over 25 percent of the daily cap in one hour | page | Pause agent runs (`ai_agent_runs`) |
+| Hourly spend | Over 25 percent of the daily cap in one hour | page | Pause agent runs (`ai.agent_runs`) |
 | Single account | Over 3 times its daily ceiling (the ledger should prevent this, so it means a bug) | page | Suspend AI for that account |
 | Single run | Passes its turn, search, fetch or dollar cap | notify | Run stopped by code; alert on any overrun |
-| Free tier spend | Over 30 percent of total daily spend | notify | Consider `ai_free_tier` switch |
+| Free tier spend | Over 30 percent of total daily spend | notify | Consider `ai.free_tier` switch |
 | Cache hit rate | Down 20 points from the 7 day average | notify | None |
 | Anthropic 429 or overloaded rate | Over 5 percent for 10 minutes | notify | Back off the `ai` lane |
 | Refusal rate | Over 3 percent for a feature in a day | notify | Review prompt version |
@@ -565,7 +566,7 @@ Verify every item on the day of submission; Apple policy moves.
 - [ ] Guideline 4.8: Sign in with Apple offered alongside Google.
 - [ ] Guideline 5.1.1(v): in-app account deletion works and revokes the Apple token.
 - [ ] Guideline 5.1.2(i): AI consent screen names the provider and what is sent.
-- [ ] Guideline 3.1.1 and 3.1.2: all digital plans and credits use In-App Purchase; paywall shows price, period, trial terms, Terms and Privacy links and Restore; subscription info localized; review screenshots per product.
+- [ ] Guideline 3.1.1 and 3.1.2: all digital plans and credits (Plus, Family, Trip Pass, Group Trip Pass, credit packs; Pro only when its flag launches) use In-App Purchase; paywall shows price, period, trial terms, Terms and Privacy links and Restore; subscription info localized; review screenshots per product.
 - [ ] Guideline 3.1.3(e): partner links lead to physical travel services used outside the app, labeled as commission links. No web checkout for digital goods.
 - [ ] Guideline 1.2: report and block on shared content and AI answers, contact info, moderation queue.
 - [ ] Guideline 5.6 and 5.1.1: no dark patterns; data collection matches the privacy label.
@@ -645,6 +646,7 @@ Gates match the README roadmap. Each item has an owner (the founder unless noted
 - [ ] AI spend alerts fired in a staging drill; every kill switch exercised.
 - [ ] Anthropic workspace limits set per environment.
 - [ ] Load test at 1,000 users passed (section 1.8 targets, scaled).
+- [ ] Contrast test green for every token pair in 05 section 2.3, including `--tp-edge` and `--tp-warning-ink`; axe clean on the web beta screens in light and dark.
 - [ ] Privacy policy, terms and cookie notice published; AI consent live; export and deletion working.
 - [ ] Sentry, uptime, log shipping and the status page live.
 - [ ] 4-week retention measured and recorded.
@@ -657,7 +659,7 @@ Gates match the README roadmap. Each item has an owner (the founder unless noted
 - [ ] Offline trip verified in airplane mode on a real device.
 - [ ] Account deletion revokes the Apple token (verified in Apple's settings).
 - [ ] App Attest flow verified on a real device; fallback verified.
-- [ ] Accessibility pass with VoiceOver and Dynamic Type.
+- [ ] Accessibility pass with VoiceOver and Dynamic Type, and a check that `--tp-edge` borders and `--tp-warning-ink` text hold their contrast in the native shell in light, dark and Increase Contrast.
 
 ### 7.3 Before public launch (Phase 3 gate)
 
@@ -700,9 +702,9 @@ Each runbook also lives in `docs/runbooks/` as its own file with the same headin
 
 **Contain (first 10 minutes).**
 1. Open the admin AI spend dashboard: spend by hour, feature, tier, account and model.
-2. If a single feature or agent runs is the source, turn on `ai_agent_runs` (or the matching switch). If unclear, turn on `ai_all`. The app shows "AI is paused, your plans are safe".
+2. If a single feature or agent runs is the source, turn on `ai.agent_runs` (or the matching switch). If unclear, turn on `ai.all`. The app shows "AI is paused, your plans are safe".
 3. If one account is the source, suspend its AI from the admin console (reason logged) and check its `runs` for loops.
-4. If the source is free accounts (signup farming), turn on `ai_free_tier` and tighten signup limits (`signups` switch if needed).
+4. If the source is free accounts (signup farming), turn on `ai.free_tier` and tighten signup limits (`signups` switch if needed).
 
 **Find the cause.**
 - Runs over caps (turn, search, fetch, dollar): a bug in the loop or the tool executor. Check `run_events` for repeating tool calls.
@@ -723,7 +725,7 @@ Covers Anthropic, SerpApi, Travelpayouts, Geoapify, Supabase Auth, RevenueCat, S
 
 **Contain.**
 1. Confirm on the provider's status page and with a direct test call from a staging shell.
-2. Turn on the matching kill switch (`provider_<name>`, `ai_all`, `push_all`, `email_all`) only if retries are causing harm (queue growth, spend, user-facing errors). Otherwise let retries with backoff work.
+2. Turn on the matching kill switch (`provider.<name>`, `ai.all`, `push.all`, `email.all`) only if retries are causing harm (queue growth, spend, user-facing errors). Otherwise let retries with backoff work.
 3. Post a status page update.
 
 **Per provider.**
@@ -731,7 +733,7 @@ Covers Anthropic, SerpApi, Travelpayouts, Geoapify, Supabase Auth, RevenueCat, S
 | Provider | User impact and action |
 |---|---|
 | Anthropic | AI paused or queued; credits stay reserved up to 30 minutes then release; cached research still served; consider `ai_force_haiku` if only Sonnet is degraded |
-| SerpApi | Flag `serpapi_live` off; fares fall back to cached Travelpayouts with an age label; no credit charge for empty results |
+| SerpApi | Flag `serpapi_live_fares` off; fares fall back to cached Travelpayouts with an age label; no credit charge for empty results |
 | Travelpayouts | Show last observations; alerts pause; affiliate links still work |
 | Geoapify | Serve `places_cache`; manual place entry still works |
 | Supabase Auth | New sign-ins blocked, existing sessions work (JWKS cached 1 hour, extend the cache window to 24 hours by config if the outage is long); do not sign anyone out; status banner on the sign-in screen |

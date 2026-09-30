@@ -144,7 +144,7 @@ wayfold/
     spec/                         this build specification (copied from business-plan/app-buildout)
     runbooks/                     one file per runbook in 10-quality-security-launch.md
     adr/                          architecture decision records
-  .env.example                    every variable in section 9
+  .env.example                    every variable in section 7
   package.json                    workspaces, root scripts
   pyproject.toml                  uv workspace (apps/api, apps/worker)
   CLAUDE.md
@@ -165,22 +165,22 @@ Each module under `apps/api/wayfold/modules/<name>/` has the same five files: `r
 |---|---|---|---|
 | `auth` | `users`, `auth_identities`, `devices`, `consents`, `data_exports`, `deletion_requests` | JWT verification, user bootstrap on first sign-in, guest claim, devices, consent records, account deletion and export orchestration, App Attest | `notifications`, `credits` (grant on signup) |
 | `trips` | `trips`, `trip_destinations`, `people`, `trip_people`, `checklist_items`, `notes` | Trip CRUD, templates, traveler profiles, checklists, trash and restore, capabilities computed per trip (`trip_capabilities()`) | `billing` (entitlements), `collaboration` |
-| `collaboration` | `trip_members`, `trip_invites`, `trip_share_links`, `polls`, `poll_votes` | Roles, invites, share links, polls, activity feed, optimistic concurrency helpers, ownership transfer | `trips`, `notifications` |
-| `flights` | `flight_routes`, `fare_observations`, `trip_fare_links`, `chosen_flights`, `price_alerts`, `airports`, `fx_rates` | Routes, fare ingest and dedup, cached-fare alerts, live-check scheduling inputs, chosen flight, FX conversion | `ai` (fare hunt), `credits`, `affiliate`, `providers` |
+| `collaboration` | `trip_members`, `trip_invites`, `trip_share_links`, `polls`, `poll_votes`, `activity_log` | Roles, invites, share links, polls (plus, family, pro and both passes), activity feed, optimistic concurrency helpers, ownership transfer | `trips`, `notifications` |
+| `flights` | `flight_routes`, `fare_observations`, `trip_fare_links`, `chosen_flights`, `price_alerts`, `route_price_insights`, `airports`, `fx_rates` | Routes, fare ingest and dedup, cached-fare alerts, live-check scheduling inputs, chosen flight, FX conversion | `ai` (fare hunt), `credits`, `affiliate`, `providers` |
 | `lodging` | `lodging_options`, `lodging_votes` | Shortlist, pasted-link previews (no Airbnb, Vrbo or Booking.com fetches), votes, compare, rental search | `places`, `affiliate`, `providers` |
 | `itinerary` | `itinerary_days`, `itinerary_items` | Days and items, ordering, times and time zones, conflicts, presentation data, calendar feed (ICS) | `places`, `trips` |
 | `places` | `places_cache`, `saved_places` | Geoapify search and details, Wikipedia summaries, map data, cache expiry per provider terms | `providers` |
 | `ai` | `routines`, `runs`, `run_events`, `ai_usage`, `provider_calls`, `shared_research_cache` | `AgentLoop`, tool definitions, prompts, evidence rules, run lifecycle, metering, shared research cache, AI consent check, kill switches for AI | `credits`, `flights`, `trips`, `providers.anthropic` |
-| `billing` | `subscriptions`, `entitlements`, `trip_passes`, `store_transactions`, `webhook_events`, `households`, `household_members` | RevenueCat and Stripe webhooks, entitlement computation, Trip Pass binding, Family household, restore and reconcile | `credits` |
-| `credits` | `credit_ledger`, `credit_grants` | The only writer of credits: grants, reserve, settle, refund, expiry, pooled Family balance, spend ceilings | none (leaf) |
-| `affiliate` | `affiliate_programs`, `affiliate_link_templates`, `link_clicks`, `affiliate_conversions`, `partner_guides` | Link building from stored templates, the `/go/{click_id}` redirect, disclosure flags, conversion import, revenue reports | `providers` |
+| `billing` | `plans`, `store_products`, `subscriptions`, `entitlements`, `trip_passes`, `store_transactions`, `webhook_events`, `households`, `household_members` | RevenueCat and Stripe webhooks, entitlement computation, Trip Pass binding, Family household, restore and reconcile | `credits` |
+| `credits` | `credit_ledger`, `credit_grants`, `credit_action_prices` | The only writer of credits: grants, reserve, settle, refund, expiry, pooled Family balance, spend ceilings | none (leaf) |
+| `affiliate` | `affiliate_programs`, `affiliate_link_templates`, `link_clicks`, `affiliate_conversions`, `affiliate_payouts`, `partner_guides` | Link building from stored templates, the `/go/{click_id}` redirect, disclosure flags, conversion import, revenue reports | `providers` |
 | `concierge` | `concierge_requests`, `room_block_requests` | "Have a human book this" requests, advisor assignment, status, consent and disclosure, seller-of-travel gating by region | `notifications`, `advisors` |
-| `groups` | `expenses`, `expense_shares`, `settlements` | Cost splitting, balances, settle-up through Stripe (never In-App Purchase), currency handling | `billing` (Stripe), `trips` |
+| `groups` | `expenses`, `expense_shares`, `settlements` | Manual cost splitting and balances (every paid tier and both passes, plus Free users on trips that have them), currency handling; settle-up through Stripe only for `group_trip_pass` and `pro`, Phase 4 (never In-App Purchase) | `billing` (Stripe), `trips` |
 | `notifications` | `devices` (read), notification preference and delivery rows | Push, email, digest building, preference checks, quiet hours, collapse ids, unsubscribe | `providers.apns`, `providers.resend` |
 | `admin` | `admin_users`, `feature_flags`, `kill_switches`, `audit_log`, `support_tickets` | Admin console API, feature flags, kill switches, support tools, audit writes | every service (through audited functions) |
 | `advisors` | `advisor_orgs`, `advisor_seats`, `advisor_clients`, `print_orders` | Advisor workspaces, client trips, proposals, seat billing on Stripe, commission tracking | `trips`, `billing`, `affiliate` |
 
-Cross-cutting code (not modules): `security/`, `deps.py`, `errors.py`, `logging.py`, `providers/`. The analytics helper `analytics.capture(event, props)` lives in `wayfold/analytics.py` and validates names against `packages/shared/src/events.ts`.
+Cross-cutting code (not modules): `security/` (owns `rate_limit_counters`), `deps.py`, `errors.py`, `logging.py`, `providers/`. The analytics helper `analytics.capture(event, props)` lives in `wayfold/analytics.py` and validates names against `packages/shared/src/events.ts`.
 
 Boundary rules that tests enforce:
 
@@ -196,7 +196,7 @@ Boundary rules that tests enforce:
 1. **Edge.** Cloudflare terminates TLS, applies WAF and per-IP rate rules, and forwards to Render. The origin accepts traffic only from Cloudflare (authenticated origin pulls). `TRUSTED_PROXY_CIDRS` makes `X-Forwarded-For` trustworthy.
 2. **Middleware order.** Request id (`X-Request-Id`, generated if absent) then access log start, CORS (explicit origins, including `capacitor://localhost`), body size limit (1 MB JSON, uploads go to R2 by signed URL), kill-switch check for maintenance mode, then the route.
 3. **Authentication.** Dependency `CurrentUser` reads `Authorization: Bearer <jwt>` (web also accepts the `wf_session` cookie set by `POST /auth/session`). It verifies the Supabase JWT: signature against the cached JWKS (selected by `kid`, refreshed on unknown `kid` at most once per minute), `iss` equals `SUPABASE_JWT_ISSUER`, `aud` equals `SUPABASE_JWT_AUDIENCE`, `exp` and `nbf` with 30 seconds of skew. It then maps `sub` through `auth_identities` to a `users` row, creating the user and the "Me" person on first sight in one transaction. A user whose status is not `active` gets 401 (`pending_deletion` gets a specific code so the app can offer recovery).
-4. **Session variable.** `DbSession` opens a transaction and runs `SELECT set_config('app.user_id', :uuid, true)` (transaction-local). Row-level security policies on trip-owned tables read `current_setting('app.user_id')`. The API database role has no `BYPASSRLS`. Jobs that act for a user set the same variable; system jobs use a separate role `wayfold_system` with `BYPASSRLS` and are listed in section 6.
+4. **Session variable.** `DbSession` opens a transaction and runs `SELECT set_config('app.user_id', :uuid, true)` (transaction-local). Row-level security policies on trip-owned tables read `current_setting('app.user_id')`. The API database role has no `BYPASSRLS`. Jobs that act for a user set the same variable; system jobs use a separate role `wayfold_worker` with `BYPASSRLS` (see [03-database-schema.md](03-database-schema.md) section 6.1).
 5. **Tenant check.** Every route with a `trip_id` depends on `require_trip(trip_id, min_role)`. It returns a `TripAccess(trip, member, role, capabilities)` object, or raises `NotFound` (404, never 403) when the user is not a member or the trip is in trash. `min_role` is one of `viewer`, `editor`, `owner`. Routes that take a child id (an itinerary item, a lodging option) resolve the child, join up to its trip and then call the same function. No route calls `session.get(Model, id)` on a tenant table. A CI test walks `app.routes` and fails if a path with an id parameter does not resolve through `require_trip` or is not on the public allowlist.
 6. **Entitlement and credit checks.** Routes that cost money call `entitlements.require(capability, trip)` first (402 with a `paywall` body naming the upsell, never a bare error), then `credits.reserve(user, action, trip)` for AI actions. Both are service calls, not decorators, so the order is visible in the code.
 7. **Handler and response.** The handler returns a Pydantic model. Mutations on editable rows use `If-Match` with the row version; a mismatch returns 409 with the latest row. Lists support `updated_since` and ETag for cheap polling.
@@ -249,7 +249,7 @@ Times are UTC unless marked local. "Key" is the idempotency key: a second run wi
 
 | Job | Lane | Trigger | Schedule | Idempotency key | Retries |
 |---|---|---|---|---|---|
-| `scan_due_routines` | api | Scheduler tick | Every 30 seconds (leader only) | `(routine_id, slot_at)` unique on `runs` | none |
+| `scan_due_routines` | api | Scheduler tick | Every 30 seconds (leader only) | `routines.last_slot_at` advanced in the same transaction | none |
 | `check_fare_route` | api | Routine tick, user "refresh", trip pass start | Live routes daily within 120 days of departure, jittered in a 60 minute window by hash of route id | `(route_id, provider, time_bucket_6h)` on `provider_calls` | transient x5 |
 | `refresh_cached_fares` | api | Scheduler | Every 6 hours for routes with `price_alerts` or free cached-fare tracking | `(route_id, bucket_6h)` | transient x5 |
 | `evaluate_price_alerts` | notify | After `check_fare_route` or `refresh_cached_fares` writes `fare_observations` | Event | `(alert_id, observation_id)` | transient x3 |
@@ -276,6 +276,7 @@ Times are UTC unless marked local. "Key" is the idempotency key: a second run wi
 | `purge_trash` | batch | Scheduler | Daily 04:30; hard deletes trips deleted more than 30 days ago | `(trip_id)` | transient x3 |
 | `retention_sweep` | batch | Scheduler | Daily 05:30; invites older than 30 days, IP hashing after 30 days, prompt content older than 30 days, `run_events` payloads older than 14 days, analytics older than 90 days | `(table, day)` | transient x3 |
 | `ai_spend_guard` | api | Scheduler | Every 5 minutes; sums `ai_usage`, trips the global circuit breaker, raises alerts | `(bucket_5m)` | none |
+| `reconcile_anthropic_usage` | batch | Scheduler | Daily 06:30; pulls the Anthropic usage and cost admin API and compares it with `ai_usage` (alert above 3 percent) | `(date)` | transient x3 |
 | `provider_quota_check` | api | Scheduler | Every 30 minutes (SerpApi account API, Geoapify, Travelpayouts rate limits) | `(provider, bucket_30m)` | none |
 | `build_concierge_digest` | notify | Scheduler | Hourly; notifies advisors of new or stale `concierge_requests` | `(request_id, state)` | transient x3 |
 | `send_group_settle_reminders` | notify | Scheduler | Daily 15:00 local; only for `settlements` the user opted into | `(settlement_id, date)` | transient x3 |
@@ -290,8 +291,8 @@ The scheduler is a loop inside `wayfold_worker/scheduler.py`. It enqueues work; 
 2. **Routine scan.** Every 30 seconds the leader runs `SELECT id FROM routines WHERE enabled AND next_run_at <= now() ORDER BY next_run_at LIMIT 500 FOR UPDATE SKIP LOCKED`. For each row it checks the kill switch for the routine's kind, checks the account's budget (reserve in the same transaction), inserts a `runs` row with `slot_at`, defers the job, and advances `next_run_at` to the next cron slot after now (never stacking missed slots). An outage of a day fires one check, not many.
 3. **Jitter.** `next_run_at` = cron slot plus `hash(routine_id) mod window`, window 60 minutes for daily checks. This spreads load and is stable per routine.
 4. **Periodic jobs.** Fixed-schedule jobs in section 5.1 use Procrastinate periodic tasks registered on the leader only, so they never double-fire. Each has the `slot` timestamp as its lock key.
-5. **Live-route eligibility.** A route is scheduled only if the trip's best capability allows it (Plus 3, Family 5, Pro 6, Trip Pass 2 per trip, Group Trip Pass per README), the departure is within 120 days, and the trip pass has live checks left (60 max). When eligibility ends, `next_run_at` is cleared and the route keeps its last fares.
-6. **Scheduled agents.** Off for everyone until Pro. Flag `scheduled_agents` defaults off. The scan skips `routines.kind = 'agent'` while the flag is off.
+5. **Live-route eligibility.** A route is scheduled only if the trip's best capability allows it (Plus 3, Family 5, Pro 6, Trip Pass 2 per trip, Group Trip Pass 2 per trip), the departure is within 120 days, and the trip pass has live checks left (60 max). When eligibility ends, `next_run_at` is cleared and the route keeps its last fares.
+6. **Scheduled agents.** Off for everyone until Pro. Flag `scheduled_agent_routines` defaults off. The scan skips `routines.kind IN ('fare_hunt', 'deep_research')` while the flag is off.
 7. **Observability.** Each tick writes `scheduler_ticks` metrics (due count, enqueued, skipped by reason, tick duration). A heartbeat URL is pinged each minute; a missing ping for 3 minutes pages.
 
 ### 5.3 Provider call flow inside a job
@@ -315,12 +316,12 @@ There is no Redis at launch. Every layer below is in Postgres, in process memory
 | Client query cache | Trip data | TanStack Query, persisted to IndexedDB (SQLite in phase 2) | Query key prefixed by user id | `gcTime` 30 days, `staleTime` 30 seconds on shared trips | Sign-out clears; `updated_since` poll merges |
 | JWKS | Supabase signing keys | Process memory | `kid` | 1 hour, refresh on unknown `kid` (max 1 per minute) | Key rotation |
 | Feature flags and kill switches | `feature_flags`, `kill_switches` | Process memory per instance | Flag key | 15 seconds | `NOTIFY flags_changed` from admin writes refreshes at once |
-| Entitlement cache | Computed tier and capabilities | `users.cached_tier` column plus per-request memo | `user_id` | Recomputed on each webhook and on `reconcile_entitlements` | Webhook processing |
-| Fare and lodging provider results | Provider responses | `provider_calls.payload` (compressed) plus `fare_observations` | `sha256(provider, endpoint, normalized_params, time_bucket)` | Flights 6 hours, lodging and places 24 hours, FX 24 hours | Expiry sweep |
+| Entitlement cache | Computed tier and capabilities | `entitlements` table (`tier_code`, `limits`) plus per-request memo | `user_id` | Recomputed on each webhook and on `reconcile_entitlements` | Webhook processing |
+| Fare and lodging provider results | Provider responses | `provider_calls` (`request_hash`, `cached`) plus `fare_observations` and `places_cache` | `sha256(provider, endpoint, normalized_params, time_bucket)` | Flights 6 hours, lodging and places 24 hours, FX 24 hours | Expiry sweep |
 | Places | Geoapify and Wikipedia results | `places_cache` | provider id | Per provider terms (`expires_at`) | Sweep job |
 | AI shared research | Public web research only | `shared_research_cache` | `(destination, month, interest_bucket, model, prompt_version)` | 7 days | Prompt version bump; admin purge |
 | Anthropic prompt cache | System prompt, tool definitions, trip context prefix | Anthropic side | Prefix | 5 minutes, refreshed on use | Automatic |
-| Rate limit counters | Token buckets | Postgres table `rate_limits` (unlogged) | `(subject, route_class)` | Sliding window | Redis replaces at about 10k MAU |
+| Rate limit counters | Token buckets | Postgres table `rate_limit_counters` (unlogged) | `(subject, route_class)` | Sliding window | Redis replaces at about 10k MAU |
 
 Rules: the shared caches hold only public facts (prices, places, web research), never notes, itineraries or names. A cache hit costs the user the lower credit price where the README says so (`research` 1 credit, `agent_run` 8 credits). Cache hit rate is tracked per provider and per AI action; the target above 60 percent at 10k MAU.
 
@@ -353,11 +354,11 @@ All configuration is environment variables, read once in `config.py` through `py
 
 | Name | Purpose | Example | Secret |
 |---|---|---|---|
-| `DATABASE_URL` | App role connection (DML only, no `BYPASSRLS`) | `postgresql+psycopg://wayfold_app:...@host/wayfold` | Yes |
-| `DATABASE_URL_SYSTEM` | System role for jobs that cross tenants | `postgresql+psycopg://wayfold_system:...` | Yes |
-| `MIGRATION_DATABASE_URL` | DDL role, used only by `migrate` | `postgresql+psycopg://wayfold_migrator:...` | Yes |
+| `DATABASE_URL` | App role connection (DML only, no `BYPASSRLS`) | `postgresql+psycopg://wayfold_api_login:...@host/wayfold` | Yes |
+| `DATABASE_URL_SYSTEM` | System role for jobs that cross tenants | `postgresql+psycopg://wayfold_worker_login:...` | Yes |
+| `MIGRATION_DATABASE_URL` | DDL role, used only by `migrate` | `postgresql+psycopg://wayfold_owner:...` | Yes |
 | `DATABASE_POOL_SIZE` / `DATABASE_MAX_OVERFLOW` | Pool size per process | `10` / `5` | No |
-| `DATABASE_STATEMENT_TIMEOUT_MS` | Per-statement timeout (migrator overrides) | `15000` | No |
+| `DATABASE_STATEMENT_TIMEOUT_MS` | Per-statement timeout (the migration role overrides) | `15000` | No |
 | `TEST_DATABASE_URL` | Test database; CI and local only | `postgresql+psycopg://wayfold:...@localhost/wayfold_test` | Yes |
 | `REDIS_URL` | Empty until Redis is added (about 10k MAU) | empty | Yes |
 
@@ -406,7 +407,7 @@ All configuration is environment variables, read once in `config.py` through `py
 | `TRAVELPAYOUTS_MARKER` | Affiliate marker (appears in partner URLs) | `123456` | No |
 | `VIATOR_API_KEY` | Viator partner API | random | Yes |
 | `STAY22_AID` | Stay22 affiliate id | `wayfold` | No |
-| `SERPAPI_API_KEY` | Live fares and rentals, behind flag `serpapi_live` | random | Yes |
+| `SERPAPI_API_KEY` | Live fares and rentals, behind flag `serpapi_live_fares` | random | Yes |
 | `SERPAPI_MONTHLY_CAP` | Global search cap | `5000` | No |
 | `GEOAPIFY_API_KEY` | Places and geocoding | random | Yes |
 | `WIKIMEDIA_CONTACT` | Required contact for Wikipedia API | `support@wayfold.app` | No |
@@ -456,14 +457,14 @@ All configuration is environment variables, read once in `config.py` through `py
 | Service | Purpose | Failure behavior |
 |---|---|---|
 | Supabase Auth | Sign-in (Apple, Google, email code), JWT issuing | Existing sessions keep working (JWKS cached, tokens verified locally). New sign-ins fail with a friendly screen and a status link. Email code delivery goes through Resend SMTP |
-| Anthropic Claude API | All AI features | Non-urgent `ai` lane pauses on repeated 429 or 5xx; users see "queued, we will finish this when the service recovers" and credits stay reserved up to 30 minutes, then release. Cached data keeps working. Kill switch `ai_all` |
+| Anthropic Claude API | All AI features | Non-urgent `ai` lane pauses on repeated 429 or 5xx; users see "queued, we will finish this when the service recovers" and credits stay reserved up to 30 minutes, then release. Cached data keeps working. Kill switch `ai.all` |
 | Anthropic Batch API | Cache warming | Missed night means stale research; the next night catches up |
 | Render | Compute and Postgres | Multi-instance API survives one instance loss. Regional outage: status page, restore plan in the runbook |
 | Cloudflare (DNS, WAF, Pages, R2) | Edge, web hosting, storage | Pages outage: the iOS app still works because it is bundled. R2 outage: uploads and exports fail with retry, trips keep working |
 | RevenueCat | Purchases, entitlement events | Webhook backlog delays unlock; `POST /purchases/sync` gives instant unlock for the buyer. Outage: entitlements come from our own table, so nothing locks. Reconcile job catches up |
 | Stripe | Advisor seats, group payments, print orders | Payment buttons show "temporarily unavailable"; no digital feature depends on it |
 | Travelpayouts | Cached fares and affiliate network | Fare cards show last observation with its age; alerts pause; affiliate links still work |
-| SerpApi | Live fares and rentals, flag `serpapi_live` | Flag off or quota out: live checks fall back to cached fares and say so; credits are not charged for an empty result |
+| SerpApi | Live fares and rentals, flag `serpapi_live_fares` | Flag off or quota out: live checks fall back to cached fares and say so; credits are not charged for an empty result |
 | Geoapify | Places and geocoding | Serve `places_cache`; search shows "search is limited right now"; manual place entry still works |
 | Wikipedia and Wikimedia | Destination summaries and photos | Skip the summary; no error shown |
 | Frankfurter | FX rates | Use the last stored `fx_rates` row, show its date |
@@ -533,32 +534,33 @@ Both live in Postgres (`feature_flags`, `kill_switches`), are cached 15 seconds 
 
 | Key | Controls |
 |---|---|
-| `scheduled_agents` (off) | Pro scheduled agent routines |
-| `pro_tier` (off) | Pro products visible and purchasable |
-| `serpapi_live` (off until terms audit passes) | Live fare and rental provider |
-| `concierge` (off until seller-of-travel registration is confirmed per region) | Concierge requests |
-| `group_payments` (off) | Stripe settle-up |
-| `advisors` (off) | Advisor seats and workspaces |
+| `scheduled_agent_routines` (off) | Pro scheduled agent routines |
+| `tier_pro` (off) | Pro products visible and purchasable |
+| `serpapi_live_fares` (off until terms audit passes) | Live fare and rental provider |
+| `concierge_requests` (off until seller-of-travel registration is confirmed per region) | Concierge requests |
+| `group_payments` (off; Phase 4) | Stripe collection for `group_trip_pass` and `pro` |
+| `advisor_workspaces` (off) | Advisor seats and workspaces |
 | `inapp_hotel_booking` (off) | LiteAPI booking, later |
+| `room_block_requests` (on) | Room-block request on Group Trip Pass trips |
 | `print_orders` (off) | Printed trip books |
 | `poll_comments` (off) | Comments and mentions |
-| `research_shared_cache` (on) | Shared research cache reads and writes |
+| `shared_research_cache` (on) | Shared research cache reads and writes |
 | `min_app_version` (value) | Forces update below a version |
 
 **Kill switches** (operational control, default off; turning one on disables the thing)
 
 | Key | Effect |
 |---|---|
-| `ai_all` | Pauses the `ai` lane; AI buttons show "AI is paused, your plans are safe" |
-| `ai_agent_runs` | Blocks `agent_run` only |
-| `ai_free_tier` | Blocks AI for Free accounts |
-| `ai_web_search` | Runs without server web search and fetch tools |
-| `ai_force_haiku` | Uses the fast model for every feature that allows it |
-| `provider_<name>` | Disables one provider (`serpapi`, `travelpayouts`, `geoapify`, `viator`, `stay22`, `frankfurter`) |
-| `affiliate_<program>` | Hides one program's cards and stops new clicks for it |
-| `push_all`, `email_all` | Stops sending |
+| `ai.all` | Pauses the `ai` lane; AI buttons show "AI is paused, your plans are safe" |
+| `ai.agent_runs` | Blocks `agent_run` only |
+| `ai.free_tier` | Blocks AI for Free accounts |
+| `ai.web_search` | Runs without server web search and fetch tools |
+| `ai.force_haiku` | Uses the fast model for every feature that allows it |
+| `provider.<name>` | Disables one provider (`serpapi`, `travelpayouts`, `geoapify`, `viator`, `stay22`, `frankfurter`) |
+| `affiliate.<program_code>` | Hides one program's cards and stops new clicks for it |
+| `push.all`, `email.all` | Stops sending |
 | `signups` | Stops new account creation (existing users unaffected) |
-| `webhooks_process` | Keeps receiving webhooks but pauses processing, for a safe replay |
+| `webhooks.process` | Keeps receiving webhooks but pauses processing, for a safe replay |
 | `maintenance` | Read-only mode: writes return 503 with a friendly body |
 
 Practice every switch in staging each quarter. Anthropic workspace spend limits are the backstop outside our code.
@@ -582,7 +584,7 @@ Paths are under `backend/tripplanner/` and `frontend/src/` in the current repo. 
 | `cli.py` | Adapt | `cli.py` | Keep the typer or argparse shape; commands become `api`, `worker`, `scheduler`, `migrate`, `seed`, `openapi` |
 | `migrations/` (7 revisions) | Drop history, keep `env.py` | `migrations/` | Start Wayfold with a new baseline from [03-database-schema.md](03-database-schema.md); the 7 existing revisions are replaced by one baseline plus a one-off data import script |
 | `models/base.py` | Adapt | `modules/*/models.py` base | Keep the declarative base; switch to UUIDv7 public ids and `timestamptz` |
-| `models/trip.py`, `people.py` | Adapt | `trips`, `people`, `trip_people` | Add owner, `public_id`, `deleted_at`, `owner_user_id`, `linked_user_id`; `trip_travelers` becomes `trip_people` |
+| `models/trip.py`, `people.py` | Adapt | `trips`, `people`, `trip_people` | Add `deleted_at`, `owner_user_id`, `linked_user_id` (the UUIDv7 `id` is the public id); `trip_travelers` becomes `trip_people` |
 | `models/flights.py` | Adapt | `flight_routes`, `fare_observations`, `trip_fare_links`, `chosen_flights`, `price_alerts` | Logic is sound; add tenant scope, cache keys and alert rows |
 | `models/itinerary.py` | Adapt | `itinerary_days`, `itinerary_items` | Rename Activity to item, add created-by, row `version` on all editable rows |
 | `models/lodging.py` | Adapt | `lodging_options`, `lodging_votes` | Votes gain `user_id` |
@@ -610,7 +612,7 @@ Paths are under `backend/tripplanner/` and `frontend/src/` in the current repo. 
 | `services/app_settings.py` | Drop | `feature_flags` | Global key value store replaced by flags and per-user settings |
 | `services/enrichment.py`, `airports.py`, `fx.py`, `presentation.py` | Reuse | Module services | Self-contained and tenant-neutral; `fx.py` writes `fx_rates` |
 | `providers/travelpayouts.py` | Reuse | `providers/travelpayouts.py` | Plus affiliate marker support |
-| `providers/serpapi.py`, `serpapi_rentals.py` | Adapt | `providers/serpapi.py` | Keep behind `serpapi_live`; add `provider_calls` recording and cache keys |
+| `providers/serpapi.py`, `serpapi_rentals.py` | Adapt | `providers/serpapi.py` | Keep behind `serpapi_live_fares`; add `provider_calls` recording and cache keys |
 | `providers/geoapify.py`, `geoapify_places.py` | Reuse | `providers/geoapify.py` | Add `provider_calls` and cache expiry |
 | `providers/wikipedia.py`, `frankfurter.py` | Reuse | Same names | Small and generic |
 | `providers/link_preview.py` | Adapt | `providers/link_preview.py` | Add SSRF protection (resolved IP checks, redirect limits), refuse Airbnb, Vrbo and Booking.com hosts, legal review before scaling |
