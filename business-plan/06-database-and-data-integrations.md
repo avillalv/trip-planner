@@ -1,0 +1,511 @@
+# Database and data integrations
+
+Part of the [business plan](README.md). The decisions of record in the README override anything here.
+
+Written 2026-09-30. Scope: schema, tenancy, migrations, data providers, caching, affiliate tracking, retention. Related files: [02-pricing-tiers.md](02-pricing-tiers.md) (tiers and credits), [03-ai-features-and-costs.md](03-ai-features-and-costs.md) (AI cost and controls), [04-users-and-accounts.md](04-users-and-accounts.md) (sign-in, sharing, deletion), [05-infrastructure.md](05-infrastructure.md) (hosting and jobs), [07-local-to-app-store.md](07-local-to-app-store.md) (purchases and roadmap).
+
+Several provider sites (serpapi.com, geoapify.com, duffel.com) could not be read directly on 2026-09-30, so their pricing and terms come from search summaries. Anything not read on a primary page is labeled "reported, verify" with the date checked.
+
+## 1. Current schema
+
+The app uses Alembic (7 migrations in `backend/tripplanner/migrations/versions/`, applied at `serve` startup after a backup). Every table is single-household: no user or tenant column anywhere. `trips` is the root; almost everything hangs off `trip_id` with `ON DELETE CASCADE`.
+
+| Table | One-line description | Target scope |
+|---|---|---|
+| `people` | Two named travelers (name, color, home airports) | Kept. Gains `owner_user_id` and `linked_user_id` |
+| `trips` | Trip root: name, status, home currency, notes | Tenant (owned by a user, shared via `trip_members`) |
+| `trip_travelers` | Association trip to people | Tenant, unchanged |
+| `trip_destinations` | Destinations with Geoapify id, bbox, Wikipedia summary and image | Tenant row; enrichment fields come from the shared cache |
+| `flight_routes` | A watched route: origin and destination code arrays, pax, cabin, sources, alert price, chosen quote | Tenant (trip) |
+| `flight_quotes` | One observed fare per check (price, currency, airline, booking URL, dedupe_key, raw JSONB) | Tenant view over a shared observation (2.6) |
+| `route_price_insights` | Google price level, typical range, history JSONB per route | Shared (keyed by market, not trip) |
+| `fx_rates` | EUR-based rates from Frankfurter | Global |
+| `airports` | OurAirports seed (IATA, name, city, country, kind) | Global reference |
+| `itinerary_days` | Per-trip day title, notes, destination | Tenant |
+| `activities` | Itinerary items with place provider, id, data JSONB, optimistic `version` | Tenant |
+| `places_cache` | Key to response JSONB with `expires_at` (Geoapify, Wikipedia, SerpApi rentals) | Global; becomes `shared_research_cache` |
+| `lodging_options` | Candidate stays with URL, price, photos, notes, status; unique per trip and normalized URL | Tenant |
+| `lodging_votes` | Person votes on lodging | Tenant |
+| `routines` | Scheduled jobs per trip (cron, timezone, config) | Tenant |
+| `runs` | One agent or check execution (status, prompt, report, cost_usd_est, log_path) | Tenant |
+| `run_events` | Streamed events per run | Tenant (high volume, partition or TTL) |
+| `agent_notes` | Findings the agent saved to a trip with sources | Tenant |
+| `ingest_rejections` | Agent output rejected by validation | Tenant (or ops only) |
+| `api_calls` | Provider, endpoint, units, cached, ok, status_code, timestamp; used by the SerpApi budget | Global ops ledger; gains account attribution (2.5) |
+| `app_settings` | Key/value JSONB (SerpApi cap, account sync) | Split: global config vs per-user prefs |
+| `worker_heartbeat` | Single-row worker liveness | Global ops |
+
+Observations that shape the design:
+- `flight_quotes` stores `price_home` and `home_currency` per row. That is per-user presentation data mixed into a provider observation. Convert at read time, or keep it as a derived column on the tenant side only.
+- `flight_quotes.raw` and `lodging_options.raw` hold provider payloads. Storing raw SerpApi or Google payloads long term is a terms risk (section 4), so retention is short.
+- `run_events` and `runs.report` are the biggest growth tables at scale and need retention (section 7).
+- `places_cache` already proves the pattern (hash key, provider, JSONB, TTL). Generalize it instead of inventing a second cache.
+
+## 2. Target schema
+
+### 2.1 Tenancy model
+
+The tenant is the **user account**, and **trips are shared through membership**. There is no organization or household table in v1: a household is a trip with two members. If family plans are wanted later, add `workspaces`; `owner_user_id` on trips makes that a backfill, not a rewrite.
+
+The existing `people` table stays. A person is a traveler on a trip even if they never sign in (a child, a friend). It gains two columns, and access control moves to a new `trip_members` table:
+
+- `people.owner_user_id`: the account that created and manages this person row.
+- `people.linked_user_id`: set when the person is a real account (an invitee who joined, or the owner's own profile person). Null for travelers without accounts.
+- `trip_members` decides who can open a trip. `people` and `trip_travelers` describe who is travelling. The two are joined only through `people.linked_user_id`.
+
+Scoping rule for every table:
+- **Global (no tenant column):** `airports`, `fx_rates`, `shared_research_cache`, `fare_observations`, `route_price_insights`, the plan catalog.
+- **Trip-scoped (access via `trip_members`):** everything that today has `trip_id`. Do not add `user_id` to these; check membership through the trip. Keeping `trip_id` on children keeps queries and RLS policies cheap.
+- **Account-scoped:** `users`, `people` (by `owner_user_id`), `user_devices`, `subscriptions`, `trip_passes`, `entitlements`, `ai_usage`, `credit_grants`, `user_prefs`.
+
+### 2.2 Identity and sharing tables
+
+Sign-in is Supabase Auth only (Sign in with Apple, Google, email code). Our own `users` table lives in our own Postgres and holds the Supabase user id; see [04-users-and-accounts.md](04-users-and-accounts.md).
+
+```sql
+users (
+  id uuid pk default gen_random_uuid(),
+  auth_subject text unique,         /* Supabase Auth user id (JWT sub) */
+  email text, email_is_relay bool,  /* Apple private relay is common */
+  display_name text, home_currency char(3), locale text,
+  created_at timestamptz, deleted_at timestamptz  /* soft delete then hard purge */
+)
+people (                            /* existing table, two new columns */
+  id, name, color, home_airports,
+  owner_user_id uuid references users,   /* not null after backfill */
+  linked_user_id uuid references users null,
+  unique (owner_user_id, linked_user_id)
+)
+user_devices (id, user_id fk, apns_token, platform, last_seen_at)  /* push for fare alerts */
+trip_members (
+  trip_id fk, user_id fk, role text check (role in ('owner','editor','viewer')),
+  joined_at, primary key (trip_id, user_id)
+)
+invites (
+  id, trip_id fk, invited_by fk users, token_hash text unique,  /* store hash only */
+  role text, email text null, expires_at, accepted_by fk users null, accepted_at
+)
+```
+- Joining a trip creates a `trip_members` row and, if the user has no person row yet, a `people` row with `linked_user_id` set, plus a `trip_travelers` row. Existing `trip_travelers` rows and `lodging_votes.person_id` keep working unchanged.
+- Example, "who is on this trip and which of them have accounts":
+  ```sql
+  select p.id, p.name, p.linked_user_id, m.role
+  from trip_travelers tt
+  join people p on p.id = tt.person_id
+  left join trip_members m on m.trip_id = tt.trip_id and m.user_id = p.linked_user_id
+  where tt.trip_id = :trip_id;
+  ```
+- Add `owner_user_id` to `trips` for the free-tier trip limit (2 active) and for billing attribution. Only the trip owner pays; invitees join free and get the owner's tier on that trip.
+- Invites use link tokens (Universal Links on iOS); store only a hash, 7 day expiry, single use.
+
+### 2.3 Subscriptions, Trip Pass and entitlements
+
+Apple is the source of truth. Sync through **RevenueCat webhooks** over StoreKit 2 (it handles receipt validation, grace periods, refunds, and Android later), with our own tables as a read model. Products: Plus monthly and annual (7-day trial on annual only), Trip Pass, three credit packs. Premium is built behind a flag and launches later (see [02-pricing-tiers.md](02-pricing-tiers.md)).
+
+```sql
+subscriptions (                   /* Plus now; Premium rows only once the flag is on */
+  id, user_id fk, provider text default 'revenuecat',
+  original_transaction_id text unique, product_id text,
+  tier text check (tier in ('plus','premium')),
+  status text,   /* active, in_grace, billing_retry, expired, refunded, revoked */
+  period_start, period_end, auto_renew bool, environment text,  /* sandbox | production */
+  last_event_at, raw_last_event jsonb
+)
+trip_passes (                     /* non-renewing subscription in StoreKit, bound to a trip here */
+  id, trip_id fk, purchaser_user_id fk, original_transaction_id text unique,
+  starts_at, expires_at,          /* 90 days */
+  live_routes_max smallint default 2, live_checks_max smallint default 60,
+  live_checks_used smallint default 0, collaborators_max smallint default 6,
+  status text                     /* active, expired, refunded */
+)
+entitlements (
+  user_id pk fk, tier text default 'free', source_subscription_id fk null,
+  valid_until timestamptz,
+  limits jsonb,   /* snapshot: active_trips, live_routes, credits_per_month, collaborators */
+  updated_at
+)
+webhook_events (id text pk /* provider event id */, provider, received_at, processed_at, payload jsonb)
+```
+- **Effective tier on a trip** is the higher of the owner's tier and any active `trip_passes` row for that trip. Invitees are evaluated against the trip owner, never their own tier, for trip features (live routes, collaborators).
+- Limits by tier (from the README): Free 2 active trips, 1 cached-fare route per trip, 8 credits a month, 1 alert on cached fares. Plus unlimited trips (fair use 25), 3 live routes checked daily within 120 days of departure, 40 credits a month. Trip Pass 2 live routes, at most 60 live checks, 40 credits, up to 6 collaborators, 90 days. Premium (flagged off) 6 live routes, 240 credits a month.
+- The pass is bound to the trip on the server: the purchase flow sends `trip_id`, the webhook writes `trip_passes`, and a pass cannot move to another trip.
+- `webhook_events.id` as primary key gives idempotency: insert first, skip on conflict.
+- The backend reads `entitlements` and `trip_passes` only and never calls Apple on a request. A nightly reconcile job re-pulls RevenueCat for users whose `valid_until` is near.
+- `limits jsonb` is derived from a plan constant in code, so changing a quota needs no migration.
+
+### 2.4 AI credit ledger
+
+**One credit is a budget of up to $0.02 of provider spend** (Claude, SerpApi, Geoapify). Users are charged a fixed number of credits per action, not per token:
+
+| Action | Credits |
+|---|---|
+| Haiku explain | 1 |
+| Live flight or rental search | 1 |
+| Itinerary day | 1 |
+| Whole-trip draft | 4 |
+| Research question | 8 (1 if served from the shared cache) |
+| Deep agent run | 40, hard stop at $0.80 (Premium later) |
+
+Two tables hold usage, plus a grants table:
+
+```sql
+ai_usage (                              /* append-only, partition by month */
+  id bigint identity, user_id fk, trip_id fk null, run_id uuid null,
+  feature text,                          /* 'explain','search','itinerary_day','trip_draft','research','agent_run' */
+  model text, input_tokens int, output_tokens int,
+  cache_read_tokens int, cache_write_tokens int, via_batch bool default false,
+  cost_usd_micros bigint,                /* what it cost us: Claude plus provider calls */
+  credits_reserved int, credits_charged int,
+  state text,                            /* 'reserved','settled','released' */
+  cache_hit bool default false,          /* shared research cache: charged 1 credit */
+  idempotency_key text unique, created_at timestamptz, settled_at timestamptz
+)
+credit_grants (
+  id, user_id fk, kind text,             /* 'monthly','trip_pass','purchase','promo' */
+  credits int, remaining int, trip_id fk null,   /* trip_pass grants only spend on that trip */
+  expires_at, source_txn text
+)
+```
+- **Reserve, then settle.** Before an action starts, reserve its full credit price in one atomic statement (`UPDATE credit_grants ... WHERE remaining >= :n`, spending in the order below) and insert an `ai_usage` row in state `reserved`. When the work finishes, settle: mark `settled`, set `credits_charged`, and record `cost_usd_micros`. If the action fails before delivering a result, mark it `released` and return the credits. A sweeper releases reservations older than the run cap (agent runs cap at 20 turns and $0.80). This prevents overspend under concurrency without long locks.
+- **Spend order:** monthly grants first, then Trip Pass grants (for that trip), then purchased packs last. Purchased credits last 12 months (packs: 50, 150, 400).
+- Monthly reset is a new grant row (Free 8, Plus 40), never a mutation of history. Balance is `sum(remaining)` over unexpired grants, which is cheap because each user has a handful of rows.
+- **Who pays:** the account that starts the action. On a shared trip, an invitee's AI actions spend the invitee's credits.
+- `cost_usd_micros` against `credits_charged * 20000` is the margin check: if settled cost regularly exceeds the $0.02 unit per credit, the prices in [02-pricing-tiers.md](02-pricing-tiers.md) are wrong. Deep agent runs and research questions enforce their own hard stops ($0.80 and $0.16) inside the worker, see [03-ai-features-and-costs.md](03-ai-features-and-costs.md).
+- `runs.cost_usd_est` stays as an operational number; `ai_usage` is the billing-grade record.
+
+### 2.5 Provider call ledger and account ceilings
+
+Rename and extend `api_calls` to `provider_calls`, keeping the existing columns so `serpapi_budget.py` keeps working during the transition.
+
+```sql
+provider_calls (
+  id bigint identity, provider text, endpoint text,
+  user_id uuid null, trip_id int null, run_id uuid null,
+  units numeric default 1, cost_usd_micros bigint null,   /* our cost for the call */
+  cached bool, cache_layer text null,   /* 'db','memory','provider' */
+  ok bool, status_code int, latency_ms int,
+  request_hash text,                    /* the cache key, for dedup analytics */
+  created_at timestamptz
+) partition by range (created_at);      /* monthly */
+create index on provider_calls (provider, created_at);
+create index on provider_calls (user_id, provider, created_at);
+```
+The quota manager has three scopes:
+1. **Global provider cap** from the plan we pay for (replaces the constant 240; keep the daily fair-share logic in `serpapi_budget.py`).
+2. **Per-account provider-spend ceiling**, summed from `provider_calls.cost_usd_micros` and `ai_usage.cost_usd_micros` for the acting account:
+
+   | Tier | Monthly ceiling | Daily ceiling |
+   |---|---|---|
+   | Free | $0.25 | $0.05 |
+   | Plus | $1.75 | $0.40 |
+   | Trip Pass | $1.80 per pass | $0.40 |
+   | Premium (later) | $5.50 | $1.25 |
+
+   Cached data keeps working when a ceiling is hit. A credit balance never overrides a ceiling.
+3. **Credit reservation** (2.4), checked first because it is the user-visible limit.
+
+Counting with `sum(cost_usd_micros)` over one month partition is fine to about 1M rows a month. Until Redis is added (about 10k MAU) keep counters in Postgres and reconcile from this table; after that, hot counters can live in Redis. Rows with `cached=true` stay because the cache hit rate is the key business metric.
+
+### 2.6 Shared caches and fare observations
+
+**`shared_research_cache`** (generalized `places_cache`):
+```sql
+shared_research_cache (
+  key char(64) pk,              /* sha256 of normalized request */
+  kind text,                    /* 'geo_search','wiki','rentals','ai_research','destination_brief' */
+  provider text, params jsonb,  /* normalized input, for debugging and invalidation */
+  response jsonb, response_bytes int,
+  fetched_at, expires_at, stale_until,   /* stale-while-revalidate window */
+  hit_count int default 0, last_hit_at,
+  model text null, prompt_version text null   /* AI entries: bump version to invalidate */
+)
+create index on shared_research_cache (kind, expires_at);
+```
+AI research entries hold only content derived from public facts (destination briefs, "best areas to stay", visa-free summaries), never a user's private notes or trip data. Key on normalized destination, month and prompt version, never on user text. A hit on a research question costs the user 1 credit instead of 8. The batch API warms this cache offline (see [03-ai-features-and-costs.md](03-ai-features-and-costs.md)).
+
+**`fare_observations`** (the main dedup win; the source of truth instead of per-trip copies):
+```sql
+fare_observations (
+  id bigint identity,
+  origin char(3), destination char(3),            /* single airports; multi-airport routes expand */
+  depart_date date, return_date date null,
+  cabin text, adults smallint, children smallint, stops_max smallint,
+  source text, confidence text,                    /* 'serpapi_live' | 'travelpayouts_cache' */
+  currency char(3), price_total numeric(12,2),
+  airlines text[], stops smallint, duration_min int,
+  deep_link_template text,                         /* provider link, wrapped at click time */
+  observed_at timestamptz, expires_at timestamptz,
+  search_key char(64)                              /* hash of the full normalized query */
+) partition by range (observed_at);
+create index on fare_observations (origin, destination, depart_date, return_date, cabin, observed_at desc);
+create unique index on fare_observations (search_key, source, observed_at);
+```
+- `flight_quotes` becomes a thin tenant table: `route_id`, `observation_id`, and the user-specific fields (`hidden`, `suspect`, `price_home`, chosen flag). A quote row costs a few dozen bytes instead of a JSONB blob.
+- Lookup order for a route check: (1) a fresh `fare_observations` row for `search_key` within TTL, (2) Travelpayouts cache (free), (3) a live provider (SerpApi behind its flag, later a licensed source) only if the route is live-tracked for that trip, the account is under its ceiling, and no fresh observation exists. Step 1 turns 1,000 users watching LHR to JFK next June into one live call per TTL window.
+- Free-tier routes and alerts use cached fares only. Live routes are a Plus or Trip Pass feature; a live search or check costs 1 credit and counts toward the Trip Pass 60-check limit (`live_checks_used`).
+- Redistribution caveat: sharing an observation between users of our own app is internal reuse, but show it as "price seen at [time] from [source]", never as a bookable guarantee (see section 4).
+
+### 2.7 Tenant columns and indexes
+
+| Table | Change |
+|---|---|
+| `trips` | add `owner_user_id uuid not null`, index `(owner_user_id, status)`, `deleted_at` |
+| `people` | add `owner_user_id`, `linked_user_id`; index `(linked_user_id)` |
+| `trip_members` | pk `(trip_id, user_id)`, secondary index `(user_id, trip_id)` (the "my trips" query) |
+| all trip-child tables | keep `trip_id` index; add composite indexes where lists are sorted, for example `(trip_id, created_at desc)` |
+| `routines` | add `owner_user_id` (who is billed for the checks) and `kind` (`price_check`, `batch_scan`, `agent`); the `agent` kind is rejected until Premium launches; index `(enabled, next_run_at)` |
+| `runs` | add `user_id`; index `(user_id, queued_at desc)`; partition or TTL for `run_events` |
+| `api_calls` to `provider_calls` | as above |
+| `app_settings` | keep for global config; move per-user settings to `user_prefs (user_id, key, value)` |
+
+Add an opaque UUID `public_id` (UUIDv7) to `trips` and other exposed entities before launch. Sequential integer ids in URLs and API paths invite enumeration, and non-colliding ids make merging or sharding later easier. Internal joins can keep bigint identity; expose only `public_id`.
+
+### 2.8 Row-level security: yes, as a second layer
+
+Enable Postgres RLS on all tenant tables, but do not rely on it alone. Application-level authorization (a dependency that loads the trip and checks membership) stays the primary control.
+
+Why:
+- One missing `WHERE trip_id IN (...)` in a future endpoint is the most likely cause of a cross-tenant leak. RLS turns that into an empty result instead of an incident.
+- Policies are short because every child table has `trip_id`.
+
+```sql
+alter table activities enable row level security;
+alter table activities force row level security;
+create policy tenant_isolation on activities
+  using (trip_id in (select trip_id from trip_members where user_id = current_setting('app.user_id')::uuid));
+
+create policy owner_or_shared on people
+  using (owner_user_id = current_setting('app.user_id')::uuid
+         or id in (select person_id from trip_travelers
+                   where trip_id in (select visible_trip_ids())));
+```
+Per request, the app runs `SET LOCAL app.user_id = '<uuid>'` inside the transaction (this works with PgBouncer transaction pooling because it is `LOCAL`). Workers and admin jobs use a separate role with `BYPASSRLS` and must set trip and user context explicitly.
+
+Costs and mitigations:
+- A policy subquery per row can slow scans. Use the `(user_id, trip_id)` index on `trip_members` and a `SECURITY DEFINER` helper `visible_trip_ids()` marked `STABLE`.
+- The test suite must run once as a restricted role (pytest today runs as owner, which silently bypasses RLS). Add a "tenant A cannot see tenant B" test per table, generated from `Base.metadata`.
+- Global tables get no RLS, but the app role gets `SELECT` only on them; writes go through the worker role.
+
+## 3. Migration strategy
+
+Postgres is managed by Render with point-in-time recovery (see [05-infrastructure.md](05-infrastructure.md)). Migrations stay in Alembic.
+
+### 3.1 The existing household becomes the first account
+
+1. **Expand.** Migration `0008_users_and_tenancy`: create `users`, `trip_members`, `invites`, `subscriptions`, `trip_passes`, `entitlements`, ledgers. Add nullable `owner_user_id` to `trips`, `people`, `runs`, `routines`, and nullable `linked_user_id` to `people`. No behavior change; the local app keeps working.
+2. **Backfill** (separate idempotent revision, in batches). Create `users` rows for the two existing people (emails from config or prompted at first login). Set `people.owner_user_id` to the primary user and `people.linked_user_id` to each person's own user. Set every existing trip's `owner_user_id` to the primary user and insert `trip_members` rows for both (owner and editor). `trip_travelers` is left as is. Fold existing `flight_quotes` into `fare_observations` only when `source` is a provider, dropping or trimming `raw`. Keep the original quote rows during a soak period.
+3. **Contract.** After the backfill is verified: `SET NOT NULL` via a `NOT VALID` check constraint then `VALIDATE CONSTRAINT` (no long lock), then enable RLS.
+4. **Account claiming.** On first sign-in, if the email or a one-time claim code matches the legacy household, attach the `users` row to it. For a personal install this can be a CLI command: `trip-planner claim-household --email ...`. If the hosted service starts empty and the founders simply import their trips, use the JSON export and import path instead (export is also a user feature).
+5. **Cutover.** Restore the local dump into managed Postgres (`pg_dump --format=custom`, `pg_restore`), run migrations, run the backfill, verify row counts per table, then flip.
+
+### 3.2 Zero-downtime rules for every later migration
+
+Add these as a checklist in `.claude/rules/database-migrations.md` (the maintainer decides whether to add):
+- **Expand, migrate, contract.** Never rename or drop a column in the same release that stops using it. Two deploys minimum.
+- New columns are nullable or have constant defaults (instant on Postgres 11+). Backfill in batches of about 5,000 rows outside the DDL transaction.
+- `CREATE INDEX CONCURRENTLY`; in Alembic use `op.get_context().autocommit_block()`.
+- Add foreign keys and checks `NOT VALID`, then `VALIDATE CONSTRAINT` separately.
+- Set `lock_timeout = '3s'` and `statement_timeout` in migration sessions; retry on lock timeout instead of queueing behind a long query.
+- Migrations run as a **pre-deploy step**, one job before the new API and worker start, not at server start. Startup migration is right for a desktop install and wrong for several replicas racing. Use `pg_advisory_lock` as a guard regardless.
+- Old and new app versions must both work against the intermediate schema. CI test: run the previous release's tests against the new schema.
+- Partition `run_events`, `provider_calls`, `ai_usage`, `fare_observations` by month at creation; retire old data by dropping partitions.
+- Render Postgres has no branching, so test risky migrations against a restored copy of the latest backup.
+
+The `CLAUDE.md` rule still applies: read `.claude/rules/database-migrations.md` before any model or migration change, and run `npm run gen:api` after API schema changes.
+
+### 3.3 Schema work by roadmap phase
+
+| Phase | Schema work |
+|---|---|
+| M0: validate | None. Waitlist data lives outside the app database. |
+| 0: foundations | Move to Postgres with the pre-deploy migration job. `provider_calls`, `ai_usage` metering (with `user_id` nullable until phase 1), `shared_research_cache`. |
+| 1: hosted web beta | Migration `0008` and backfill, `users`, `trip_members`, `invites`, `entitlements`, `credit_grants`, `fare_observations`, RLS with restricted-role tests, account ceilings. |
+| 2: iOS TestFlight | `user_devices`, `subscriptions`, `trip_passes`, `webhook_events`, credit pack grants, `link_clicks`, data export. |
+| 3: public launch | Account deletion purge job, retention jobs, monthly restore drill, affiliate conversion import. |
+| 4: growth | Premium flag on (`premium` subscriptions, agent routines), Redis counters, `public_id` pages for shared trips, self-hosted places at scale, Android products. |
+
+## 4. Data provider review
+
+Confidence legend: **V** = read on a primary source; **S** = secondary source or search summary (reported, verify); **U** = unverified (site blocked or not found). Everything other than V was checked on 2026-09-30 and must be verified before launch.
+
+| Provider | Used for | Current plan | Paid pricing | Cost per call | Commercial use and redistribution | Confidence |
+|---|---|---|---|---|---|---|
+| SerpApi (Google Flights, Google Hotels rentals) | Live fares, price insights, rentals | Free, 250/mo (app caps at 240) | Starter $25 (1,000), Developer $75 (5,000), Production $150 (15,000), Big Data $275 (30,000), Searcher $725 (100k), Volume $1,475 (250k) | $0.015 to $0.025 at low tiers, about $0.0072 at 100k, $0.0059 at 250k | API use is allowed; Google's content rights are the open question (4.1) | S, reported, verify (2026-09-30) |
+| Travelpayouts / Aviasales Data API | Cached cheapest fares, affiliate links | Data API token (free) | Free; earns commission | $0 | Data API reported open with no MAU threshold; Search API reported to need 50,000 MAU and conversion targets | S, reported, verify (2026-09-30) |
+| Geoapify | Autocomplete, geocoding, places | Free 3,000 request credits a day | API 10 $59/mo (10k/day), API 25 $109, API 50 $179, API 100 $299, API 250 $609, Custom from $860 | About $0.0002 to $0.002 per request depending on plan | Free plan is for testing and small use with attribution; storage and caching rules not verified | S and U |
+| Wikipedia, Wikidata, Commons | Destination summaries and hero images | Public API, no key | Free; Wikimedia Enterprise for high-volume commercial reuse | $0 | Text CC BY-SA 4.0 (attribution and share-alike); images have per-file licenses; identifying User-Agent required | V (Wikimedia docs via search summary) |
+| Frankfurter | FX (ECB reference rates) | Free, no key | Free, self-hostable | $0 | Open for commercial use | S |
+| Link previews (`providers/link_preview.py`) | Title, description, photo of a pasted URL, user-initiated | Direct fetch of the user's URL | n/a | $0 | User-initiated only; never applied to Airbnb, Vrbo or Booking automatically (project rule). Storing third-party photos is a copyright risk: hotlink, or store a thumbnail plus source link | Own code review |
+| OurAirports | Airport reference | Bundled seed | Free | $0 | Public domain (per the seed's docstring) | S |
+
+"Geoapify request credits" are provider quota units and are unrelated to the user-facing AI credits, although Geoapify spend counts toward the $0.02 credit budget of an action.
+
+### 4.1 SerpApi and Google Flights: the main risk
+
+- SerpApi scrapes Google. Google sued SerpApi on 2025-12-19 in N.D. Cal. under DMCA section 1201, alleging circumvention of its SearchGuard bot protection ([IPWatchdog](https://ipwatchdog.com/2025/12/26/google-sues-serpapi-parasitic-scraping-circumvention-protection-measures/)). The later timeline is reported by a secondary source only (reported, verify on the docket; checked 2026-09-30): core claims dismissed 2026-07-20, narrower claims refiled 2026-08-10, second motion to dismiss filed 2026-08-25 ([ScrapeBadger summary](https://scrapebadger.com/blog/google-sued-a-scraper-under-copyright-law-and-lost-heres-what-the-serpapi-ruling-actually-says)).
+- SerpApi reports a "U.S. Legal Shield" (up to $2M) on the Production and Big Data plans only, excluding claims that arise from how the customer uses the data, and covering U.S. claims in U.S. courts (reported, verify; [SerpApi legal](https://serpapi.com/legal), checked 2026-09-30).
+- Google Flights terms do not grant programmatic access. Google could send a cease-and-desist or block SerpApi's upstream access at any time.
+
+Assessment: personal use at 240 searches a month is low risk. A paid product that displays Google Flights fares to thousands of paying users is **high risk**: it depends on an upstream Google is litigating against, on content we do not license, and Apple guideline 5.2 review could pull the app on a third-party complaint. SerpApi's resale terms are unverified.
+
+**Decision of record:** SerpApi is the live-fare source **behind a feature flag at launch, with the legal risk flagged**, and a licensed source (Skyscanner Partners) is applied for now. Mitigations:
+1. SerpApi is never the only flight source: Travelpayouts cached fares are the free baseline for every tier.
+2. Flights sit behind a provider interface (the `sources` array on `flight_routes` already points this way), so SerpApi turns off by config.
+3. Live fares are shown as "price check" hints with a link out, not as bookable inventory.
+4. Buy Production ($150) at minimum while it stays, for the legal shield.
+5. Move the main live path to a licensed source before scaling past 1k MAU.
+
+### 4.2 Flight source alternatives
+
+| Option | Access | Cost | Fit |
+|---|---|---|---|
+| Duffel (Flights API) | Self-serve. Reported, verify (primary page blocked): $3.00 per confirmed order, $2.00 per paid ancillary, 1% of order value for managed content, excess-search fee above a 1,500:1 search-to-book ratio ([Duffel pricing](https://duffel.com/pricing)) | Per order | Built for **booking**: you become seller of record with payments, refunds and servicing. Poor fit for a planner that links out. Not chosen |
+| Amadeus Self-Service | **Shut down** (reported, verify; checked 2026-09-30): keys disabled 2026-07-17, signups paused since spring 2026, only Enterprise contracts remain ([PhocusWire](https://www.phocuswire.com/amadeus-shut-down-self-service-apis-portal-developers), [Tripgic](https://www.tripgic.com/playbook/amadeus-api-shutdown-migration/)) | n/a | Not available. Removed from the plan |
+| Kiwi Tequila | Invitation-only B2B since 2024; via Travelpayouts it reportedly needs 50,000 MAU (reported, verify; [guide](https://phptravels.com/blog/comprehensive-guide-to-flights-api-integration)) | n/a | Not available at launch |
+| Skyscanner Partners API | Partner-only, application, roughly 5,000 monthly users minimum and manual approval (reported, verify; checked 2026-09-30; [summary](https://www.travelpayouts.com/blog/skyscanner-flights-api/)) | Free to approved partners, paid by commission | The licensed live source we want (redirect model). **Applied for now**; approval not guaranteed |
+| Travelpayouts Data API | Self-serve token | Free | Cached fares reported to cover the last 48 hours to 7 days of Aviasales user searches. The free baseline for all tiers: hints plus affiliate link. Coverage and freshness vary |
+| Travelpayouts Search API (real time) | Reported to need 50,000 MAU, with 9% search-to-click and 5% click-to-purchase floors, user-initiated searches only (reported, verify; checked 2026-09-30; [requirements](https://support.travelpayouts.com/hc/en-us/articles/210995808-Requirements-for-Aviasales-Flight-Search-API-access)) | Free; commission | Not usable at 1k or 10k MAU |
+| Ignav flight search API | Self-serve; 1,000 free then about $2.00 per 1,000 successful requests (vendor claim, unverified; [docs](https://ignav.com/docs/amadeus-self-service-shutdown)) | Low | Worth a proof of concept; first ask for the upstream data source and resale terms |
+
+Final flight data setup: **Travelpayouts Data API as the free baseline for all tiers; SerpApi behind a feature flag for live routes at launch; Skyscanner Partners applied for now as the licensed live source.**
+
+### 4.3 Places alternatives
+
+| Option | Price | Storage terms | Notes |
+|---|---|---|---|
+| Geoapify (current) | Free 3,000 credits a day; paid from $59/mo | Not verified. Ask in writing whether persistent storage is allowed (`places_cache` stores 7 days) | OSM-based, good value; attribution to OpenStreetMap (ODbL) and Geoapify |
+| Google Places (New) | Text Search Pro about $32 per 1,000 after 5,000 free a month; Enterprise about $35 per 1,000 after 1,000 free (reported, verify; [pricing](https://developers.google.com/maps/billing-and-pricing/pricing)) | `place_id` may generally be stored; other content has limited caching and needs a Google map or attribution. Verify | Best quality, 10x to 100x the cost per call; only for a rare detail lookup |
+| Foursquare Places | Pro endpoints free for 500 calls then $15 per 1,000; Premium $18.75 per 1,000 (reported, verify; pricing change 2026-06-01; [pricing](https://foursquare.com/pricing/)) | Not verified | Strong POI data, cheaper than Google |
+| Overture Maps or self-hosted OSM (Photon, Pelias) | Infra only | ODbL: attribution and share-alike on derived databases | Viable at 100k MAU when autocomplete volume makes request credits expensive |
+
+Stay on Geoapify at 1k and 10k MAU (upgrading the plan as needed), get written confirmation on caching and storage, and keep the `places` interface swappable so Foursquare or self-hosted Photon can take autocomplete at 100k MAU.
+
+### 4.4 Affiliate networks
+
+Affiliate links (flights, hotels, eSIM, insurance, tours) are the free-tier income; there are no banner ads.
+
+| Network | Flights | Lodging | Access | Notes |
+|---|---|---|---|---|
+| Travelpayouts (Aviasales and many brands) | About 1.1% to 1.5% of booking value (reported, verify; flights are thin-margin everywhere) | Various (Booking.com, Hotellook and others, by program) | Instant signup | Best starting point; one dashboard; a statistics API for bookings |
+| Skyscanner (Impact or partner API) | Commission on redirects and bookings; approval needed | Hotels via partners | Application | Licensed data plus attribution |
+| Expedia Group (Rapid or affiliate) | No flight commission unless packaged | Yes, revenue share | Partner-only, certification | Heavy integration; use affiliate links only, not Rapid, at our scale |
+| Booking.com affiliate | n/a | Yes | Affiliate programme or Travelpayouts | Outbound links only; our rule against fetching Booking pages is unaffected because deep links are links, not fetches |
+| GetYourGuide, Viator, Klook | n/a | Activities | Instant-ish | Fits itinerary activities; higher rates than flights |
+
+## 5. Caching and dedup strategy
+
+Every provider call goes through one `cached_call(kind, normalized_params, ttl, fetch_fn)` helper. It hashes params, checks `shared_research_cache` (with stale-while-revalidate), coalesces concurrent identical requests (single-flight via advisory lock on the key), records a `provider_calls` row, and only then calls out. Today `places.py` does this for Geoapify and rentals; the in-process dict in `providers/geoapify.py` (500 entries, lost on restart, not shared across replicas) moves behind the same helper, backed by Postgres first and by Redis for hot autocomplete once Redis exists (about 10k MAU).
+
+| Provider or data | Cache key (normalized) | TTL | Shared? | Notes |
+|---|---|---|---|---|
+| SerpApi flights | origin set, destination set, depart, return, cabin, pax, stops, currency | 12 h for dates within 60 days, 24 h for 60 to 180 days, 72 h beyond | Yes: identical `search_key` from any user reuses one observation | Convert to the user's currency at read time; request in USD or EUR |
+| Travelpayouts | origin, destination, month or date, one-way flag | 6 h (upstream cache is 48 h to 7 days) | Yes | Free, so use it first and use it to decide whether a paid call is worth it (skip if the cheapest cached fare is far above the alert price) |
+| SerpApi rentals | destination, dates, guests, filters | 12 h (current `RENTALS_TTL`); 24 h for month-out dates | Yes | Store only fields the UI shows; drop `raw` after 30 days |
+| Geoapify autocomplete | lowercased query, locale, bias | 30 days for named places; 7 days for POI search | Yes | Store `place_id`, name, coordinates; debounce on client (300 ms, min 3 chars) |
+| Geoapify places search | rounded bbox or center plus categories | 7 days (current) | Yes | Round to about a 1 km grid at city zoom |
+| Wikipedia summary and image | wikidata id | 30 days (current) | Yes | Store attribution and license with the entry (CC BY-SA) |
+| FX | currency pair | 12 h (current), refresh on ECB publish (about 16:00 CET on working days) | Global | Add a "rates as of" stamp in the UI |
+| AI research (Claude) | kind, normalized destination, month, prompt_version, model | 30 to 90 days (visa rules 30, "top neighborhoods" 90) | Yes, public-input facts only | Never key on user text or cache content derived from private trip notes |
+| Link preview | normalized URL | 7 days | Yes (public metadata) | Do not store photos; hotlink or resize once |
+
+Scheduled work is API price checks plus cheap batch scans (batch API for offline jobs such as cache warming, nightly digests and scheduled fare scans), never scheduled agents before Premium.
+
+### Quota scaling with users
+
+Planning estimates, not measurements; validate with `provider_calls.cached` once live. Assumptions: a Plus payer has 3 live routes checked daily within 120 days of departure, at most 90 checks a month, and about 45 in practice because routes are only live near departure; a Trip Pass buyer averages about 20 checks a month (60 maximum over 90 days); a Free user makes about 3 one-credit live searches a month. Payers are 4% of MAU on Plus and 1.5% on Trip Pass, Free live users are 20% of MAU. Dedup hit rate is 40% at 1k, 65% at 10k and 80% at 100k MAU. Premium is excluded until it launches.
+
+| MAU | Plus / Trip Pass / Free live users | Gross live searches a month | After dedup | SerpApi plan | Est. cost a month |
+|---|---|---|---|---|---|
+| 1,000 | 40 / 15 / 200 | 2,700 | about 1,620 | Developer (5,000) | $75 (Production $150 for the legal shield) |
+| 10,000 | 400 / 150 / 2,000 | 27,000 | about 9,450 | Production (15,000) | $150 |
+| 100,000 | 4,000 / 1,500 / 20,000 | 270,000 | about 54,000 | Searcher (100k) | about $725 |
+
+At 100k MAU the licensed source should already carry most live traffic. The per-account ceilings bound the worst case: at $0.015 to $0.025 a search, the Plus monthly ceiling of $1.75 allows roughly 70 to 115 SerpApi searches, in line with the 90-check maximum. Geoapify autocomplete is the bigger quota risk: 100,000 MAU at about 10 keystroke calls per planning session and 3 sessions a month is about 3M calls a month, which lands on the API 100 to API 250 plans ($299 to $609 a month) even with debouncing, unless caching absorbs it or autocomplete moves to a self-hosted engine.
+
+## 6. Affiliate integration
+
+Goal: outbound booking links that earn commission and attribute revenue to a user, trip and feature without tracking anything the App Store privacy label cannot support.
+
+Flow:
+1. The user taps "Book" on a fare or stay.
+2. The app calls `POST /api/outbound` with `{quote_id | lodging_id, surface}`; the server creates a `link_clicks` row and returns the redirect URL with our affiliate id and a **sub-id** (`click_id`, an opaque uuid).
+3. The app opens the URL in `SFSafariViewController` (not an embedded WKWebView with injected JS).
+4. The network reports conversions (postback or statistics API poll) carrying the `click_id`; we upsert `affiliate_conversions`.
+
+```sql
+affiliate_programs (id, network text, program text, base_url_template text, marker_or_id text,
+                    commission_model text, cookie_days int, terms_url text, active bool)
+link_clicks (
+  id uuid pk, user_id fk null, trip_id fk null, program_id fk,
+  entity_type text, entity_id bigint,   /* flight quote, lodging option, activity */
+  destination_url text, surface text, created_at, ip_hash text, device_id_hash text null
+)
+affiliate_conversions (
+  id, program_id fk, network_txn_id text, click_id uuid null,  /* null if the network did not pass the sub-id back */
+  status text,  /* pending, approved, rejected, paid */
+  booking_value numeric, currency char(3), commission numeric, commission_currency char(3),
+  event_at, approved_at, paid_at, raw jsonb,
+  unique (program_id, network_txn_id)
+)
+affiliate_payouts (id, program_id, period, amount, currency, received_at, reference)
+```
+- A materialized view `revenue_by_month` joins conversions to clicks to users. Revenue per MAU and per tier shows whether affiliate income covers free-tier costs (the kill rule in the README uses $0.20 per monthly user).
+- Store only a hashed IP and no advertising identifier. Disclose affiliate links in-app ("we may earn a commission") near the button.
+- Never rewrite a user-pasted Airbnb, Vrbo or Booking URL with tracking silently; wrap outbound links only for programs we joined, and never fetch those pages automatically.
+- Booking physical travel outside the app is not subject to In-App Purchase, so the affiliate redirect is compliant. Plus, Trip Pass and credit packs must use StoreKit (see [07-local-to-app-store.md](07-local-to-app-store.md)).
+- Flight commissions are around 1% and lodging 3% to 8% on low booking rates (reported, verify). Model affiliate income as upside, not the plan; see [01-business-plan.md](01-business-plan.md).
+
+## 7. Retention, backups, analytics
+
+### Retention
+
+| Data | Retention | Reason |
+|---|---|---|
+| Account and trip data | While the account is active; hard purge 30 days after a deletion request | Apple requires in-app account deletion (guideline 5.1.1(v)); GDPR and CCPA |
+| `run_events` | 30 days (partition drop); `runs.report` 12 months | Largest growth table; debugging value decays fast |
+| `flight_quotes` and `fare_observations.raw` | Drop `raw` after 14 days; keep price history (date, price, source) 24 months | Price history is product value; raw payloads are a terms risk |
+| `shared_research_cache` | Purge at `stale_until`; cap size per kind | Limits how long third-party content is held |
+| `provider_calls` | 13 months, then monthly rollups | Cost analytics |
+| `ai_usage`, `credit_grants`, `trip_passes`, `subscriptions` | 7 years for financial records tied to purchases (check local tax advice); otherwise 25 months | Disputes, refunds |
+| Webhook events | 12 months | Reconciliation with Apple |
+| Logs | 30 days | Privacy |
+
+Data export: `GET /api/me/export` returns a JSON archive of the user's trips. It is required by GDPR and is a trust signal.
+
+### Backups
+
+- Managed Postgres on Render with PITR (window depends on the plan; verify), plus a daily logical `pg_dump` to Cloudflare R2, a separate provider from the database host, for provider-failure and operator-error cases.
+- Replace `services/backups.py` (backup before migrate, to local disk) with a snapshot before each production migration and an automated **monthly restore drill** into a scratch instance with a row-count smoke test. An untested backup is not a backup.
+- Target RPO 5 minutes (PITR) and RTO 1 hour at 10k MAU. Add a read replica and a standby region with the AWS or Google Cloud move (around 50k MAU or $1,500 a month).
+- Encrypt at rest (managed default). Column-level encryption is not needed in v1 because the app stores no payment data and no passport numbers; do not add passport or document storage without a separate security review.
+
+### Analytics
+
+- Product analytics with a client event SDK (PostHog is self-hostable with a generous free tier) for funnels: onboarding, first trip, paywall view, purchase, first live search. Keep it anonymous by default and use first-party analytics only, so no App Tracking Transparency prompt is needed.
+- Server-side business events go to an `events` table (`id, ts, user_id, name, props jsonb`), partitioned monthly and read from a replica or the same Postgres; a warehouse only at 100k MAU.
+- Metrics the schema must answer from day one: cache hit rate per provider, provider cost per active user, AI cost per active user by tier, credits consumed vs granted, credit-to-dollar margin (2.4), free to paid conversion, Trip Pass share of paid purchases, affiliate click to conversion, and the share of live searches served from `fare_observations`.
+- Sentry for backend and iOS crashes, scrubbing trip content and free-text notes.
+
+## Where this plan changed the initial idea
+
+1. **Own migration system.** The repo already uses Alembic. The change is when it runs: a single pre-deploy job with an advisory lock instead of server start (3.2).
+2. **Amadeus Self-Service and Kiwi Tequila as flight options.** Amadeus Self-Service is reported shut down (2026-07-17, reported, verify) and Kiwi is invitation-only. Both are removed.
+3. **Duffel as a search replacement.** Duffel is priced and built around booking orders. It does not fit a planner that links out and would change compliance, support and payments scope. Not chosen.
+4. **SerpApi as the scaling path for live fares.** Final decision: SerpApi runs behind a feature flag at launch with the legal risk flagged (an earlier draft limited it to Premium), Travelpayouts cached fares are the free baseline, and Skyscanner Partners is applied for now. Cost is not the issue; legal exposure is.
+5. **Row-level security.** Yes, but as a second layer behind app checks, with a restricted DB role in tests, because worker and admin roles bypass it.
+6. **Tenant model.** User plus trip membership, not household or workspace tables. An earlier draft replaced `people` with a `travelers` table; the final decision keeps `people` and adds `owner_user_id` and `linked_user_id`, with membership in `trip_members`.
+7. **Travelpayouts as a fare source.** Its cached data suits "cheap dates" hints but is stale by design and must not be shown as a live price. Its real-time Search API reportedly needs 50,000 MAU (reported, verify), so it cannot replace SerpApi at 1k or 10k.
+8. **Quotas and credits.** Per-tier live-search allowances were replaced by the README's credit unit ($0.02 of provider spend, reserve then settle) and per-account provider-spend ceilings. A Trip Pass table was added, and scheduled agents stay off until Premium.
+9. **Database host.** Render managed Postgres with PITR replaces the earlier list of options to evaluate (Neon and others), and Redis waits until about 10k MAU.
+
+## Provider-terms risks and unverified items
+
+- **High:** SerpApi scraping Google Flights and Hotels; resale terms unverified; Google v. SerpApi timeline from secondary sources (reported, verify, 2026-09-30).
+- **Medium:** Geoapify terms on caching, storing results, and commercial use of the free plan were not read. Get written confirmation and use a paid plan before launch.
+- **Medium:** Wikipedia text is CC BY-SA: show attribution and a license link next to each summary; check per-image Commons licenses before using hero images commercially.
+- **Medium:** Google Places and Foursquare storage limits are unverified; relevant only if we switch.
+- **Medium:** Travelpayouts terms and thresholds (user-initiated searches only, "Book" button rules, 50,000 MAU and conversion floors for the Search API) come from search summaries (reported, verify, 2026-09-30). Read the full agreement before integrating.
+- **Low:** Frankfurter (ECB data) and OurAirports (public domain per its docstring) look fine; confirm there is no attribution duty.
+- Not verified at all: the Duffel primary pricing page, Skyscanner commission rates and user minimum, per-program affiliate commission tables, Ignav data provenance, the Amadeus shutdown date on a primary page.
+
+Sources (found by search on 2026-09-30): [Google v. SerpApi coverage](https://ipwatchdog.com/2025/12/26/google-sues-serpapi-parasitic-scraping-circumvention-protection-measures/), [SerpApi legal](https://serpapi.com/legal), [SerpApi pricing summary](https://scrapegraphai.com/blog/serpapi-pricing), [Amadeus shutdown](https://www.phocuswire.com/amadeus-shut-down-self-service-apis-portal-developers), [Duffel pricing](https://duffel.com/pricing), [Travelpayouts Data API](https://support.travelpayouts.com/hc/en-us/articles/203956163-Aviasales-Data-API), [Travelpayouts Search API requirements](https://support.travelpayouts.com/hc/en-us/articles/210995808-Requirements-for-Aviasales-Flight-Search-API-access), [Geoapify pricing](https://www.geoapify.com/pricing/), [Google Maps Platform pricing](https://developers.google.com/maps/billing-and-pricing/pricing), [Foursquare pricing](https://foursquare.com/pricing/), [Wikimedia APIs](https://www.mediawiki.org/wiki/Wikimedia_REST_API/en), [Frankfurter](https://frankfurter.dev/).
