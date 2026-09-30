@@ -1048,7 +1048,7 @@ Step 3, done:
 **Interactions.** Choosing a file or sending a link or text starts reading at once and moves to step 2. Unticking rows changes the count. Pasted emails are read one at a time, each charged after the confirm; a text with no booking in it is refunded and says so. "Import" saves everything ticked; Back changes nothing. Imported booked flights offer the booked-fare watch (6.32) on the new trip. A guest who taps Import sees the Save your trip sheet first (6.2).
 **States.** Loading: skeleton rows under "Reading your file", one row per pasted email as it finishes. Empty: "We did not find any trips or bookings in that file.", "Try another file, or paste a booking email.", [Paste a booking email]. Error: unreadable file "We could not read that file. Check that it is a calendar (.ics) file and try again."; too large "That file is too large. Export a shorter date range and try again."; over 500 events "That calendar has more than 500 events. Choose a date range."; blocked host "We do not open links from Airbnb, Vrbo or Booking.com. Download the calendar and upload the file instead."; link failed "We could not read that link. Check that it is the full link, or upload the file instead." Offline: "Connect to import. Nothing was changed." No permission: viewers cannot import into a trip; editors and owners can. Google Maps link "We cannot open Google Maps links. Export your list, or paste the place names."; more than 200 places "We imported the first 200 places."; polling stopped "We could not reach your calendar three times, so we stopped checking. Turn it back on any time."; Limit: text over 12,000 characters "That is too long. Paste one email at a time."; no credits for a pasted email opens `out_of_credits_research` (6.27) while the file and link routes stay free.
 **Copy.** Above the button "Nothing is saved until you tap Import." Reward card "Your first import includes a Trip Pass for Lisbon: live fare checks, up to 6 collaborators and 40 credits until 4 Dec." The card appears only when the pass will be granted (3 or more items including a flight or a stay, a verified email, no active pass on the trip and no active Plus), never for a places-only import, and never as a paywall. No third-party logos are used.
-**Events.** `import_started {source: file|feed|paste|maps_file|places, origin: tripit|tripsy|wanderlog|google_calendar|google_maps|other}`, `import_previewed {source, item_count_bucket}`, `import_completed {source, item_count_bucket, reward_granted}`, `import_failed {source, reason}`, `calendar_polling_enabled`, `calendar_changes_found {change_count_bucket}`, `calendar_changes_applied {applied_count_bucket}`.
+**Events.** `import_started {method: ics_file|ics_feed|pasted|maps_file|places, source_app: tripit|tripsy|wanderlog|google_calendar|google_maps|other|unknown}`, `import_previewed {method, item_count_bucket}`, `import_completed {method, saved_count_bucket, reward_granted}`, `import_failed {method, reason}`, `calendar_polling_enabled`, `calendar_changes_found {change_count_bucket}`, `calendar_changes_applied {applied_count_bucket}`.
 **Accessibility.** Each preview row is a checkbox with its full label ("Flight, JFK to LIS, Friday 12 March, 18:05, will be imported"); the count is a polite live region; the step label is announced; the file button, link field and text area have visible labels.
 
 ### 6.31 Calendar feed
@@ -1279,6 +1279,201 @@ Second, the "Your booked fare" block on the chosen-flight card and the route car
 **Copy.** Button "Share your link". Reward line "Friend joined. 20 credits added."
 **Events.** `referral_link_shared {method}`, `referral_code_applied {result}`, `referral_reward_earned {role: referrer|friend}`.
 **Accessibility.** The code is selectable text with a labeled Copy button; progress is text ("2 friends joined, 20 credits earned"); errors are linked to the field.
+
+### 6.38 Verify this plan
+
+**Purpose.** Let someone who planned in ChatGPT, Gemini, Layla or Mindtrip paste the plan and see which places, hours and prices hold up, with the source for each, then keep only what checked out.
+**Layout.** Entry: Trips home "+" menu, a trip's "..." menu, the import screen and the AI sheet (6.15). A full-screen modal in four steps with a progress label: **Paste the plan**, **Choose what to check**, **Results**, **Add to trip**. It runs inside a trip; from Trips home it offers "Start a trip to check it" (named from the first destination) or "Check it inside one of your trips".
+
+Step 1, paste the plan:
+
+```
++------------------------------+
+| x   Verify a plan   Step 1/4 |
+|                              |
+| Paste a plan from ChatGPT,   |
+| Gemini, Layla or Mindtrip.   |
+| We check each place, its     |
+| hours and its price.         |
+|                              |
+| [ text area, 8,000 max ]     |
+|                              |
+| Written by  (o) ChatGPT      |
+|             ( ) Gemini ...   |
+|                              |
+| [ Read the plan   1 credit ] |
+|                              |
+| We do not open links in the  |
+| text and do not save it.     |
++------------------------------+
+```
+
+Step 2, choose what to check:
+
+```
++------------------------------+
+| < Back    Choose what to     |
+|           check   Step 2/4   |
+| 9 places found               |
+|                              |
+| Day 1                        |
+| [x] Time Out Market          |
+|     Open 10:00 to 00:00      |
+| [x] Castelo de S. Jorge      |
+|     Ticket 15 EUR            |
+| [ ] Miradouro da Graca       |
+| Day 2                        |
+| [x] Pasteis de Belem         |
+|     ...                      |
+|                              |
+| Free checks up to 5 at a time|
+| [ Check 5 places  5 credits ]|
++------------------------------+
+```
+
+Step 3, results:
+
+```
++------------------------------+
+| < Plan check        Step 3/4 |
+| Checked 7 of 9. 5 confirmed, |
+| 1 differs, 1 not found.      |
+| 2 not checked.               |
+|                              |
+| [check] Confirmed            |
+| Time Out Market              |
+|  Found on timeout.com,       |
+|  checked today               |
+| [warn] Differs               |
+| Pasteis de Belem             |
+|  Closed Mondays. Your plan   |
+|  has Monday at 10:00.        |
+|  Found on pasteisdebelem.pt, |
+|  checked today               |
+| [x] Could not find it        |
+| Rooftop Bar Vista Nova       |
+|  No place or page matches.   |
+| [-] Not checked              |
+| Miradouro da Graca           |
+|  Over your 5 check limit.    |
++------------------------------+
+```
+
+**Content.** Step 1 has a text area (8,000 characters, a counter), an optional "Written by" choice (ChatGPT, Gemini, Layla, Mindtrip, Other; shown, never trusted), and the button "Read the plan" with a credit chip of 1. Step 2 lists up to 25 items grouped by the day in the plan, each with a tick, the place, and the hours or price the plan states. The bottom bar shows the price before anything runs ("Check 5 places, 5 credits") and how many the account can check at once (5 on Free, 12 on Plus and Trip Pass); ticking past the limit is blocked with "Free checks 5 at a time. Check the rest in another run." A confirm sheet appears at 6 credits or more with the balance before and after (4.11). Step 3 shows the result header, then one row per item: a verdict chip (4.21), the place name, a one-line reason in plain words, the evidence label ("Found on [site], checked [date]", a link), and, for differences, what the source says. Red rows say "Could not find it" and what was tried. Items not checked say why (over the limit, cost limit reached, Airbnb, Vrbo or Booking.com page never opened, service error with the credit returned). Step 4 lists the items that can be added: green rows ticked, amber rows unticked until opened, red rows unticked and marked "Not found", with a day picker per item and "Add to Lisbon" (free, nothing is saved until the tap).
+**Interactions.** "Read the plan" reads the text and moves to step 2. "Check" starts the run; progress streams row by row (a spinner per row turns into its chip), the person can leave and a push and Activity item announce the finish (F-NOT-1 "plan check finished"), and Stop ends the run and returns the credits for items not yet checked. A second run checks the remaining items. Results stay on the trip under "Plan checks" for 30 days. "Discard" deletes the result and its evidence. The pasted text is never stored.
+**States.** Loading: row skeletons under "Reading your plan", then one spinner per row. Empty: "We could not find places in that text. You were not charged." with [Try another text]. Error: "That did not finish. The places we could not check were not charged." with Retry. Offline: "Checking needs a connection." and the text area keeps the paste. No permission: viewers can read results but not start a check. Limit: text over 8,000 characters "That is too long. Paste one trip at a time."; more than 25 places "We read the first 25 places."; too many ticked "Free checks 5 at a time."; no credits opens `out_of_credits_verify` (6.27); AI off for the trip "AI is off for this trip. Ask Sam to turn it on."; the Free owner at the 2 trip limit sees "Check it inside one of your trips." Partial: a row that could not be checked keeps "Not checked" and its credit is returned. Web: identical; the credit paywall says "Upgrade in the iOS app" (6.27).
+**Copy.** Step 1 helper "We do not open links in the text and we do not save it." Header `verify_header` (7.5). Never "verified" for the whole plan and never "safe to book". Verdict words are Confirmed, Differs, Partly confirmed, Could not find it, Not checked. No partner link, card or paywall sits on the results.
+**Events.** `verify_started {label, text_length_bucket}`, `verify_items_read {item_count_bucket}`, `verify_checked {selected_count_bucket, green, amber, red, unchecked, credits}`, `verify_imported {item_count_bucket}`, `verify_discarded`.
+**Accessibility.** Each row is one checkbox or link with its full label ("Confirmed. Time Out Market, Day 1. Found on timeout.com, checked today"); verdicts are words and icons, never color alone; the header count is a polite live region; progress announces "Checked 3 of 5"; the step label is announced.
+
+### 6.39 Evidence freshness and recheck
+
+**Purpose.** Keep the "every fact links to its source" promise honest over time: say when a finding is old, and let the person ask again in one tap.
+**Layout.** Not a screen of its own. The evidence label (4.21) and evidence rows on Notes and evidence (6.18), the agent run findings (6.16), plan check results (6.38) and imported plan items gain a second line when the label date is more than 14 days old.
+
+```
++------------------------------+
+| Tram 28 is often crowded     |
+| after 10:00                  |
+| Found on lisbon-guide.org,   |
+| checked 12 Sep               |
+| [! May be out of date]       |
+| [ Recheck   1 credit ]       |
++------------------------------+
+```
+
+**Content.** The amber chip "May be out of date" (icon and words) and a "Recheck" button with a credit chip of 1. Nothing is hidden, removed or greyed out. Editors and owners see the button on any finding at any age ("Recheck now"); viewers see the chip only. Fares are not rechecked here: they keep their age tag and "Refresh now" (6.10).
+**Interactions.** "Recheck" opens the stored source page once and answers in a small sheet: "Still the same. Checked today." (the label date moves to today), "It now says: {new value}" with the source and [Save as a note] (the old text stays), "The page no longer shows this." or "We could not reach the page. You were not charged." A recheck never searches the web, never opens Airbnb, Vrbo or Booking.com, and never edits the item on its own.
+**States.** Loading: the button turns into "Checking" with a spinner. Error: "That did not finish. You were not charged." Offline: "Recheck needs a connection." Limit: no credits opens `out_of_credits_verify` (6.27); AI off for the trip hides the button. Not applicable: fares, Wikipedia text and notes people wrote never show the chip.
+**Copy.** Chip `evidence_old`, button `recheck_button` (7.5).
+**Events.** `evidence_stale_shown {age_bucket}`, `evidence_rechecked {result: confirmed|changed|not_shown|unreachable, credits}`.
+**Accessibility.** The chip is text plus icon; the button name includes the subject ("Recheck: Tram 28 is often crowded"); the result sheet is a polite announcement.
+
+### 6.40 Trust pages: How we earn and How billing works
+
+**Purpose.** Show, in plain words and before anyone asks, how Wayfold makes money and how billing works.
+**Layout.** Two public pages in the marketing shell (6.34): `/how-we-earn` and `/billing`. The same content opens in the app from Account (6.25) and the paywall legal row. A 720 px reading column, short headings, no affiliate card, no paywall, no banner.
+
+```
++------------------------------+
+| How we earn                  |
+|                              |
+| Wayfold is paid for by       |
+| subscriptions, Trip Passes,  |
+| AI credits and commissions   |
+| when you book through a      |
+| partner link.                |
+|                              |
+| What we promise              |
+| - Nothing is ranked by       |
+|   commission.                |
+| - Every partner link is      |
+|   labeled.                   |
+| - No ads. We never sell your |
+|   data.                      |
+| - We never fetch Airbnb,     |
+|   Vrbo or Booking.com pages. |
+|                              |
+| Our partners (18 in 7        |
+| categories)                  |
+| Flights: Aviasales, Kiwi.com |
+| Stays: Booking.com, Agoda    |
+| ...                          |
++------------------------------+
+```
+
+**Content.** How we earn: the sentence above, the four promises, a sample partner button with its label ("We earn a commission if you book here."), the "Hide booking links" setting, the list of every active partner grouped by category with its disclosure line, and live counts of partners and categories, all generated from the same partner list the app uses so a new partner cannot appear without being listed. How billing works (`/billing`): prices and renewal for Plus monthly and annual; the 7-day trial on annual, the reminder 2 days before it converts and what happens on day 8; Trip Pass is one time, 90 days, never renews; credit packs are one time and last 12 months; how to cancel (a button "Cancel subscription" that opens the App Store's subscription sheet on an iPhone, or explains where to find it on the web); what stays after cancelling; refunds go through Apple and what Wayfold can do; no card details are stored; purchases are in the iOS app only for now; what stays free. Prices come from the paywall configuration so the page and the paywall cannot disagree.
+**Interactions.** Links to the page appear in Account, every paywall's legal row, the plan and credits screen (6.26), every `/vs` page and the App Store listing. Each partner name is plain text, never a link.
+**States.** Loading: a text skeleton. Error: "We could not load this page. Try again." Offline: the last loaded copy with its date. Not applicable: empty, permission, limit.
+**Copy.** Titles "How we earn" and "How billing works". No em dashes; sentence case.
+**Events.** `how_we_earn_viewed {source}`, `billing_page_viewed {source}`, `cancel_link_tapped {surface}`.
+**Accessibility.** One `h1`; partner lists are real lists; the cancel button has a visible label; no content lives only in an image.
+
+### 6.41 Service status and sync indicator
+
+**Purpose.** Let a person tell in seconds whether a problem is theirs or ours.
+**Layout.** Two parts. The **sync indicator** (4.21) sits under the destination name in every trip header: "Synced 12 s ago", with states Syncing, "Offline, 3 edits waiting" and "Could not sync, retrying". The **status page** is hosted outside Wayfold's own servers at `status.wayfold.app` (opened from Account, Help and support, "Service status", and from the `/status` redirect): five components (web app, API, AI features, fare data, push), each operational, degraded or down, 90 days of uptime, and incidents with times in plain words.
+**Content.** The app shows a banner (4.21) only when the public status summary reports a degraded component: "Fares are delayed right now. Saved trips still work." with a "Service status" link. A single person's failed request never produces the banner.
+**Interactions.** Tapping the sync indicator runs a sync now and shows the new time. Tapping the banner opens the status page in the in-app browser.
+**States.** Loading: the indicator reads "Syncing" after 150 ms. Offline: the banner and the indicator both say so ("Offline, 3 edits waiting"). Error: "Could not sync, retrying" after three failed polls, with "Try now". Not applicable: empty, permission, limit.
+**Copy.** `sync_ago`, `sync_offline`, `status_banner` (7.5).
+**Events.** `sync_indicator_tapped {state}`, `status_banner_shown {component}`, `status_page_opened {source}`.
+**Accessibility.** The indicator is text and an icon, not color alone; it is not a live region for each tick, and a change of state is announced once, politely; the status page is tested with the same checks as the public pages.
+
+### 6.42 Android install guide
+
+**Purpose.** Let Android users use Wayfold as an installed app from the browser, and make it clear what works, until a native app exists.
+**Layout.** A public page `/install/android` in the marketing shell, reached from Account, Help and support, "Install on Android", and from a dismissible card on Android Chrome. The page shows three short numbered steps with a screenshot each, then two lists.
+
+```
++------------------------------+
+| Use Wayfold on Android       |
+|                              |
+| 1 Open wayfold.app in Chrome |
+| 2 Tap the menu (three dots)  |
+| 3 Tap Install app, or Add to |
+|   Home screen                |
+|                              |
+| What works                   |
+| - Plan, edit and share trips |
+| - Read trips offline         |
+| - Plan with friends on       |
+|   iPhone                     |
+|                              |
+| Not yet                      |
+| - Push alerts (we email      |
+|   price drops instead)       |
+| - A Play Store app           |
++------------------------------+
+```
+
+**Content.** The steps for Chrome, with a note for Samsung Internet. "What works": full planning and editing, sharing, reading offline, invites. "Not yet": push notifications (price drops and invites arrive by email) and a Play Store app ("A native Android app is planned"). The web app has a manifest (name, icons, theme color, standalone display) and a service worker that keeps opened trips readable offline.
+**The card.** On Android Chrome a dismissible card "Add Wayfold to your home screen" appears on Trips home after the person has created a trip, never on the first screen, never as a modal, at most once every 30 days. Its button uses the browser's own install prompt where Chrome provides one, and otherwise opens this page.
+**Interactions.** "Install" triggers the browser prompt; "Not now" hides the card for 30 days; the page links to Help.
+**States.** Loading: static content, no loading state. Already installed: the card does not appear and the page says "Wayfold is installed on this phone." Not Chrome: the page shows the steps for Samsung Internet and Firefox, and "Other browsers may differ." Offline: the page is readable from the service worker. Not applicable: empty, error, permission, limit.
+**Copy.** Card "Add Wayfold to your home screen" with [Install] and [Not now]. No claim of a store app or push that does not exist.
+**Events.** `android_install_card_shown`, `android_install_prompted {result: accepted|dismissed}`, `android_install_guide_viewed {source}`, `pwa_installed`.
+**Accessibility.** Steps are an ordered list; screenshots have text alternatives that repeat the step; the card is reachable in order and dismissible by keyboard.
 
 ## 7. Microcopy rules
 

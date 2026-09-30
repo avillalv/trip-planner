@@ -230,7 +230,7 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
 - **Purpose:** see where provider money goes, catch runaways in minutes, and stop a run.
 - **Data shown** (from `ai_usage`, `provider_calls`, `credit_ledger`, `runs`, `run_events`):
   - Spend today, this month and trailing 7-day mean, versus the global budget; gap between our sum and the daily Anthropic cost report (alert above 3 percent).
-  - Per feature: cost and call count for `explain`, `live_search`, `draft_day`, `draft_trip`, `research`, `agent_run`, and pasted-text import (`ai.import`); credits charged versus real cost (repricing signal when drift exceeds 20 percent); shared research cache hit rate; prompt cache read ratio on agent runs (alert under 70 percent).
+  - Per feature: cost and call count for `explain`, `live_search`, `draft_day`, `draft_trip`, `research`, `agent_run`, pasted-text import (`ai.import`), plan checks (`verify_plan`, with cost per checked item against the $0.02 budget, the green, amber, red and unchecked mix, and the share of items served from the `place_check` cache) and evidence rechecks (`ai.recheck`); credits charged versus real cost (repricing signal when drift exceeds 20 percent); shared research cache hit rate; prompt cache read ratio on agent runs (alert under 70 percent).
   - Per tier: spend per active user and per active payer (alert above $2 for Plus).
   - Top spenders: top 20 users by month-to-date spend, with tier, ceiling, percent of ceiling.
   - Ceiling hits: users who reached their daily or monthly ceiling, by tier, with the upsell outcome (pack bought or not).
@@ -256,12 +256,13 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
 | `ai.all_but_paid` | AI actions for every tier except paid ones (the 95 percent breaker) | Paid tiers, cached answers |
 | `provider.serpapi` | Live flight and rental search (SerpApi, the live provider) | Travelpayouts cached fares, saved fares, alerts on cached fares |
 | `provider.travelpayouts`, `provider.geoapify`, `provider.anthropic`, `provider.viator`, `provider.stay22`, `provider.frankfurter` | All calls to that provider; the dependent feature shows a stale-data banner | Everything that does not need it |
-| `ai.explain`, `ai.draft`, `ai.research`, `ai.taster`, `ai.import`, `ai.packing`, `ai.web_search`, `ai.web_fetch`, `ai.model.sonnet`, `ai.model.haiku`, `ai.force_haiku`, `ai.batch`, `ai.shared_cache_write` | That AI feature, tool, model route or lane (06 section 6.6) | Everything else |
+| `ai.explain`, `ai.draft`, `ai.research`, `ai.taster`, `ai.import`, `ai.packing`, `ai.verify`, `ai.recheck`, `ai.web_search`, `ai.web_fetch`, `ai.model.sonnet`, `ai.model.haiku`, `ai.force_haiku`, `ai.batch`, `ai.shared_cache_write` | That AI feature, tool, model route or lane (06 section 6.6) | Everything else |
 | `ai.agent_runs` | Starting new agent runs (running ones finish or are cancelled) | Single-call AI, research from cache |
 | `user:<users.id>` (a per-account hold; created on demand, never seeded) | AI and live actions for one account | Everything else for that account |
 | `affiliate.all`, `affiliate.{program code}` | Partner links (plain links only) | Everything else |
 | `signups`, `purchases` | New account creation; paywalls and purchase buttons | Existing accounts and restores |
-| `import.all` | Every trip import (files, feeds, pasted text), feed polling and the import reward | Everything else |
+| `import.all` | Every trip import (files, feeds, pasted text, Google Maps lists), feed polling and the import reward | Everything else |
+| `import.polling` | The 6-hourly calendar feed polling only | First-time imports, refresh now |
 | `referrals.grant` | Granting referral credits (qualified rewards wait and are granted when the switch clears) | Sign-up, redeeming codes |
 
 - **Breakers (automatic):** the system flips switches itself and records them with `actor_type = system`: at 80 percent of the daily global Anthropic budget `ai.free_tier` engages; at 95 percent `ai.all_but_paid` engages (the `auto_rule` values in 03); at 90 percent of the SerpApi monthly quota `provider.serpapi` narrows live checks to top-value routes (a chosen flight or an active alert), then cached only; any provider error rate over 50 percent for 5 minutes trips that provider's switch to "half-open" (one probe a minute) until it recovers. Automatic trips page the owner.
@@ -274,7 +275,7 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
 
 - **Purpose:** roll features out gradually and test paywall and onboarding changes without a release.
 - **Data shown:** `feature_flags` rows with key, `kind` (`flag`, `experiment` for `exp_` keys, `setting` for `setting_` keys; a check constraint keeps it in step with the prefix), `enabled`, `rollout_pct`, `rules` (`tiers`, `platforms`, `countries`, `user_ids`, `min_app_version`, `max_app_version`), `variants`, `updated_by`, created and changed times, and a stale-flag warning (unchanged 90 days at 100 percent or 0 percent).
-- **Flags at launch** (03 section 11.5): `serpapi_live_fares` (on behind legal review), `guest_mode`, `shared_research_cache`, `link_preview`, `affiliate_lodging_test`, `min_app_version`, `trip_import`, `referrals` and `booked_fare_alerts` (all on), and `insurance_cards` and `visa_assist` (off). Flags for features of later phases are added by the phase that ships them. There is deliberately no flag that turns affiliate links or their disclosure off for a tier.
+- **Flags at launch** (03 section 11.5): `serpapi_live_fares` (on behind legal review), `guest_mode`, `shared_research_cache`, `link_preview`, `affiliate_lodging_test`, `min_app_version`, `trip_import`, `referrals`, `booked_fare_alerts`, `verify_plan`, `evidence_recheck` and `calendar_feed_polling` (all on), and `insurance_cards` and `visa_assist` (off). Flags for features of later phases are added by the phase that ships them. There is deliberately no flag that turns affiliate links or their disclosure off for a tier.
 - **Experiments:** name, hypothesis, variants with allocation, primary metric, guardrail metrics, start and end dates, status (draft, running, stopped, concluded). Results table per variant: exposures, conversions, conversion rate, relative lift, probability to beat control (Bayesian), minimum detectable effect, and guardrails (refund rate, AI cost per user, 7-day retention). Exposure and conversion events come from PostHog (03 has no `analytics_events` table); revenue figures come from `store_transactions`.
 - **Paywall experiments** in the roadmap: Trip Pass price points, annual-first versus pass-first ordering, trial copy. A price test uses separate store products or RevenueCat offerings (the console cannot change App Store prices); the console only assigns users to offerings.
 - **Filters:** kind, state, owner, tier, stale.
@@ -295,7 +296,7 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
   - Conversion import status: for each network the last nightly import time, rows imported, rows changed, failures, unmatched share (alert above 10 percent, which means a tracking break).
   - Redirect health: `/go/{click_id}` 4xx and 5xx rate (alert above 1 percent), expired or reused click ids, clicks down more than 50 percent day over day.
   - Broken link checker: for every active template, the result of the last check.
-  - Disclosure audit: each surface that shows a partner button, with a check that the text "We earn a commission if you book here." is present, the "Ad" label appears on UK and EU storefronts, lists state how they are sorted, and the "Hide booking links" setting works.
+  - Disclosure audit: each surface that shows a partner button, with a check that the text "We earn a commission if you book here." is present, that the public "How we earn" page lists every active program (it is built from `affiliate_programs`, so a program with status `active` appears there automatically), the "Ad" label appears on UK and EU storefronts, lists state how they are sorted, and the "Hide booking links" setting works.
 - **Filters:** date range, network, program, surface, platform, country, status (pending, approved, rejected, paid).
 - **Actions:**
   - *Run the link checker now* for a template or all; *disable a template* (`affiliate_link_templates.active = false`; stops new clicks through it and falls back to a plain link).
@@ -311,12 +312,12 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
 
 ### 6.8 Imports monitoring
 
-- **Purpose:** keep the switching path (calendar file, calendar feed, pasted booking text) working and safe, find broken sources fast, and see every blocked fetch. The pipeline is in [02-architecture.md](02-architecture.md) section 5.4.
+- **Purpose:** keep the switching path (calendar file, calendar feed, pasted booking text, Google Maps export, pasted places) working and safe, find broken sources fast, and see every blocked fetch. The pipeline is in [02-architecture.md](02-architecture.md) section 5.4.
 - **Data shown** (`trip_imports`, `provider_calls`, `ai_usage`):
-  - Funnel by source (`ics_file`, `ics_feed`, `pasted_text`): started, reached `review`, `applied`, `failed`, `discarded`; share of new users who import within 7 days; first-import Trip Pass grants (`reward_granted_at` set).
+  - Funnel by source (`ics_file`, `ics_feed`, `pasted_text`, `maps_file`, `places_text`) and by entry (`origin`: TripIt, Tripsy, Wanderlog, Google Calendar, Google Maps, other): started, reached `review`, `applied`, `failed`, `discarded`; share of new users who import within 7 days; first-import Trip Pass grants (`reward_granted_at` set).
   - Pasted-text quality: items found versus items applied (keep rate), median Haiku cost per import, p95 latency, how often nothing was recognized. An alert fires when the keep rate is under 60 percent over the last 100 imports (default).
   - Failure reasons by `error_code`: `unreadable_file`, `no_events`, `feed_unreachable`, `nothing_found`, `provider_error`, `blocked_source`.
-  - Feed health: feeds with polling on, polls per hour, median fetch time, success rate, feeds switched off after 3 consecutive failures, feeds by host (host only, because the full address is a secret link), oldest last success.
+  - Feed health: feeds with polling on (opt-in, every 6 hours), polls per hour, median fetch time, success rate, change previews found and how many were confirmed, feeds switched off after 3 consecutive failures, feeds by host (host only, because the full address is a secret link), oldest last success.
   - Blocked fetches (the SSRF guard in [02-architecture.md](02-architecture.md) section 5.4): count by reason (private or reserved address, redirect to a private address, blocked host list, bad scheme or port) and the accounts with the most blocks.
   - Recent imports: short id, masked user, source, status, items found and applied, duration, `error_code`. Never file names, feed addresses, event titles or pasted text; only sizes, counts and hashes.
 - **Filters:** source, status, `error_code`, date range, tier, feed host.
@@ -362,7 +363,7 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
 - **Purpose:** know whether SerpApi, Travelpayouts, Geoapify and Anthropic are working and affordable, before users notice.
 - **Data shown** (`provider_calls`, provider status APIs where they exist): per provider: requests, success rate, p50 and p95 latency, 429 and 5xx rates, quota used and remaining (SerpApi account API, Travelpayouts limits, Geoapify credits, Anthropic rate-limit headers and org daily spend), spend today and this month, cache hit rate, current kill switch state, and the last incident. Also listed for completeness: RevenueCat, Supabase Auth, APNs and Resend, with status and last error.
 - **Filters:** provider, endpoint, range, cached or live.
-- **Actions:** run a synthetic probe (one cheap request), open the kill switch dialog, set a quota alert threshold (settings), export an error sample (redacted).
+- **Actions:** run a synthetic probe (one cheap request), open the kill switch dialog, set a quota alert threshold (settings), export an error sample (redacted), and open the public status page in Better Stack to post or update an incident (the page is hosted outside our servers, 02 section 8.1; an incident is posted whenever a component is degraded for more than 10 minutes).
 - **Guardrails:** probes use a test account and are rate limited to 1 a minute; quotas that drop under 20 percent alert; the screen explains the fallback users get when each provider is down.
 
 
@@ -395,9 +396,9 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
 - **Purpose:** change business parameters without a deploy and keep a history.
 - **Data shown and editable.** Each group is stored where 03 already keeps it, so an edit is an audited `UPDATE` and never a migration (03 section 11):
   - Prices display: `store_products.price_minor` for Plus, Trip Pass and credit packs, used on the web pricing page and paywall fallback. The real prices live in App Store Connect; the screen shows a check that these values match the store prices (from RevenueCat offerings) and flags a mismatch.
-  - Credit prices per action in `credit_action_prices` (`explain` 1, `live_search` 1, `draft_day` 1, `draft_trip` 4, `research` 8 with `credits_cached` 1, `agent_run` 40 with `credits_cached` 8, plus `hard_stop_micros`, `max_turns`, `max_searches`, `max_fetches`) and monthly allowances in `plans.monthly_credits` and `plans.credits_granted` (Free 12, Plus 60, Trip Pass 40).
+  - Credit prices per action in `credit_action_prices` (`explain` 1, `live_search` 1, `draft_day` 1, `draft_trip` 4, `research` 8 with `credits_cached` 1, `agent_run` 40 with `credits_cached` 8, `verify_plan` 1 per checked item, plus `hard_stop_micros`, `max_turns`, `max_searches`, `max_fetches`) and monthly allowances in `plans.monthly_credits` and `plans.credits_granted` (Free 12, Plus 60, Trip Pass 40).
   - Ceilings: `plans.limits` keys `monthly_ceiling_micros` and `daily_ceiling_micros` per tier and pass. The global daily Anthropic budget (`setting_ai_global_daily_usd`, seeded at $50), per-provider quotas (`setting_serpapi_monthly_quota`, seeded at 5,000) and alert thresholds are `setting_` rows in `feature_flags` (03 section 11.5 seeds these and `setting_ai_warm_daily_usd`; the console creates the others).
-  - Growth settings (`setting_` rows, 03 section 11.5): `setting_import_reward` (`enabled`, `min_items_applied`), `setting_referral_credits` (`referrer` 20, `referee` 20, `referrer_monthly_cap` 5, `referrer_yearly_cap` 10, `qualify_event`, `qualify_min_items`) and `setting_booked_fare_drop` (`min_drop_pct` 5, `min_drop_usd`, `max_age_hours` 48).
+  - Growth settings (`setting_` rows, 03 section 11.5): `setting_import_reward` (`enabled`, `min_items_applied` 3, `require_flight_or_stay`, `require_verified_email`, `block_if_plus`), `setting_referral_credits` (`referrer` 20, `referee` 20, `expiry_months` 12, `referrer_monthly_cap` 5 in a rolling 30 days, `referrer_yearly_cap` 10 per calendar year, `qualify_event` `first_trip_with_dates`), `setting_booked_fare_drop` (`min_drop_pct` 5, `min_drop_usd` 10, `min_days_between` 7, `max_age_hours` 48) and `setting_calendar_polling` (`interval_hours` 6, `max_failures` 3, `max_feeds_per_user` 3).
   - Admin limits used in section 3 (grant caps, extension caps), also `setting_` rows.
 - **Filters:** group, changed in the last 30 days.
 - **Actions:** edit a value with reason (engineer within plus or minus 20 percent of the current value, owner beyond), schedule a change for a future time, revert to a previous value from history.

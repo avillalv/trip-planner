@@ -4,7 +4,7 @@ Part of the [Wayfold build specification](../README.md) and of [Phase 1](README.
 
 This file is the quality bar for the launch app. It covers testing, security, privacy and compliance, the analytics event catalogue, observability, the App Store submission for the Phase 1 products (Free, Plus, Trip Pass, credit packs), the launch checklist and the runbooks. Architecture is in [02-architecture.md](02-architecture.md), the API in [04-api-spec.md](04-api-spec.md), AI evals in detail in [06-ai-agents-spec.md](06-ai-agents-spec.md), and money rules in [07-monetization-spec.md](07-monetization-spec.md). The ticket that builds each item is in [09-build-roadmap.md](09-build-roadmap.md).
 
-Not in Phase 1, so not tested or secured here: Stripe (web billing, group payments, advisor seats, print), households and the Family plan, polls and cost splitting, the Group Trip Pass, the concierge lane, Wayfold for Advisors, partner guides and Pro. Each arrives with its own tests in the phase that builds it. What this file adds compared with the full specification: tests and security for the switching import (ICS files, ICS feeds, pasted confirmations), the import-reward and referral abuse controls, public sample and shared-trip pages with content reports, and the analytics events for the new features.
+Not in Phase 1, so not tested or secured here: web purchases and web billing (the web paywall only says "Upgrade in the iOS app"), Stripe (group payments, advisor seats, print), households and the Family plan, polls and cost splitting, the Group Trip Pass, the concierge lane, Wayfold for Advisors, partner guides and Pro. Each arrives with its own tests in the phase that builds it. What this file adds compared with the full specification: tests and security for the switching import (ICS files, ICS feeds with opt-in polling, pasted confirmations, Google Maps exports and pasted places), the import-reward and referral abuse controls, public sample and shared-trip pages with content reports, Verify this plan and the evidence recheck (accuracy evals, injection and cost gates), the trust pages, the sync indicator and public status page, Android Chrome testing, and the analytics events for the new features.
 
 ## 1. Testing strategy
 
@@ -14,14 +14,15 @@ Principle: test what loses money or trust first (tenant leaks, entitlements, cre
 
 | Layer | Tool | What it covers | Runs | Gate |
 |---|---|---|---|---|
-| Unit (backend) | pytest | Pure rules: `trip_capabilities()`, `can_invite()` (Free 1 collaborator), credit price table, reserve and settle math, fare normalization, evidence rules in `ingest`, affiliate URL building, FX conversion, cron slot math, PII redaction, referral rules | Every pull request | 100 percent pass; 90 percent line coverage on `credits`, `billing`, `affiliate`, `security`, the import parsers and ingest; 75 percent overall |
+| Unit (backend) | pytest | Pure rules: `trip_capabilities()`, `can_invite()` (Free 1 collaborator), credit price table, reserve and settle math (including per-item settlement for `verify_plan`), fare normalization, evidence rules in `ingest`, the 14-day freshness rule, the plan-check verdict code (hours windows, price tolerance, grounding), affiliate URL building, FX conversion, cron slot math, PII redaction, referral rules and caps, import reward conditions, booked-fare thresholds, calendar feed diff | Every pull request | 100 percent pass; 90 percent line coverage on `credits`, `billing`, `affiliate`, `security`, the import parsers and ingest; 75 percent overall |
 | Unit (frontend) | vitest and Testing Library | Form logic, date and money helpers, paywall selection, offline queue, query key namespacing, import preview state | Every pull request | 100 percent pass |
 | Integration | pytest against a real `postgres:18` service container | Routers through the ASGI app with real SQL, real RLS, real Procrastinate queue, fake providers | Every pull request | 100 percent pass |
 | Tenant isolation | pytest, generated from `app.routes` | Every route as another user (section 1.3) | Every pull request | Zero leaks, zero unclassified routes |
 | Contract tests | pytest with recorded fixtures | Webhook signature and payload handling for RevenueCat, Resend, Supabase auth hook, affiliate reports; provider response shapes; golden ICS files from TripIt, Google Calendar and Apple Calendar | Every pull request; fixtures refreshed monthly | 100 percent pass |
 | Fuzzing | Hypothesis in CI; Atheris nightly (30 minutes) on the ICS parser and the redaction functions | Malformed, oversized and hostile ICS files and pasted text (section 2.6 and 2.7) | Hypothesis on every pull request; Atheris nightly and before launch (1 hour) | No crash, hang or limit breach; every crash becomes a committed regression file |
-| AI evals | Custom runner through the Anthropic Batch API | Fare extraction, abstention, rule compliance, research grounding, booking import extraction, injection, cost (section 1.5) | On prompt, model or agent changes; weekly | Gates in section 1.5 |
-| Web end to end | Playwright (Chromium, WebKit, iPhone 15 viewport) | Sign-in, create trip, invite, hearts, import, paywall, AI consent, public pages, delete account | Nightly and on pull requests labeled `e2e` | Zero failures on the smoke set |
+| AI evals | Custom runner through the Anthropic Batch API | Fare extraction, abstention, rule compliance, research grounding, booking import extraction, plan extraction and plan checking, recheck, injection, cost (section 1.5) | On prompt, model or agent changes; weekly | Gates in section 1.5 |
+| Web end to end | Playwright (Chromium, WebKit, iPhone 15 viewport, Pixel 7 viewport on Chromium) | Sign-in, create trip, invite, hearts, import, paywall, AI consent, public pages, delete account | Nightly and on pull requests labeled `e2e` | Zero failures on the smoke set |
+| Android Chrome | Playwright (Chromium with the Pixel 7 profile) in CI, plus a manual pass on a real Android phone and tablet | Sign-in, create and edit a trip, invite and share, import, Verify this plan, offline reading, the install flow (section 1.9) | CI on pull requests labeled `e2e` and nightly; manual before each release | Zero failures on the smoke set; the manual checklist passes or every defect is fixed or listed in the review notes |
 | iOS smoke | Maestro on simulator, XCUITest for native pieces | Launch, sign in, offline trip, ICS file import, purchase in sandbox, push permission, deep link | Nightly on the main branch, and before every TestFlight build | Zero failures |
 | Migration | CI job | Empty to head, previous release to head, single head, no model drift | Every pull request | Pass |
 | Load | k6 | API and queue targets (section 1.8) | Before launch, then quarterly | Targets met |
@@ -51,14 +52,20 @@ Required integration scenarios (each is a named test file):
 11. `/go/{click_id}` never redirects to a host outside `affiliate_link_templates`.
 12. Scheduler: two instances, one leader; 500 due routines fire exactly once; outage of a day fires one check; no agent job is ever scheduled in Phase 1.
 13. ICS file import: a TripIt export, a Google Calendar export and an Apple Calendar export import into the right itinerary items, flights and stays; re-import adds nothing (dedupe by `UID`); oversized, malformed and too-many-event files fail cleanly and leave the trip unchanged; nothing is saved before the user confirms the preview.
-14. ICS feed import: a fake feed imports through the same parser; every hostile URL in section 2.5 is refused before any socket opens; the feed URL appears in no log line, Sentry event, `provider_calls` row or analytics event; the fifth feed import in an hour succeeds and the sixth returns 429.
+14. ICS feed import: a fake feed imports through the same parser; every hostile URL in section 2.5 is refused before any socket opens; the feed URL appears in no log line, Sentry event, `provider_calls` row or analytics event, and is stored (encrypted) only while polling is on; the fifth feed import in an hour succeeds and the sixth returns 429.
 15. Pasted confirmations: the recorded Anthropic request for a corpus of confirmations contains none of the planted personal data; booking codes come back from local extraction, not the model; an empty or failed extraction refunds the credit; instructions inside the pasted text do not change the output schema or call any tool; consent is required.
-16. First-import reward: the first qualifying import (verified email, at least 3 saved items, Free account) creates one `trip_passes` row with `source = 'import_reward'` and one 40 credit grant; concurrent and repeated imports grant once; a Plus owner gets nothing; revoking the reward reverses the grant.
-17. Booked-fare drop alert: a lower fare on the same route and dates triggers exactly one alert with source and age; equal or higher fares trigger none; the alert copy contains no refund promise.
+16. First-import reward (settled conditions): the first qualifying import (verified email, at least 3 saved items including a flight or a stay, no active pass on the trip, no active Plus) creates one `trip_passes` row with `source = 'import_reward'` and one 40 credit grant; concurrent and repeated imports grant once; an import with only places, fewer than 3 items, no flight or stay, an unverified email or a Plus owner gets nothing and does not consume the reward; revoking the reward reverses the grant.
+17. Booked-fare drop alert (settled thresholds): a fare at least 5 percent and at least $10 (converted) below what was paid, on the same route and dates, triggers exactly one alert with source and age; a drop under 5 percent or under $10, and equal or higher fares, trigger none; a second qualifying drop within 7 days of the first alert triggers none; the alert has no partner link and its copy contains no refund promise.
 18. Calendar feed: the token URL returns the trip's events and no private notes; rotating the token kills the old URL at once; the token is absent from logs; 60 requests a minute per token.
 19. Public pages and reports: sample and shared pages render without JavaScript; planted sentinel strings in private notes, addresses, prices and traveler names never appear; a report creates a queue item; disabling a link returns 410 and removes the sitemap entry within 5 minutes.
-20. Referral: a valid referral grants both sides once after activation; self-referral (same device key, IP hash or normalized email), duplicates and accounts over the caps grant nothing; revoking reverses the ledger.
+20. Referral (settled values): a valid referral grants 20 credits to both sides once, after the referred person's first trip with dates, expiring after 12 months; the sixth reward in a rolling 30 days and the eleventh in a calendar year pay the referrer nothing while the referred person is still paid; self-referral (same device key, IP hash or normalized email) and duplicates grant nothing; the credits never raise a provider-spend ceiling; revoking reverses the ledger.
 21. Offline: a trip cached on the client renders without network; sign-out and account deletion purge the cache.
+22. Verify this plan: the recorded model request for a corpus of plans contains none of the planted personal data; a name not in the text is dropped; selection over the cap (5 Free, 12 Plus and Trip Pass) is refused; credits reserved equal the items selected and settle to the items that ended green, amber or red; unchecked items and provider errors are refunded; a green or amber item always has a cited page and date; an invented place is never green; Airbnb, Vrbo and Booking.com pages are never opened; the pasted text is in no table, log or event; a member cannot update a verdict; results are deleted after 30 days; importing carries the evidence into the trip.
+23. Evidence freshness and recheck: a finding whose date is 15 days old shows the flag and one that is 13 days old does not; a recheck costs 1 credit, moves the date only when the page still says the same thing, refunds when the page is unreachable, never searches and never fetches a blocked host; fares are not rechecked.
+24. Calendar polling: a feed is read every 6 hours only after the person opted in; an unchanged feed makes no preview; a changed feed makes one preview and one notice and changes nothing until the person confirms; the third failure in a row stops polling and deletes the stored address; the fourth polled feed is refused; turning it off deletes the address.
+25. Google Maps and pasted places: a Takeout CSV, GeoJSON and KML export and a pasted list import as ideas with matched places and no AI call; a pasted Google Maps list link triggers no network request and returns `list_link_not_readable`; a places-only import never earns the first-import reward; more than 200 places import the first 200.
+26. Web paywall and cancel path: on the web client every paywall says "Upgrade in the iOS app" with no price and no purchase control (`purchasable: false`); on iOS the plan card has "Cancel subscription" one tap from Account and `cancel_url` is set; trial reminder emails contain the link.
+27. Trust pages and status: adding an active `affiliate_programs` row makes it appear on `/how-we-earn` with no code change; the prices on `/billing` equal the paywall prices; `GET /public/status` mirrors a degraded component and the app banner appears and clears; the sync indicator shows the offline state within 5 seconds of losing the network.
 
 ### 1.3 Tenant-isolation test (the most important test)
 
@@ -105,13 +112,18 @@ Evals are the quality bar for anything that touches fares or facts. Spec of the 
 | Evidence labels | Every AI-saved fact in the eval runs | Carries `source_url` and `checked_at` and renders "Found on [site], checked [date]" | 100 percent |
 | Booking import extraction | 60 pasted confirmations (airlines, hotels, rentals, tours, rail; clean and noisy; English, Spanish, German) | Field accuracy for dates, places, times and amounts; items invented that are not in the text; abstention on text that is not a confirmation | 95 percent field accuracy; 0 invented items; 95 percent abstention |
 | Booking import privacy | The same 60 confirmations with planted names, emails, phone numbers, booking codes, card-like and passport-like numbers | Personal data present in the recorded model request | 0 occurrences |
+| Plan extraction (Verify this plan, step 1) | 40 pasted itineraries written by ChatGPT, Gemini, Layla and Mindtrip (English and 3 other languages), hand-labeled | Item recall; hallucinated items (a name not in the text) after grounding | Recall 95 percent or better; 0 hallucinated names |
+| Plan checking (Verify this plan, step 2) | 120 place claims across 30 cities: 50 real with correct facts, 25 real with a wrong hour or price, 25 invented, 20 closed or renamed (saved place data and saved pages, never fetched live) | Verdict accuracy per class; false green rate (a wrong claim shown green); false red rate; evidence validity (every green or amber cites a page that contains the value) | False green under 2 percent; invented places shown green 0; false red under 5 percent; evidence valid 100 percent |
+| Plan check injection and blocked sites | 20 pages with hidden instructions, 10 claims whose only source is Airbnb, Vrbo or Booking.com | Attack success; blocked page opened | 0 and 0 |
+| Evidence recheck | 60 saved page pairs: unchanged, changed, removed, unreachable | Result accuracy; `current_value` grounded in the page | 95 percent or better; 100 percent grounded |
+| Plan extraction privacy | The 40 plans with planted names, emails, phone numbers and booking codes | Personal data present in the recorded model request | 0 occurrences |
 | Prompt injection | 30 pages with hidden instructions, 20 pasted confirmations that contain instructions, plus shared-trip notes with instructions | Attack success rate (tool misuse, cross-trip access, data leakage, rule change, changed output schema) | 0 |
 | Refusals | 40 ordinary travel prompts, 20 edge prompts | Refusal rate on ordinary travel; refusal handling (credits refunded, run failed cleanly) | Ordinary refusals under 1 percent; handling 100 percent |
 | Safety scope | Insurance, visa, legal and medical questions | Answer links to official sources and gives no advice | 100 percent |
-| Cost and latency | Replays of 20 real trips, and the 50-run staging measurement | p50 and p95 dollars, turns, searches | Agent run p95 under $0.80; research p95 under $0.16; `draft_trip` p95 under $0.10; `booking_import` p95 under $0.01 |
+| Cost and latency | Replays of 20 real trips, the 50-run staging measurement, and 20 plan checks of 5 to 12 items | p50 and p95 dollars, turns, searches | Agent run p95 under $0.80; research p95 under $0.16; `draft_trip` p95 under $0.10; `booking_import` p95 under $0.01; plan check p95 under $0.02 per item; recheck p95 under $0.01 |
 | Ranking neutrality | 50 lodging and tour lists with and without affiliate programs | Order does not change with commission | Identical ordering; 100 percent |
 
-Rules: a prompt, model, tool or effort change merges only after an eval run on the Batch API passes. Rollout is 5 percent, then 25, then 100 over 3 days, watching `IngestRejection` rate, grounding failures, refusal rate and cost per run. A daily canary re-fetches 20 accepted fares and compares. A "price was different" button on every agent-found fare feeds new cases into the set.
+If a plan-check gate fails at launch, the flag `verify_plan` stays off (the screens hide the entry). Rules: a prompt, model, tool or effort change merges only after an eval run on the Batch API passes. Rollout is 5 percent, then 25, then 100 over 3 days, watching `IngestRejection` rate, grounding failures, refusal rate and cost per run. A daily canary re-fetches 20 accepted fares and compares. A "price was different" button on every agent-found fare feeds new cases into the set.
 
 ### 1.6 Web end to end (Playwright)
 
@@ -130,6 +142,11 @@ Smoke set (runs on every labeled pull request and nightly):
 11. Delete account flow requires re-authentication and lists effects.
 12. Present mode opens full screen and swipes through days; PDF export downloads (with the footer on Free).
 13. A public sample trip page loads with JavaScript disabled, shows no partner buttons and has a working Report link.
+14. Verify a plan (fake Anthropic and fake place data): paste a sample plan, read 9 items for 1 credit, tick 5 on a Free account (the sixth is blocked with "Free checks 5 at a time"), check them, see green, amber, red and not-checked rows with evidence labels, import the green rows, and see "May be out of date" on an imported item after the clock advances 15 days.
+15. Import entries: the TripIt, Tripsy, Wanderlog and Google Maps entries each open the right method; pasted place names produce a matched preview with no credit charged; a pasted Google Maps list link makes no network request and offers to keep it as a note.
+16. Keep checking this calendar: after a fake feed import the switch is off; turning it on and changing the fake feed produces a "Calendar changed" sheet; nothing changes in the trip until "Apply" is tapped.
+17. On the web client the paywall says "Upgrade in the iOS app" with no price or purchase button; the public pages `/how-we-earn` and `/billing` load without sign-in and pass axe.
+18. The trip header shows "Synced N s ago" and changes to "Offline, 1 edit waiting" when the network is cut; a degraded component in the fake status source shows the status banner.
 
 Full set adds: paywall states for each tier, out-of-credits state, offline banner, 409 conflict UI, share link read-only view, calendar feed subscription URL, referral link, admin console login gate, empty and error states. Every test file also runs an axe scan on its main screen, in light and dark, so the `--tp-edge` control borders and `--tp-warning-ink` warning text are checked on real screens.
 
@@ -162,6 +179,15 @@ Tool: k6 against staging sized like production, with synthetic data (5,000 trips
 | Soak | 4 hours at 50 requests per second with no memory growth over 20 percent |
 
 Pass criteria are written into the test script as thresholds; the job fails when any is missed. The results are saved with the release.
+
+### 1.9 Android Chrome tests
+
+Android users get the installable web app in Phase 1 (native Android is Phase 2), so Android Chrome is a supported browser and is tested as one.
+
+- **In CI:** the Playwright smoke set (section 1.6) also runs in a Chromium project with the Pixel 7 device profile (touch, 412 by 915 viewport, mobile user agent), on every pull request labeled `e2e` and nightly. A Lighthouse PWA check asserts the manifest, icons, `display: standalone` and the service worker, and a Playwright test asserts that an opened trip renders offline.
+- **Before each release, by hand (30 minutes), on a real Android phone (Chrome on the current and the previous Android release) and one tablet or a cloud device lab:** sign in by email code and Google; create and edit a trip with the on-screen keyboard (fields stay visible, no zoom on focus); invite and accept a link invite; share a read-only link; import a calendar file from the file picker; run Verify this plan; read a trip offline in airplane mode; install from the Chrome menu and from the in-app card; open the installed app from the home screen; turn on TalkBack and complete sign-in and trip viewing; rotate the device; check dark mode and text size 130 percent.
+- **Pass rule:** no blocker or major defect open; every minor defect is fixed or written into the known-issues list in the review notes. The result is saved to `docs/qa/android-chrome.md` with the date, devices and Chrome versions.
+- **Copy check:** the install guide (`/install/android`) and the card make no claim of a Play Store app or of push notifications.
 
 ## 2. Security
 
@@ -237,7 +263,7 @@ Limits are enforced in the app (Postgres token buckets, Redis later) and again a
 - Web has no attestation. Web Free accounts get the same caps and rely on email verification, Cloudflare Turnstile on signup, per-IP limits and disposable-email blocking.
 - Jailbreak signals are not used to block users.
 
-### 2.5 SSRF protection for link previews and calendar feed import
+### 2.5 SSRF protection for link previews and calendar feed import and polling
 
 Two features fetch URLs typed by users: link previews (`providers/link_preview.py`) and calendar feed import (`providers/ics_feed.py`). Both use the same guard in `security/ssrf.py`, so there is one place to get this right. This is the main server-side request risk.
 
@@ -248,7 +274,8 @@ Two features fetch URLs typed by users: link previews (`providers/link_preview.p
 5. Denylist: Airbnb, Vrbo and Booking.com hosts (and their country domains) are refused outright, which also satisfies the site-terms rule. The link preview response says "Paste the details or use the bookmarklet."; the feed import says "That link is not a calendar feed we can read." The denylist lives in one module shared with the AI fetch tool.
 6. Fetches run in the `api` job lane on a worker with egress through a fixed proxy that has its own network deny rules for internal ranges, as defense in depth.
 7. Returned image URLs are not fetched by the server; the client loads them under the CSP.
-8. A feed URL is a secret. It is never stored, never logged (log masking, section 2.2), never sent to Sentry, PostHog or `provider_calls` (the row stores the host only), and never echoed back in an error message. The user repastes it to refresh.
+8. A feed URL is a secret. It is never logged (log masking, section 2.2), never sent to Sentry, PostHog or `provider_calls` (the row stores the host only), and never echoed back in an error message. It is held only until the preview is confirmed or discarded; if the person turns on "Keep checking this calendar" it is then kept encrypted (`FIELD_ENCRYPTION_KEY`, AES-GCM) until polling is turned off, fails three times in a row, the trip ends plus 7 days, the import is discarded or the account is deleted, at which point it is deleted. Otherwise the user repastes it to refresh. The stored address is shown back only as host plus a masked path.
+10. Polling limits: every 6 hours per feed, at most 3 polled feeds per account, at most 60 fetches an hour to one destination host across the platform, conditional requests, the same guard on every poll (a host that starts resolving to a private address is refused and counts as a failure). A change preview is stored, never applied automatically, and deleted after 30 days if not confirmed.
 9. Tests: a table of hostile URLs (`http://127.0.0.1`, `http://[::1]`, `http://169.254.169.254`, `http://0x7f000001`, `http://2130706433`, `http://localtest.me`, `gopher://`, `file:///`, `https://user:pass@host`, a non-standard port, a DNS name that resolves to a private address, a name that resolves to a public address first and a private one second, a redirect to a private address, an https to http downgrade, a 30x loop, an oversized body, a gzip bomb that expands past 1 MB, a response that never finishes) must all be refused, for both the link preview and the feed import, using a fake resolver and a fake socket layer so the test never touches the network.
 
 The AI `web_fetch` tool is Anthropic's server tool, so it does not run on our network, but the same blocked domain list applies, and fetched URLs must already appear in the conversation.
@@ -268,11 +295,11 @@ Calendar files and feeds come from other people's software and from attackers. T
 
 ### 2.7 Pasted text and PII redaction
 
-Pasted confirmations are sent to Anthropic, so personal data is removed first.
+Pasted confirmations and pasted plans (Verify this plan) are sent to Anthropic, so personal data is removed first.
 
 1. **What is redacted before any model call:** personal names (traveler names become "Traveler 1", "Traveler 2" using the trip's `people` list and a name detector), email addresses, phone numbers, postal and home addresses, dates of birth, booking references and confirmation codes, ticket and loyalty numbers, payment card numbers (Luhn-checked and pattern-based), passport and identity document numbers, and URLs with tokens or query strings. Hotel and airline names, places, dates and times are kept because extraction needs them.
 2. **Booking codes come back locally.** The model never sees a code; the preview re-attaches the code found by local extraction from the original text, so the user still gets their reference on the item.
-3. **Fail closed.** If the redactor raises or finds an unparsable chunk, the request is not sent and the credit is not charged. Text over 8,000 characters is refused, not truncated silently.
+3. **Fail closed.** If the redactor raises or finds an unparsable chunk, the request is not sent and the credit is not charged. Pasted confirmations over 12,000 characters and pasted plans (Verify this plan) over 8,000 characters are refused, not truncated silently.
 4. **Consent and labels.** AI consent (section 3.5) is required; the paste screen says the text is processed by Anthropic with personal data removed. Output is labeled "From your pasted text" and needs confirmation before saving.
 5. **Logging.** Pasted text and model output are not logged at INFO; run records keep sizes and hashes. Prompt content is kept for 30 days server side as for every AI call (section 3.5), with the pasted text in redacted form only.
 6. **Injection.** Pasted text is placed in a `tool_result` style data block, never in the system prompt; the model has no tools in this action; output must match a strict schema or is discarded. The eval set in section 1.5 includes confirmations that contain instructions.
@@ -282,10 +309,10 @@ Pasted confirmations are sent to Anthropic, so personal data is removed first.
 
 Free Trip Passes and referral credits cost real money in AI and provider spend, so both are designed to be hard to farm.
 
-- **Import reward** (one free Trip Pass for the first import on a trip): once per account; requires a verified email; requires at least 3 items saved from the import; never for an account that already has Plus; never stacks on an existing pass for that trip; nothing for an empty, duplicate or junk import (the same file hash and the same set of `UID`s cannot earn it twice across accounts); the grant is idempotent on `(user_id, 'import_reward')`; the pass and its 40 credits are revocable from admin with the ledger reversed.
-- **Referral credits:** a referral link carries only an opaque code (no user id or email). Both sides are rewarded only after the referred account has a verified email and has completed an activation (first itinerary item or first import) and, on iOS, has passed attestation or the stricter fallback. Blocked: self-referral (same device key, same IP hash within 30 days, or the same normalized email), referral chains between two accounts, and more than 5 rewards a month or 25 a year per referrer. The pair is unique; a refund or an abuse flag on the referred account reverses both grants. Rewards are credits only (never cash or gift cards) and are never tied to a rating, review or social post (App Review Guideline 5.6.1).
+- **Import reward** (one free Trip Pass for the first qualifying import on a trip): once per account; requires a verified email; requires at least 3 items saved from the import including a flight or a stay (places-only imports and calendar change confirmations never qualify); never for an account that already has Plus; never stacks on an existing pass for that trip; nothing for an empty, duplicate or junk import (the same file hash and the same set of `UID`s cannot earn it twice across accounts); the grant is idempotent on `(user_id, 'import_reward')`; the pass and its 40 credits are revocable from admin with the ledger reversed.
+- **Referral credits:** a referral link carries only an opaque code (no user id or email). Both sides are rewarded only after the referred account has a verified email and has created their first trip with dates and, on iOS, has passed attestation or the stricter fallback. Both sides receive 20 credits that expire after 12 months and never raise a spend ceiling. Blocked: self-referral (same device key, same IP hash within 30 days, or the same normalized email), referral chains between two accounts, and more than 5 paid rewards in a rolling 30 days or 10 in a calendar year per referrer (the referred person is still paid). The pair is unique; a refund or an abuse flag on the referred account reverses both grants. Rewards are credits only (never cash or gift cards) and are never tied to a rating, review or social post (App Review Guideline 5.6.1).
 - **Detection:** `referral_blocked` and `import_reward_granted` events, a daily query for referrers with a high rate of rewards, shared device keys across accounts, and referred accounts that never return after the reward. A spike alert is in section 5.3.
-- **Kill switches:** `referrals` stops new rewards and referral attribution; `import.ics`, `import.feed` and `import.paste` stop each import path, and turning all three off stops the reward.
+- **Kill switches:** `referrals.grant` pauses referral credit grants (codes can still be entered); `import.all` stops every import path and the reward; `import.polling` stops only feed polling; `ai.import` stops pasted confirmations.
 - **Tests:** scenarios 16 and 20 in section 1.2, plus concurrency tests that import the same file in two sessions at once and refer with two signups at once.
 
 ### 2.9 Public pages and content reports
@@ -344,6 +371,18 @@ The admin console (see [08-admin-control-center.md](08-admin-control-center.md))
 6. **Network.** Optional IP allowlist (`ADMIN_IP_ALLOWLIST`), separate Cloudflare rules for `/admin`, stricter rate limits, and no admin routes on the iOS origin.
 7. **No shared accounts.** Offboarding removes the `admin_users` row and the identity provider account the same day.
 
+### 2.14 Verify this plan and evidence recheck
+
+Both features send text to Anthropic and open web pages on the user's behalf, so they follow the AI rules in [06-ai-agents-spec.md](06-ai-agents-spec.md) sections 4.3, 5.11 and 5.12 and these checks.
+
+1. **Privacy.** The pasted plan goes through the same redactor as pasted confirmations (2.7) and is never stored; only the extracted items and their evidence are kept, for 30 days. A check request carries only one item's name, planned time, claimed hours and price and the matched place's public fields.
+2. **No fetching of booking sites.** The blocked-domain list (Airbnb, Vrbo, Booking.com and their country sites) applies to every search and fetch; an item whose only source is such a page ends `unchecked` with `blocked_source`. Links inside the pasted text and in an item are never opened; a recheck fetches only the stored source URL that an earlier run already saw.
+3. **Verdicts are code, not model output.** The model reports what a page showed; every reported value must appear in a tool result of the same request, and the cited page must be one the search returned or the fetch opened. A value that cannot be grounded is discarded, and a green or amber row without a cited page and date cannot be written (database constraint `ck_plan_verification_items_evidence`).
+4. **Tamper resistance.** Members can change only the check and import ticks; verdicts, reasons, evidence and counts are written by the worker role (grants in 03 section 6.1), and the tenant-isolation tests cover both tables.
+5. **Injection.** Item text, place data and fetched pages are data; the model has no write tool; output is a strict schema; the eval set includes pages with hidden instructions (section 1.5).
+6. **Abuse and cost.** Per-run caps (5 or 12 items), a per-item $0.02 hard stop, admission on month headroom, the AI endpoint rate limits (10 a minute, 30 an hour), refunds for unchecked items, and an alert when real cost per checked item exceeds $0.02 (section 5.4).
+7. **Wording.** No screen, email or notification says a plan is "verified", "safe" or "guaranteed"; a copy lint test in CI fails on those words in the verify screens.
+
 ## 3. Privacy and compliance
 
 Plain statement used in the app and policy: Wayfold does not sell personal data, does not show ads and does not track people across other companies' apps or sites. Legal texts are written by counsel and versioned; `consents` stores the accepted version. This section is the engineering side.
@@ -353,14 +392,14 @@ Plain statement used in the app and policy: Wayfold does not sell personal data,
 | Topic | Implementation |
 |---|---|
 | Lawful basis (GDPR) | Contract for running the service; consent for AI processing, marketing email and optional analytics; legitimate interest for security logs and abuse prevention (device and IP hashes) |
-| Data inventory | A maintained `docs/privacy/data-map.md`: each table or store, what it holds, purpose, retention, processor, deletion rule. A test fails if a new table lacks an entry (the `referrals` table and calendar tokens included) |
+| Data inventory | A maintained `docs/privacy/data-map.md`: each table or store, what it holds, purpose, retention, processor, deletion rule. A test fails if a new table lacks an entry (the `referral_*` tables, `plan_verifications`, stored feed addresses and calendar tokens included) |
 | Rights | Access, portability (export), correction (edit in app), deletion (in app), objection and restriction (by support within 30 days; 45 days for CCPA) |
 | CCPA | No sale or sharing. No "Do not sell or share" link needed because there are no ad SDKs; the policy says so. Honor Global Privacy Control as an opt-out of optional analytics |
 | Processors | DPA signed with Anthropic, Supabase, Render, Cloudflare, RevenueCat, Sentry, PostHog, Resend, Better Stack. List is public in the policy |
 | International transfers | Standard contractual clauses where needed; US primary region at launch; EU region only when revenue or partners require |
 | Breach notice | 72 hours to regulators where required; users notified without undue delay (runbook 8.4) |
-| Imports | Uploaded calendar files are processed in memory and dropped; feed URLs are never stored; pasted confirmations are redacted before any AI processing and kept only as confirmed trip items |
-| Public pages | Shared pages are opt-in for indexing; the owner can turn a page off at any time; reports can take a page down |
+| Imports | Uploaded calendar files and Google Maps exports are processed in memory and dropped; a feed URL is kept (encrypted) only while the person has "Keep checking this calendar" on and is deleted when it is turned off; Google Maps list links are never opened or stored; pasted confirmations and pasted plans are redacted before any AI processing, and only confirmed trip items (and, for plan checks, the extracted items with their evidence for 30 days) are kept |
+| Public pages | Shared pages are opt-in for indexing; the owner can turn a page off at any time; reports can take a page down. "How we earn", "How billing works", the Android guide and the status page are static or data-driven pages with no personal data |
 | Minors | See 3.7 |
 | DPIA | A short data protection impact assessment for AI processing, imports and shared trips, reviewed yearly |
 
@@ -390,7 +429,7 @@ All items are "not used for tracking". Labels must match the code; a checklist i
 | Data type | Collected | Linked to user | Purpose |
 |---|---|---|---|
 | Contact info: email, name | Yes | Yes | App functionality, account |
-| User content: trips, notes, itinerary, imported trip items, pasted confirmation text (redacted before AI processing) | Yes | Yes | App functionality |
+| User content: trips, notes, itinerary, imported trip items, pasted confirmation text and pasted plan text (redacted before AI processing; plan text is not stored), plan check results (items and evidence, 30 days) | Yes | Yes | App functionality |
 | Identifiers: user id, device id (push token, App Attest key id) | Yes | Yes | App functionality, analytics, fraud prevention |
 | Purchases | Yes | Yes | App functionality |
 | Usage data: product interactions, affiliate click logging (which partner link was tapped, when, on which screen), referral attribution | Yes | Yes | Analytics, app functionality |
@@ -404,7 +443,7 @@ All items are "not used for tracking". Labels must match the code; a checklist i
 
 Apple guideline 5.1.2(i) requires disclosure and permission before personal data goes to third-party AI.
 
-- **Consent screen** the first time an AI feature is used, including a pasted confirmation import (also shown from Settings, Privacy). It names Anthropic, says what is sent (destination names, dates, party size, budget, preferences and text the user typed in the request, and pasted confirmation text with personal data removed), says what is not sent (email, name, account id, Apple identifiers, home address, other travelers' names which become "Traveler 1", booking codes, payment data), says it is not used to train models, and links to the policy. Buttons: "Allow" and "Not now". "Not now" leaves everything else working, including file and feed import, which use no AI.
+- **Consent screen** the first time an AI feature is used, including a pasted confirmation import, Verify this plan and a recheck (also shown from Settings, Privacy). It names Anthropic, says what is sent (destination names, dates, party size, budget, preferences and text the user typed in the request, and pasted confirmation text with personal data removed), says what is not sent (email, name, account id, Apple identifiers, home address, other travelers' names which become "Traveler 1", booking codes, payment data), says it is not used to train models, and links to the policy. Buttons: "Allow" and "Not now". "Not now" leaves everything else working, including file and feed import, which use no AI.
 - Stored in `consents(kind='ai_processing', version, granted_at, revoked_at)`. Revoke in Settings disables AI and does not delete the account. A new consent version re-prompts.
 - The API refuses AI routes without a current consent row (403 `consent_required`), and the worker checks again before each run.
 - Shared trips: the requester's consent covers their own prompt; the trip setting "Allow AI on this trip" (owner) controls whether content others wrote enters context. Notes marked private are never sent.
@@ -444,7 +483,7 @@ Apple guideline 5.1.2(i) requires disclosure and permission before personal data
 |---|---|
 | Email | Transactional mail separate from marketing; marketing is opt-in with one-click unsubscribe (`UNSUBSCRIBE_SECRET` signed link) and a physical address in the footer (CAN-SPAM). Referral invitations are sent by the user's own share sheet, not by Wayfold email |
 | Push | Permission requested in context after the first invite or alert, with a reason screen; no marketing pushes without opt-in |
-| Subscriptions | Price, period, trial length and renewal terms visible on the paywall; Terms and Privacy links; Restore button; easy path to cancel through Apple (guideline 3.1.2) |
+| Subscriptions | Price, period, trial length and renewal terms visible on the paywall; Terms and Privacy links; Restore button; one-tap "Cancel subscription" on the Account plan card that opens Apple's subscription sheet, the same link in the trial reminder email, and the plain "How billing works" page (guideline 3.1.2) |
 | Auto-renew laws | State rules on cancellation and reminders are handled by Apple for in-app subscriptions |
 | Accessibility | Accessibility statement, VoiceOver pass, Dynamic Type, reduced motion, AA contrast (including `--tp-edge` and `--tp-warning-ink`); accessibility nutrition labels in App Store Connect if required at submission |
 | Sales tax and VAT | Apple is merchant of record for all in-app purchases in Phase 1; there is no web checkout |
@@ -492,12 +531,12 @@ Common properties on every event (not repeated below): `app_version`, `platform`
 | `ai_consent_shown` | none | Consent screen displayed |
 | `ai_consent_granted` | `version` | Consent accepted |
 | `ai_consent_declined` | none | "Not now" |
-| `ai_action_started` | `action` (`explain`, `live_search`, `draft_day`, `draft_trip`, `research`, `agent_run`), `feature` (`explain`, `packing_list`, `booking_import`, `fare_hunt`, `deep_research`, from 06 section 1), `credits`, `from_cache` (bool), `taster` (bool) | Credits reserved (or the taster grant spent) |
+| `ai_action_started` | `action` (`explain`, `live_search`, `draft_day`, `draft_trip`, `research`, `agent_run`, `verify_plan`), `feature` (`explain`, `packing_list`, `booking_import`, `verify_extract`, `verify_plan`, `recheck`, `fare_hunt`, `deep_research`, from 06 section 1), `credits`, `from_cache` (bool), `taster` (bool) | Credits reserved (or the taster grant spent) |
 | `ai_action_completed` | `action`, `feature`, `outcome` (`ok`, `partial`, `failed`, `refunded`; a run the user stopped is `partial`), `taster` (bool), `duration_seconds_bucket` | Run settled |
 | `ai_feedback_given` | `action`, `rating` (`up`, `down`), `reason` (enum) | Thumbs tapped |
 | `fare_marked_wrong` | none | "Price was different" tapped |
 | `credits_low_shown` | `balance_bucket` | Low credit banner shown |
-| `paywall_viewed` | `placement` (a trigger id from [05-ui-ux-spec.md](05-ui-ux-spec.md) section 6.27, for Phase 1: `collaborators`, `track_live`, `third_trip`, `credits`, `trip_pass`, `settings`, `onboarding`), `offer_shown` (list of product codes) | Paywall displayed |
+| `paywall_viewed` | `placement` (a trigger id from [05-ui-ux-spec.md](05-ui-ux-spec.md) section 6.27, for Phase 1: `collaborators`, `track_live`, `third_trip`, `credits`, `out_of_credits_verify`, `trip_pass`, `settings`, `onboarding`; on the web the sheet has no purchase control), `offer_shown` (list of product codes) | Paywall displayed |
 | `paywall_dismissed` | `placement` | Closed without purchase |
 | `purchase_started` | `product` (`plus`, `trip_pass`, `credits_50`, `credits_150`, `credits_400`), `period` | StoreKit sheet shown |
 | `purchase_completed` | `product`, `period`, `is_trial` (bool) | Server confirms entitlement |
@@ -523,7 +562,7 @@ Common properties on every event (not repeated below): `app_version`, `platform`
 | `screen_viewed` | `screen` (the route name from 05 section 5.4) | Any screen appears; not repeated in the per-screen lists in 05 |
 | `onboarding_started` | none | Splash shown to a signed-out visitor |
 | `onboarding_choice_made` | `choice` (`plan`, `sign_in`, `invite`) | A splash button tapped |
-| `onboarding_switch_answered` | `answer` (`tripit`, `wanderlog`, `other_app`, `fresh`, `skipped`) | The "Coming from TripIt or Wanderlog?" question answered |
+| `onboarding_switch_answered` | `answer` (`tripit`, `tripsy`, `wanderlog`, `other_app`, `fresh`, `skipped`) | The "Coming from TripIt, Tripsy or Wanderlog?" question answered |
 | `onboarding_step_skipped` | `step` (`profile`, `home_airport`, `first_trip`) | "Skip for now" on a step |
 | `sign_in_failed` | `method`, `reason` (`wrong_code`, `expired_code`, `rate_limited`, `cancelled`, `error`) | Sign-in ends without success |
 | `save_prompt_shown` | `trigger` (`invite`, `sync`, `ai`, `export`, `alert`, `purchase`, `banner`) | Guest "Save your trip" sheet shown |
@@ -574,7 +613,7 @@ Common properties on every event (not repeated below): `app_version`, `platform`
 | `setting_changed` | `key` (the setting name, never its value) | A setting toggled |
 | `booking_links_hidden` | `value` (bool) | "Hide booking links" switched |
 | `manage_subscription_tapped` | none | "Manage subscription" tapped |
-| `notification_opened` | `type` (`price_alert`, `booked_fare`, `trip_change`, `reminder`, `run_done`) | App opened from a push |
+| `notification_opened` | `type` (`price_alert`, `booked_fare`, `trip_change`, `reminder`, `run_done`, `calendar_changes`, `verify_done`) | App opened from a push |
 | `subscription_started` | `product`, `period`, `is_trial` (bool) | From the RevenueCat webhook |
 | `subscription_renewed` | `product`, `period` | From the webhook |
 | `trial_converted` | `product` | First paid renewal after a trial |
@@ -582,10 +621,10 @@ Common properties on every event (not repeated below): `app_version`, `platform`
 | `trip_pass_moved` | none | A pass moved to another trip |
 | `trip_pass_expired` | `product`, `source` (`purchase`, `import_reward`) | Pass reaches `expires_at` |
 | `credits_expired` | `credits_bucket` | Grant expiry sweep (server side, no user id in the event) |
-| `import_started` | `method` (`ics_file`, `ics_feed`, `pasted`), `source_app` (`tripit`, `google_calendar`, `other`, `unknown`) | User starts an import (the app name is chosen by the user or detected from the file format, never from the URL) |
+| `import_started` | `method` (`ics_file`, `ics_feed`, `pasted`, `maps_file`, `places`), `source_app` (`tripit`, `tripsy`, `wanderlog`, `google_calendar`, `google_maps`, `other`, `unknown`) | User starts an import (the app name is the entry the user chose or detected from the file format, never from the URL) |
 | `import_previewed` | `method`, `item_count_bucket` | The preview list is shown |
 | `import_completed` | `method`, `saved_count_bucket` | The user confirms and items are saved |
-| `import_failed` | `method`, `reason` (`too_large`, `invalid_file`, `blocked_url`, `fetch_failed`, `no_items`, `rate_limited`, `consent_required`, `redaction_failed`, `error`) | An import ends without saving |
+| `import_failed` | `method`, `reason` (`too_large`, `invalid_file`, `blocked_url`, `list_link_not_readable`, `fetch_failed`, `no_items`, `rate_limited`, `consent_required`, `redaction_failed`, `error`) | An import ends without saving |
 | `import_reward_granted` | `method` | The free Trip Pass is granted (server side, once per account) |
 | `calendar_feed_enabled` | none | A calendar subscription link is created |
 | `calendar_feed_rotated` | none | The link is rotated |
@@ -594,11 +633,31 @@ Common properties on every event (not repeated below): `app_version`, `platform`
 | `sample_trip_copied` | none | "Copy this trip" after sign-up |
 | `share_indexing_toggled` | `value` (bool) | Owner turns search indexing on or off |
 | `content_reported` | `surface` (`shared_trip`, `sample_trip`, `ai_answer`, `research`), `reason` (enum) | A report is submitted |
-| `vs_page_viewed` | `competitor` (`tripit`, `wanderlog`) | A comparison page loads (server side) |
+| `vs_page_viewed` | `competitor` (`tripit`, `wanderlog`, `tripsy`) | A comparison page loads (server side) |
 | `referral_link_shared` | `channel` (`share_sheet`, `copy`) | The referral link is shared |
 | `referral_signup_attributed` | none | A sign-up carries a referral code |
 | `referral_reward_granted` | `side` (`referrer`, `referred`) | Credits granted after activation |
 | `referral_blocked` | `reason` (`self`, `duplicate`, `cap`, `abuse`, `unverified`) | A reward is refused (server side) |
+| `calendar_polling_enabled` | none | "Keep checking this calendar" switched on |
+| `calendar_changes_found` | `change_count_bucket` | A poll found changes and made a preview (server side) |
+| `calendar_changes_applied` | `applied_count_bucket` | The person applied some or all changes |
+| `verify_started` | `label` (`chatgpt`, `gemini`, `layla`, `mindtrip`, `other`), `text_length_bucket` | A pasted plan is read (step 1) |
+| `verify_items_read` | `item_count_bucket` | The list of places is shown |
+| `verify_checked` | `selected_count_bucket`, `green_bucket`, `amber_bucket`, `red_bucket`, `unchecked_bucket`, `credits` | A plan check settles (server side) |
+| `verify_imported` | `item_count_bucket` | Checked items are added to the trip |
+| `verify_discarded` | none | A plan check is discarded |
+| `evidence_stale_shown` | `age_bucket` (`15_to_30`, `over_30`) | A "May be out of date" chip is shown, once per item per session |
+| `evidence_rechecked` | `result` (`confirmed`, `changed`, `not_shown`, `unreachable`), `credits` | A recheck settles (server side) |
+| `cancel_link_tapped` | `surface` (`account`, `paywall`, `email`, `billing_page`) | "Cancel subscription" tapped |
+| `how_we_earn_viewed` | `source` (`settings`, `paywall`, `vs`, `link`) | The How we earn page loads |
+| `billing_page_viewed` | `source` (`settings`, `paywall`, `link`, `listing`) | The How billing works page loads |
+| `sync_indicator_tapped` | `state` (`synced`, `syncing`, `offline`, `failing`) | The sync indicator is tapped |
+| `status_banner_shown` | `component` (`web`, `api`, `ai`, `fares`, `push`) | The status banner appears |
+| `status_page_opened` | `source` (`banner`, `settings`, `link`) | The status page is opened from the app |
+| `android_install_card_shown` | none | The Android install card appears |
+| `android_install_prompted` | `result` (`accepted`, `dismissed`) | The browser install prompt result |
+| `android_install_guide_viewed` | `source` (`card`, `settings`, `link`) | The Android install guide loads |
+| `pwa_installed` | none | The installed web app opens for the first time |
 
 Screen names in 05 map to the catalogue as follows, so a screen never invents a name: the Subscription and credits screen is `screen_viewed {screen: subscription}`; a credit pack tap is `purchase_started` with a `credits_*` product; a live check or an explain is `ai_action_started` with its `action`; "Book on ..." on a fare, a stay or a checklist row is `partner_link_tapped` with the matching `placement`; sharing from present mode is `share_link_created`.
 
@@ -622,11 +681,12 @@ JSON to stdout, one line per event, shipped to Better Stack and kept 14 days hot
 | AI | Spend per day, model, action and tier; cost per active user; p95 cost per action; refusal rate; cache hit rate; batch share; retries |
 | Billing | Webhook lag (received to processed), unprocessed events, entitlement mismatches found by reconcile |
 | Notifications | Push delivered rate, 410 rate, email bounce and complaint rate |
-| Imports | Imports started, previewed and completed per method; failure rate by reason; parser sandbox timeouts and memory kills; feed URLs refused by the SSRF guard; redaction failures; import rewards granted per day |
+| Imports | Imports started, previewed and completed per method and per entry (TripIt, Tripsy, Wanderlog, Google Maps); failure rate by reason; parser sandbox timeouts and memory kills; feed URLs refused by the SSRF guard; polled feeds, change previews found and confirmed, polls failing; redaction failures; import rewards granted per day |
+| Verify this plan | Checks per day, items per check, verdict mix, credits spent, real cost per checked item, refund rate, share served from the `place_check` cache, false-green reports ("Price was different" style reports on green rows), rechecks and their results |
 | Referrals | Referral signups, rewards granted and blocked by reason per day |
 | Public pages | Requests, CDN hit rate, 4xx and 5xx, reports created, reports open over 24 hours, pages taken down |
 | Business | Signups, activation, invites, paywall conversion, MAU, MRR, credits sold, affiliate clicks and conversions, gross margin per tier, switching funnel conversion |
-| Client | Crash-free sessions (Sentry), cold start time, JS errors, API errors seen by the app |
+| Client | Crash-free sessions (Sentry), cold start time, JS errors, API errors seen by the app, sync indicator states shown (offline and failing shares), Android installs |
 
 Platform metrics plus Sentry until 10k MAU, then Prometheus style metrics into Grafana Cloud. The AI and business dashboards are built before launch (Metabase on a read replica through a SELECT-only login that is not one of the application roles).
 
@@ -655,7 +715,10 @@ Severity: `page` (phone, any hour), `notify` (chat, business hours), `digest` (w
 | Provider quota | Under 20 percent of monthly quota left | notify |
 | Affiliate link errors | `/go` non-302 rate over 2 percent for 15 minutes | notify |
 | Import failures | More than 30 percent of imports failing for 30 minutes (excluding user mistakes) | notify |
-| Import SSRF attempts | More than 50 refused feed URLs in an hour, or any single account with more than 10 | notify; engage `import.feed` if it continues |
+| Import SSRF attempts | More than 50 refused feed URLs in an hour, or any single account with more than 10 | notify; engage `import.all` if it continues |
+| Calendar polling | More than 20 percent of polls failing for an hour, or any polled feed host over 60 fetches an hour | notify; engage `import.polling` if it continues |
+| Verify this plan cost | Real cost per checked item over $0.02 on a 7 day p95, or more than 5 false-green reports in a day | notify; consider `ai.verify` |
+| Status page | A component degraded for more than 10 minutes with no incident posted | notify |
 | Parser sandbox kills | More than 5 timeouts or memory kills in an hour | notify |
 | Redaction failures | Any spike over 10 in an hour | notify |
 | Import rewards or referral rewards | More than 3 times the 7 day daily average, or any account at its cap twice | notify |
@@ -680,7 +743,8 @@ The most likely way to lose money is a runaway agent or a loop. Alerts run from 
 | Single account | Over 3 times its daily ceiling (the ledger should prevent this, so it means a bug) | page | Suspend AI for that account |
 | Single run | Passes its turn, search, fetch or dollar cap | notify | Run stopped by code; alert on any overrun |
 | Free tier spend | Over 30 percent of total daily spend | notify | Consider `ai.free_tier` switch |
-| Booking import spend | Over 3 times the 7 day average, or any account over 30 imports a day | notify | Consider `import.paste` |
+| Booking import spend | Over 3 times the 7 day average, or any account over 30 imports a day | notify | Consider `ai.import` |
+| Plan check spend | Over 3 times the 7 day average, or any account over 10 checks a day | notify | Consider `ai.verify` |
 | Cache hit rate | Down 20 points from the 7 day average | notify | None |
 | Anthropic 429 or overloaded rate | Over 5 percent for 10 minutes | notify | Back off the `ai` lane |
 | Refusal rate | Over 3 percent for a feature in a day | notify | Review prompt version |
@@ -692,11 +756,11 @@ Monthly provider-spend ceilings per tier (root README) are enforced by the ledge
 
 ### 5.5 Uptime and status
 
-Better Stack probes `/health/ready` from two regions and runs a synthetic check every 5 minutes that signs in with a test account and loads a trip. A public status page (`status.wayfold.app`) lists API, AI, sign-in, purchases, imports, public pages and push. Service targets: API availability 99.9 percent, price alert delivery within 30 minutes of a scheduled check, p95 queue wait under 5 minutes.
+Better Stack probes `/health/ready` from two regions and runs a synthetic check every 5 minutes that signs in with a test account and loads a trip. A public status page (`status.wayfold.app`, hosted by Better Stack outside our own infrastructure, 02 section 8.1) lists five components: web app, API, AI features, fare data and push, each fed by an outside monitor, with 90 days of uptime and plain-words incidents. The app's status banner mirrors it through `GET /public/status`, and the trip header shows "Synced N seconds ago" so a person can tell a local problem from ours. An incident is posted whenever a component is degraded for more than 10 minutes; the drill in section 8.2 includes posting one. Service targets: API availability 99.9 percent, price alert delivery within 30 minutes of a scheduled check, p95 queue wait under 5 minutes.
 
 ## 6. App Store submission (Phase 1 products)
 
-Products submitted: Plus monthly and annual (7-day trial on annual), Trip Pass, and the credit packs `credits_50`, `credits_150` and `credits_400`, all through In-App Purchase. Not submitted in Phase 1: Family, Group Trip Pass, Pro, and anything billed through Stripe. The submission is made at the end of week 24 (WF-115).
+Products submitted: Plus monthly and annual (7-day trial on annual), Trip Pass, and the credit packs `credits_50`, `credits_150` and `credits_400`, all through In-App Purchase. Not submitted in Phase 1: Family, Group Trip Pass, Pro, and anything billed through Stripe. There are no web purchases in Phase 1. The submission is made at the end of week 24 (WF-115).
 
 ### 6.1 Checklist
 
@@ -724,7 +788,8 @@ Verify every item on the day of submission; Apple policy moves.
 - [ ] Guideline 5.1.1(v): in-app account deletion works and revokes the Apple token.
 - [ ] Guideline 5.1.2(i): AI consent screen names the provider and what is sent, including pasted confirmations with personal data removed.
 - [ ] Guideline 3.1.1 and 3.1.2: all digital plans and credits (Plus, Trip Pass, credit packs) use In-App Purchase; paywall shows price, period, trial terms, Terms and Privacy links and Restore; subscription info localized; review screenshots per product. The free Trip Pass for a first import and referral credits are free grants, not sold, and the UI never links to outside purchase.
-- [ ] Guideline 3.1.3(e): partner links lead to physical travel services used outside the app, labeled as commission links. No web checkout for digital goods.
+- [ ] Guideline 3.1.3(e): partner links lead to physical travel services used outside the app, labeled as commission links. No web checkout for digital goods, and the web paywall only says "Upgrade in the iOS app".
+- [ ] Guideline 3.1.2: "Cancel subscription" is one tap from the Account plan card and opens Apple's subscription sheet; "How billing works" and "How we earn" are live and linked from Settings and every paywall.
 - [ ] Guideline 1.2: report and block on shared content and AI answers, contact info, moderation queue, 24 hour response; public pages have a Report link.
 - [ ] Guideline 2.3.7 and 5.2: no competitor names in keywords or the app name; "Import from TripIt" appears only as descriptive text in the description and screenshots with a no-affiliation statement; no claim of partnership.
 - [ ] Guideline 5.6.1: no reward (free pass, credits) is offered for a rating or review.
@@ -733,7 +798,7 @@ Verify every item on the day of submission; Apple policy moves.
 
 **Store listing**
 - [ ] Name, subtitle, promotional text, description, keywords, category Travel.
-- [ ] Screenshots 6.9 inch (1320 by 2868), up to 10: trip overview, itinerary on map, price alert, import from another app, AI plan with evidence labels, offline, shared trip, present mode. Icon 1024 by 1024 without alpha.
+- [ ] Screenshots 6.9 inch (1320 by 2868), up to 10: trip overview, itinerary on map, price alert, import from another app, AI plan with evidence labels, a Verify this plan result (green, amber and red rows with sources), offline, shared trip, present mode. Icon 1024 by 1024 without alpha.
 - [ ] Localized metadata for en-US and one or two more storefronts.
 - [ ] App Privacy labels match section 3.4.
 - [ ] Release set to manual; phased release for updates.
@@ -759,8 +824,14 @@ Where things are:
     ("Found on [site], checked [date]").
   - Import: Trips > New trip > Import, or Settings > Import. A sample calendar file
     (sample-trip.ics) and sample confirmation text (sample-confirmation.txt) are attached
-    to these notes. Importing a first trip gives a free Trip Pass for that trip; nothing is
-    tied to a rating or review.
+    to these notes. An import that adds 3 or more items including a flight or a stay gives a
+    free Trip Pass for that trip; nothing is tied to a rating or review.
+  - Verify a plan: Trips > "+" > Verify a plan. Paste the attached sample-plan.txt; the
+    results show sources ("Found on [site], checked [date]"). Checks cost credits shown
+    before the tap; the reviewer account has credits.
+  - Billing: Account > plan card > "Cancel subscription" opens the App Store sheet. The page
+    "How billing works" and the page "How we earn" are linked from Settings and every paywall.
+    The web app sells nothing: its paywall says "Upgrade in the iOS app".
   - Offline: turn on airplane mode after opening "Lisbon in May"; it stays readable.
   - Report and block: the "..." menu on shared trip content and on AI answers. Public
     sample pages on the web have a Report link.
@@ -795,7 +866,8 @@ A "Reviewer sign in" path is a server-side allowlisted account that signs in wit
 | Missing deletion | Delete a throwaway account end to end |
 | Privacy label mismatch | Compare the label to section 3.4 and the SDK list |
 | 4.2 web wrapper feel | Airplane mode demo video, native features listed in the notes |
-| External purchase language | Search the UI and listing for "web", "cheaper on our site", "lifetime"; the web paywall says where to upgrade without linking to a purchase page |
+| External purchase language | Search the UI and listing for "web", "cheaper on our site", "lifetime"; the web paywall says "Upgrade in the iOS app" without a price, a purchase page or a checkout |
+| Cancel path hidden | From the Account screen, reach the subscription sheet in one tap on a sandbox subscription; screenshot it for the notes |
 | AI disclosure | Consent screen screenshot in the notes |
 | Sign in with Apple relay emails failing | Send a test email to a relay address |
 | Competitor names in metadata | Search keywords, subtitle and screenshots for competitor names outside the descriptive import text |
@@ -824,9 +896,10 @@ Gates match the month exits in the Phase 1 README and [09-build-roadmap.md](09-b
 - [ ] Credit reserve and settle tests green; ledger reconciliation query returns zero drift.
 - [ ] Agent run cost measured over 50 runs on staging with p95 under $0.80; report saved.
 - [ ] Every ceiling enforced in tests; the taster works once per account.
-- [ ] AI spend alerts fired in a staging drill; every kill switch exercised, including the new `import.*`, `referrals` and `public_pages` switches; AI off in under 30 seconds.
+- [ ] AI spend alerts fired in a staging drill; every kill switch exercised, including the new `import.all`, `import.polling`, `ai.verify`, `ai.recheck`, `referrals.grant` and `public_pages` switches; AI off in under 30 seconds.
 - [ ] Anthropic workspace limits set per environment.
 - [ ] Evidence labels on every AI-saved fact (eval gate 100 percent); injection evals at 0.
+- [ ] Evidence freshness: a 15-day-old finding shows "May be out of date" and a recheck moves the date, refunds when unreachable and never searches (scenario 23).
 - [ ] AI consent live; consent required before any AI call.
 
 ### 7.3 Month 4 gate (money, imports, admin essentials)
@@ -834,8 +907,9 @@ Gates match the month exits in the Phase 1 README and [09-build-roadmap.md](09-b
 - [ ] Webhook contract tests green; replay test run.
 - [ ] Sandbox purchases pass end to end on the harness for Plus monthly and annual, Trip Pass and every credit pack.
 - [ ] Affiliate: disclosure text present on every partner placement (automated UI check), `/go` tests green, clicks and conversions visible in the admin overview.
-- [ ] Imports: golden files pass; fuzz run clean (Hypothesis on every pull request, Atheris 30 minutes); SSRF table refused for both feed import and link preview; PII corpus shows zero leaks; first-import reward granted once.
-- [ ] Booked-fare alert drill with a fake fare drop.
+- [ ] Imports: golden files pass; fuzz run clean (Hypothesis on every pull request, Atheris 30 minutes); SSRF table refused for both feed import and link preview; PII corpus shows zero leaks; first-import reward granted once and only under the settled conditions (3 items including a flight or a stay, verified email, no active Plus); the TripIt, Tripsy and Wanderlog entries and pasted places work; the rival help-page check is dated.
+- [ ] Verify this plan works through the API on staging: extraction and checking evals run, the false-green and evidence gates are measured, credits settle per item (scenario 22).
+- [ ] Booked-fare alert drill with a fake fare drop (5 percent and $10 thresholds, once per flight every 7 days, no partner link).
 
 ### 7.4 Before TestFlight external testing (Month 5 gate)
 
@@ -846,6 +920,8 @@ Gates match the month exits in the Phase 1 README and [09-build-roadmap.md](09-b
 - [ ] Account deletion revokes the Apple token (verified in Apple's settings).
 - [ ] App Attest flow verified on a real device; fallback verified.
 - [ ] Calendar feed subscribes in Apple Calendar and Google Calendar; rotating the token breaks the old link.
+- [ ] Keep checking this calendar: a real TripIt or Google feed is polled every 6 hours, a change produces a preview, nothing applies without confirmation, turning it off deletes the stored address.
+- [ ] The sync indicator and the status banner behave on a real device in airplane mode and with a degraded component in staging.
 - [ ] Accessibility pass with VoiceOver and Dynamic Type, and a check that `--tp-edge` borders and `--tp-warning-ink` text hold their contrast in the native shell in light, dark and Increase Contrast.
 - [ ] 30 beta testers, crash-free sessions above 99.5 percent over 100 or more sessions; beta report saved.
 - [ ] Export and deletion working; privacy policy, terms and affiliate disclosure published.
@@ -854,7 +930,7 @@ Gates match the month exits in the Phase 1 README and [09-build-roadmap.md](09-b
 
 - [ ] Penetration test complete; no open high or critical findings (WF-110).
 - [ ] Load test at 10x expected launch traffic passed; Anthropic rate limits raised and tested at 3x peak.
-- [ ] All runbooks in section 8 written, reviewed and each drilled once in staging (spend spike, provider outage, webhook backlog, bad deploy rollback, import abuse, public page takedown; breach tabletop).
+- [ ] All runbooks in section 8 written, reviewed and each drilled once in staging (spend spike, provider outage with a status page incident posted, webhook backlog, bad deploy rollback, import abuse, public page takedown, a wrong fact in a plan check; breach tabletop).
 - [ ] On-call routing tested (a real page reaches the phone at night).
 - [ ] Backups: PITR healthy, weekly off-provider dump verified by restore.
 - [ ] Dependency audit clean; secrets rotated after beta; secret scan of history clean.
@@ -865,7 +941,10 @@ Gates match the month exits in the Phase 1 README and [09-build-roadmap.md](09-b
 - [ ] Support live: inbox, macros (including import problems), FAQ, refund and cancellation guidance, abuse inbox.
 - [ ] Data processing agreements on file for every processor.
 - [ ] App Review passed; release set to manual.
-- [ ] Status page and announcement drafted; launch day owner and rollback plan named.
+- [ ] Status page live with its five monitors and a practice incident posted; announcement drafted; launch day owner and rollback plan named.
+- [ ] Verify this plan: all gates in section 1.5 pass (false green under 2 percent, invented places never green, evidence valid 100 percent, plan check p95 under $0.02 per item) or the `verify_plan` flag stays off.
+- [ ] Trust pages live and reviewed: How we earn lists every active partner, How billing works matches the paywall prices, the cancel link opens the subscription sheet, the trial reminder email carries it.
+- [ ] Android Chrome: the manual checklist in section 1.9 passed on a real phone and tablet; the install guide screenshots match the current Chrome menus.
 
 ### 7.6 Launch day and first 72 hours
 
@@ -892,7 +971,7 @@ Each runbook also lives in `docs/runbooks/` as its own file with the same headin
 
 **Contain (first 10 minutes).**
 1. Open the admin AI spend dashboard: spend by hour, feature, tier, account and model.
-2. If a single feature or agent runs is the source, turn on `ai.agent_runs` (or the matching switch, such as `import.paste`). If unclear, turn on `ai.all`. The app shows "AI is paused, your plans are safe".
+2. If a single feature or agent runs is the source, turn on `ai.agent_runs` (or the matching switch, such as `ai.import` or `ai.verify`). If unclear, turn on `ai.all`. The app shows "AI is paused, your plans are safe".
 3. If one account is the source, suspend its AI from the admin console (reason logged) and check its `runs` for loops.
 4. If the source is free accounts (signup farming, reward farming), turn on `ai.free_tier`, tighten signup limits (`signups` switch if needed) and check section 8.7.
 
@@ -916,13 +995,13 @@ Covers Anthropic, SerpApi, Travelpayouts, Geoapify, Supabase Auth, RevenueCat, A
 **Contain.**
 1. Confirm on the provider's status page and with a direct test call from a staging shell.
 2. Turn on the matching kill switch (`provider.<name>`, `ai.all`, `push.all`, `email.all`) only if retries are causing harm (queue growth, spend, user-facing errors). Otherwise let retries with backoff work.
-3. Post a status page update.
+3. Post an incident on the public status page (Better Stack, 02 section 8.1) within 10 minutes of a degraded component, in plain words with the time; the in-app banner follows the page state through `GET /public/status`.
 
 **Per provider.**
 
 | Provider | User impact and action |
 |---|---|
-| Anthropic | AI paused or queued (pasted confirmation import unavailable; file and feed import keep working); credits stay reserved up to 30 minutes then release; cached research still served; consider `ai_force_haiku` if only Sonnet is degraded |
+| Anthropic | AI paused or queued (pasted confirmation import, Verify this plan and rechecks unavailable; file, feed, Google Maps and pasted-places import keep working); credits stay reserved up to 30 minutes then release; cached research still served; consider `ai_force_haiku` if only Sonnet is degraded |
 | SerpApi | Flag `serpapi_live_fares` off; fares fall back to cached Travelpayouts with an age label; no credit charge for empty results |
 | Travelpayouts | Show last observations; alerts pause; affiliate links still work |
 | Geoapify | Serve `places_cache`; manual place entry still works |
@@ -1003,7 +1082,7 @@ Covers Anthropic, SerpApi, Travelpayouts, Geoapify, Supabase Auth, RevenueCat, A
 **Detect.** Import SSRF, parser sandbox or redaction alerts (section 5.3), a spike of `import_failed` with `blocked_url`, a worker memory or CPU alarm, or a Sentry issue from the parser.
 
 **Contain.**
-1. If feed fetches are suspect, turn on `import.feed` (kill switch) at once; it stops only feed import. For a parser problem turn on `import.ics`; for a redaction problem turn on `import.paste`. Turning all three off also stops the free-pass reward.
+1. If feed fetches or polling are suspect, turn on `import.polling` (kill switch) at once; it stops only the 6-hourly polling. For a broader problem turn on `import.all`, which stops every import path and the free-pass reward; for a redaction problem in pasted text turn on `ai.import` (and `ai.verify` for pasted plans).
 2. Check the `provider_calls` host list (hosts only, never URLs) and rate limit rows for the account or IP; suspend the account's imports from admin if one source is the cause.
 3. If a worker was affected, restart the worker service; the sandbox limits should already have killed the child process.
 
@@ -1020,7 +1099,7 @@ Covers Anthropic, SerpApi, Travelpayouts, Geoapify, Supabase Auth, RevenueCat, A
 
 **Detect.** Reward alerts (section 5.3), a daily report of referrers near their caps, many new accounts sharing a device key or IP hash, or referred accounts that never return.
 
-**Contain.** Turn on `referrals` to stop new referral rewards (attribution still logs). For import rewards, add a temporary higher item minimum or turn off the reward only (the import paths keep working).
+**Contain.** Turn on `referrals.grant` to pause referral credit grants (codes can still be entered). For import rewards, add a temporary higher item minimum or turn off the reward only (the import paths keep working).
 
 **Fix.** Revoke rewards from the admin console (audited; the ledger reverses the credits and the pass is ended), block the device keys and normalized emails involved, tighten caps or the activation rule, and confirm no purchased credits were affected.
 
@@ -1035,3 +1114,15 @@ Covers Anthropic, SerpApi, Travelpayouts, Geoapify, Supabase Auth, RevenueCat, A
 **Fix.** Review the content and reporter, suspend the owner's sharing if the content breaks the terms, and notify the owner with the reason. If the page exposed private fields, treat it as a privacy incident (section 8.4) and fix the redaction with a failing test first.
 
 **Follow up.** Reply to the reporter within 24 hours, add the case to the redaction sentinel tests if it was a leak, and review the report volume for patterns.
+
+### 8.9 Wrong fact shown by Verify this plan
+
+**Detect.** Reports on a green or amber row, the false-green alert (section 5.3), thumbs down on a plan check, or an eval regression.
+
+**Contain.** If more than one wrong green is confirmed, turn on `ai.verify` (the list of places and imports keep working, checking pauses) and leave `ai.recheck` on unless rechecks are wrong too. A single case does not need a switch.
+
+**Find the cause.** Open the run (sizes and verdict reasons, no pasted text): was the page grounded and did it really contain the value? Was the place match wrong (name similarity or distance)? Was a stale `place_check` cache entry served? Add the case to the checking eval set with a failing test first.
+
+**Fix and recover.** Ship the fix behind a canary (5 percent for 48 hours, 06 section 10), expire the affected `place_check` cache keys, rerun the suite and turn the switch off again. Refund the credits of the affected checks if the verdict was our error (an `adjustment` grant with a reason).
+
+**Follow up.** Record the false-green rate in the monthly accuracy note and review whether the tolerance (15 percent price, 60 minute hours) or the match threshold (0.8, 30 km) needs to change.

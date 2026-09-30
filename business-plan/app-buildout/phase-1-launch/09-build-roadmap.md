@@ -2,7 +2,7 @@
 
 Part of the [Wayfold build specification](../README.md) and of [Phase 1](README.md). The shared decisions in the [root README](../README.md) (tier codes, credit codes, table names) and the Phase 1 scope and month plan in the [Phase 1 README](README.md) are final; this file sequences the work.
 
-This file has two halves. The first is the plan: what each month is for, week-level milestones, the critical path, a capacity check and what to cut first. The second is an ordered backlog of 115 tickets (WF-001 to WF-115, numbered for Phase 1 only), each small enough for one Claude Code session. A section at the end explains how to work through it with Claude Code.
+This file has two halves. The first is the plan: what each month is for, week-level milestones, the critical path, a capacity check and what to cut first. The second is an ordered backlog of 129 tickets (WF-001 to WF-129, numbered for Phase 1 only; WF-116 to WF-129 were appended for the features adopted from the competitive analysis and sit inside their months), each small enough for one Claude Code session. Two of them (WF-122 and WF-129) are already on the cut list and are not counted in the committed plan (section 4). A section at the end explains how to work through it with Claude Code.
 
 Effort assumes one developer with Claude Code working about 25 to 30 focused hours a week (the plan uses 27.5). Paths follow the repository layout in [02-architecture.md](02-architecture.md) section 2 (`apps/api`, `apps/worker`, `apps/web`, `apps/ios`, `packages/shared`, `packages/tokens`, `infra/`, `docs/`); if a path here differs from that tree, 02 wins. Spec references use the file numbers in the Phase 1 README table. Tickets that were in the full build roadmap keep their substance and get a new Phase 1 number; the map at the end of this file links old and new IDs.
 
@@ -13,11 +13,11 @@ The month table is copied from the Phase 1 README. Months 3 and 5 are five weeks
 | Month | Weeks | Goal | Exit |
 |---|---|---|---|
 | 1 | 1 to 4 | Validate and set up: landing page and waitlist, 10 interviews, repo, CI, Docker, database, auth, tenancy | Demand signal; a signed-in user can create a trip on staging |
-| 2 | 5 to 8 | Core planning: trips, collaboration, flights (cached), stays, itinerary, places, map | Two people can plan a trip together on the web |
-| 3 | 9 to 13 | AI and credits: Claude API loop, explain, drafts, research, agent runs, taster, ledger, ceilings, shared cache, evidence labels | Agent run cost measured over 50 runs; ceilings enforced |
-| 4 | 14 to 17 | Money: RevenueCat, Plus, Trip Pass, packs, paywalls, affiliate redirect and reporting, checklist; imports; admin essentials | Sandbox purchases work end to end; clicks and conversions tracked |
-| 5 | 18 to 22 | iOS and polish: Capacitor shell, push, offline, calendar feed, presentation, accessibility, performance, onboarding, empty and error states; TestFlight beta | 30 beta testers, crash-free sessions above 99.5% |
-| 6 | 23 to 26 | Launch: App Review, privacy labels, support, monitoring, runbooks, SEO pages, comparison pages, launch campaign | Live on the App Store and web |
+| 2 | 5 to 8 | Core planning: trips, collaboration, flights (cached), stays, itinerary, places, map, the sync indicator | Two people can plan a trip together on the web |
+| 3 | 9 to 13 | AI and credits: Claude API loop, explain, drafts, research, agent runs, taster, ledger, ceilings, shared cache, evidence labels with the 14-day freshness flag and recheck | Agent run cost measured over 50 runs; ceilings enforced |
+| 4 | 14 to 17 | Money: RevenueCat, Plus, Trip Pass, packs, paywalls (iOS purchases only), affiliate redirect and reporting, checklist; imports with entries named for TripIt, Tripsy and Wanderlog; Verify this plan; admin essentials | Sandbox purchases work end to end; clicks and conversions tracked |
+| 5 | 18 to 22 | iOS and polish: Capacitor shell, push, offline, calendar feed and opt-in feed polling, Verify this plan screens, presentation, accessibility, performance, onboarding, empty and error states, status banner; TestFlight beta | 30 beta testers, crash-free sessions above 99.5% |
+| 6 | 23 to 26 | Launch: App Review, privacy labels, support, monitoring, runbooks, SEO pages, comparison pages, trust pages, Android install guide and testing, Verify evals, launch campaign | Live on the App Store and web |
 
 Do not start a month's feature work until the previous exit is met, except for the long-lead items in section 3. Each exit gets a short gate review written to `docs/gates/month-N.md` (see section 9). The biggest schedule risks are Month 3 (AI cost and ceilings) and Month 5 (the first native build, which needs a Mac).
 
@@ -36,20 +36,20 @@ Exit: demand signal recorded (a "no-go" stops the backlog after week 3); a signe
 
 ### Month 2 (weeks 5 to 8): core planning
 
-Tickets WF-020 to WF-040. About 90 ticket hours.
+Tickets WF-020 to WF-040 and WF-125. About 92 ticket hours.
 
 | Week | Milestone | Tickets |
 |---|---|---|
 | 5 | All planning and billing tables exist; seeds loaded; entitlement resolver enforcing trip limits; error reporting live | WF-020, 021, 022, 023, 037 |
 | 6 | People, invites and roles work; a Free owner can invite 1 collaborator; activity feed; rate limits; notes; responsive layout with empty and error states | WF-024, 025, 026, 027, 028, 035, 036 |
-| 7 | Cached fares and alerts rules; itinerary with calendar and ICS export; places and map; FX; analytics base | WF-029, 030, 031, 032, 033, 038 |
+| 7 | Cached fares and alerts rules; itinerary with calendar and ICS export; places and map; FX; analytics base; the "Synced N seconds ago" indicator | WF-029, 030, 031, 032, 033, 038, 125 |
 | 8 | Lodging with hearts and compare (and the shared SSRF guard); backup and restore drill; the owner's own trips migrated so the owner and a partner plan a real trip together on staging | WF-034, 039, 040 |
 
 Exit: two people can plan a trip together on the web; restore drill passed once.
 
 ### Month 3 (weeks 9 to 13): AI and credits
 
-Tickets WF-041 to WF-062. About 114 ticket hours. The admin cost-control screens (foundation, audit, kill switches, AI spend) are built here, not in Month 4, because the 50-run measurement and the spend drill need them; the rest of the admin console follows in months 4 to 6.
+Tickets WF-041 to WF-062 and WF-120. About 118 ticket hours. The admin cost-control screens (foundation, audit, kill switches, AI spend) are built here, not in Month 4, because the 50-run measurement and the spend drill need them; the rest of the admin console follows in months 4 to 6.
 
 | Week | Milestone | Tickets |
 |---|---|---|
@@ -57,49 +57,49 @@ Tickets WF-041 to WF-062. About 114 ticket hours. The admin cost-control screens
 | 10 | Spend ceilings; job queue and lanes; notification service and email; scheduler and price-check jobs | WF-045, 046, 047, 051 |
 | 11 | Claude client with `explain`, drafts and packing list; agent loop; research with shared cache; consent; guest mode and claim | WF-048, 049, 050, 054, 062 |
 | 12 | Live fare provider behind its flag; agent runs API and screen with the taster; evidence labels; global breakers; first 50-run cost batch starts | WF-052, 053, 055, 056, 057 |
-| 13 | Admin foundation, audit log, kill switch console and AI spend screen; 50 runs measured; a spend drill and a kill switch drill recorded | WF-058, 059, 060, 061 |
+| 13 | Admin foundation, audit log, kill switch console and AI spend screen; evidence freshness flag and one-tap recheck; 50 runs measured; a spend drill and a kill switch drill recorded | WF-058, 059, 060, 061, 120 |
 
 Exit: agent run cost measured over 50 runs and inside the $0.80 cap; every ceiling enforced; AI off switch stops AI in under 30 seconds.
 
 ### Month 4 (weeks 14 to 17): money, imports, admin essentials
 
-Tickets WF-063 to WF-079. About 88 ticket hours. Apple's Paid Applications Agreement, tax forms and App Store Connect products must be ready by week 14 (start in Month 1).
+Tickets WF-063 to WF-079 and WF-116, 117 and 121. About 104 ticket hours plus 2 hours of checking rival help pages. Apple's Paid Applications Agreement, tax forms and App Store Connect products must be ready by week 14 (start in Month 1).
 
 | Week | Milestone | Tickets |
 |---|---|---|
 | 14 | RevenueCat webhooks idempotent in staging; credit grants and refund reversal; Trip Pass binding; paywall decided by the server | WF-063, 064, 065, 066 |
-| 15 | `/go` redirect, disclosure and placements; conversion import; "Before you go" checklist | WF-067, 068, 069, 070 |
-| 16 | Switching import: ICS file, ICS feed (SSRF guarded), pasted confirmations; first import earns a free Trip Pass | WF-071, 072, 073, 074 |
-| 17 | Booked-fare drop alert; a throwaway sandbox purchase harness proves every product end to end; admin users, subscriptions and overview | WF-075, 076, 077, 078, 079 |
+| 15 | `/go` redirect, disclosure and placements; conversion import; "Before you go" checklist; import entries named for TripIt, Tripsy and Wanderlog with pasted places | WF-067, 068, 069, 070, 121 |
+| 16 | Switching import: ICS file, ICS feed (SSRF guarded), pasted confirmations; first import earns a free Trip Pass; Verify this plan schema and reading a pasted plan | WF-071, 072, 073, 074, 116 |
+| 17 | Booked-fare drop alert; a throwaway sandbox purchase harness proves every product end to end; admin users, subscriptions and overview; Verify this plan item checks and credit settlement (runs about 4 hours over the week's hours; week 14 has about 7 spare) | WF-075, 076, 077, 078, 079, 117 |
 
-Exit: sandbox purchases work end to end (harness build); affiliate clicks and conversions tracked in the overview; all three import paths work on staging.
+Exit: sandbox purchases work end to end (harness build); affiliate clicks and conversions tracked in the overview; all three import paths and the named entries work on staging; a pasted plan can be read and checked through the API on staging.
 
 ### Month 5 (weeks 18 to 22): iOS and polish, TestFlight beta
 
-Tickets WF-080 to WF-103. About 112 ticket hours. This month needs a Mac or Xcode Cloud.
+Tickets WF-080 to WF-103 and WF-118, 123 and 126. About 130 ticket hours. This month needs a Mac or Xcode Cloud, and it is the most loaded month (103 percent of its hours, section 3): the Verify screens and feed polling are web work that can run while a device build waits.
 
 | Week | Milestone | Tickets |
 |---|---|---|
-| 18 | Capacitor shell runs on a device against staging; native plugins; Sign in with Apple; App Attest | WF-080, 081, 082, 083 |
+| 18 | Capacitor shell runs on a device against staging; native plugins; Sign in with Apple; App Attest; opt-in calendar feed polling and change preview | WF-080, 081, 082, 083, 123 |
 | 19 | In-app purchases through RevenueCat; universal links; push; TestFlight internal build from the pipeline | WF-084, 085, 086, 087, 101 |
 | 20 | Offline reading and edit queue; calendar subscription feed; account deletion and export; settings, consents and legal pages | WF-088, 089, 090, 092, 093, 094 |
 | 21 | Presentation mode and PDF; onboarding switching question; accessibility; performance pass; analytics events; external TestFlight beta opens (30 testers) | WF-091, 095, 096, 097, 098 |
-| 22 | Admin affiliate revenue; uptime and status page; purchase matrix passed; beta report | WF-099, 100, 102, 103 |
+| 22 | Admin affiliate revenue; uptime and status page; public status summary and banner; Verify this plan screens; purchase matrix passed; beta report | WF-099, 100, 102, 103, 118, 126 |
 
 Exit: 30 beta testers, crash-free sessions above 99.5 percent over 100 or more sessions, purchase matrix passed, a trip fully browsable in airplane mode on a real device.
 
 ### Month 6 (weeks 23 to 26): launch
 
-Tickets WF-104 to WF-115. About 74 ticket hours, deliberately light: App Review takes one to four days per cycle, and this month absorbs fixes.
+Tickets WF-104 to WF-115 and WF-119, 124, 127 and 128. About 92 ticket hours. It is no longer as light as planned (98 percent of its hours, section 3): App Review takes one to four days per cycle, and this month absorbs fixes, so the Verify evals and the Android work are web or server only and can continue during review.
 
 | Week | Milestone | Tickets |
 |---|---|---|
-| 23 | Store listing and privacy labels; support inbox; content reports; public sample and shared-trip pages live | WF-104, 105, 106, 107 |
-| 24 | Referral credits; comparison pages; penetration test fixed; review notes and demo account; **build submitted to App Review at the end of the week** | WF-108, 109, 110, 111, 115 (submit) |
-| 25 | Load test at 10 times launch traffic; runbooks drilled; admin user actions and flags and health screens; answer review feedback | WF-112, 113, 114, 115 |
+| 23 | Store listing and privacy labels; support inbox; content reports; public sample and shared-trip pages live; How we earn, How billing works and the cancel link | WF-104, 105, 106, 107, 124 |
+| 24 | Referral credits; comparison pages; penetration test fixed; review notes and demo account; Verify this plan evals and release gate; **build submitted to App Review at the end of the week** | WF-108, 109, 110, 111, 119, 115 (submit) |
+| 25 | Load test at 10 times launch traffic; runbooks drilled; admin user actions and flags and health screens; Android install guide and Android Chrome test pass; answer review feedback | WF-112, 113, 114, 115, 127, 128 |
 | 26 | Release (manual), launch campaign, 72-hour monitoring | WF-115 |
 
-Exit: live on the App Store and web; no P0 in the first 72 hours; crash-free at least 99.5 percent; API error rate under 1 percent.
+Exit: live on the App Store and web; the Verify evals pass their gates or the `verify_plan` flag stays off; Android Chrome tested; no P0 in the first 72 hours; crash-free at least 99.5 percent; API error rate under 1 percent.
 
 ## 2. Critical path
 
@@ -117,7 +117,7 @@ WF-004 scaffold -> WF-007 CI -> WF-008 Docker -> WF-011 migrations -> WF-012 ide
   -> WF-115 submit and launch                                                  (Month 6 gate)
 ```
 
-Switching import (WF-071 to WF-074), offline (WF-088, WF-089), the calendar feed, referral credits and the public pages hang off this path: they must finish before the binary is submitted in week 24 only where they ship inside the app (offline, import screens, referral screen, onboarding question). Web-only work (public pages, `/vs` pages, most admin screens) can finish during review.
+Verify this plan (WF-116, 117, 118, 119) hangs off the AI path (Claude client WF-048, evidence labels WF-055, credits WF-044) and the redaction built in WF-073; it is server-side except the screens, so it can be switched off with the `verify_plan` flag if its evals are not ready. Switching import (WF-071 to WF-074, 121, 123), offline (WF-088, WF-089), the calendar feed, referral credits and the public pages hang off this path: they must finish before the binary is submitted in week 24 only where they ship inside the app (offline, import screens, referral screen, onboarding question, Verify screens, the cancel row and the sync indicator). Web-only work (public pages, `/vs` pages, most admin screens) can finish during review.
 
 Long-lead items that are off the code path but on the calendar path: Apple Developer enrollment (days to weeks; start in week 1), Paid Applications Agreement and tax forms, a Mac or Xcode Cloud, Travelpayouts approval, Viator and Stay22 approvals, booking the outside penetration test firm (book by week 18 for week 23), and App Review itself.
 
@@ -128,23 +128,27 @@ Assumption: one developer, Claude Code for implementation and review, 25 to 30 f
 | Month | Weeks | Hours at 25 a week | Hours at 27.5 | Hours at 30 | Ticket hours | Non-ticket hours | Load at 27.5 |
 |---|---|---|---|---|---|---|---|
 | 1 | 4 | 100 | 110 | 120 | 82 | 20 (10 interviews, price test, Apple enrollment) | 93% |
-| 2 | 4 | 100 | 110 | 120 | 90 | 4 (partner dogfooding sessions) | 85% |
-| 3 | 5 | 125 | 138 | 150 | 114 | 6 (reading the 50-run cost report) | 87% |
-| 4 | 4 | 100 | 110 | 120 | 88 | 6 (affiliate approvals, tax forms, products) | 85% |
-| 5 | 5 | 125 | 138 | 150 | 112 | 12 (beta tester support and feedback) | 90% |
-| 6 | 4 | 100 | 110 | 120 | 74 | 16 (App Review replies, support, launch campaign) | 82% |
-| Total | 26 | 650 | 716 | 780 | 560 | 64 | 87% |
+| 2 | 4 | 100 | 110 | 120 | 92 | 4 (partner dogfooding sessions) | 87% |
+| 3 | 5 | 125 | 138 | 150 | 118 | 6 (reading the 50-run cost report) | 90% |
+| 4 | 4 | 100 | 110 | 120 | 104 | 8 (affiliate approvals, tax forms, products, checking the rival help pages behind the import entries) | 102% |
+| 5 | 5 | 125 | 138 | 150 | 130 | 12 (beta tester support and feedback) | 103% |
+| 6 | 4 | 100 | 110 | 120 | 92 | 16 (App Review replies, support, launch campaign) | 98% |
+| Total | 26 | 650 | 716 | 780 | 618 | 66 | 95.5% |
+
+Recomputed after adding the features adopted from the competitive analysis. Before any cut the new work was 62 hours (14 tickets, WF-116 to WF-129, plus 2 non-ticket hours), which took the plan to 690 of 716 hours, 96.4 percent, above the 95 percent line. Two tickets were therefore moved to the cut list, following the agreed order: first the repair items (repair-a-day and paste-your-group-chat), which were already moved to Phase 2 and were never in these hours, so nothing more came out there; then the Google Maps export file import (WF-122, 4 hours); then status page polish (WF-129, 2 hours). The hours above exclude both, so the committed plan is 618 ticket hours plus 66 non-ticket hours, 684 of 716, 95.5 percent, which is at the line and leaves about 32 hours. Both cut items are still tickets in the backlog and can be built in the reserve if a month ends ahead of plan. The pasted-places import and the named Tripsy and Wanderlog entries (WF-121) and the basic hosted status page (WF-100 and WF-126) stay in the plan.
 
 Reading the table:
 
-- At 27.5 hours the plan uses 624 of 716 hours, which leaves about 92 hours (three and a half weeks) of reserve. At 30 hours the reserve is about 156 hours. At 25 hours it is only 26 hours, so the cut list in section 4 will almost certainly be needed.
-- Month 1 and Month 5 are the tightest. Month 1 is full because validation runs beside setup; if week 4 slips, defer the second half of WF-005 (port only the flight and provider modules, the rest when first needed).
+- At 27.5 hours the plan uses 684 of 716 hours, which leaves about 32 hours (a little over one week) of reserve. At 30 hours the reserve is about 96 hours. At 25 hours the plan is 34 hours over (684 of 650), so the cut list in section 4 will almost certainly be needed, and the first things on it are listed there.
+- Months 4, 5 and 6 are now the tightest (102, 103 and 98 percent of their hours), as well as Month 1. Month 4 and Month 5 carry the new work that needs earlier tickets (Verify this plan, feed polling); if either month exits more than a week behind, run the cut list before starting the next month. Month 1 is full because validation runs beside setup; if week 4 slips, defer the second half of WF-005 (port only the flight and provider modules, the rest when first needed).
 - Month 3 has the most variance: Procrastinate and the agent loop are new to this codebase, and the 50-run batch takes calendar time, not just hours. Start the batch by week 12.
-- Month 6 is intentionally under-loaded. Keep it that way: one failed App Review cycle costs a week.
+- Month 6 is no longer under-loaded (98 percent). What keeps it safe is that its new work is web or server only (Verify evals, trust pages, Android guide and testing), so a failed App Review cycle delays the binary without blocking those tickets; do not add more to Month 6.
 - If more than two weeks behind at a month exit, stop and run the cut list before starting the next month.
 - Two or three parallel sessions help with wall-clock time but not with your review hours, so the plan counts review hours once.
 
 ## 4. What to cut first if behind schedule
+
+**Already cut to keep the plan near 95 percent** (section 3): the repair items (repair-a-day and paste-your-group-chat) were already moved to Phase 2, so nothing more comes out there; the Google Maps export file import (WF-122, 4 hours) and status page polish (WF-129, 2 hours) are on the cut list and out of the committed hours. If a month ends ahead of plan, build them in this order: WF-122, then WF-129. If the plan falls behind, do not wait for them: go to the table below.
 
 Cut in this order. Each item keeps the product honest and launchable; none touches tenancy, credits, purchases, deletion, consent or disclosure. Hours are the ticket estimate saved.
 
@@ -161,8 +165,12 @@ Cut in this order. Each item keeps the product honest and launchable; none touch
 | 9 | Booked-fare drop alert | WF-075 | 4 h | Ship in 1.1; price alerts still work |
 | 10 | Live flight provider (keep cached fares) | WF-052 | 8 h | `serpapi_live_fares` stays off; Plus shows cached fares with age labels |
 | 11 | Evals beyond the fare set | WF-057 | 4 h | Keep the cost measurement, run the other evals after launch |
+| 12 | Opt-in calendar feed polling (keep the one-time feed import and manual refresh) | WF-123 | 8 h | "Keep checking this calendar" arrives in 1.1; nothing else changes |
+| 13 | Android install guide page and card (keep the manifest) | WF-127 | 2 h of 4 | The Android web app still installs from Chrome's menu; the guide follows after launch |
 
-Cutting items 1 to 5 saves 32 hours; 1 to 8 saves 48. Never cut: WF-014 to WF-016 (tenancy), WF-044 and WF-045 (credits), WF-063 (purchases), WF-092 and WF-093 (deletion, export), WF-054 (AI consent), WF-068 (disclosure), WF-106 (content reports, needed for Guideline 1.2), WF-110 (security review). If you must drop an iOS feature, drop native polish before you drop offline reading.
+Verify this plan (WF-116 to WF-119) is not on this list: it is the main funnel from the largest competitor and its credit pricing funds itself. If it slips, ship it behind the `verify_plan` flag in 1.0.1 rather than cutting it, because it is server-side except for its screens.
+
+Cutting items 1 to 5 saves 32 hours; 1 to 8 saves 48; 1 to 11 saves 64; 1 to 13 saves 74. Never cut: WF-014 to WF-016 (tenancy), WF-044 and WF-045 (credits), WF-063 (purchases), WF-092 and WF-093 (deletion, export), WF-054 (AI consent), WF-068 (disclosure), WF-106 (content reports, needed for Guideline 1.2), WF-110 (security review). If you must drop an iOS feature, drop native polish before you drop offline reading.
 
 ## 5. Risk register
 
@@ -177,12 +185,15 @@ Cutting items 1 to 5 saves 32 hours; 1 to 8 saves 48. Never cut: WF-014 to WF-01
 | 7 | Affiliate disclosure or tracking failure | Low | High | Disclosure component with tests, no ranking by commission test, no fetching of Airbnb, Vrbo or Booking.com pages | WF-067, WF-068 |
 | 8 | No Mac available | Certain | Medium | Buy a Mac mini or use Xcode Cloud; book it before week 17 | WF-076, WF-080 |
 | 9 | Import abuse: SSRF through feed URLs, hostile ICS files, PII leaking to the AI | Medium | High | Shared SSRF guard, sandboxed parser with limits, fuzzing, redaction before every model call | WF-071 to WF-073, WF-110 |
-| 10 | Import reward and referral farming | Medium | Medium | One reward per account, minimum item count, device and IP checks, caps, revocation | WF-074, WF-108 |
+| 10 | Import reward and referral farming | Medium | Medium | One reward per account, at least 3 items including a flight or a stay, verified email, no active Plus, referrer caps of 5 per 30 days and 10 per year, device and IP checks, revocation | WF-074, WF-108 |
 | 11 | Public pages leak private data or host abusive content | Low | High | Redaction tests, noindex by default, report queue, one-click takedown | WF-106, WF-107 |
 | 12 | WebView jank on maps and calendar | Medium | Medium | Simplify the phone calendar, cluster markers, profile early | WF-032, WF-033, WF-097 |
 | 13 | Migration error on the owner's data | Low | Medium | Dry run, row counts, idempotent importer, backup before import | WF-040 |
 | 14 | Solo bus factor and burnout | High | High | Strict month exits; use the cut list before cutting quality; runbooks | WF-112 |
-| 15 | Web users cannot buy (purchases are in the iOS app only in Phase 1) | High | Low | Web paywall explains where to upgrade; Android and web billing are Phase 2 work | WF-066 |
+| 15 | Web users cannot buy (purchases are in the iOS app only in Phase 1) | High | Low | The web paywall says "Upgrade in the iOS app" with no price list or purchase button; Android and web billing are Phase 2 work | WF-066 |
+| 16 | Verify this plan shows a wrong fact as confirmed (a false green) | Medium | High | Verdicts are decided in code, every green or amber needs a cited page containing the value, evals gate release (false green under 2 percent, invented places never green), thumbs and "Price was different" style reports feed the eval set, flag and kill switch | WF-117, WF-119 |
+| 17 | Calendar polling stores a secret feed address or hammers a host | Low | Medium | Encrypted only while polling is on, 3 polled feeds per person, 6-hour interval, 60 fetches an hour per host, three failures stop it, kill switch `import.polling` | WF-123 |
+| 18 | The Android web app feels unfinished on real devices | Medium | Low | Android Chrome test pass before launch, install guide states what works and what does not, native Android is Phase 2 | WF-127, WF-128 |
 
 ## 6. Backlog
 
@@ -220,7 +231,7 @@ Conventions for every ticket:
 
 #### WF-003 Interview kit, price test and terms checklist [M1, S]
 - Depends on: WF-002.
-- Description: write the interview script, the written "yes" signal, the paywall and price test cards (Trip Pass $9.99; Plus $5.99 a month or $39.99 a year), a question on switching from TripIt or Wanderlog (would a free Trip Pass for importing a trip change your mind?), and the provider terms checklist (SerpApi terms and the Google lawsuit, Geoapify caching terms, Travelpayouts rates and app eligibility).
+- Description: write the interview script, the written "yes" signal, the paywall and price test cards (Trip Pass $9.99; Plus $5.99 a month or $39.99 a year), a question on switching from TripIt, Tripsy or Wanderlog (would a free Trip Pass for importing a trip change your mind?), and the provider terms checklist (SerpApi terms and the Google lawsuit, Geoapify caching terms, Travelpayouts rates and app eligibility).
 - Accept: 10 interviews logged with outcome by the end of week 3; each terms question has an answer or an owner and a date; a go or no-go decision record exists.
 - Touches: `docs/validation/`.
 - Tests: none (documentation); checklist reviewed by the owner.
@@ -340,7 +351,7 @@ Conventions for every ticket:
 
 #### WF-018 Sign-in and first-trip wizard [M1, M]
 - Depends on: WF-017.
-- Description: Sign in with Apple, Google and email code screens; a short intro; "Create your first trip" wizard (destination, dates, who is going). The "Coming from TripIt or Wanderlog?" question arrives in WF-095 and guest mode in WF-062. Spec: [05-ui-ux-spec.md](05-ui-ux-spec.md).
+- Description: Sign in with Apple, Google and email code screens; a short intro; "Create your first trip" wizard (destination, dates, who is going). The "Coming from TripIt, Tripsy or Wanderlog?" question arrives in WF-095 and guest mode in WF-062. Spec: [05-ui-ux-spec.md](05-ui-ux-spec.md).
 - Accept: new user reaches a created trip in under 2 minutes on staging; sign-out clears state; copy follows the rules.
 - Touches: `apps/web/src/routes/auth/`, `apps/web/src/routes/onboarding/`.
 - Tests: component tests, Playwright sign-in with a test identity.
@@ -398,8 +409,8 @@ Conventions for every ticket:
 
 #### WF-025 Invites, roles and share links [M2, M]
 - Depends on: WF-014.
-- Description: invite by link (`trip_invites`), accept, roles (owner, editor, viewer), leave, transfer ownership, and read-only `trip_share_links` with revoke; invitees join free and get the trip's capabilities on that trip. Tokens are 128-bit random, stored as SHA-256 hashes.
-- Accept: expired and used invites fail; owner cannot be removed without transfer; revoked link stops working immediately; the collaborator limit hooks into the resolver (enforced in WF-026).
+- Description: invite by link (`trip_invites`), accept, roles (owner, editor, viewer), leave, transfer ownership, and read-only `trip_share_links` with revoke, available on every tier (a Free owner's share page carries the "Made with Wayfold" footer); invitees join free and get the trip's capabilities on that trip. Tokens are 128-bit random, stored as SHA-256 hashes.
+- Accept: expired and used invites fail; owner cannot be removed without transfer; revoked link stops working immediately; a Free owner can create a share link; the collaborator limit hooks into the resolver (enforced in WF-026).
 - Touches: `apps/api/wayfold/modules/collaboration/`, `apps/web/src/routes/invite/`.
 - Tests: invite lifecycle tests, role change tests, link revoke test.
 - Done: DoD.
@@ -524,6 +535,14 @@ Conventions for every ticket:
 - Tests: import run against a fixture copy of a real-shaped database, idempotency test.
 - Done: DoD plus the old install kept read-only for 30 days and the Month 2 gate review recorded.
 
+#### WF-125 "Synced N seconds ago" indicator [M2, S]
+- Depends on: WF-025, WF-035.
+- Description: the sync indicator in every trip header (05 section 4.21): "Synced 12 s ago" from the last successful conditional sync response (200 or 304) or accepted queued edit, refreshed every 5 seconds, with the states Syncing, "Offline, N edits waiting" (wired to the offline queue when WF-089 lands) and "Could not sync, retrying" after three failed polls; tap runs a sync now. Text plus icon, state changes announced politely, never the ticking seconds.
+- Accept: after a successful poll the header reads "Synced 0 s ago" and counts up; with the network off it reads the offline state within 5 seconds; a failed server poll never resets the timer; VoiceOver hears state changes only.
+- Touches: `apps/web/src/components/sync-indicator/`, `apps/web/src/lib/sync.ts`.
+- Tests: fake-timer component tests for every state, an aria-live test, a Playwright test that cuts the network.
+- Done: DoD.
+
 ### Month 3: AI and credits
 
 #### WF-041 AI, credit and run schema [M3, M]
@@ -640,7 +659,7 @@ Conventions for every ticket:
 
 #### WF-055 Evidence labels [M3, M]
 - Depends on: WF-035, WF-049.
-- Description: a shared component that shows "Found on [site], checked [date]" on every AI-found fact (fares, notes, research items, imported confirmations show "From your pasted text" instead), opens the source, shows age for fares, and offers "Price was different" on agent-found fares (feeds the eval set). The server rejects any AI-saved fact without `source_url` and `checked_at`.
+- Description: a shared component that shows "Found on [site], checked [date]" on every AI-found fact (fares, notes, research items, imported confirmations show "From your pasted text" instead), opens the source, shows age for fares, and offers "Price was different" on agent-found fares (feeds the eval set). The server rejects any AI-saved fact without `source_url` and `checked_at` (the `checked_at` column on notes and items is added here; the 14-day freshness flag and the recheck are WF-120).
 - Accept: no AI-found fact renders without a label; a fact without a source is rejected at ingest; labels are readable (body-size text, contrast tokens) and work with VoiceOver.
 - Touches: `apps/web/src/components/evidence/`, `apps/api/wayfold/modules/ai/ingest.py`, `apps/api/wayfold/modules/trips/` (notes).
 - Tests: component snapshot tests, ingest rejection test, a test that scans AI-saved rows for missing sources.
@@ -702,6 +721,14 @@ Conventions for every ticket:
 - Tests: claim idempotency test, guest restriction tests, Playwright guest flow.
 - Done: DoD.
 
+#### WF-120 Evidence freshness and one-tap recheck [M3, M]
+- Depends on: WF-055, WF-048, WF-044.
+- Description: adds the "May be out of date" flag and the recheck. The evidence label (WF-055) shows an amber chip when `checked_at` is more than 14 days old (computed at read time, `stale` and `stale_after_days` on `Evidence` and `Note`, 04 section 5.14), nothing hidden or removed. `POST /notes/{id}/recheck` and `POST /items/{id}/recheck` run the `recheck` feature (06 section 5.12): Haiku 4.5, one `web_fetch` of the stored source URL, strict JSON result (`confirmed`, `changed`, `not_shown`, `unreachable`), code-grounded `current_value`, 1 credit in the `explain` price class (run kind `recheck`, kill switch `ai.recheck`, flag `evidence_recheck`), refunded when unreachable. `confirmed` moves `checked_at` to today; `changed` and `not_shown` change nothing and offer "Save as a note". Editors and owners see the button at any age, viewers the chip only. Fares are not rechecked.
+- Accept: a 15-day-old finding shows the chip and a 13-day-old one does not; a recheck of an unchanged page moves the date and charges 1 credit; an unreachable page refunds; a changed page leaves the old text and shows the new value with its source; a blocked host is never fetched; no search is ever run.
+- Touches: `apps/api/wayfold/modules/ai/features/recheck.py`, `apps/api/wayfold/modules/trips/` (notes evidence), `apps/web/src/components/evidence/`.
+- Tests: freshness boundary test (14 days), grounding test for `current_value`, refund test, role test, injection fixture on a fetched page, blocked-host test, component test for the chip and result sheet.
+- Done: DoD plus the recheck eval set (60 page pairs, 06 section 10) committed in `docs/evals/`.
+
 ### Month 4: money, imports, admin essentials
 
 #### WF-063 RevenueCat webhook and reconcile [M4, L]
@@ -730,8 +757,8 @@ Conventions for every ticket:
 
 #### WF-066 Paywall logic and screens [M4, M]
 - Depends on: WF-023, WF-018.
-- Description: server-decided paywall moments (Trip Pass first when a trip is within 120 days, annual Plus first with 2 or more active trips, credit packs when credits run out, `collaborators` when a Free owner invites a second person, `track_live` for live routes), `GET /paywall`, purchase screens with price, period and trial terms, Terms and Privacy links, Restore, and a visible free path. Purchases happen in the iOS app; on the web the same screen shows plans and "Upgrade in the iOS app" (no web checkout for digital goods in Phase 1). Anti-patterns avoided: no fake urgency.
-- Accept: the paywall code returned by the server drives the screen; Plus annual is shown first with the trial only on annual; the close control is always visible; web shows where to upgrade.
+- Description: server-decided paywall moments (Trip Pass first when a trip is within 120 days, annual Plus first with 2 or more active trips, credit packs when credits run out, `collaborators` when a Free owner invites a second person, `track_live` for live routes), `GET /paywall`, purchase screens with price, period and trial terms, Terms and Privacy links, Restore, and a visible free path. Purchases happen only in the iOS app; on the web the same sheet returns `purchasable: false` and shows what the upgrade gives, the free path and "Upgrade in the iOS app" with an App Store link, and no price, purchase button or checkout (there are no web purchases in Phase 1). The paywall legal row links to "How billing works" (WF-124). Adds the trigger `out_of_credits_verify` for plan checks and rechecks. Anti-patterns avoided: no fake urgency.
+- Accept: the paywall code returned by the server drives the screen; Plus annual is shown first with the trial only on annual; the close control is always visible; web shows "Upgrade in the iOS app" and no price or purchase control.
 - Touches: `apps/web/src/routes/paywall/`, `apps/api/wayfold/modules/billing/router.py`.
 - Tests: decision table tests, component tests.
 - Done: DoD.
@@ -770,7 +797,7 @@ Conventions for every ticket:
 
 #### WF-071 Switching import: ICS file [M4, M]
 - Depends on: WF-032, WF-014, WF-019.
-- Description: import a trip from a calendar file (TripIt single-trip export or Google Calendar export). `POST /trips/{id}/imports/ics` accepts one `.ics` file up to 1 MB; a strict parser in a resource-limited subprocess (CPU 5 seconds, memory 256 MB) reads `VEVENT`s, handles `VTIMEZONE`, floating times and all-day events, caps 500 events, ignores `ATTACH` and never fetches any URL it finds; events map to itinerary items, flights and stays with an `import` source; a preview screen ("We found 12 items") lets the user deselect before saving; duplicates are skipped by `UID`. Kill switch `import.ics`.
+- Description: import a trip from a calendar file (TripIt, Tripsy or Google Calendar export; the optional `origin` records which entry was used). `POST /trips/{id}/imports/ics` accepts one `.ics` file up to 1 MB; a strict parser in a resource-limited subprocess (CPU 5 seconds, memory 256 MB) reads `VEVENT`s, handles `VTIMEZONE`, floating times and all-day events, caps 500 events, ignores `ATTACH` and never fetches any URL it finds; events map to itinerary items, flights and stays with an `import` source; a preview screen ("We found 12 items") lets the user deselect before saving; duplicates are skipped by `UID`. Kill switch `import.all`.
 - Accept: golden files from TripIt, Google Calendar and Apple Calendar import correctly; re-importing the same file adds nothing; malformed, oversized and hostile files fail with a clear message and never crash the worker; no network access during parsing.
 - Touches: `apps/api/wayfold/modules/trips/import_ics.py`, `apps/api/wayfold/modules/itinerary/`, `apps/web/src/routes/import/`.
 - Tests: golden files, dedupe test, property-based fuzzing of the parser (Hypothesis in CI, corpus committed), limits tests (size, event count, recurrence explosion), no-network test.
@@ -778,7 +805,7 @@ Conventions for every ticket:
 
 #### WF-072 Switching import: ICS feed [M4, L]
 - Depends on: WF-071, WF-046, WF-034.
-- Description: import from a calendar feed URL (TripIt iCal feed, Google Calendar secret address). The user pastes the URL (`webcal://` is rewritten to `https://`); a `fetch_ics_feed` job in the `api` lane fetches it once through the shared SSRF guard (public addresses only, pinned IP, at most 3 manual redirects, 3 second connect and 5 second total timeout, 1 MB cap counted after decompression, `text/calendar` only) and hands the body to the WF-071 parser and preview. The feed URL is a secret: it is never stored, logged or sent to analytics, and the user repastes it to refresh. Airbnb, Vrbo and Booking.com hosts are refused. Kill switch `import.feed`.
+- Description: import from a calendar feed URL (TripIt iCal feed, Google Calendar secret address). The user pastes the URL (`webcal://` is rewritten to `https://`); a `fetch_ics_feed` job in the `api` lane fetches it once through the shared SSRF guard (public addresses only, pinned IP, at most 3 manual redirects, 3 second connect and 5 second total timeout, 1 MB cap counted after decompression, `text/calendar` only) and hands the body to the WF-071 parser and preview. The feed URL is a secret: it is never logged or sent to analytics, it is held (encrypted) only until the preview is confirmed or discarded, and it is kept after that only when the person turns on "Keep checking this calendar" (WF-123); otherwise the user repastes it to refresh. Airbnb, Vrbo and Booking.com hosts are refused. Kill switches `import.all` and, for polling, `import.polling`.
 - Accept: the hostile URL table (loopback, link-local, private and mapped addresses, decimal and hex IPs, rebinding, redirect to private, loops, `file:` and `gopher:`, userinfo, non-standard ports, oversized and compressed bodies) is refused; the URL never appears in logs, Sentry, `provider_calls` or events; limit of 5 feed imports per user per hour.
 - Touches: `apps/api/wayfold/providers/ics_feed.py`, `apps/api/wayfold/security/ssrf.py`, `apps/worker/wayfold_worker/jobs/fetch_ics_feed.py`, `apps/web/src/routes/import/`.
 - Tests: SSRF table test with a fake resolver, redirect tests, gzip bomb test, log and Sentry scrub test, rate limit test.
@@ -786,7 +813,7 @@ Conventions for every ticket:
 
 #### WF-073 Switching import: pasted confirmations [M4, L]
 - Depends on: WF-048, WF-071.
-- Description: the `booking_import` action. The user pastes booking confirmation text (up to 8,000 characters); the server redacts personal data before any model call (names become "Traveler 1", emails, phone numbers, booking and confirmation codes, card-like and passport-like numbers, home addresses are removed; booking codes are re-attached locally from the original text, never taken from the model), Haiku extracts flights, stays and reservations as schema-validated items, each shown in a preview as "From your pasted text" (evidence label) before saving. 1 credit in the `explain` price class, refunded on an empty or failed extraction, AI consent required. Links inside pasted text are never fetched. Kill switch `import.paste`.
+- Description: the `booking_import` action. The user pastes booking confirmation text (up to 12,000 characters); the server redacts personal data before any model call (names become "Traveler 1", emails, phone numbers, booking and confirmation codes, card-like and passport-like numbers, home addresses are removed; booking codes are re-attached locally from the original text, never taken from the model), Haiku extracts flights, stays and reservations as schema-validated items, each shown in a preview as "From your pasted text" (evidence label) before saving. 1 credit in the `explain` price class, refunded on an empty or failed extraction, AI consent required. Links inside pasted text are never fetched. Kill switch `ai.import`.
 - Accept: the outbound model request contains none of the test PII; output that fails validation is discarded; instructions hidden in pasted text do not change behavior; a pasted Airbnb or Vrbo confirmation works without any fetch; the user confirms every item before it is saved.
 - Touches: `apps/api/wayfold/modules/ai/features/booking_import.py`, `apps/api/wayfold/modules/trips/import_paste.py`, `apps/web/src/routes/import/`.
 - Tests: a redaction corpus of 40 real-shaped confirmations asserting zero PII in the recorded request, extraction eval set (10 section 1.5), injection fixtures, refund test, consent test.
@@ -794,18 +821,18 @@ Conventions for every ticket:
 
 #### WF-074 First-import Trip Pass reward [M4, M]
 - Depends on: WF-065, WF-071.
-- Description: the first successful import on a trip (any of the three methods) earns a free Trip Pass for that trip, once per account, with the same limits as a paid Trip Pass (WF-065) and 90 days from grant, recorded as a `trip_passes` row with `source = 'import_reward'` (no store transaction) and an idempotent 40-credit grant. Conditions: verified email, at least 3 items saved from the import, a Free account without an active pass on that trip. Plus owners are thanked but get no reward. Nothing is granted for empty or duplicate imports.
-- Accept: the reward is granted once per account and never twice for the same file or trip; junk imports under 3 items grant nothing; the pass appears in trip settings as free; expiry works like a paid pass; admin can revoke it.
+- Description: the first qualifying import on a trip (calendar file, calendar feed or pasted confirmations) earns a free Trip Pass for that trip, once per account, with the same limits as a paid Trip Pass (WF-065) and 90 days from grant, recorded as a `trip_passes` row with `source = 'import_reward'` (no store transaction) and an idempotent 40-credit grant. Conditions (settled): at least 3 items saved from the import including a flight or a stay, a verified email, no active pass on that trip and no active Plus; `grant_import_reward()` in 03 section 5.9 enforces them. Google Maps and pasted-places imports and calendar change confirmations never qualify. Plus owners are thanked but get no reward. Nothing is granted for empty or duplicate imports, and an import that does not qualify does not consume the reward.
+- Accept: the reward is granted once per account and never twice for the same file or trip; junk imports under 3 items, imports with no flight or stay, unverified emails and Plus owners grant nothing and keep the reward available; the pass appears in trip settings as free; expiry works like a paid pass; admin can revoke it.
 - Touches: `apps/api/wayfold/modules/billing/passes.py`, `apps/api/wayfold/modules/trips/` (import hook), `apps/web/src/routes/import/`.
-- Tests: once-per-account test, idempotency test under concurrent imports, minimum item test, Plus owner test, revoke test.
+- Tests: once-per-account test, idempotency test under concurrent imports, minimum item test, flight-or-stay test, verified-email test, Plus owner test, places-only import test, revoke test.
 - Done: DoD.
 
 #### WF-075 Booked-fare drop alert [M4, M]
 - Depends on: WF-031, WF-047, WF-051, WF-030.
-- Description: on a chosen flight the user can add what they paid ("Mark as booked" plus price); the daily check compares current fares for the same route and dates and alerts when one is lower: "You paid $X, it is now $Y. Check the airline's change and credit rules." The copy never promises a refund or rebooking. Uses `price_alerts` with kind `booked_fare` (add the value by an expand migration if 03 lacks it). Free accounts use cached fares (their one alert can be a booked-fare watch); Plus and Trip Pass follow live route limits. One alert per new lower price, at most one a day, email now and push after WF-086.
-- Accept: a lower fare triggers exactly one alert; an equal or higher fare triggers none; the alert shows the fare's source and age; copy passes the no-advice lint; a flight marked as departed stops watching.
+- Description: on a chosen flight the user can add what they paid ("Mark as booked" plus price); the daily check compares current fares for the same route and dates and alerts when one is lower: "You paid $X, it is now $Y. Check the airline's change and credit rules." The copy never promises a refund or rebooking. Uses `price_alerts` with kind `booked_fare` (add the value by an expand migration if 03 lacks it). Free accounts use cached fares (their one alert can be a booked-fare watch); Plus and Trip Pass follow live route limits. Settled thresholds: the fare must be at least 5 percent and at least $10 (converted) below what was paid, at most one alert per flight every 7 days, never a partner link; email now and push after WF-086.
+- Accept: a lower fare that clears both thresholds triggers exactly one alert and a second within 7 days triggers none; a drop under 5 percent or under $10, and an equal or higher fare, trigger none; the alert shows the fare's source and age; copy passes the no-advice lint; a flight marked as departed stops watching.
 - Touches: `apps/api/wayfold/modules/flights/`, `apps/worker/wayfold_worker/jobs/evaluate_price_alerts.py`, `apps/web/src/routes/flights/`.
-- Tests: threshold tests, once-per-drop test, currency test, copy lint test.
+- Tests: threshold tests (5 percent and $10 edges), 7-day repeat test, currency test, no-partner-link test, copy lint test.
 - Done: DoD.
 
 #### WF-076 Sandbox purchase harness [M4, M]
@@ -839,6 +866,30 @@ Conventions for every ticket:
 - Touches: `apps/api/wayfold/modules/admin/overview.py`, `apps/worker/wayfold_worker/jobs/rollups.py`, `apps/web/src/routes/admin/overview/`.
 - Tests: rollup tests with fixtures, tile rendering tests.
 - Done: DoD plus the Month 4 gate review recorded.
+
+#### WF-121 Import entries named for TripIt, Tripsy and Wanderlog, and pasted places [M4, M]
+- Depends on: WF-071, WF-072, WF-073, WF-033.
+- Description: the import screen lists entries named for TripIt, Tripsy, Wanderlog, Google Calendar and Google Maps (plain text, no logos), each opening the matching method with two or three steps for getting the data out of that app (05 section 6.30); `trip_imports.origin` records the entry (03 section 5.9) and the `origin` event property carries it. Adds the `places_text` source: `POST /imports/places` takes pasted place names (one per line, up to 20,000 characters and 200 places), matches each by place search (Geoapify, no AI, no credits) and returns candidates of kind `place` that import as ideas with no day; a single Google Maps list link returns `422 list_link_not_readable` (never opened) and the screen offers to keep the link as a note. The rival instructions are checked against each app's current help pages before merge and again before launch (2 non-ticket hours); where an app has no export the entry says so.
+- Accept: each entry opens the right method; pasting Wanderlog or Maps place names gives a preview with matched places and "Not the right place"; a pasted Maps list link is never requested (no network call, asserted); a places-only import never triggers the first-import reward; the entry is stored and no other parsing changes; no third-party logos.
+- Touches: `apps/api/wayfold/modules/trips/import_places.py`, `apps/api/wayfold/modules/places/`, `apps/web/src/routes/import/`.
+- Tests: place-matching golden set (30 lists), no-network test for list links, reward exclusion test, origin analytics test, copy lint.
+- Done: DoD plus the rival help-page check dated in `docs/import-sources.md`.
+
+#### WF-116 Verify this plan: schema, endpoints and reading a pasted plan [M4, M]
+- Depends on: WF-048, WF-055, WF-073, WF-044.
+- Description: the tables `plan_verifications` and `plan_verification_items` with policies and grants (03 section 5.20 and 6), the run kinds `verify_extract` and `verify_plan`, the `verify_plan` credit action and price row, flag `verify_plan` and kill switch `ai.verify`. `POST /trips/{id}/verify-plan` redacts the pasted text (the WF-073 redactor), calls Haiku once with a strict schema and no tools (06 section 5.11, up to 8,000 characters and 25 items), applies the grounding checks (every name, hours and price must appear in the text), stores only the items (never the text) and returns the price of step 2. Also `GET`, `PUT selection` (cap by `verify_items_per_run`: Free 5, Plus and Trip Pass 12), `DELETE`. 1 credit in the `explain` price class, refunded when nothing is recognized.
+- Accept: the recorded model request contains none of the test PII; a name not in the text is dropped; over-cap selection is refused; the pasted text is in no table, log or event; a viewer cannot start a check; a member cannot update verdicts or evidence columns (grants test).
+- Touches: `apps/api/wayfold/modules/verification/`, `apps/api/wayfold/modules/ai/features/verify_extract.py`, migrations and models for 03 section 5.20.
+- Tests: grounding tests, redaction corpus reuse, grants and RLS tests, refund test, idempotency test, consent and kill switch tests.
+- Done: DoD plus 03 section 5.20 migration reviewed.
+
+#### WF-117 Verify this plan: item checks, verdicts and credit settlement [M4, L]
+- Depends on: WF-116, WF-033, WF-050, WF-049.
+- Description: `POST /plan-verifications/{id}/check` and the `run_verify_plan` worker job (06 section 5.11). Per selected item (4 at a time): place search match (name similarity 0.8, 30 km), shared cache lookup (`place_check`, 14 days), then at most one Haiku request with `web_search` (1) and `web_fetch` (1, 4,000 content tokens) and a strict schema; the verdict (green, amber, red, unchecked) is decided in code after grounding every reported value in a tool result, with hours compared as weekday windows and prices within 15 percent; green and amber always carry a cited page and date. Reserves 1 credit per item, settles to the items that ended green, amber or red, refunds the rest (provider error, budget stop, blocked source), admits like an agent run (month headroom for items x $0.02), per-item $0.02 and per-run 3 minute caps, cancel between items. `POST /plan-verifications/{id}/import` writes the ticked items as itinerary items (`source = 'verify_plan'`, `check_url`, `checked_at`).
+- Accept: a fixture plan of 9 items with known truths yields the expected verdicts; an invented place is never green; a value the model reports that is not in the fetched content is discarded; Airbnb, Vrbo and Booking.com pages are never opened; credits charged equal the items checked and the rest are returned; a stopped run refunds unchecked items; the import carries evidence into the trip.
+- Touches: `apps/api/wayfold/modules/verification/`, `apps/worker/wayfold_worker/jobs/run_verify_plan.py`, `apps/api/wayfold/modules/ai/features/verify_check.py`, `apps/api/wayfold/modules/places/` (hours parser).
+- Tests: verdict table tests, hours and price comparison tests, grounding tests, injection fixtures in fetched pages, budget stop test, refund and settle tests, concurrency test, blocked-domain test, cache hit test, fake Messages client with recorded fixtures (06 section 10).
+- Done: DoD plus the first accuracy numbers written to `docs/evals/verify-plan.md`.
 
 ### Month 5: iOS and polish, TestFlight beta
 
@@ -963,8 +1014,8 @@ Conventions for every ticket:
 - Done: DoD plus counsel review noted or explicitly deferred.
 
 #### WF-095 Onboarding: switching question [M5, S]
-- Depends on: WF-018, WF-071, WF-072, WF-073, WF-074.
-- Description: the onboarding question "Coming from TripIt or Wanderlog?" with answers (TripIt, Wanderlog, another app, starting fresh); the first two lead to the import chooser (file, calendar feed, paste) and mention the free Trip Pass for the first import; "starting fresh" continues to the first-trip wizard. Skippable. The answer is stored as an enum for analytics only.
+- Depends on: WF-018, WF-071, WF-072, WF-073, WF-074, WF-121.
+- Description: the onboarding question "Coming from TripIt, Tripsy or Wanderlog?" with answers (TripIt, Tripsy, Wanderlog, another app, starting fresh); the first three lead to the matching entry on the import screen (WF-121) and mention the free Trip Pass for a first import that adds 3 or more items including a flight or a stay, only to accounts without Plus; "starting fresh" continues to the first-trip wizard. Skippable. The answer is stored as an enum for analytics only.
 - Accept: each answer leads to the right screen; skipping loses nothing; the reward is described accurately and only to Free accounts.
 - Touches: `apps/web/src/routes/onboarding/`.
 - Tests: component tests, Playwright switching flow.
@@ -988,7 +1039,7 @@ Conventions for every ticket:
 
 #### WF-098 Analytics events for Phase 1 [M5, M]
 - Depends on: WF-038.
-- Description: fire every event in the Phase 1 catalogue ([10-quality-security-launch.md](10-quality-security-launch.md) section 4), including the new ones for imports (`import_started`, `import_previewed`, `import_completed`, `import_failed`, `import_reward_granted`), onboarding switching, collaborator limit, offline, calendar feed, booked-fare watch and alert, evidence, public pages, content reports, `/vs` pages and referrals. Funnels: activation, invite loop, paywall, AI, affiliate, switching (onboarding answer to import completed to reward to first itinerary edit).
+- Description: fire every event in the Phase 1 catalogue ([10-quality-security-launch.md](10-quality-security-launch.md) section 4), including the new ones for imports (`import_started` with `origin`, `import_previewed`, `import_completed`, `import_failed`, `import_reward_granted`, `calendar_polling_enabled`, `calendar_changes_found`, `calendar_changes_applied`), onboarding switching, collaborator limit, offline, calendar feed, booked-fare watch and alert, evidence and rechecks, Verify this plan (`verify_started`, `verify_items_read`, `verify_checked`, `verify_imported`), trust pages and the cancel link, the sync indicator, the status banner, the Android install card, public pages, content reports, `/vs` pages and referrals. Funnels: activation, invite loop, paywall, AI, affiliate, switching (onboarding answer to import completed to reward to first itinerary edit).
 - Accept: each event fires once with only enum and bucket properties; no URL, file name, pasted text or trip title is ever an event property; opt-out stops every event.
 - Touches: `apps/web/src/lib/analytics.ts`, `apps/api/wayfold/analytics.py`, `packages/shared/src/events.ts`, `docs/analytics.md`.
 - Tests: event firing tests, property allowlist test, opt-out test.
@@ -1004,8 +1055,8 @@ Conventions for every ticket:
 
 #### WF-100 Uptime, alerts and status page [M5, M]
 - Depends on: WF-037.
-- Description: probes on `/health/ready` from two regions, a synthetic sign-in and trip-load check, heartbeat monitors (scheduler, nightly jobs, queue), public status page, alert routing (phone for outage, data loss risk and spend runaway only), and the Phase 1 alerts of [10-quality-security-launch.md](10-quality-security-launch.md) section 5.3.
-- Accept: stopping the worker in staging raises a page within 5 minutes; status page live.
+- Description: probes on `/health/ready` from two regions, a synthetic sign-in and trip-load check, heartbeat monitors (scheduler, nightly jobs, queue), public status page on Better Stack with the five components of 02 section 8.1 (web app, API, AI features, fare data, push) and a first incident template, alert routing (phone for outage, data loss risk and spend runaway only), and the Phase 1 alerts of [10-quality-security-launch.md](10-quality-security-launch.md) section 5.3.
+- Accept: stopping the worker in staging raises a page within 5 minutes; the status page is live, hosted outside Render and Cloudflare Pages, and shows the five components.
 - Touches: `infra/render/render.yaml` (heartbeats), `docs/runbooks/`.
 - Tests: drill recorded.
 - Done: DoD.
@@ -1033,6 +1084,38 @@ Conventions for every ticket:
 - Touches: `apps/api/wayfold/modules/admin/invites.py`, `infra/scripts/beta_report.py`.
 - Tests: cohort calculation tests.
 - Done: DoD plus the Month 5 gate review recorded.
+
+#### WF-123 Keep checking this calendar: opt-in polling and change preview [M5, L]
+- Depends on: WF-072, WF-046, WF-086.
+- Description: after a feed import is applied the person can switch on "Keep checking this calendar" (off by default, never turned on for them): `PUT /imports/{id}/polling` calls `set_import_polling()` (03 section 5.9), keeps the feed URL encrypted (`feed_url_enc`, `FIELD_ENCRYPTION_KEY`) only while on, at most 3 polled feeds per account. The `poll_import_feeds` scheduler job (every 30 minutes, leader only) enqueues `fetch_import_feed` for due rows; each feed is read every 6 hours through the SSRF guard with a conditional request and a content hash (`last_content_hash`). A change builds a diff against the import's items (by `import_uid`) into `pending_changes`, sends a push and in-app notice, and the "Calendar changed" sheet lists new, changed (before and after) and removed events; `POST /imports/{id}/changes/confirm` applies only the ticked changes; nothing is ever applied automatically and removed events are never deleted for the person. Polling stops after 3 failures in a row (`calendar_poll_stopped`), 7 days after the trip ends, or when switched off (URL and pending changes deleted). Kill switches `import.polling` and `import.all`; flag `calendar_feed_polling`; `setting_calendar_polling`.
+- Accept: an unchanged feed creates no preview; a changed feed creates one preview and one notice; nothing changes in the trip until the person confirms; turning the switch off deletes the stored URL; the third failure stops polling and tells the person; the fourth polled feed is refused; the URL never appears in logs, Sentry, `provider_calls` or events; a polling confirmation never earns the import reward.
+- Touches: `apps/api/wayfold/modules/imports/`, `apps/worker/wayfold_worker/jobs/poll_import_feeds.py`, `apps/web/src/routes/import/`.
+- Tests: poll schedule test (6 hours), content hash test, diff test (added, changed, removed), confirm-only-ticked test, failure and stop tests, encryption and deletion tests, log scrub test, limit test, SSRF table reuse.
+- Done: DoD plus the threat model updated for stored feed addresses.
+
+#### WF-118 Verify this plan: screens [M5, L]
+- Depends on: WF-117, WF-066, WF-121.
+- Description: the four-step flow in 05 section 6.38: paste, choose what to check (price shown first, per-run cap, confirm at 6 credits or more), results with verdict chips and evidence labels, and "Add to trip"; entry points on the Trips home "+" menu, the trip menu, the import screen and the AI sheet; "Plan checks" list with 30-day retention; credit-out paywall `out_of_credits_verify` (web says "Upgrade in the iOS app"); the recheck control from WF-120 on imported items; events in 10 section 4. Words and icons, never color alone.
+- Accept: a Free account cannot tick more than 5 items and sees the price before the check; results show the evidence label for every green and amber row; red rows are unticked for import; the header reads "Checked 7 of 9..." and never says the plan is verified; leaving mid-run and returning shows progress; axe passes on every step.
+- Touches: `apps/web/src/routes/verify/`, `apps/web/src/components/verdict-chip/`, `apps/web/src/routes/trips/`.
+- Tests: component tests per state, Playwright end-to-end with a fake Anthropic client, axe checks, a copy lint test for the forbidden words ("verified", "safe to book").
+- Done: DoD.
+
+#### WF-126 Public status summary and in-app status banner [M5, S]
+- Depends on: WF-100, WF-037.
+- Description: `GET /public/status` (04 section 5.28) mirrors the five component states of the hosted status page (02 section 8.1) and is cached 30 seconds; the app shows the quiet banner "Fares are delayed right now. Saved trips still work." with a "Service status" link only when a component is degraded, and Settings has "Service status". The banner never appears for one person's failed request.
+- Accept: degrading a component in staging shows the banner within a minute and clearing it removes it; the endpoint answers without auth and without touching the database more than once a minute; offline the app shows the offline banner instead.
+- Touches: `apps/api/wayfold/modules/admin/` (status read), `apps/api/wayfold/api/public.py`, `apps/web/src/components/status-banner/`.
+- Tests: endpoint contract test, banner component tests, caching test.
+- Done: DoD.
+
+#### WF-122 Google Maps export file import [M5, M] (cut list, not in the committed plan)
+- Depends on: WF-121.
+- Description: `POST /imports/maps-file` reads a Google Takeout saved-list export (CSV, GeoJSON or KML, up to 5 MB and 200 places) locally and matches each title by place search (no AI, no credits); candidates of kind `place` import as ideas; notes and any Google Maps URLs stay as plain text and are never followed; a pasted list link is never opened (WF-121 already guides the export). Cut from the committed hours (section 3): build it only in reserve time.
+- Accept: golden exports from 3 Takeout variants import with the right matches; a file with no places says so; 201 places import the first 200 and warn; no network request is made for any URL in the file.
+- Touches: `apps/api/wayfold/modules/trips/import_maps.py`, `apps/web/src/routes/import/`.
+- Tests: golden files (CSV, GeoJSON, KML), no-network test, limits test, reward exclusion test.
+- Done: DoD.
 
 ### Month 6: launch
 
@@ -1070,11 +1153,11 @@ Conventions for every ticket:
 
 #### WF-108 Referral credits [M6, L]
 - Depends on: WF-044, WF-064, WF-083, WF-094.
-- Description: each user gets a referral link in Settings ("Invite friends"); when a referred person signs up, verifies their email and completes an activation (first itinerary item or first import) both accounts get a credit grant (20 credits each as a placeholder until [07-monetization-spec.md](07-monetization-spec.md) fixes the amount; `credit_grants` kind `referral`, 90 day expiry). New `referrals` table (code, referrer, referred, status, reason) added by a migration with 03. Abuse controls: no self-referral (same device key, IP hash or normalized email), 5 rewards a month and 25 a year per referrer, unique per referred account, rewards only from attested devices or verified email, reversal on refund or abuse flag, never tied to a rating or review. Kill switch `referrals`.
-- Accept: a valid referral grants both sides once; self, duplicate and farmed referrals grant nothing and are logged; admin can revoke and the ledger reverses; the referral link carries no user id or email.
+- Description: each user gets a referral link in Settings ("Invite friends"); when a referred person signs up, verifies their email and creates their first trip with dates, both accounts get 20 credits (settled values in the `setting_referral_credits` flag; `credit_grants` kind `promo`, expiring after 12 months; referral credits never raise the provider-spend ceiling). Uses the `referral_codes` and `referral_rewards` tables and the functions in 03 section 5.9. Abuse controls: no self-referral (same device key, IP hash or normalized email), a referrer is paid for at most 5 rewards in a rolling 30 days and 10 in a calendar year (the referred person still gets theirs), unique per referred account, rewards only from attested devices or verified email, reversal on refund or abuse flag, never tied to a rating or review. Kill switch `referrals.grant`.
+- Accept: a valid referral grants 20 credits to both sides once, expiring in 12 months; the sixth reward in 30 days and the eleventh in a calendar year pay the referrer nothing and the referred person in full; self, duplicate and farmed referrals grant nothing and are logged; admin can revoke and the ledger reverses; the referral link carries no user id or email.
 - Touches: `apps/api/wayfold/modules/credits/` (grants), `apps/api/wayfold/modules/auth/` (referrals), `apps/web/src/routes/settings/`.
-- Tests: reward-once test, self-referral tests, velocity and cap tests, reversal test, idempotency under concurrency.
-- Done: DoD plus the `referrals` table documented in 03.
+- Tests: reward-once test, self-referral tests, velocity and cap tests (5 per 30 days, 10 per year), expiry test, no-ceiling-raise test, reversal test, idempotency under concurrency.
+- Done: DoD.
 
 #### WF-109 Comparison pages (/vs) [M6, M]
 - Depends on: WF-107.
@@ -1131,6 +1214,46 @@ Conventions for every ticket:
 - Touches: `docs/launch/`.
 - Tests: post-launch smoke test script.
 - Done: DoD plus the Month 6 gate review recorded.
+
+#### WF-119 Verify this plan: evals and release gate [M6, L]
+- Depends on: WF-118, WF-057.
+- Description: the Verify suites in 06 section 10: extraction (40 pasted itineraries, hand-labeled), checking (120 place claims: 50 correct, 25 wrong hour or price, 25 invented, 20 closed or renamed, from saved place data and saved pages, never fetched live), injection and blocked sites, recheck (60 page pairs) and cost replay. Gates: extraction recall 95 percent or more with 0 hallucinated names; false green under 2 percent and no invented place ever green; false red under 5 percent; every green or amber cites a page containing the value; blocked pages opened 0; plan check p95 under $0.02 per item. The suites run through the Batch API and record against the `prompt_version`. If a gate fails, the flag `verify_plan` stays off at launch.
+- Accept: suites run in CI against recorded fixtures and nightly through Batch; results are committed; the failing-gate path (flag off) is tested; a prompt change cannot ship without a passing run.
+- Touches: `backend/evals/` (verify suites), `docs/evals/verify-plan.md`, CI workflow.
+- Tests: the suites themselves, plus a test that the gate script fails on a seeded false green.
+- Done: DoD plus the gate result recorded in the Month 6 review.
+
+#### WF-124 Trust pages: How we earn, How billing works and the cancel link [M6, M]
+- Depends on: WF-068, WF-066, WF-094, WF-084.
+- Description: the public pages `/how-we-earn` (from `GET /public/how-we-earn`, built from `affiliate_programs` so every active partner is listed, with the rules, a sample labeled button and live counts) and `/billing` (plain billing text, prices from the same configuration as the paywall), both in the marketing shell and in the app from Account and the paywall legal row; the plan card gets a first-level "Cancel subscription" row that opens the App Store's subscription sheet (`Purchases.showManageSubscriptions()`; on the web "Cancel in the iOS app" with the store page link); `Entitlements.cancel_url`; the trial reminder, receipt and billing problem emails carry the cancel link; `/vs` pages and the App Store listing link to `/how-we-earn`. No affiliate card, paywall or survey on any of these.
+- Accept: adding an active `affiliate_programs` row makes it appear on `/how-we-earn` with no code change; the prices on `/billing` match the paywall (a test compares them); the cancel row is reachable in one tap from the Account screen and opens the subscription sheet in the sandbox build; the trial reminder email contains the link; the pages pass axe and have no em dashes.
+- Touches: `apps/web/src/routes/how-we-earn/`, `apps/web/src/routes/billing/`, `apps/api/wayfold/api/public.py`, `apps/api/wayfold/modules/affiliate/`, `apps/web/src/routes/account/`.
+- Tests: partner-list generation test, price-match test, cancel row test, email template test, copy lint.
+- Done: DoD plus both pages added to the App Review notes (WF-111).
+
+#### WF-127 Android install: installable web app and install guide [M6, M]
+- Depends on: WF-088, WF-036.
+- Description: the web app manifest (name, icons, theme color, standalone display, start URL), a service worker that keeps opened trips readable offline on the web (reusing WF-088), the public page `/install/android` (three steps with screenshots for Chrome, a note for Samsung Internet, what works and what does not yet, 05 section 6.42), the dismissible "Add Wayfold to your home screen" card on Android Chrome after the first trip (once every 30 days at most, the browser's own install prompt), and a "Install on Android" row in Help. Copy never claims a Play Store app or push notifications.
+- Accept: Chrome on Android offers "Install app"; the installed app opens a trip offline; the card never shows before a trip exists, on iOS or when already installed; the guide's screenshots match the current Chrome menus on the day of release.
+- Touches: `apps/web/public/manifest.webmanifest`, `apps/web/src/sw.ts`, `apps/web/src/routes/install/`, `apps/web/src/components/install-card/`.
+- Tests: Lighthouse PWA check in CI, component tests for the card rules, Playwright Pixel 7 test for the manifest and offline read.
+- Done: DoD.
+
+#### WF-128 Android Chrome test pass [M6, S]
+- Depends on: WF-127, WF-118.
+- Description: the Android Chrome checklist in [10-quality-security-launch.md](10-quality-security-launch.md) sections 1.9 and 7.5: a Playwright project on Chromium with a Pixel 7 profile in CI, plus one manual pass on a real Android phone and one tablet (or the cloud device lab) before the release: sign-in, create and edit a trip, invite and share, import, Verify this plan, offline reading, install flow, keyboard and screen reader basics with TalkBack. Defects go to the Month 6 review.
+- Accept: the checklist passes on Chrome on a real Android phone; every defect found is fixed or written into the known-issues list in the review notes; the CI project runs on every pull request.
+- Touches: `apps/web/e2e/`, `docs/qa/android-chrome.md`.
+- Tests: the Playwright Android project and the manual checklist record.
+- Done: DoD plus the checklist result saved in `docs/qa/`.
+
+#### WF-129 Status page polish [M6, S] (cut list, not in the committed plan)
+- Depends on: WF-100, WF-126.
+- Description: incident templates written in plain words, email subscription, component history export, custom domain and styling for the hosted status page (02 section 8.1). The basic page, five monitors and the in-app banner ship without this. Cut from the committed hours (section 3): build it only in reserve time.
+- Accept: a practice incident is posted from a template in under 2 minutes and subscribers receive it.
+- Touches: `docs/runbooks/status-page.md`, the hosted status page settings.
+- Tests: a recorded drill.
+- Done: DoD.
 
 ## 7. Moved to Phase 2 or 3
 
@@ -1201,7 +1324,7 @@ Two decisions to confirm: admin impersonation, finance reports and experiments a
 | 039 | 030 | | | | |
 | 040 | 052 | | | | |
 
-New in Phase 1 (no old ID): WF-026 (Free owners invite 1 collaborator, split from old 032), WF-055 (evidence labels), WF-071 to WF-075 (switching import, reward, booked-fare alert), WF-076 (sandbox purchase harness), WF-083 (App Attest), WF-088 and WF-089 (offline reading and edit queue, split from old 087), WF-090 (calendar subscription feed), WF-095 (onboarding switching question), WF-107 (public sample and shared-trip pages, extends old 112), WF-108 (referral credits, from old 113), WF-109 (`/vs` pages), WF-110 (penetration test and fixes).
+New in Phase 1 (no old ID): WF-026 (Free owners invite 1 collaborator, split from old 032), WF-055 (evidence labels), WF-071 to WF-075 (switching import, reward, booked-fare alert), WF-076 (sandbox purchase harness), WF-083 (App Attest), WF-088 and WF-089 (offline reading and edit queue, split from old 087), WF-090 (calendar subscription feed), WF-095 (onboarding switching question), WF-107 (public sample and shared-trip pages, extends old 112), WF-108 (referral credits, from old 113), WF-109 (`/vs` pages), WF-110 (penetration test and fixes), and WF-116 to WF-129, appended in the integration pass for the features adopted from the competitive analysis: WF-116 to WF-119 (Verify this plan), WF-120 (evidence freshness and recheck), WF-121 (import entries named for TripIt, Tripsy and Wanderlog, and pasted places), WF-122 (Google Maps export file, on the cut list), WF-123 (opt-in calendar polling), WF-124 (How we earn, How billing works, cancel link), WF-125 (sync indicator), WF-126 (public status summary), WF-127 and WF-128 (Android install and Chrome testing), WF-129 (status page polish, on the cut list).
 
 ## 8. How to work with Claude Code
 

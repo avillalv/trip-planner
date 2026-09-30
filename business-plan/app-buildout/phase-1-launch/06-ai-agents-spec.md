@@ -529,7 +529,7 @@ Output schema: `{"groups": [{"name": enum, "items": [{"label": string(<=60), "qt
 
 ### 5.3 `booking_import`
 
-- **Purpose.** Turn text into structured flight, stay and activity drafts so people can switch from TripIt, Wanderlog or an inbox of confirmations without retyping. One feature, two input modes that share the prompt, schema and checks:
+- **Purpose.** Turn text into structured flight, stay and activity drafts so people can switch from TripIt, Tripsy, Wanderlog or an inbox of confirmations without retyping. One feature, two input modes that share the prompt, schema and checks:
   - `pasted_text`: a pasted confirmation (an email body, an airline or hotel confirmation, a message from a host).
   - `ics_descriptions`: the description text of events in an imported calendar file or feed. The calendar's own fields (title, start, end, location) are read without AI; the model only fills in what the description states.
 - **Trigger.** `POST /v1/imports/paste`, and the preview step of `POST /v1/imports/ics-file` and `POST /v1/imports/ics-feed` ([04-api-spec.md](04-api-spec.md) section 5.26). Nothing else calls it. Every extraction therefore ends in a reviewable preview and nothing is saved until the user confirms.
@@ -783,14 +783,6 @@ Start now. Remember to call finish_run at the end.
 ### 5.10 Scheduled routines and weekly digest
 
 Later: Phase 2 (Pro tier, scheduled agent routines, batch scans, the weekly digest). Phase 1 agent runs start only when a person taps the button, and the only background AI work is cache warming (8.6) and nightly evals.
-
-## How to search
-- Check this one route and date window only. Use at most {max_searches} searches and
-  {max_fetches} fetches.
-- Return every fare you can ground on a page that shows specific dates. Return an empty list if
-  you find none. Do not estimate.
-- Compare with cheapest_known; include a fare only if it is within 15% of it or lower.
-```
 
 ### 5.11 `verify_plan` ("Verify this plan")
 

@@ -11,7 +11,7 @@ Written 2026-09-30. This file is complete and self-contained for Phase 1: it def
 | Import a trip from a calendar file, a calendar feed URL (with SSRF protection), pasted booking text, a Google Maps export or pasted places, through entries named for TripIt, Tripsy and Wanderlog; preview, then confirm; opt-in "Keep checking this calendar" polling every 6 hours; one free Trip Pass reward per user | 5.26 |
 | "Verify this plan": paste an itinerary from ChatGPT, Gemini, Layla or Mindtrip, check each place, hours and price with sources, import the confirmed items | 5.30 |
 | Evidence freshness: `stale` after 14 days and a one-tap recheck on notes and verified items | 5.14 |
-| Public status summary, "How we earn" data and the Android install guide data | 5.28 |
+| Public status summary and "How we earn" data (the Android install guide is a static page and needs no endpoint) | 5.28 |
 | Live calendar subscription feed per trip, token URL | 5.29 |
 | Booked-fare fields (`paid`, `booked_at`) and the booked-fare drop alert | 5.8 |
 | Referral codes and referral rewards | 5.27 |
@@ -969,7 +969,7 @@ type Entitlements = {
   product_id: string | null; status: "none" | "active" | "in_trial" | "in_grace" | "billing_retry" | "paused" | "expired" | "refunded" | "revoked"
   valid_until: string | null; auto_renew: boolean | null; store: "apple" | null        // Phase 1 sells only through the App Store; there are no web purchases
   manage_subscription_url: string | null
-  cancel_url: string | null                  // the store's own subscription page, opened by the one-tap "Cancel subscription" row (07 section 4.3); null when there is no subscription
+  cancel_url: string | null                  // the store's own subscription page, opened by the one-tap "Cancel subscription" row (07 section 7.11); null when there is no subscription
   limits: { active_trips: number | null; live_routes: number; monthly_credits: number; price_alerts: number; collaborators: number }   // plans.limits keys
   usage: { active_trips: number }
   trip_passes: TripPass[]
@@ -1082,7 +1082,7 @@ Base path `/v1/admin`, hidden from the public OpenAPI schema, reachable only fro
 | Content reports | `GET /reports`, `PATCH /reports/{id}` | support |
 | Audit | `GET /audit` | support (own actions) or owner |
 
-### 5.26 Imports (switching from TripIt, Wanderlog and calendars)
+### 5.26 Imports (switching from TripIt, Tripsy, Wanderlog, Google Maps and calendars)
 
 An import brings an existing plan into Wayfold in two steps: create a **preview** (nothing is written to any trip), review it, then **confirm**. There are five sources, stored as `trip_imports.source`: `ics_file` (an uploaded calendar file, for example a TripIt, Tripsy or Google Calendar export), `ics_feed` (a calendar feed URL the user pastes), `pasted_text` (booking confirmations pasted as text), `maps_file` (a Google Maps saved-list export: Takeout CSV, GeoJSON or KML) and `places_text` (pasted place names, one per line, or a list copied out of Wanderlog or Google Maps). The import screen has entries named for TripIt, Tripsy, Wanderlog and Google Maps; every create call takes an optional `origin` (`tripit`, `tripsy`, `wanderlog`, `google_calendar`, `google_maps`, `other`) that only changes the instructions shown and feeds the "switch imports per week" metric, never the parsing. An import targets a new trip (the default, used by the onboarding card "Coming from TripIt or Wanderlog?") or an existing trip the caller can edit. Email-forward import (plans@wayfold.app) is Later: Phase 2.
 
@@ -1097,7 +1097,7 @@ Rules that hold for every source:
 | Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
 |---|---|---|---|---|
 | `POST /imports/ics-file` | user | none; 20 previews a day | multipart form: `file` (max 2 MB, `.ics` or `text/calendar`), `trip_id?` (caller must be editor) to 201 `ImportPreview` | Parses in the worker sandbox and returns a `previewed` import (files are parsed locally, so no async step). `415 unsupported_media_type`, `413 payload_too_large`, `422 validation_failed` (`no_events`, `too_many_events`). Description extraction may spend credits (see parsing rules). |
-| `POST /imports/ics-feed` | user | none; 5 a day; SSRF rules below | `{ url: string, trip_id?: Uuid }` with `Idempotency-Key` to 202 `ImportPreview` (status `fetching`) | Validates the URL, stores it encrypted, enqueues the fetch job, sets `Location: /v1/imports/{id}`. Poll `GET /imports/{id}` until `previewed` or `failed`. `422 feed_url_not_allowed`, `422 blocked_domain`, `502 feed_fetch_failed` (as the failed import's `error_code`). |
+| `POST /imports/ics-feed` | user | none; 5 a day; SSRF rules below | `{ url: string, trip_id?: Uuid }` with `Idempotency-Key` to 202 `ImportPreview` (status `fetching`) | Validates the URL, holds it encrypted (only until the preview is confirmed or discarded, unless "Keep checking this calendar" is switched on later), enqueues the fetch job, sets `Location: /v1/imports/{id}`. Poll `GET /imports/{id}` until `previewed` or `failed`. `422 feed_url_not_allowed`, `422 blocked_domain`, `502 feed_fetch_failed` (as the failed import's `error_code`). |
 | `POST /imports/paste` | user | `ai`, `credits(1)` (`booking_import`, action code `explain`) | `{ text: string /* max 12000 */, trip_id?: Uuid }` with `Idempotency-Key` to 201 `ImportPreview` | Reserves 1 credit, redacts personal data, calls Haiku once with a strict JSON schema, builds candidates. Nothing recognized: the credit is refunded and the import has `warnings: [{ code: "unrecognized" }]`. `402 insufficient_credits`, `403 ai_consent_required`, `503 feature_disabled` (kill switch `ai.import`). The server never fetches a URL in the text. |
 | `POST /imports/maps-file` | user | none; 20 previews a day | multipart form: `file` (max 5 MB, `.csv`, `.json`, `.geojson` or `.kml`), `trip_id?`, `origin?` to 201 `ImportPreview` | Reads the Takeout list locally (title, note, comment; coordinates when present) and matches each title by place search. Up to 200 places, more is `422 too_many_events`. Candidates are `kind: "place"`. No AI, no credits. `415`, `413`. |
 | `POST /imports/places` | user | none; 20 previews a day | `{ text: string /* max 20000 */, trip_id?: Uuid, origin?: ImportOrigin }` to 201 `ImportPreview` | Pasted place names, one per line or a copied list. A single Google Maps list link returns `422 list_link_not_readable`. Matching by place search, no AI, no credits; up to 200 places. |
@@ -1108,7 +1108,7 @@ Rules that hold for every source:
 | `GET /imports/{import_id}/changes` | the importer | none | none to `ImportChanges \| null` | The change preview found by polling or refresh: events added, changed and removed since the last confirm. `null` when there is nothing to review. |
 | `POST /imports/{import_id}/changes/confirm` | the importer (editor on the trip) | none | `{ include_keys: string[] }` with `Idempotency-Key` to 200 `ImportResult` | Applies only the ticked changes, matched by `import_uid`; removed events are never deleted silently (the item is shown as "Removed from your calendar" for the person to delete). Polling changes never count toward the reward. |
 | `DELETE /imports/{import_id}/changes` | the importer | none | none to 204 | Dismisses the change preview. |
-| `POST /imports/{import_id}/confirm` | the importer (editor on an existing target trip) | `active_trips` when a new trip is created; `routes_per_trip` for tracked fares | `ImportConfirm` with `Idempotency-Key` to 201 `ImportResult` | One transaction (rules below). Sets `trip_imports.status = 'confirmed'`, deletes the candidate payload, and applies the reward when the account is eligible. `403 limit_reached` (reason `trip_limit`) when a Free owner has 2 active trips; the client then offers "Add to an existing trip". |
+| `POST /imports/{import_id}/confirm` | the importer (editor on an existing target trip) | `active_trips` when a new trip is created; `routes_per_trip` for tracked fares | `ImportConfirm` with `Idempotency-Key` to 201 `ImportResult` | One transaction (rules below). Sets `trip_imports.status = 'confirmed'`, deletes the candidate payload and, unless polling is switched on, the stored feed address, and applies the reward when the account is eligible. `403 limit_reached` (reason `trip_limit`) when a Free owner has 2 active trips; the client then offers "Add to an existing trip". |
 | `DELETE /imports/{import_id}` | the importer | none | none to 204 | Discards the preview, deletes the stored feed URL and candidates. Rows an earlier confirm created stay. Also turns polling off. |
 | `GET /me/import-reward` | user | none | none to `ImportReward` | Drives the onboarding card and the copy on the import screen. |
 
