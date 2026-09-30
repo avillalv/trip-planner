@@ -1,23 +1,28 @@
-import { BedDouble, Plus, Search } from 'lucide-react'
+import { BedDouble, Loader2, Plus, Search, Sparkles } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { AiLodgingDialog } from '@/components/lodging/ai-lodging-dialog'
 import { BookmarkletCard } from '@/components/lodging/bookmarklet-card'
 import { CompareDialog } from '@/components/lodging/compare-dialog'
 import { LodgingCard } from '@/components/lodging/lodging-card'
 import { LodgingEditor } from '@/components/lodging/lodging-editor'
+import { byAiRank } from '@/components/lodging/lodging-meta'
 import { RentalSearchDialog } from '@/components/lodging/rental-search'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { isRunning } from '@/lib/api/agents'
 import { useActivities } from '@/lib/api/itinerary'
 import { useLodging, type Lodging } from '@/lib/api/lodging'
+import { useLatestAiRun } from '@/lib/api/suggestions'
 import { cn } from '@/lib/utils'
 import { useTripContext } from './trip-context'
 
-type View = 'all' | 'shortlist' | 'rejected'
-type Sort = 'added' | 'price' | 'rating'
+type View = 'all' | 'shortlist' | 'ai' | 'rejected'
+type Sort = 'added' | 'rank' | 'price' | 'rating'
 
 const VIEWS: Array<{ value: View; label: string }> = [
   { value: 'all', label: 'All' },
   { value: 'shortlist', label: 'Shortlist' },
+  { value: 'ai', label: 'AI picks' },
   { value: 'rejected', label: 'Not for us' },
 ]
 
@@ -25,6 +30,7 @@ const MAX_COMPARE = 4
 
 function visible(option: Lodging, view: View): boolean {
   if (view === 'rejected') return option.status === 'rejected'
+  if (view === 'ai') return option.added_via === 'agent' && option.status !== 'rejected'
   if (view === 'shortlist') return option.favorite || option.status === 'shortlisted' || option.status === 'booked'
   return option.status !== 'rejected'
 }
@@ -33,6 +39,7 @@ function order(sort: Sort) {
   const price = (o: Lodging) => (o.price_home_total !== null ? Number(o.price_home_total) : Infinity)
   const rating = (o: Lodging) => (o.rating !== null ? Number(o.rating) : -1)
   return (a: Lodging, b: Lodging) => {
+    if (sort === 'rank') return byAiRank(a, b)
     if (sort === 'price') return price(a) - price(b)
     if (sort === 'rating') return rating(b) - rating(a)
     return b.created_at.localeCompare(a.created_at)
@@ -41,13 +48,16 @@ function order(sort: Sort) {
 
 export function TripLodging() {
   const { trip } = useTripContext()
-  const lodging = useLodging(trip.id)
+  const aiRun = useLatestAiRun(trip.id, 'lodging_agent').run
+  const picking = aiRun !== undefined && isRunning(aiRun.status)
+  const lodging = useLodging(trip.id, picking)
   const activities = useActivities(trip.id)
   const [view, setView] = useState<View>('all')
   const [sort, setSort] = useState<Sort>('added')
   const [editing, setEditing] = useState<Lodging | null>(null)
   const [adding, setAdding] = useState(false)
   const [searching, setSearching] = useState(false)
+  const [asking, setAsking] = useState(false)
   const [compareIds, setCompareIds] = useState<number[]>([])
   const [comparing, setComparing] = useState(false)
 
@@ -55,6 +65,11 @@ export function TripLodging() {
   const shown = useMemo(() => all.filter((o) => visible(o, view)).sort(order(sort)), [all, view, sort])
   const selected = compareIds.map((id) => all.find((o) => o.id === id)).filter((o): o is Lodging => Boolean(o))
   const savedUrls = useMemo(() => new Set(all.map((o) => o.url).filter((u): u is string => Boolean(u))), [all])
+  // The AI picks view starts in the AI's own ranking; the others start newest first.
+  const showView = (next: View) => {
+    setView(next)
+    setSort((s) => (next === 'ai' ? (s === 'added' ? 'rank' : s) : s === 'rank' ? 'added' : s))
+  }
   const toggleCompare = (option: Lodging) =>
     setCompareIds((ids) => (ids.includes(option.id) ? ids.filter((id) => id !== option.id) : [...ids, option.id]))
 
@@ -69,6 +84,10 @@ export function TripLodging() {
           <Button variant="outline" onClick={() => setSearching(true)}>
             <Search aria-hidden="true" />
             Search rentals
+          </Button>
+          <Button variant="outline" onClick={() => setAsking(true)}>
+            {picking ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Sparkles aria-hidden="true" />}
+            AI picks
           </Button>
           <Button onClick={() => setAdding(true)}>
             <Plus aria-hidden="true" />
@@ -88,7 +107,7 @@ export function TripLodging() {
                 type="button"
                 role="tab"
                 aria-selected={view === v.value}
-                onClick={() => setView(v.value)}
+                onClick={() => showView(v.value)}
                 className={cn(
                   'rounded-md px-3 py-1 text-sm',
                   view === v.value ? 'bg-brand-soft font-semibold text-brand' : 'text-ink-soft hover:bg-accent',
@@ -105,6 +124,7 @@ export function TripLodging() {
               onChange={(e) => setSort(e.target.value as Sort)}
               className="h-8 rounded-lg border border-input bg-card px-2 text-sm"
             >
+              {view === 'ai' && <option value="rank">AI ranking</option>}
               <option value="added">Newest</option>
               <option value="price">Price, lowest first</option>
               <option value="rating">Rating, highest first</option>
@@ -181,6 +201,7 @@ export function TripLodging() {
           currency: trip.home_currency,
         }}
       />
+      <AiLodgingDialog open={asking} onOpenChange={setAsking} trip={trip} onShowPicks={() => showView('ai')} />
       <RentalSearchDialog open={searching} onOpenChange={setSearching} trip={trip} savedUrls={savedUrls} />
       <CompareDialog
         open={comparing}

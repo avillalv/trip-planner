@@ -1,7 +1,6 @@
 import { Ban, CircleAlert, CircleCheck, CircleX, Clock, Loader2, Pause, TimerOff, type LucideIcon } from 'lucide-react'
 import type { RunOutputs, RunStatus } from '@/lib/api/agents'
 import type { Run } from '@/lib/api/flights'
-import type { Lodging } from '@/lib/api/lodging'
 import { formatElapsed } from '@/lib/format'
 
 export type Tone = 'ok' | 'warn' | 'bad' | 'muted' | 'live'
@@ -53,9 +52,6 @@ export function runCounts(run: Run): string | null {
   return parts.length ? parts.join(' · ') : null
 }
 
-// Places to stay from a lodging run (RunOutputs.lodging); other runs have none.
-export const lodgingOf = (outputs: RunOutputs) => (outputs as { lodging?: Lodging[] }).lodging ?? []
-
 /** How many things a run saved, of every kind (rejections aren't saved). */
 export const savedCount = (outputs: RunOutputs) =>
-  outputs.quotes.length + outputs.notes.length + outputs.suggestions.length + lodgingOf(outputs).length
+  outputs.quotes.length + outputs.notes.length + outputs.suggestions.length + outputs.lodging.length

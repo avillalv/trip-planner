@@ -9,7 +9,7 @@ import type { Suggestion } from '@/lib/api/suggestions'
 import { formatDateRange, parseDate } from '@/lib/dates'
 import { hostOf } from '@/lib/format'
 import { formatMoney } from '@/lib/money'
-import { lodgingOf, savedCount } from './run-meta'
+import { savedCount } from './run-meta'
 
 const day = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 
@@ -120,7 +120,7 @@ function LodgingRow({ option }: { option: Lodging }) {
 }
 
 export function SavedOutputs({ outputs }: { outputs: RunOutputs }) {
-  const lodging = lodgingOf(outputs)
+  const { lodging } = outputs
   if (savedCount(outputs) === 0) {
     return <p className="text-sm text-ink-soft">This run didn't save any prices, notes, or ideas.</p>
   }

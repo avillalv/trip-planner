@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useRef } from 'react'
 import { api, unwrap } from './client'
+import type { Run } from './flights'
 import type { components } from './schema'
 
 export type Lodging = components['schemas']['LodgingOut']
@@ -10,15 +12,24 @@ export type LinkPreview = components['schemas']['LinkPreview']
 export type RentalOffer = components['schemas']['RentalOffer']
 export type RentalSearch = components['schemas']['RentalSearchIn']
 export type RentalSearchResult = components['schemas']['RentalSearchResult']
+export type AskLodging = components['schemas']['AskLodgingIn']
 
 export const lodgingKey = (tripId: number) => ['lodging', tripId] as const
 
-export function useLodging(tripId: number) {
+/** Polls fast while `live` (a lodging run is saving picks), and once more when it ends. */
+export function useLodging(tripId: number, live = false) {
+  const queryClient = useQueryClient()
+  const wasLive = useRef(live)
+  useEffect(() => {
+    if (wasLive.current && !live) void queryClient.invalidateQueries({ queryKey: lodgingKey(tripId) })
+    wasLive.current = live
+  }, [live, queryClient, tripId])
+
   return useQuery({
     queryKey: lodgingKey(tripId),
     queryFn: async (): Promise<Lodging[]> =>
       unwrap(await api.GET('/api/v1/trips/{trip_id}/lodging', { params: { path: { trip_id: tripId } } })),
-    refetchInterval: 30_000,
+    refetchInterval: live ? 3_000 : 30_000,
   })
 }
 
@@ -110,5 +121,15 @@ export function useRentalSearch(tripId: number) {
           body,
         }),
       ),
+  })
+}
+
+/** Runs one Google search, then queues a Claude run that saves its best picks as lodging options. */
+export function useAskForLodging(tripId: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (body: AskLodging): Promise<Run> =>
+      unwrap(await api.POST('/api/v1/trips/{trip_id}/ai/lodging', { params: { path: { trip_id: tripId } }, body })),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['runs'] }),
   })
 }

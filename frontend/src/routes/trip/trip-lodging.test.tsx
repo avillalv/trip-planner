@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Outlet, Route, Routes } from 'react-router'
 import { describe, expect, it } from 'vitest'
-import { lodging, trip } from '@/test/fixtures'
+import { lodging, lodgingRun, trip } from '@/test/fixtures'
 import { jsonResponse, mockApi, renderWithProviders } from '@/test/render'
 import type { TripOutletContext } from './trip-context'
 import { TripLodging } from './trip-lodging'
@@ -50,7 +50,7 @@ function renderLodging() {
 
 describe('TripLodging', () => {
   it('shows each place’s converted price, and hides the ones you ruled out', async () => {
-    mockApi({ '/api/v1/trips/7/lodging': [machiya, koto, dorm], '/api/v1/trips/7/activities': [] })
+    mockApi({ '/api/v1/trips/7/lodging': [machiya, koto, dorm], '/api/v1/trips/7/activities': [], '/api/v1/runs': [] })
     const user = userEvent.setup()
 
     renderLodging()
@@ -73,6 +73,7 @@ describe('TripLodging', () => {
     mockApi({
       '/api/v1/trips/7/lodging': [machiya],
       '/api/v1/trips/7/activities': [],
+      '/api/v1/runs': [],
       'PUT /api/v1/lodging/3/hearts/1': async (request: Request) => {
         sent = await request.json()
         return jsonResponse({ ...machiya, hearts: [1, 2] })
@@ -89,7 +90,7 @@ describe('TripLodging', () => {
   })
 
   it('compares the places you pick, marking the lowest price', async () => {
-    mockApi({ '/api/v1/trips/7/lodging': [machiya, koto], '/api/v1/trips/7/activities': [] })
+    mockApi({ '/api/v1/trips/7/lodging': [machiya, koto], '/api/v1/trips/7/activities': [], '/api/v1/runs': [] })
     const user = userEvent.setup()
 
     renderLodging()
@@ -102,5 +103,86 @@ describe('TripLodging', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Compare places to stay' })
     const total = within(dialog).getByRole('row', { name: /^Total/ })
     expect(within(total).getByText('Lowest').closest('td')).toHaveTextContent('$275')
+  })
+
+  describe('AI picks', () => {
+    const pick = (id: number, rank: number | null, title: string, overrides: Parameters<typeof lodging>[0] = {}) =>
+      lodging({
+        id,
+        title,
+        added_via: 'agent',
+        url: `https://example.com/${id}`,
+        notes: rank ? `AI pick #${rank}: Why ${title} suits you.` : `Why ${title} suits you.`,
+        created_at: `2026-09-29T12:00:0${id}Z`,
+        ...overrides,
+      })
+    const picks = [
+      pick(10, 2, 'Second pick'),
+      pick(11, 1, 'Best pick', { pros: 'Steps from the market', cons: 'Small kitchen' }),
+      pick(12, 3, 'Rejected pick', { status: 'rejected' }),
+      pick(13, null, 'Unranked pick'),
+    ]
+
+    it('shows only what the AI saved, best first, with a badge, why, and pros and cons', async () => {
+      mockApi({ '/api/v1/trips/7/lodging': [machiya, koto, ...picks], '/api/v1/trips/7/activities': [], '/api/v1/runs': [] })
+      const user = userEvent.setup()
+
+      renderLodging()
+      await screen.findByText('Machiya with a garden')
+      await user.click(screen.getByRole('tab', { name: 'AI picks' }))
+
+      const titles = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
+      expect(titles).toEqual(['Best pick', 'Second pick', 'Unranked pick'])
+      expect(screen.getByLabelText('Sort by')).toHaveValue('rank')
+
+      const best = screen.getByText('Best pick').closest('li')!
+      expect(within(best).getByText('AI pick #1')).toBeInTheDocument()
+      expect(within(best).getByText('Why Best pick suits you.')).toBeInTheDocument()
+      expect(within(best).getByText('Steps from the market')).toBeInTheDocument()
+      expect(within(best).getByText('Small kitchen')).toBeInTheDocument()
+      const unranked = screen.getByText('Unranked pick').closest('li')!
+      expect(within(unranked).getByText('AI pick')).toBeInTheDocument()
+
+      await user.click(screen.getByRole('tab', { name: 'All' }))
+      expect(screen.getByLabelText('Sort by')).toHaveValue('added')
+      expect(screen.getByText('Machiya with a garden')).toBeInTheDocument()
+      expect(screen.queryByText('Rejected pick')).not.toBeInTheDocument()
+      const manual = screen.getByText('Machiya with a garden').closest('li')!
+      expect(within(manual).queryByText(/^AI pick/)).not.toBeInTheDocument()
+    })
+
+    it('lets a long reason be read in full', async () => {
+      const long = pick(10, 1, 'Wordy pick', { notes: `AI pick #1: ${'Great location. '.repeat(20)}` })
+      mockApi({ '/api/v1/trips/7/lodging': [long], '/api/v1/trips/7/activities': [], '/api/v1/runs': [] })
+      const user = userEvent.setup()
+
+      renderLodging()
+      const more = await screen.findByRole('button', { name: 'Show more' })
+      const reason = more.previousElementSibling!
+      expect(reason).toHaveClass('line-clamp-4')
+      await user.click(more)
+      expect(reason).not.toHaveClass('line-clamp-4')
+      expect(screen.getByRole('button', { name: 'Show less' })).toHaveAttribute('aria-expanded', 'true')
+    })
+
+    it('opens the AI dialog, and “Show AI picks” lands on the picks', async () => {
+      mockApi({
+        '/api/v1/trips/7/lodging': [machiya, ...picks],
+        '/api/v1/trips/7/activities': [],
+        '/api/v1/runs': [lodgingRun()],
+      })
+      const user = userEvent.setup()
+
+      renderLodging()
+      await screen.findByText('Machiya with a garden')
+      await user.click(screen.getByRole('button', { name: 'AI picks' }))
+      await screen.findByRole('dialog', { name: 'Find the best places to stay' })
+      await user.click(await screen.findByRole('button', { name: 'Show AI picks' }))
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: 'AI picks' })).toHaveAttribute('aria-selected', 'true')
+      expect(screen.queryByText('Machiya with a garden')).not.toBeInTheDocument()
+      expect(screen.getByText('Best pick')).toBeInTheDocument()
+    })
   })
 })

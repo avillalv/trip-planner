@@ -1,3 +1,4 @@
+import type { Run } from '@/lib/api/flights'
 import type { Lodging } from '@/lib/api/lodging'
 import type { Presentation } from '@/lib/api/presentation'
 import type { Suggestion } from '@/lib/api/suggestions'
@@ -51,6 +52,30 @@ export function trip(overrides: Partial<Trip> = {}): Trip {
     cover: null,
     created_at: '2026-09-26T12:00:00Z',
     updated_at: '2026-09-26T12:00:00Z',
+    ...overrides,
+  }
+}
+
+export function lodgingRun(overrides: Partial<Run> = {}): Run {
+  return {
+    id: '5c1d7a42-0b6e-4e0e-9a55-3f0b8c1d2e4f',
+    routine_id: null,
+    trip_id: 7,
+    kind: 'lodging_agent',
+    trigger: 'manual',
+    status: 'succeeded',
+    params: { place: 'Kyoto, Japan', kind: 'rentals', message: 'Near a market' },
+    queued_at: '2026-09-29T12:00:00Z',
+    started_at: '2026-09-29T12:00:05Z',
+    finished_at: '2026-09-29T12:04:05Z',
+    summary: 'I picked three places near Nishiki Market, best first.',
+    error: null,
+    accepted_count: 3,
+    rejected_count: 0,
+    input_tokens: 30000,
+    output_tokens: 2000,
+    cost_usd_est: '0.30',
+    cancel_requested: false,
     ...overrides,
   }
 }

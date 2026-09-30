@@ -1,12 +1,14 @@
-import { BedDouble, ExternalLink, Heart, Star } from 'lucide-react'
+import { BedDouble, ExternalLink, Heart, Sparkles, Star } from 'lucide-react'
+import { useState } from 'react'
 import { toast } from 'sonner'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useHeart, useUpdateLodging, type Lodging } from '@/lib/api/lodging'
 import type { Person } from '@/lib/api/people'
 import { formatDateRange } from '@/lib/dates'
 import { formatMoney } from '@/lib/money'
 import { cn } from '@/lib/utils'
-import { perPerson, STATUS, STATUS_ORDER } from './lodging-meta'
+import { aiPickNotes, perPerson, STATUS, STATUS_ORDER } from './lodging-meta'
 import { PhotoStrip } from './photo-strip'
 
 type Props = {
@@ -33,6 +35,9 @@ export function LodgingCard({ option, travelers, onEdit, comparing, compareFull,
   const person = perPerson(option, travelers.length)
   const showOriginal = option.price_home_total !== null && option.currency !== home && option.price_total !== null
   const nights = option.nights
+  const pick = option.added_via === 'agent' ? aiPickNotes(option.notes) : null
+  const notes = pick ? pick.text : option.notes
+  const [expanded, setExpanded] = useState(false)
 
   const save = (body: Parameters<typeof update.mutate>[0]) =>
     update.mutate(body, { onError: (e) => toast.error(e.message) })
@@ -60,6 +65,12 @@ export function LodgingCard({ option, travelers, onEdit, comparing, compareFull,
 
       <div className="flex flex-1 flex-col gap-2 p-4">
         <div>
+          {pick && (
+            <Badge variant="secondary" className="mb-1.5">
+              <Sparkles aria-hidden="true" />
+              {pick.rank ? `AI pick #${pick.rank}` : 'AI pick'}
+            </Badge>
+          )}
           <h3 className="line-clamp-2 leading-snug font-semibold">{option.title}</h3>
           <p className="text-sm text-ink-soft">
             {[
@@ -116,7 +127,41 @@ export function LodgingCard({ option, travelers, onEdit, comparing, compareFull,
           )}
         </p>
 
-        {option.notes && <p className="line-clamp-2 text-sm text-ink-soft">{option.notes}</p>}
+        {notes && (
+          <div className="text-sm text-ink-soft">
+            <p className={cn(!expanded && (pick ? 'line-clamp-4' : 'line-clamp-2'))}>{notes}</p>
+            {pick && notes.length > 200 && (
+              <button
+                type="button"
+                aria-expanded={expanded}
+                onClick={() => setExpanded(!expanded)}
+                className="font-semibold text-brand underline-offset-2 hover:underline"
+              >
+                {expanded ? 'Show less' : 'Show more'}
+              </button>
+            )}
+          </div>
+        )}
+        {(option.pros || option.cons) && (
+          <div className="space-y-0.5 text-sm">
+            {option.pros && (
+              <p>
+                <span className="font-semibold text-success" aria-hidden="true">
+                  +
+                </span>
+                <span className="sr-only">Pros: </span> {option.pros}
+              </p>
+            )}
+            {option.cons && (
+              <p>
+                <span className="font-semibold text-destructive" aria-hidden="true">
+                  −
+                </span>
+                <span className="sr-only">Cons: </span> {option.cons}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-2">
           <div className="flex items-center gap-1" aria-label="Hearts">

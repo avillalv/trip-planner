@@ -16,6 +16,40 @@ export function perPerson(option: Lodging, travelers: number): number | null {
   return Number(option.price_home_total) / people
 }
 
+// --- AI picks ------------------------------------------------------------------------------------
+
+/** The agent saves each pick's notes as "AI pick #N: why…"; this splits the rank from the reason. */
+export function aiPickNotes(notes: string): { rank: number | null; text: string } {
+  const match = notes.match(/^AI pick #(\d+):?\s*/)
+  return match ? { rank: Number(match[1]), text: notes.slice(match[0].length) } : { rank: null, text: notes }
+}
+
+/** Best pick first; the rest in the order they were saved. */
+export function byAiRank(a: Lodging, b: Lodging): number {
+  const rank = (o: Lodging) => aiPickNotes(o.notes).rank ?? Infinity
+  return rank(a) - rank(b) || a.created_at.localeCompare(b.created_at) || a.id - b.id
+}
+
+/** The app never fetches Airbnb; this is only a link for you to open in your own browser. */
+export function airbnbSearchUrl({
+  place,
+  checkIn,
+  checkOut,
+  guests,
+}: {
+  place: string
+  checkIn: string
+  checkOut: string
+  guests: number
+}): string {
+  const where = place.trim() ? `${encodeURIComponent(place.trim())}/` : ''
+  const query = new URLSearchParams()
+  if (checkIn) query.set('checkin', checkIn)
+  if (checkOut) query.set('checkout', checkOut)
+  query.set('adults', String(guests))
+  return `https://www.airbnb.com/s/${where}homes?${query}`
+}
+
 // --- Bookmarklet ---------------------------------------------------------------------------------
 
 /**
