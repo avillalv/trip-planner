@@ -171,6 +171,7 @@ describe('RunPage', () => {
   const outputs: RunOutputs = {
     quotes: [],
     suggestions: [],
+    lodging: [],
     notes: [
       {
         id: 1,

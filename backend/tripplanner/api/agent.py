@@ -14,6 +14,8 @@ from tripplanner.models import Run
 from tripplanner.schemas.agent import (
     AgentAck,
     FinishIn,
+    LodgingPickBatchIn,
+    LodgingPickBatchResult,
     NoteIn,
     NoteOut,
     QuoteBatchIn,
@@ -96,6 +98,19 @@ def submit_activity_suggestions(
             "Only itinerary runs can suggest activities. Save findings with add_note instead.",
         )
     return agent_ingest.submit_suggestions(db, run, body.suggestions)
+
+
+@router.post("/runs/{run_id}/lodging-picks", response_model=LodgingPickBatchResult)
+def submit_lodging_picks(run_id: UUID, body: LodgingPickBatchIn, db: DbSession) -> LodgingPickBatchResult:
+    """Up to 8 ranked places to stay, each by its number in the search results. Each is accepted,
+    rejected with reasons, or reported as a duplicate."""
+    run = _active_run(db, run_id)
+    if run.kind != "lodging_agent":
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Only lodging runs can pick places to stay. Save findings with add_note instead.",
+        )
+    return agent_ingest.submit_lodging_picks(db, run, body.picks)
 
 
 @router.post("/runs/{run_id}/notes", response_model=NoteOut, status_code=status.HTTP_201_CREATED)

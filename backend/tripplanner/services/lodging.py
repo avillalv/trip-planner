@@ -3,6 +3,7 @@
 from datetime import UTC, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
+from uuid import UUID
 
 import httpx
 from sqlalchemy import delete, select
@@ -18,6 +19,7 @@ from tripplanner.schemas.lodging import (
     LodgingIn,
     LodgingOut,
     LodgingUpdate,
+    RentalOffer,
     RentalSearchIn,
     RentalSearchResult,
 )
@@ -101,9 +103,10 @@ def get_option(db: Session, option_id: int) -> LodgingOption:
     return option
 
 
-def create_option(db: Session, trip: Trip, body: LodgingIn) -> LodgingOption:
+def create_option(db: Session, trip: Trip, body: LodgingIn, run_id: UUID | None = None) -> LodgingOption:
+    """Save an option; `run_id` marks one an agent run picked."""
     ensure_rates(db, body.currency, trip.home_currency)
-    option = LodgingOption(trip_id=trip.id, **body.model_dump())
+    option = LodgingOption(trip_id=trip.id, run_id=run_id, **body.model_dump())
     if body.url:
         option.url_normalized = link_preview.normalize_url(body.url)
         option.site = link_preview.site_name(body.url)
@@ -178,6 +181,20 @@ def preview_link(client: httpx.Client, url: str, fetch: bool) -> LinkPreview:
     return preview
 
 
+def _rental_request(trip: Trip, body: RentalSearchIn, vacation_rentals: bool) -> tuple[dict[str, Any], str]:
+    """The SerpApi parameters for a search, and the key its response is cached under."""
+    params = serpapi_rentals.request_params(
+        body.place or trip_place(trip),
+        body.check_in,
+        body.check_out,
+        body.adults,
+        body.children,
+        trip.home_currency,
+        vacation_rentals=vacation_rentals,
+    )
+    return params, cache_key("serpapi-rentals", params)
+
+
 def search_rentals(
     db: Session,
     client: httpx.Client,
@@ -185,13 +202,12 @@ def search_rentals(
     trip: Trip,
     body: RentalSearchIn,
     now: datetime | None = None,
+    *,
+    vacation_rentals: bool = True,
 ) -> RentalSearchResult:
+    """One SerpApi search (free within 12 hours of the same one); hotels when `vacation_rentals` is off."""
     now = now or datetime.now(UTC)
-    place = body.place or _trip_place(trip)
-    params = serpapi_rentals.request_params(
-        place, body.check_in, body.check_out, body.adults, body.children, trip.home_currency
-    )
-    key = cache_key("serpapi-rentals", params)
+    params, key = _rental_request(trip, body, vacation_rentals)
     data: dict[str, Any] | None = cache_get(db, key, now)
     cached = data is not None
     if data is None:
@@ -218,7 +234,20 @@ def search_rentals(
     )
 
 
-def _trip_place(trip: Trip) -> str:
+def cached_offers(
+    db: Session,
+    trip: Trip,
+    body: RentalSearchIn,
+    vacation_rentals: bool = True,
+    now: datetime | None = None,
+) -> list[RentalOffer] | None:
+    """What an earlier search found, if it's still cached; None when it isn't. Never searches or spends."""
+    _, key = _rental_request(trip, body, vacation_rentals)
+    data = cache_get(db, key, now or datetime.now(UTC))
+    return None if data is None else serpapi_rentals.parse(data, trip.home_currency)
+
+
+def trip_place(trip: Trip) -> str:
     if not trip.destinations:
         raise ValueError("Add a destination to the trip, or say where to search.")
     first = trip.destinations[0]

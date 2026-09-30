@@ -54,8 +54,7 @@ def _tool_use_summary(name: str, args: dict[str, Any]) -> str:
             count = len(args.get("suggestions") or [])
             return f"Suggested {count} thing{'s' if count != 1 else ''} to do"
         case "suggest_lodging":
-            # The list's argument name is the lodging tool's to choose, so count whichever list it sends.
-            count = next((len(v) for v in args.values() if isinstance(v, list)), 0)
+            count = len(args.get("picks") or [])
             return f"Picked {count} place{'s' if count != 1 else ''} to stay"
         case "add_note":
             return f"Saved a note: {_clip(str(args.get('title', '')), 160)}"

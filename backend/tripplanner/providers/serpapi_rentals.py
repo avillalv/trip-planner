@@ -1,4 +1,4 @@
-"""Vacation rentals from Google Hotels via SerpApi (one search of the monthly allowance each).
+"""Vacation rentals or hotels from Google Hotels via SerpApi (one search of the monthly allowance each).
 
 Results come from Google's rental partners, with prices for the given dates and party. Airbnb
 listings may not be among them; the bookmarklet covers those.
@@ -19,11 +19,17 @@ SEARCH_URL = "https://serpapi.com/search.json"
 
 
 def request_params(
-    place: str, check_in: date, check_out: date, adults: int, children: int, currency: str
+    place: str,
+    check_in: date,
+    check_out: date,
+    adults: int,
+    children: int,
+    currency: str,
+    *,
+    vacation_rentals: bool = True,
 ) -> dict[str, Any]:
-    return {
+    params: dict[str, Any] = {
         "engine": "google_hotels",
-        "vacation_rentals": "true",
         "q": place,
         "check_in_date": check_in.isoformat(),
         "check_out_date": check_out.isoformat(),
@@ -33,6 +39,10 @@ def request_params(
         "hl": "en",
         "gl": "us",
     }
+    # Left out (not "false") for hotels, which are Google Hotels' default.
+    if vacation_rentals:
+        params["vacation_rentals"] = "true"
+    return params
 
 
 def fetch(client: httpx.Client, params: dict[str, Any], api_key: str) -> dict[str, Any]:
@@ -70,12 +80,23 @@ def _photos(item: dict[str, Any]) -> list[str]:
     return [url for url in urls if url][:10]
 
 
+def _hotel_class(item: dict[str, Any]) -> str | None:
+    label = item.get("hotel_class")
+    if isinstance(label, str) and label:
+        return label
+    stars = item.get("extracted_hotel_class")
+    return f"{stars}-star hotel" if stars else None
+
+
 def to_offer(item: dict[str, Any], currency: str) -> RentalOffer | None:
     name = item.get("name")
     if not name:
         return None
     details = [str(d) for d in item.get("essential_info") or []]
-    kind = next((d for d in details if not re.search(r"\d", d)), None) or item.get("type")
+    # Hotels often have no essential_info; their star rating says what they are.
+    kind = (
+        _hotel_class(item) or next((d for d in details if not re.search(r"\d", d)), None) or item.get("type")
+    )
     gps = item.get("gps_coordinates") or {}
     link = item.get("link") or None
     sources = [p.get("source") for p in item.get("prices") or [] if p.get("source")]

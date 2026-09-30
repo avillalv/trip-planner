@@ -14,9 +14,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from tests.conftest import make_settings
-from tests.factories import add_route, add_run, add_trip
+from tests.factories import add_route, add_run, add_trip, cache_rental_search
 from tripplanner.config import Settings
-from tripplanner.models import FlightRoute, Routine, Run, RunEvent, Trip
+from tripplanner.models import FlightRoute, Routine, Run, RunEvent, Trip, TripDestination
 from tripplanner.services.claude_cli import agent_env
 from tripplanner.services.runs import RunLog
 from tripplanner.worker.agents import runner
@@ -109,8 +109,8 @@ def test_planning_tool_calls_are_summarized_for_the_log() -> None:
 
     assert summary("suggest_activities", {"suggestions": [{}, {}, {}]}) == "Suggested 3 things to do"
     assert summary("suggest_activities", {"suggestions": [{}]}) == "Suggested 1 thing to do"
-    assert summary("suggest_lodging", {"places": [{}, {}]}) == "Picked 2 places to stay"
-    assert summary("suggest_lodging", {"places": [{}]}) == "Picked 1 place to stay"
+    assert summary("suggest_lodging", {"picks": [{}, {}]}) == "Picked 2 places to stay"
+    assert summary("suggest_lodging", {"picks": [{}]}) == "Picked 1 place to stay"
 
 
 def test_house_rules_depend_on_the_kind_of_run() -> None:
@@ -241,6 +241,44 @@ def test_an_itinerary_run_gets_the_planner_prompt_and_tools(agent, db_session: S
     assert "Focus on Thursday, November 26." in seen["prompt"]
     assert '"interests"' in seen["prompt"] and '"waterfalls"' in seen["prompt"]
     assert '"plan"' in seen["prompt"] and '"routes"' not in seen["prompt"] and '"LAX"' not in seen["prompt"]
+
+
+def test_a_lodging_run_gets_the_lodging_prompt_and_the_numbered_offers(agent, db_session: Session) -> None:
+    run: Run = agent.run
+    trip = db_session.get(Trip, run.trip_id)
+    trip.start_date, trip.end_date = date(2026, 11, 5), date(2026, 11, 15)
+    trip.interests = ["temples"]
+    trip.destinations = [
+        TripDestination(
+            position=0, name="Kyoto", country="Japan", lat=35.01, lon=135.77, info_status="skipped"
+        )
+    ]
+    search = json.loads(
+        (Path(__file__).parent / "fixtures" / "serpapi_vacation_rentals.json").read_text("utf-8")
+    )
+    run.kind, run.routine_id = "lodging_agent", None
+    run.params = {
+        **cache_rental_search(db_session, trip, search, guests=3),
+        "message": "Near a subway station",
+    }
+    db_session.flush()
+
+    outcome = agent("success")
+    seen = json.loads(agent.record.read_text(encoding="utf-8"))
+    run_dir = Path(run.log_path)
+
+    assert outcome.status == "partial"  # the fake agent never calls finish_run
+    assert (run_dir / "system.md").read_text(encoding="utf-8") == system_prompt("lodging_agent")
+    mcp = json.loads((run_dir / "mcp.json").read_text(encoding="utf-8"))
+    assert arg_after(mcp["mcpServers"]["trip"]["args"], "--kind") == "lodging_agent"
+    assert arg_after(seen["argv"], "--max-turns") == "25"
+    assert seen["prompt"] == run.prompt
+    assert "# Task: the best places to stay in Kyoto, Japan, 2026-11-09 to 2026-11-12" in seen["prompt"]
+    assert "for 3 guests" in seen["prompt"] and "<request>Near a subway station</request>" in seen["prompt"]
+    assert '"title": "Stay Inn KOTO"' in seen["prompt"] and '"index": 2' in seen["prompt"]
+    assert (
+        '"temples"' in seen["prompt"] and '"routes"' not in seen["prompt"] and '"LAX"' not in seen["prompt"]
+    )
 
 
 def test_itinerary_runs_do_not_need_flight_routes(agent, db_session: Session) -> None:

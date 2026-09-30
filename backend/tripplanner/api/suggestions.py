@@ -1,11 +1,17 @@
 from typing import Annotated
 
+import httpx
 from fastapi import APIRouter, HTTPException, Query, status
 
+from tripplanner import __version__
 from tripplanner.api.deps import DbSession
+from tripplanner.api.lodging import OUT_OF_SEARCHES
+from tripplanner.config import get_settings
 from tripplanner.models import Trip
+from tripplanner.providers import ProviderError
 from tripplanner.schemas.automation import RunOut
 from tripplanner.schemas.itinerary import ActivityOut
+from tripplanner.schemas.lodging import AskLodgingIn
 from tripplanner.schemas.suggestions import (
     AddSuggestionIn,
     IdeasIn,
@@ -13,7 +19,7 @@ from tripplanner.schemas.suggestions import (
     SuggestionStatus,
     SuggestionUpdate,
 )
-from tripplanner.services import suggestions
+from tripplanner.services import ai_lodging, lodging, suggestions
 
 router = APIRouter(prefix="/api/v1", tags=["suggestions"])
 
@@ -39,6 +45,28 @@ def ask_for_ideas(trip_id: int, body: IdeasIn, db: DbSession) -> RunOut:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
     except suggestions.IdeasUnavailable as exc:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
+
+
+@router.post("/trips/{trip_id}/ai/lodging", response_model=RunOut, status_code=status.HTTP_202_ACCEPTED)
+def ask_for_lodging(trip_id: int, body: AskLodgingIn, db: DbSession) -> RunOut:
+    """Search Google Hotels for the dates (one SerpApi search), then queue a Claude run that ranks the
+    best places to stay. The picks arrive as lodging options; poll the run, then read the trip's lodging."""
+    trip = _trip(db, trip_id)
+    key = get_settings().serpapi_api_key
+    try:
+        with httpx.Client(timeout=60, headers={"User-Agent": f"TripPlanner/{__version__}"}) as client:
+            run = ai_lodging.ask_for_picks(db, client, key.get_secret_value() if key else None, trip, body)
+    except suggestions.IdeasBusy as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    except suggestions.IdeasUnavailable as exc:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
+    except lodging.OutOfSearches as exc:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, OUT_OF_SEARCHES) from exc
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    except ProviderError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
+    return RunOut.model_validate(run)
 
 
 @router.get("/trips/{trip_id}/suggestions", response_model=list[SuggestionOut])

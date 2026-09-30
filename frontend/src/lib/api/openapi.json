@@ -2484,7 +2484,7 @@
           "automation"
         ],
         "summary": "Run Outputs",
-        "description": "What the run saved (prices, notes, suggested activities) and what was rejected, with the reasons.",
+        "description": "What the run saved (prices, notes, suggested activities, picked places to stay) and what was\nrejected, with the reasons.",
         "operationId": "run_outputs",
         "parameters": [
           {
@@ -3415,6 +3415,60 @@
         }
       }
     },
+    "/api/agent/v1/runs/{run_id}/lodging-picks": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Submit Lodging Picks",
+        "description": "Up to 8 ranked places to stay, each by its number in the search results. Each is accepted,\nrejected with reasons, or reported as a duplicate.",
+        "operationId": "submit_lodging_picks",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LodgingPickBatchIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LodgingPickBatchResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/agent/v1/runs/{run_id}/notes": {
       "post": {
         "tags": [
@@ -3546,6 +3600,59 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/IdeasIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trips/{trip_id}/ai/lodging": {
+      "post": {
+        "tags": [
+          "suggestions"
+        ],
+        "summary": "Ask For Lodging",
+        "description": "Search Google Hotels for the dates (one SerpApi search), then queue a Claude run that ranks the\nbest places to stay. The picks arrive as lodging options; poll the run, then read the trip's lodging.",
+        "operationId": "ask_for_lodging",
+        "parameters": [
+          {
+            "name": "trip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Trip Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AskLodgingIn"
               }
             }
           }
@@ -4562,6 +4669,69 @@
           "home_currency"
         ],
         "title": "AppSettingsOut"
+      },
+      "AskLodgingIn": {
+        "properties": {
+          "place": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place"
+          },
+          "check_in": {
+            "type": "string",
+            "format": "date",
+            "title": "Check In"
+          },
+          "check_out": {
+            "type": "string",
+            "format": "date",
+            "title": "Check Out"
+          },
+          "guests": {
+            "type": "integer",
+            "maximum": 16.0,
+            "minimum": 1.0,
+            "title": "Guests",
+            "default": 2
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "rentals",
+              "hotels"
+            ],
+            "title": "Kind",
+            "default": "rentals"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000,
+                "minLength": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "check_in",
+          "check_out"
+        ],
+        "title": "AskLodgingIn",
+        "description": "Ask Claude to pick the best places to stay from one search of Google Hotels."
       },
       "BackupStatus": {
         "properties": {
@@ -7203,6 +7373,57 @@
           "updated_at"
         ],
         "title": "LodgingOut"
+      },
+      "LodgingPickBatchIn": {
+        "properties": {
+          "picks": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Picks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "picks"
+        ],
+        "title": "LodgingPickBatchIn"
+      },
+      "LodgingPickBatchResult": {
+        "properties": {
+          "accepted": {
+            "items": {
+              "$ref": "#/components/schemas/AcceptedSuggestion"
+            },
+            "type": "array",
+            "title": "Accepted"
+          },
+          "rejected": {
+            "items": {
+              "$ref": "#/components/schemas/RejectedItem"
+            },
+            "type": "array",
+            "title": "Rejected"
+          },
+          "duplicates": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Duplicates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "accepted",
+          "rejected",
+          "duplicates"
+        ],
+        "title": "LodgingPickBatchResult"
       },
       "LodgingUpdate": {
         "properties": {
@@ -10027,6 +10248,13 @@
             "type": "array",
             "title": "Suggestions"
           },
+          "lodging": {
+            "items": {
+              "$ref": "#/components/schemas/LodgingOut"
+            },
+            "type": "array",
+            "title": "Lodging"
+          },
           "rejections": {
             "items": {
               "$ref": "#/components/schemas/RejectionOut"
@@ -10040,6 +10268,7 @@
           "quotes",
           "notes",
           "suggestions",
+          "lodging",
           "rejections"
         ],
         "title": "RunOutputs",

@@ -40,8 +40,29 @@ class AlreadyAdded(Exception):
     pass
 
 
-def _short(day: date) -> str:
+def short_date(day: date) -> str:
     return f"{day:%b} {day.day}"
+
+
+def is_busy(db: Session, trip_id: int, kind: str) -> bool:
+    """Whether a run of this kind is already queued or running for the trip."""
+    return (
+        db.scalar(
+            select(Run.id)
+            .where(Run.trip_id == trip_id, Run.kind == kind, Run.status.in_(ACTIVE_STATUSES))
+            .limit(1)
+        )
+        is not None
+    )
+
+
+def ensure_agent_ready() -> None:
+    """Raises IdeasUnavailable unless a run could start and save its results."""
+    settings = get_settings()
+    if not (settings.agent_ingest_api_key and settings.agent_ingest_api_key.get_secret_value()):
+        raise IdeasUnavailable(KEY_MISSING)
+    if find_claude(settings) is None:
+        raise IdeasUnavailable(CLAUDE_MISSING)
 
 
 def ask_for_ideas(db: Session, trip: Trip, body: IdeasIn) -> Run:
@@ -50,20 +71,12 @@ def ask_for_ideas(db: Session, trip: Trip, body: IdeasIn) -> Run:
         raise IdeasNotAllowed("Add the trip's dates first so ideas can be placed on days.")
     if body.day is not None and not trip.start_date <= body.day <= trip.end_date:
         raise IdeasNotAllowed(
-            f"Pick a day between {_short(trip.start_date)} and {_short(trip.end_date)}, the trip's dates."
+            f"Pick a day between {short_date(trip.start_date)} and {short_date(trip.end_date)}, "
+            "the trip's dates."
         )
-    busy = db.scalar(
-        select(Run.id)
-        .where(Run.trip_id == trip.id, Run.kind == "itinerary_agent", Run.status.in_(ACTIVE_STATUSES))
-        .limit(1)
-    )
-    if busy is not None:
+    if is_busy(db, trip.id, "itinerary_agent"):
         raise IdeasBusy("Claude is still working on your last request. Wait for it or stop it first.")
-    settings = get_settings()
-    if not (settings.agent_ingest_api_key and settings.agent_ingest_api_key.get_secret_value()):
-        raise IdeasUnavailable(KEY_MISSING)
-    if find_claude(settings) is None:
-        raise IdeasUnavailable(CLAUDE_MISSING)
+    ensure_agent_ready()
     params = {"mode": body.mode, "message": body.message, "day": body.day.isoformat() if body.day else None}
     run, _ = enqueue(db, trip_id=trip.id, kind="itinerary_agent", trigger="manual", params=params)
     return run

@@ -63,6 +63,12 @@ class LodgingIn(LodgingFields):
         return self
 
 
+class AgentLodgingIn(LodgingIn):
+    """An option an agent run picked. The public LodgingIn can't claim to be from an agent."""
+
+    added_via: Literal["agent"] = "agent"  # type: ignore[assignment]
+
+
 class LodgingUpdate(BaseModel):
     """Only the fields sent change; send null to clear one."""
 
@@ -170,6 +176,24 @@ class RentalSearchIn(BaseModel):
 
     @model_validator(mode="after")
     def _dates(self) -> "RentalSearchIn":
+        if self.check_out <= self.check_in:
+            raise ValueError("Check-out must be after check-in.")
+        return self
+
+
+class AskLodgingIn(BaseModel):
+    """Ask Claude to pick the best places to stay from one search of Google Hotels."""
+
+    # Where to look; defaults to the trip's first destination.
+    place: text(120) | None = None
+    check_in: date
+    check_out: date
+    guests: int = Field(2, ge=1, le=16)
+    kind: Literal["rentals", "hotels"] = "rentals"
+    message: text(1000) | None = None
+
+    @model_validator(mode="after")
+    def _dates(self) -> "AskLodgingIn":
         if self.check_out <= self.check_in:
             raise ValueError("Check-out must be after check-in.")
         return self

@@ -103,6 +103,30 @@ class SuggestionBatchResult(BaseModel):
     duplicates: list[int]
 
 
+class AgentLodgingPickIn(BaseModel):
+    """One place to stay the agent picks from the numbered search results in get_task."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    index: int = Field(ge=1, description="The place's number in get_task's offers.")
+    rank: int = Field(ge=1, le=10, description="1 is the best; each pick needs its own rank.")
+    why: text(600, min_length=1) = Field(description="Why it suits these travelers: interests, plans, area.")
+    pros: text(400) = Field("", description="Short and concrete, from reviews and location research.")
+    cons: text(400) = Field("", description="Short and concrete: what to know before booking.")
+
+
+class LodgingPickBatchIn(BaseModel):
+    # Items are validated one by one, so one bad pick doesn't reject the rest.
+    picks: list[dict[str, Any]] = Field(min_length=1, max_length=8)
+
+
+class LodgingPickBatchResult(BaseModel):
+    # Keyed by the offer number each pick gave.
+    accepted: list[AcceptedSuggestion]
+    rejected: list[RejectedItem]
+    duplicates: list[int]
+
+
 class NoteIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

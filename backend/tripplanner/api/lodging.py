@@ -21,6 +21,9 @@ from tripplanner.services import lodging
 router = APIRouter(prefix="/api/v1", tags=["lodging"])
 
 DUPLICATE = "This listing is already on the trip's list."
+OUT_OF_SEARCHES = (
+    "This month's live searches are used up (they're shared with flight price checks). They reset on the 1st."
+)
 
 
 def _trip(db: DbSession, trip_id: int) -> Trip:
@@ -99,11 +102,7 @@ def search_rentals(trip_id: int, body: RentalSearchIn, db: DbSession) -> RentalS
         with httpx.Client(timeout=60, headers={"User-Agent": f"TripPlanner/{__version__}"}) as client:
             return lodging.search_rentals(db, client, key.get_secret_value(), trip, body)
     except lodging.OutOfSearches as exc:
-        raise HTTPException(
-            status.HTTP_429_TOO_MANY_REQUESTS,
-            "This month's live searches are used up (they're shared with flight price checks). "
-            "They reset on the 1st.",
-        ) from exc
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, OUT_OF_SEARCHES) from exc
     except ValueError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
     except ProviderError as exc:

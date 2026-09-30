@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from tripplanner.schemas.agent import NoteOut, RejectionOut
 from tripplanner.schemas.common import text
 from tripplanner.schemas.flights import QuoteOut
+from tripplanner.schemas.lodging import LodgingOut
 from tripplanner.schemas.suggestions import SuggestionOut
 
 RunStatus = Literal[
@@ -69,6 +70,8 @@ class RunOutputs(BaseModel):
     quotes: list[QuoteOut]
     notes: list[NoteOut]
     suggestions: list[SuggestionOut]
+    # Places to stay a lodging run picked, best first.
+    lodging: list[LodgingOut]
     rejections: list[RejectionOut]
 
 

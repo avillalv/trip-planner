@@ -14,11 +14,11 @@ from mcp.server.mcpserver.exceptions import ToolError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from tests.factories import add_rates, add_route, add_run, add_trip
+from tests.factories import add_lodging_run, add_rates, add_route, add_run, add_trip
 from tripplanner.agent_bridge import IngestApi, build_server
 from tripplanner.db import get_db
 from tripplanner.main import create_app
-from tripplanner.models import ActivitySuggestion, FlightRoute, Run, Trip
+from tripplanner.models import ActivitySuggestion, FlightRoute, LodgingOption, Run, Trip, TripDestination
 
 
 def server_for(db_session: Session, frontend_dist: Path, run: Run) -> MCPServer:
@@ -55,6 +55,22 @@ def planner(db_session: Session, frontend_dist: Path) -> tuple[MCPServer, Run]:
     return server_for(db_session, frontend_dist, run), run
 
 
+@pytest.fixture
+def lodger(db_session: Session, frontend_dist: Path) -> tuple[MCPServer, Run]:
+    trip = add_trip(db_session, "Japan")
+    trip.start_date, trip.end_date = date(2026, 11, 5), date(2026, 11, 15)
+    trip.destinations = [
+        TripDestination(
+            position=0, name="Kyoto", country="Japan", lat=35.01, lon=135.77, info_status="skipped"
+        )
+    ]
+    search = json.loads(
+        (Path(__file__).parent / "fixtures" / "serpapi_vacation_rentals.json").read_text("utf-8")
+    )
+    run = add_lodging_run(db_session, trip, search)
+    return server_for(db_session, frontend_dist, run), run
+
+
 def call(server: MCPServer, tool: str, **arguments: Any) -> str:
     result = asyncio.run(server.call_tool(tool, arguments))
     return result.content[0].text
@@ -78,8 +94,11 @@ def test_planning_runs_get_the_planning_tools(planner, db_session: Session, fron
     assert "timing_note" in schema and "duration_min" in schema and "sources" in schema
     assert "named place" in tools["suggest_activities"].description
     lodging = add_run(db_session, db_session.get(Trip, run.trip_id), "lodging_agent")
-    other = {t.name for t in asyncio.run(server_for(db_session, frontend_dist, lodging).list_tools())}
-    assert other == {"get_task", "add_note", "finish_run"}
+    tools = {t.name: t for t in asyncio.run(server_for(db_session, frontend_dist, lodging).list_tools())}
+    assert set(tools) == {"get_task", "suggest_lodging", "add_note", "finish_run"}
+    schema = json.dumps(tools["suggest_lodging"].input_schema)
+    assert "rank" in schema and "why" in schema and "pros" in schema and "cons" in schema
+    assert "index from get_task" in tools["suggest_lodging"].description
 
 
 def test_suggested_activities_come_back_with_a_verdict_for_each(planner, db_session: Session) -> None:
@@ -121,6 +140,47 @@ def test_malformed_suggestions_are_refused_before_reaching_the_api(planner) -> N
         call(server, "suggest_activities", suggestions=[{"title": "Somewhere", "category": "fun"}])
     with pytest.raises(ToolError):
         call(server, "suggest_activities", suggestions=[])
+
+
+def test_lodging_picks_come_back_with_a_verdict_for_each(lodger, db_session: Session) -> None:
+    server, run = lodger
+    good = {"index": 1, "rank": 1, "why": "Close to Fushimi Inari.", "pros": "Quiet.", "cons": "Small."}
+
+    text = call(
+        server, "suggest_lodging", picks=[good, {**good, "index": 40, "rank": 2}, {**good, "rank": 3}]
+    )
+
+    assert text.startswith("1 accepted, 2 rejected, 0 duplicates.")
+    assert "No offer 40 in this run's search results." in text and "already picked" in text
+    [saved] = db_session.scalars(select(LodgingOption)).all()
+    assert (saved.run_id, saved.added_via, saved.title, saved.notes) == (
+        run.id,
+        "agent",
+        "Stay Inn KOTO",
+        "AI pick #1: Close to Fushimi Inari.",
+    )
+    db_session.refresh(run)
+    assert (run.accepted_count, run.rejected_count) == (1, 2)
+
+
+def test_malformed_lodging_picks_are_refused_before_reaching_the_api(lodger) -> None:
+    server, _ = lodger
+
+    with pytest.raises(ToolError):
+        call(server, "suggest_lodging", picks=[{"index": 1, "rank": 0, "why": "x"}])
+    with pytest.raises(ToolError):
+        call(server, "suggest_lodging", picks=[])
+    with pytest.raises(ToolError):
+        call(server, "suggest_lodging", picks=[{"index": 1, "rank": 1, "why": "x"}] * 9)
+
+
+def test_lodging_runs_read_the_offers_with_get_task(lodger) -> None:
+    server, _ = lodger
+
+    task = json.loads(call(server, "get_task"))
+
+    assert task["kind"] == "lodging_agent" and task["routes"] == []
+    assert task["plan"]["offers"][0]["title"] == "Stay Inn KOTO" and task["plan"]["request"]["nights"] == 3
 
 
 def test_planners_read_their_plan_with_get_task(planner) -> None:

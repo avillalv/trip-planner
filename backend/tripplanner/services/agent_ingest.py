@@ -11,21 +11,32 @@ from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from tripplanner.models import ActivitySuggestion, AgentNote, FlightRoute, IngestRejection, Run, Trip
+from tripplanner.models import (
+    ActivitySuggestion,
+    AgentNote,
+    FlightRoute,
+    IngestRejection,
+    LodgingOption,
+    Run,
+    Trip,
+)
 from tripplanner.models.itinerary import SUGGESTION_MODES
 from tripplanner.schemas.agent import (
     AcceptedItem,
     AcceptedSuggestion,
+    AgentLodgingPickIn,
     AgentQuoteIn,
     AgentSuggestionIn,
     FieldError,
     FinishIn,
+    LodgingPickBatchResult,
     NoteIn,
     QuoteBatchResult,
     RejectedItem,
     SuggestionBatchResult,
 )
-from tripplanner.services import fx, suggestions
+from tripplanner.schemas.lodging import AgentLodgingIn, RentalOffer
+from tripplanner.services import ai_lodging, fx, lodging, suggestions
 from tripplanner.services.agent_context import BLOCKED_DOMAINS
 from tripplanner.services.quotes import NewQuote, add_quote
 
@@ -36,6 +47,7 @@ MAX_PER_PERSON_USD = Decimal(15_000)
 OBSERVED_SLACK = timedelta(minutes=10)
 # A run that suggests more than this is padding, not choosing.
 MAX_SUGGESTIONS_PER_RUN = 40
+MAX_LODGING_PICKS_PER_RUN = 8
 
 
 class RunNotActive(Exception):
@@ -336,6 +348,121 @@ def submit_suggestions(db: Session, run: Run, items: list[dict[str, Any]]) -> Su
             IngestRejection(
                 run_id=run.id,
                 entity="activity_suggestion",
+                item=raw if isinstance(raw, dict) else {"value": raw},
+                errors=[e.model_dump() for e in item.errors],
+            )
+        )
+    run.accepted_count += len(result.accepted)
+    run.rejected_count += len(result.rejected)
+    db.commit()
+    return result
+
+
+def _pick_errors(
+    pick: AgentLodgingPickIn, offers: list[RentalOffer], picked: set[int], ranks: set[int], saved: int
+) -> list[FieldError]:
+    errors = []
+    if pick.index > len(offers):
+        errors.append(FieldError(field="index", msg=f"No offer {pick.index} in this run's search results."))
+    elif pick.index in picked:
+        errors.append(FieldError(field="index", msg=f"Offer {pick.index} is already picked in this run."))
+    if pick.rank in ranks:
+        errors.append(FieldError(field="rank", msg="is already used by another pick; give each pick its own"))
+    if not errors and saved >= MAX_LODGING_PICKS_PER_RUN:
+        errors.append(
+            FieldError(
+                field="item",
+                msg=f"this run already saved {MAX_LODGING_PICKS_PER_RUN} places, the limit; finish up",
+            )
+        )
+    return errors
+
+
+def submit_lodging_picks(db: Session, run: Run, items: list[dict[str, Any]]) -> LodgingPickBatchResult:
+    """Save the places an agent ranked, as lodging options. The offers come back out of the search's
+    cache (never a new search), and each pick is checked against them. A listing the trip already
+    has is a duplicate. The offer's link is stored, not fetched: partner links are often Booking.com."""
+    trip = db.get(Trip, run.trip_id)
+    assert trip is not None
+    request = ai_lodging.run_request(run)
+    offers = ai_lodging.run_offers(db, run)
+    check_in, check_out = (request[0].check_in, request[0].check_out) if request else (None, None)
+    guests = (run.params or {}).get("guests")
+    # What this run already saved, so offers and ranks stay unique across calls.
+    picked: set[int] = set()
+    ranks: set[int] = set()
+    saved = 0
+    for option in db.scalars(select(LodgingOption).where(LodgingOption.run_id == run.id)):
+        saved += 1
+        earlier = ai_lodging.pick_of(option)
+        picked.add(earlier.get("index", 0))
+        ranks.add(earlier.get("rank", 0))
+    result = LodgingPickBatchResult(accepted=[], rejected=[], duplicates=[])
+    rejected_raw: list[Any] = []  # the submitted item behind each result.rejected entry
+
+    for position, raw in enumerate(items):
+        # Results are keyed by the offer number the pick gave; the item's place in the list if it gave none.
+        key = raw["index"] if isinstance(raw, dict) and isinstance(raw.get("index"), int) else position
+        try:
+            pick = AgentLodgingPickIn.model_validate(raw)
+        except ValidationError as exc:
+            errors = [
+                FieldError(field=".".join(map(str, e["loc"])) or "item", msg=e["msg"]) for e in exc.errors()
+            ]
+            result.rejected.append(RejectedItem(index=key, errors=errors))
+            rejected_raw.append(raw)
+            continue
+        errors = _pick_errors(pick, offers, picked, ranks, saved)
+        if not errors:
+            offer = offers[pick.index - 1]
+            try:
+                body = AgentLodgingIn(
+                    title=offer.title[:300],
+                    url=offer.link,
+                    check_in=check_in,
+                    check_out=check_out,
+                    guests=guests,
+                    price_total=offer.price_total or None,
+                    price_per_night=None if offer.price_total else offer.price_per_night or None,
+                    currency=offer.currency,
+                    photos=offer.photos,
+                    lat=offer.lat,
+                    lon=offer.lon,
+                    bedrooms=offer.bedrooms,
+                    beds=offer.beds,
+                    baths=offer.baths,
+                    rating=offer.rating,
+                    review_count=offer.review_count,
+                    notes=f"AI pick #{pick.rank}: {pick.why}",
+                    pros=pick.pros,
+                    cons=pick.cons,
+                    raw={**offer.model_dump(mode="json"), "pick": {"index": pick.index, "rank": pick.rank}},
+                )
+            except ValidationError as exc:
+                errors = [
+                    FieldError(field=f"offer.{'.'.join(map(str, e['loc']))}", msg=e["msg"])
+                    for e in exc.errors()
+                ]
+        if errors:
+            result.rejected.append(RejectedItem(index=key, errors=errors))
+            rejected_raw.append(raw)
+            continue
+        try:
+            option = lodging.create_option(db, trip, body, run_id=run.id)
+        except lodging.DuplicateLodging:
+            result.duplicates.append(key)
+            continue
+        result.accepted.append(AcceptedSuggestion(index=key, id=option.id))
+        picked.add(pick.index)
+        ranks.add(pick.rank)
+        saved += 1
+
+    # After the loop: create_option rolls the session back on a duplicate, which would drop these.
+    for item, raw in zip(result.rejected, rejected_raw, strict=True):
+        db.add(
+            IngestRejection(
+                run_id=run.id,
+                entity="lodging_pick",
                 item=raw if isinstance(raw, dict) else {"value": raw},
                 errors=[e.model_dump() for e in item.errors],
             )

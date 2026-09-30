@@ -4,9 +4,12 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
+import httpx
 from sqlalchemy.orm import Session
 
 from tripplanner.models import Airport, FlightRoute, FxRate, Person, Run, Trip
+from tripplanner.schemas.lodging import RentalSearchIn
+from tripplanner.services import lodging
 
 
 def add_airport(
@@ -124,3 +127,41 @@ def add_rates(db: Session, **per_eur: str) -> None:
     for code, rate in {"EUR": "1", **per_eur}.items():
         db.add(FxRate(currency=code, per_eur=Decimal(rate), rate_date=today, fetched_at=datetime.now(UTC)))
     db.flush()
+
+
+def cache_rental_search(
+    db: Session,
+    trip: Trip,
+    search: dict[str, Any],
+    check_in: date = date(2026, 11, 9),
+    check_out: date = date(2026, 11, 12),
+    guests: int = 2,
+    kind: str = "rentals",
+) -> dict[str, Any]:
+    """Cache a SerpApi lodging response (`search`) for the trip's first destination, as the ask endpoint
+    would have left it, and return the params of the lodging run that asked."""
+    client = httpx.Client(transport=httpx.MockTransport(lambda _request: httpx.Response(200, json=search)))
+    lodging.search_rentals(
+        db,
+        client,
+        "test-key",
+        trip,
+        RentalSearchIn(check_in=check_in, check_out=check_out, adults=guests),
+        vacation_rentals=kind == "rentals",
+    )
+    return {
+        "place": lodging.trip_place(trip),
+        "check_in": check_in.isoformat(),
+        "check_out": check_out.isoformat(),
+        "guests": guests,
+        "kind": kind,
+        "message": None,
+    }
+
+
+def add_lodging_run(db: Session, trip: Trip, search: dict[str, Any], **kwargs: Any) -> Run:
+    """A running lodging run whose search is cached. `check_in`, `check_out`, `guests`, and `kind`
+    are passed to cache_rental_search; anything else sets a field of the run."""
+    search_args = {k: kwargs.pop(k) for k in ("check_in", "check_out", "guests", "kind") if k in kwargs}
+    params = cache_rental_search(db, trip, search, **search_args)
+    return add_run(db, trip, "lodging_agent", params=params, **kwargs)

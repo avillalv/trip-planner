@@ -11,6 +11,7 @@ from tripplanner.models import (
     AgentNote,
     FlightQuote,
     IngestRejection,
+    LodgingOption,
     Routine,
     Run,
     RunEvent,
@@ -31,7 +32,7 @@ from tripplanner.schemas.automation import (
 )
 from tripplanner.schemas.flights import QuoteOut
 from tripplanner.schemas.suggestions import SuggestionOut
-from tripplanner.services import serpapi_budget
+from tripplanner.services import ai_lodging, lodging, serpapi_budget
 from tripplanner.services.routines import (
     InvalidSchedule,
     RoutineError,
@@ -99,8 +100,9 @@ def run_events(run_id: UUID, db: DbSession, after_seq: int = Query(0, ge=0)) -> 
 
 @router.get("/runs/{run_id}/outputs", response_model=RunOutputs)
 def run_outputs(run_id: UUID, db: DbSession) -> RunOutputs:
-    """What the run saved (prices, notes, suggested activities) and what was rejected, with the reasons."""
-    _run(db, run_id)
+    """What the run saved (prices, notes, suggested activities, picked places to stay) and what was
+    rejected, with the reasons."""
+    run = _run(db, run_id)
     quotes = db.scalars(
         select(FlightQuote)
         .where(FlightQuote.run_id == run_id)
@@ -116,6 +118,9 @@ def run_outputs(run_id: UUID, db: DbSession) -> RunOutputs:
             ActivitySuggestion.id,
         )
     )
+    picks = db.scalars(select(LodgingOption).where(LodgingOption.run_id == run_id).order_by(LodgingOption.id))
+    trip = db.get(Trip, run.trip_id)
+    assert trip is not None
     rejections = db.scalars(
         select(IngestRejection).where(IngestRejection.run_id == run_id).order_by(IngestRejection.id)
     )
@@ -123,6 +128,10 @@ def run_outputs(run_id: UUID, db: DbSession) -> RunOutputs:
         quotes=[QuoteOut.model_validate(q) for q in quotes],
         notes=[NoteOut.model_validate(n) for n in notes],
         suggestions=[SuggestionOut.model_validate(s) for s in suggestions],
+        lodging=[
+            lodging.to_out(db, o, trip)
+            for o in sorted(picks, key=lambda o: ai_lodging.pick_of(o).get("rank", 99))
+        ],
         rejections=[RejectionOut.model_validate(r) for r in rejections],
     )
 

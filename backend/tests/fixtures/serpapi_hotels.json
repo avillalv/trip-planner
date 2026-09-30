@@ -1,0 +1,159 @@
+{
+ "search_metadata": {
+  "status": "Success",
+  "google_hotels_url": "https://www.google.com/travel/search?q=Kyoto%2C+Japan&hl=en&gl=us"
+ },
+ "properties": [
+  {
+   "type": "hotel",
+   "name": "Hotel Kanra Kyoto",
+   "description": "Minimalist hotel near Kyoto Station with a rooftop lounge.",
+   "link": "https://www.hotelkanra.jp/kyoto/",
+   "property_token": "ChcIhK-dz4-lkNH5ARoLL2cvMXR4aDhrcTgQAQ",
+   "gps_coordinates": {
+    "latitude": 34.9948,
+    "longitude": 135.7594
+   },
+   "hotel_class": "4-star hotel",
+   "extracted_hotel_class": 4,
+   "rate_per_night": {
+    "lowest": "$210",
+    "extracted_lowest": 210,
+    "before_taxes_fees": "$190",
+    "extracted_before_taxes_fees": 190
+   },
+   "total_rate": {
+    "lowest": "$630",
+    "extracted_lowest": 630,
+    "before_taxes_fees": "$570",
+    "extracted_before_taxes_fees": 570
+   },
+   "prices": [
+    {
+     "source": "Hotel Kanra Kyoto",
+     "num_guests": 2,
+     "rate_per_night": {
+      "lowest": "$210",
+      "extracted_lowest": 210
+     }
+    }
+   ],
+   "images": [
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/proxy/kanra-1=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://www.hotelkanra.jp/photos/lobby.jpg"
+    },
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/proxy/kanra-2=s287-w287-h192-n-k-no-v1"
+    }
+   ],
+   "overall_rating": 4.6,
+   "reviews": 1210,
+   "location_rating": 4.3,
+   "amenities": [
+    "Free Wi-Fi",
+    "Breakfast",
+    "Air conditioning"
+   ],
+   "nearby_places": [
+    {
+     "name": "Kyoto Station",
+     "transportations": [
+      {
+       "type": "Walking",
+       "duration": "8 min"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "hotel",
+   "name": "Kyoto Backpackers Inn",
+   "link": "https://backpackers-inn.example.jp/",
+   "property_token": "ChcIwbLW7ZbHnbuRARoLL2cvMXR5bnFjcXcQAQ",
+   "gps_coordinates": {
+    "latitude": 35.0021,
+    "longitude": 135.7718
+   },
+   "rate_per_night": {
+    "lowest": "$55",
+    "extracted_lowest": 55
+   },
+   "total_rate": {
+    "lowest": "$165",
+    "extracted_lowest": 165
+   },
+   "prices": [
+    {
+     "source": "Agoda",
+     "num_guests": 2,
+     "rate_per_night": {
+      "lowest": "$55",
+      "extracted_lowest": 55
+     }
+    }
+   ],
+   "images": [],
+   "overall_rating": 4.1,
+   "reviews": 388,
+   "amenities": [
+    "Free Wi-Fi"
+   ]
+  },
+  {
+   "type": "hotel",
+   "name": "Gion Nanba Hotel",
+   "link": "https://www.booking.com/hotel/jp/gion-nanba.html?aid=1234&label=google-hotels",
+   "property_token": "ChcIiPn0gOTi2ILzARoLL2cvMTFjbmxmYmQQAQ",
+   "gps_coordinates": {
+    "latitude": 35.0038,
+    "longitude": 135.7756
+   },
+   "extracted_hotel_class": 3,
+   "rate_per_night": {
+    "lowest": "$140",
+    "extracted_lowest": 140
+   },
+   "total_rate": {
+    "lowest": "$420",
+    "extracted_lowest": 420
+   },
+   "prices": [
+    {
+     "source": "Booking.com",
+     "num_guests": 2,
+     "rate_per_night": {
+      "lowest": "$140",
+      "extracted_lowest": 140
+     }
+    }
+   ],
+   "images": [
+    {
+     "thumbnail": "https://lh3.googleusercontent.com/proxy/nanba-1=s287-w287-h192-n-k-no-v1",
+     "original_image": "https://xx.bstatic.com/xdata/images/hotel/nanba-1.jpg"
+    }
+   ],
+   "overall_rating": 4.3,
+   "reviews": 902,
+   "essential_info": [
+    "Free breakfast"
+   ]
+  },
+  {
+   "type": "hotel",
+   "name": "Machiya Ryokan Sakura",
+   "property_token": "ChcIz6nvkbP1z5mEARoLL2cvMXZfbXFxeGMQAQ",
+   "gps_coordinates": {
+    "latitude": 35.0102,
+    "longitude": 135.7681
+   },
+   "hotel_class": "3-star hotel",
+   "extracted_hotel_class": 3,
+   "images": [],
+   "overall_rating": 4.8,
+   "reviews": 57
+  }
+ ]
+}

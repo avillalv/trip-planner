@@ -737,7 +737,8 @@ export interface paths {
         };
         /**
          * Run Outputs
-         * @description What the run saved (prices, notes, suggested activities) and what was rejected, with the reasons.
+         * @description What the run saved (prices, notes, suggested activities, picked places to stay) and what was
+         *     rejected, with the reasons.
          */
         get: operations["run_outputs"];
         put?: never;
@@ -1045,6 +1046,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agent/v1/runs/{run_id}/lodging-picks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Lodging Picks
+         * @description Up to 8 ranked places to stay, each by its number in the search results. Each is accepted,
+         *     rejected with reasons, or reported as a duplicate.
+         */
+        post: operations["submit_lodging_picks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/agent/v1/runs/{run_id}/notes": {
         parameters: {
             query?: never;
@@ -1093,6 +1115,27 @@ export interface paths {
          * @description Queue a Claude run that suggests things to do. Poll the run, then read the trip's suggestions.
          */
         post: operations["ask_for_ideas"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/ai/lodging": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask For Lodging
+         * @description Search Google Hotels for the dates (one SerpApi search), then queue a Claude run that ranks the
+         *     best places to stay. The picks arrive as lodging options; poll the run, then read the trip's lodging.
+         */
+        post: operations["ask_for_lodging"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1388,6 +1431,37 @@ export interface components {
         AppSettingsOut: {
             /** Home Currency */
             home_currency: string;
+        };
+        /**
+         * AskLodgingIn
+         * @description Ask Claude to pick the best places to stay from one search of Google Hotels.
+         */
+        AskLodgingIn: {
+            /** Place */
+            place?: string | null;
+            /**
+             * Check In
+             * Format: date
+             */
+            check_in: string;
+            /**
+             * Check Out
+             * Format: date
+             */
+            check_out: string;
+            /**
+             * Guests
+             * @default 2
+             */
+            guests?: number;
+            /**
+             * Kind
+             * @default rentals
+             * @enum {string}
+             */
+            kind?: "rentals" | "hotels";
+            /** Message */
+            message?: string | null;
         };
         /**
          * BackupStatus
@@ -2160,6 +2234,22 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** LodgingPickBatchIn */
+        LodgingPickBatchIn: {
+            /** Picks */
+            picks: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** LodgingPickBatchResult */
+        LodgingPickBatchResult: {
+            /** Accepted */
+            accepted: components["schemas"]["AcceptedSuggestion"][];
+            /** Rejected */
+            rejected: components["schemas"]["RejectedItem"][];
+            /** Duplicates */
+            duplicates: number[];
         };
         /**
          * LodgingUpdate
@@ -2986,6 +3076,8 @@ export interface components {
             notes: components["schemas"]["NoteOut"][];
             /** Suggestions */
             suggestions: components["schemas"]["SuggestionOut"][];
+            /** Lodging */
+            lodging: components["schemas"]["LodgingOut"][];
             /** Rejections */
             rejections: components["schemas"]["RejectionOut"][];
         };
@@ -5452,6 +5544,41 @@ export interface operations {
             };
         };
     };
+    submit_lodging_picks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LodgingPickBatchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LodgingPickBatchResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     add_note: {
         parameters: {
             query?: never;
@@ -5534,6 +5661,41 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["IdeasIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ask_for_lodging: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AskLodgingIn"];
             };
         };
         responses: {

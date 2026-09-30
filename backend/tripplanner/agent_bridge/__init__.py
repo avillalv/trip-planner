@@ -12,13 +12,13 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from pydantic import Field
 
-from tripplanner.schemas.agent import AgentQuoteIn, AgentSuggestionIn
+from tripplanner.schemas.agent import AgentLodgingPickIn, AgentQuoteIn, AgentSuggestionIn
 
 SERVER_NAME = "trip"
 # What to save, and with which tool, for each kind of run.
 SAVING = {
     "itinerary_agent": "Save ideas with suggest_activities and tips with add_note",
-    "lodging_agent": "Save tips with add_note",  # the lodging slice adds suggest_lodging
+    "lodging_agent": "Save your ranked picks with suggest_lodging and tips with add_note",
 }
 DEFAULT_SAVING = "Record prices with submit_flight_quotes and findings with add_note"
 
@@ -62,7 +62,7 @@ def _json(value: Any) -> str:
 
 def build_server(api: IngestApi, kind: str = "flight_agent") -> MCPServer:
     """The tools a run of this kind gets: the flight and research kinds price and research; the
-    itinerary kind suggests things to do."""
+    itinerary kind suggests things to do; the lodging kind ranks places to stay."""
     saving = SAVING.get(kind, DEFAULT_SAVING)
     instructions = (
         f"Tools for this Trip Planner run. Call get_task first. {saving} as you go, "
@@ -73,7 +73,7 @@ def build_server(api: IngestApi, kind: str = "flight_agent") -> MCPServer:
     async def get_task() -> str:
         """Your assignment: the trip and the rules for this run, plus the routes to search and the
         cheapest prices the app already knows (flight runs) or the days, weather, plans, interests, and
-        earlier suggestions (planning runs)."""
+        earlier suggestions or the numbered places to stay to choose from (planning runs)."""
         return _json(await api.call("GET", f"/runs/{api.run_id}/context"))
 
     async def lookup_airports(
@@ -118,6 +118,25 @@ def build_server(api: IngestApi, kind: str = "flight_agent") -> MCPServer:
         )
         return f"{counts}\n{_json(result)}"
 
+    async def suggest_lodging(
+        picks: Annotated[list[AgentLodgingPickIn], Field(min_length=1, max_length=8)],
+    ) -> str:
+        """Save your ranked places to stay for the travelers to review (up to 8 per run, 3 to 6 is best).
+
+        Pick each place by its index from get_task's offers, and give it a rank (1 = best, each rank
+        used once). why ties the place to these travelers' interests and the days' plans; pros and
+        cons are short and concrete things you learned from reviews and location research, not
+        generic praise. The app fills in the price, photos, and details from its own search. The reply
+        lists each pick, by the index you gave, as accepted, rejected (with reasons), or a duplicate of
+        a place already saved. Fix a rejected pick only if the reason shows a real mistake."""
+        payload = {"picks": [p.model_dump(mode="json") for p in picks]}
+        result = await api.call("POST", f"/runs/{api.run_id}/lodging-picks", json=payload)
+        counts = (
+            f"{len(result['accepted'])} accepted, {len(result['rejected'])} rejected, "
+            f"{len(result['duplicates'])} duplicates."
+        )
+        return f"{counts}\n{_json(result)}"
+
     async def add_note(
         title: Annotated[str, Field(min_length=1, max_length=160)],
         body: Annotated[str, Field(min_length=1, max_length=4000, description="Plain text; be specific")],
@@ -147,7 +166,7 @@ def build_server(api: IngestApi, kind: str = "flight_agent") -> MCPServer:
         "flight_agent": [lookup_airports, submit_flight_quotes],
         "research_agent": [lookup_airports, submit_flight_quotes],
         "itinerary_agent": [suggest_activities],
-        "lodging_agent": [],  # the lodging slice adds suggest_lodging
+        "lodging_agent": [suggest_lodging],
     }
     for tool in [get_task, *kind_tools[kind], add_note, finish_run]:
         server.tool(structured_output=False)(tool)
