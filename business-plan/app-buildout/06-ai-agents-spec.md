@@ -1,6 +1,6 @@
 # 06: AI agents specification
 
-Part of the [Wayfold build specification](README.md). The README's shared decisions (tier codes, credit action codes and prices, hard stops, ceilings, table names) are final and are not repeated with new numbers here. Where this file needs a number the README does not give, it says so and marks it as a default that an admin can change in `feature_flags`.
+Part of the [Wayfold build specification](README.md). The README's shared decisions (tier codes, credit action codes and prices, hard stops, ceilings, table names) are final and are not repeated with new numbers here. Table, column, enum, flag and kill switch names come from [03-database-schema.md](03-database-schema.md). Where this file needs a number the README does not give, it says so and marks it as a default that an admin can change in `feature_flags`.
 
 Written 2026-09-30. Prices used: Claude Sonnet 5.5 $2 input and $10 output per million tokens (cache read $0.20, 5-minute cache write $2.50, 1-hour write $4.00), Claude Haiku 4.5 $1 and $5 (read $0.10, 5-minute write $1.25, 1-hour write $2.00), web search $0.01 per search, Batch API 50% off tokens only. All dollar figures are planning estimates until 200 production agent runs are measured.
 
@@ -12,8 +12,8 @@ Two code systems are used and must not be confused.
 
 | System | Values | Used for |
 |---|---|---|
-| Credit action code | `explain`, `live_search`, `draft_day`, `draft_trip`, `research`, `agent_run` | Price and hard stop in the README; written to `credit_ledger.feature` |
-| AI feature code | `explain`, `packing_list`, `booking_import`, `draft_day`, `draft_trip`, `research`, `agent_fare_hunt`, `agent_deep_research`, `taster`, `routine_scan`, `routine_agent`, `digest`, `cache_warm`, `classifier`, `eval` | Model choice, prompt, metrics; written to `ai_usage.feature` and `runs.kind` |
+| Credit action code | `explain`, `live_search`, `draft_day`, `draft_trip`, `research`, `agent_run` | Price and hard stop in the README; stored as the `ai_action` enum in `credit_ledger.action`, `ai_usage.action`, `runs.action` and `credit_action_prices.action` |
+| AI feature code | `explain`, `packing_list`, `booking_import`, `draft_day`, `draft_trip`, `research`, `agent_fare_hunt`, `agent_deep_research`, `taster`, `routine_scan`, `routine_agent`, `digest`, `cache_warm`, `classifier`, `eval` | Model choice, prompt, metrics; carried in `runs.kind` where `run_kind` has a value for it (mapping below) |
 
 Mapping from feature to action code:
 
@@ -26,11 +26,13 @@ Mapping from feature to action code:
 | `draft_trip` | `draft_trip` | 4 | Trips over 14 days bill 4 per 14 days |
 | `research` | `research` | 8, or 1 from shared cache | |
 | `agent_fare_hunt`, `agent_deep_research` | `agent_run` | 40, or 8 from shared cache | |
-| `taster` | none | 0 | One lifetime deep agent run per user, outside the credit balance |
-| `routine_scan`, `routine_agent` | none | 0 for scans; `routine_agent` is 40 and draws from the Pro allowance | Pro only; see section 5.8 |
+| `taster` | `agent_run` | 0 from the monthly balance; spends the user's one-time taster `promo` grant | One lifetime deep research run per user (`restricted_action = 'agent_run'`), see 5.9 |
+| `routine_scan`, `routine_agent` | none | 0 for scans; `routine_agent` is 40 and draws from the Pro allowance | Pro only; see section 5.10 |
 | `digest`, `cache_warm`, `classifier`, `eval` | none | 0 | Internal; counted against platform budget, not a user |
 
 `live_search` (live flight or rental search) is an API call to a fare provider, not an LLM call. It is listed in the README because it shares the credit balance and ceilings. It is metered in `provider_calls` and is out of scope here except where it shares the ledger flow in section 6.
+
+`runs.kind` (03 `run_kind`) for each feature: `explain` (also `packing_list` and `booking_import`), `draft_day`, `draft_trip`, `research_question` (feature `research`), `fare_hunt` (`agent_fare_hunt`), `deep_research` (`agent_deep_research` and `taster`), `batch_scan` (a `routine_scan`), `price_check` (an API price check) and, for a scheduled agent routine, `fare_hunt` or `deep_research` with `routine_id` set. The internal features (`digest`, `cache_warm`, `classifier`, `eval`) have no `runs` row and no user; their spend is an `ai_usage` row with `user_id` null.
 
 ## 2. Architecture
 
@@ -38,7 +40,7 @@ Mapping from feature to action code:
 
 ```
 client (web / iOS)                API (FastAPI)                       worker (Procrastinate)
-   |  POST /v1/ai/...   --->   validate, entitlement,        --->   claim job (FOR UPDATE SKIP LOCKED)
+   |  POST /v1/trips/{id}/ai/...  --->   validate, entitlement,        --->   claim job (FOR UPDATE SKIP LOCKED)
    |                           reserve credits,                      build context from DB
    |                           insert runs row (queued),             AgentLoop / SingleCall
    |  <--- SSE run_events      enqueue job                           stream Anthropic response
@@ -50,7 +52,7 @@ client (web / iOS)                API (FastAPI)                       worker (Pr
 ```
 
 - The worker is the only process holding `ANTHROPIC_API_KEY`. It lives in a secret manager and is injected as an environment variable. A separate admin key (for the Usage and Cost reconciliation job, section 6.8) is held only by the scheduler process.
-- Interactive jobs (single calls, research, agent runs the user is watching) use the `interactive` queue. Scheduled work (routines, digests, cache warming) uses the `scheduled` queue. Paid tiers are claimed before Free within a queue; Pro is claimed first (priority queue). The API process never waits on a job; it returns the `runs.id` and the client subscribes to `GET /v1/runs/{id}/events` (server-sent events that tail `run_events`).
+- Interactive jobs (single calls, research, agent runs the user is watching) run in the `ai` lane at priority 10. Scheduled work (routines, digests, cache warming) runs in the `ai` lane at the scheduled priorities (paid 5, free 1) or in the `batch` lane when it goes through the Batch API (lane names from [02-architecture.md](02-architecture.md)). Paid tiers are claimed before Free within a queue; Pro is claimed first (priority queue). The API process never waits on a job; it returns the `runs.id` and the client subscribes to `GET /v1/agent-runs/{id}/stream` (server-sent events that tail `run_events`, [04-api-spec.md](04-api-spec.md) section 5.13).
 - Workers run 4 concurrent agent loops each by default (async tasks; each holds one open stream). Concurrency is a config value, `AI_WORKER_CONCURRENCY`.
 
 ### 2.2 The client library
@@ -60,7 +62,7 @@ Use the official Anthropic Python SDK (`anthropic`), async client, with `max_ret
 - `SingleCall.run(feature, model, system_blocks, messages, output_schema, limits) -> Result` for one request, structured output through `output_config.format`.
 - `AgentLoop.run(run, spec) -> Outcome` for the tool loop in 2.3.
 
-Nothing else may import the SDK (enforced by a lint rule). Both entry points take a `MeterContext` (user, trip, run, feature, reservation id) and write one `ai_usage` row per response, in the same transaction as the `run_events` row for that response.
+Nothing else may import the SDK (enforced by a lint rule). Both entry points take a `MeterContext` (user, trip, run, feature, reservation id) and, for every response, add its tokens and cost to the action's `ai_usage` row (and to `runs.cost_usd_micros`) in the same transaction as a `run_events` row of type `info` with `payload.kind = 'usage'`. `ai_usage` holds one row per metered action (unique `idempotency_key`), not one per response; the per-response detail lives in the event payload.
 
 ### 2.3 The tool loop
 
@@ -86,7 +88,7 @@ async def agent_loop(run: Run, spec: AgentSpec) -> Outcome:
             async for event in stream:                 # forward text and tool names to run_events
                 emit_progress(run, event)
             msg = await stream.get_final_message()
-        record_usage(run, spec, msg, turn)             # ai_usage row, cost from our price table
+        record_usage(run, spec, msg, turn)             # ai_usage totals + usage run_event, cost from our price table
         messages.append({"role": "assistant", "content": msg.content})   # full content, unedited
         if msg.stop_reason == "refusal":
             return refused(run, msg.stop_details)
@@ -239,7 +241,7 @@ Validators in `submit_quotes` (kept from the existing code, plus two new ones):
 6. Provenance (new): `source_url` must appear in a `web_search_tool_result` or `web_fetch_tool_result` block earlier in this run. Otherwise reject with "cited a page you did not open".
 7. Price grounding (new): if the URL was fetched, the fetched document text is in the response; the submitted price string (for example `412`, `$412`, `412.00`, `1.412,00`) must appear in it after normalizing separators. If it does not, reject. If the URL appeared only in search results (snippets are encrypted and cannot be checked), accept with `confidence: "indicative"` and flag `search_snippet_only`. Store the fetched document's SHA-256 and URL in `fare_observations.raw` for disputes.
 
-An accepted quote is written to `fare_observations` with `source = 'agent'`, `confidence = 'indicative'` and `run_id`, and appears in the trip as "Found by AI, check the source". Rejections are stored on `run_events` (`kind = 'ingest_rejection'`) with the item and field errors, and count in `runs.rejected_count`. The model receives the per-item result and may fix an item only when the page supports the correction.
+An accepted quote is written to `fare_observations` (the executor maps `price_total` and `currency` to `price_total_minor` and `currency`, `stops_outbound` and `stops_return` to `stops_out` and `stops_back`, the `passengers` count to `adults` and `children` of the route's party, and `seen_on` to `source_domain`) with `source = 'agent'`, `confidence = 'indicative'`, `source_url` and `run_id`, and appears in the trip as "Found by AI, check the source". Rejections are stored on `run_events` (`type = 'rejection'`, `payload.kind = 'ingest_rejection'`) with the item and field errors, and count in `runs.rejected_count`. The model receives the per-item result and may fix an item only when the page supports the correction.
 
 `add_note`:
 
@@ -261,7 +263,7 @@ An accepted quote is written to `fare_observations` with `source = 'agent'`, `co
 }
 ```
 
-Executor checks: every URL passes `source_problem`; every URL appears in a result block of this run (provenance); at least one URL (a note with no source is rejected); body contains no URL-like text that is not in `urls`. A passed note is written to `notes` with `kind = 'agent'`, `run_id`, `retrieved_at` and the domain-only link labels used by the UI.
+Executor checks: every URL passes `source_problem`; every URL appears in a result block of this run (provenance); at least one URL (a note with no source is rejected); body contains no URL-like text that is not in `urls`. A passed note is written to `notes` with `kind = 'agent'`, `run_id`, `urls` (the sources; `created_at` is the retrieval time) and the UI derives its domain-only link labels from `urls`.
 
 `finish_run`:
 
@@ -323,13 +325,13 @@ Model IDs are exact strings with no date suffix. They are read from config (`AI_
 
 | Condition | Handling |
 |---|---|
-| `stop_reason == "refusal"` | Mark run `failed` with `failure_code = 'refused'` and store `stop_details.category`. Refund all reserved credits. Do not retry the same prompt unchanged. On interactive single calls and research, the request is sent with `betas: ["server-side-fallback-2026-07-01"]` and `fallbacks: "default"` so the API re-runs a declined request on the fallback model within the same call. Batch rejects `fallbacks`: a refusal in a batch item is a failed item. The user sees "We could not do that one. Nothing was charged." Track refusal rate per feature and per prompt version; above 0.5% raises an alert (user instructions are the usual trigger). |
+| `stop_reason == "refusal"` | Mark run `failed` with `runs.error = 'refused'` and store `stop_details.category` in the usage event payload. Refund all reserved credits. Do not retry the same prompt unchanged. On interactive single calls and research, the request is sent with `betas: ["server-side-fallback-2026-07-01"]` and `fallbacks: "default"` so the API re-runs a declined request on the fallback model within the same call. Batch rejects `fallbacks`: a refusal in a batch item is a failed item. The user sees "We could not do that one. Nothing was charged." Track refusal rate per feature and per prompt version; above 0.5% raises an alert (user instructions are the usual trigger). |
 | `max_tokens` before a tool call completes | Never run a half-parsed tool input. Retry that turn once with a higher `max_tokens` (double, cap 16,000), else fail the run and refund. |
 | Invalid tool input | Return `is_error` tool result; the model may correct once; a second failure for the same tool fails the turn. |
 | HTTP 429 or 5xx | SDK retries twice; then the job is re-queued with jitter (up to 3 attempts in 10 minutes). The user sees "Queued", not "Failed". After the third failure, fail and refund. |
 | HTTP 400 from a config error (model mismatch, schema) | Fail without retry, page on-call, and trip the feature's automatic kill switch if 5 occur in 10 minutes. |
-| Deadline or turn cap | Keep everything already saved (ingest saves as it goes); mark `partial`; settle per section 6.3. |
-| Anthropic outage | Provider health check fails 3 times: set the `ai.all` kill switch to `degraded`; cached data and non-AI features keep working. |
+| Deadline or turn cap | Keep everything already saved (ingest saves as it goes); mark `partial` (`timed_out` when the 8-minute deadline ended it); settle per section 6.3. |
+| Anthropic outage | Provider health check fails 3 times: engage the `provider.anthropic` kill switch; cached data and non-AI features keep working. |
 
 ## 4. Shared prompt building blocks
 
@@ -457,7 +459,7 @@ Each feature gives purpose, trigger, inputs, prompts, schemas, limits, credit co
 ### 5.1 `explain`
 
 - **Purpose.** A short answer about something on screen: why a fare is good or bad, what a neighborhood is like, whether a place suits kids.
-- **Trigger.** "Ask" or "Explain" button on a fare, a saved place, a lodging option or a day. `POST /v1/ai/explain`.
+- **Trigger.** "Ask" or "Explain" button on a fare, a saved place, a lodging option or a day. `POST /v1/trips/{trip_id}/ai/explain`.
 - **Inputs.** The subject (type and a compact JSON of its own fields: fare with its price history summary; place name, category, rating, hours; lodging name, price per night), the trip's destination names, dates and party size, and an optional question of at most 300 characters. No traveler names, no notes.
 - **Model and limits.** Haiku 4.5, one call, no tools, `max_tokens` 400, hard stop $0.01, 1 credit. Output is structured.
 - **Cache policy.** Identical subject plus question inside 6 hours returns the earlier answer with no charge and says so. Not in `shared_research_cache` (personal context).
@@ -500,8 +502,8 @@ The UI labels the answer "AI answer" with thumbs up and down (the feedback also 
 ### 5.2 `packing_list`
 
 - **Purpose.** A short packing list from the trip's weather and plans.
-- **Trigger.** "Suggest a packing list" in the "Before you go" checklist. `POST /v1/trips/{id}/packing-list`.
-- **Inputs.** Destination names, dates, trip length, weather summary from the weather provider (daily highs, lows, rain chance; never fetched by the model), activity categories from `itinerary_items` (for example "hiking", "beach", "dinner out"), party composition (adults and children counts). No names.
+- **Trigger.** "Suggest a packing list" in the "Before you go" checklist. `POST /v1/trips/{trip_id}/ai/packing-list`.
+- **Inputs.** Destination names, dates, trip length, weather summary from the weather provider (daily highs, lows, rain chance; never fetched by the model), activity categories from `itinerary_items.category` (`sights`, `museum`, `food`, `nature`, `nightlife`, `shopping`, `travel`, `other`), party composition (adults and children counts). No names.
 - **Model and limits.** Haiku 4.5, one call, `max_tokens` 900, hard stop $0.01, 1 credit (action code `explain`).
 - **Output.** Items are written to `checklist_items` with `kind = 'packing'` and `source = 'ai'`. Nothing is purchased; no product links are included.
 - **Cache policy.** Keyed by trip id and a hash of inputs; unchanged inputs within 7 days return the earlier list free.
@@ -523,7 +525,7 @@ Output schema: `{"groups": [{"name": enum, "items": [{"label": string(<=60), "qt
 ### 5.3 `booking_import`
 
 - **Purpose.** Turn pasted confirmation text (a forwarded email body, an airline or hotel confirmation) into structured flight, stay or activity entries.
-- **Trigger.** "Paste a booking" in flights, lodging or itinerary. `POST /v1/trips/{id}/imports`. Accepts pasted text up to 12,000 characters. The server does not fetch any URL in the text.
+- **Trigger.** "Paste a booking" in flights, lodging or itinerary. `POST /v1/trips/{trip_id}/ai/booking-import`. Accepts pasted text up to 12,000 characters. The server does not fetch any URL in the text.
 - **Inputs.** The pasted text only, and the trip's date range so the model can tell which dates fit. Personal data in the text (names, booking references, frequent flyer numbers) is replaced by placeholders before the call (section 12.3) and restored into the parsed draft locally.
 - **Model and limits.** Haiku 4.5, one call, `max_tokens` 1,200, hard stop $0.01, 1 credit (action code `explain`). The result is a draft shown for confirmation; nothing is saved until the user confirms.
 - **Cache policy.** None (private input).
@@ -568,7 +570,7 @@ Failure handling: unrecognized text is not charged (refund) and the UI says so.
 ### 5.4 `draft_day`
 
 - **Purpose.** Draft or edit one day of the itinerary.
-- **Trigger.** "Draft this day" or "Change this day" on a day card. `POST /v1/trips/{id}/days/{day_id}/draft`.
+- **Trigger.** "Draft this day" or "Change this day" on a day card. `POST /v1/trips/{trip_id}/ai/draft-day` with the `day` date.
 - **Inputs.** Destination and neighborhood, the date and weekday, the existing items of that day (titles, times, place ids), saved places not yet scheduled (top 12 by hearts), lodging location, arrival or departure times if a flight is chosen that day, pace preference (relaxed, balanced, full), interests (chosen from a fixed list), and an optional instruction of at most 300 characters (user text, wrapped in `<instructions>`). No traveler names; party size and ages band only ("2 adults, 1 child 6 to 12").
 - **Model and limits.** Sonnet 5.5, effort `low`, one call, structured output, `max_tokens` 1,500, hard stop $0.03, 1 credit.
 - **Cache policy.** The same inputs within 6 hours return the earlier draft free. Not shared across users.
@@ -605,12 +607,12 @@ Output schema:
  "required": ["title","items","summary"], "additionalProperties": false}
 ```
 
-Drafted items are inserted into `itinerary_items` with `source = 'ai'` and shown as a preview the user accepts, edits or discards. Accepting is free.
+Drafted items are inserted into `itinerary_items` (03 has no `source` column; the draft is a preview until accepted) and shown as a preview the user accepts, edits or discards. Accepting is free.
 
 ### 5.5 `draft_trip`
 
 - **Purpose.** Draft the whole itinerary (up to 14 days per call).
-- **Trigger.** "Draft my trip" on an empty or partly empty itinerary. `POST /v1/trips/{id}/draft`.
+- **Trigger.** "Draft my trip" on an empty or partly empty itinerary. `POST /v1/trips/{trip_id}/ai/draft-trip`.
 - **Inputs.** As `draft_day`, for every day: dates, destinations per day (from `trip_destinations`), saved places, lodging, chosen flights for arrival and departure times, pace, interests, party band, optional instruction. Existing items are kept and the model fills around them.
 - **Model and limits.** Sonnet 5.5, effort `medium`, one call, structured output, `max_tokens` 6,000, hard stop $0.10, 4 credits. Trips over 14 days run one call per 14-day block and bill 4 per block, reserved up front.
 - **Cache policy.** Identical inputs within 6 hours return the earlier draft free. Not shared.
@@ -627,11 +629,11 @@ Output schema: `{"days": [ <draft_day output with "date" added> ... ], "overview
 ### 5.6 `research` (research question)
 
 - **Purpose.** Answer one research question with sourced notes, for example "What events or closures affect Lisbon between April 10 and 17?" or "Give me a brief of Lisbon's neighborhoods for first-timers."
-- **Trigger.** "Research this" on the trip overview, a day or a destination. `POST /v1/trips/{id}/research` with a `topic` chosen from a fixed list (`destination_brief`, `events_and_closures`, `reservations_needed`, `getting_around`, `seasonal_notes`) plus an optional custom question (300 characters).
+- **Trigger.** "Research this" on the trip overview, a day or a destination. `POST /v1/trips/{trip_id}/ai/research` with a `topic` chosen from a fixed list (`destination_brief`, `events_and_closures`, `reservations_needed`, `getting_around`, `seasonal_notes`) plus an optional custom question (300 characters).
 - **Inputs.** Destination (canonical place id), date window, party size. Custom question text only if supplied (and then the shared cache is bypassed).
 - **Model and limits.** Sonnet 5.5, effort `medium`; a workflow of 1 to 3 requests where code decides the steps (request 1 searches and fetches; request 2 verifies conflicting facts; request 3 writes notes). 5 searches and 8 fetches in total across requests, `max_content_tokens` 5,000, hard stop $0.16, task budget 60,000 tokens. 8 credits, or 1 credit when served from `shared_research_cache`.
 - **Cache policy.** Shared cache, section 8. Custom questions bypass it.
-- **Output.** 3 to 8 notes through `add_note`, stored in `notes` and written to `shared_research_cache.payload` when the job used only destination and dates.
+- **Output.** 3 to 8 notes through `add_note`, stored in `notes` and written to `shared_research_cache.response` (and `sources`) when the job used only destination and dates.
 
 The system prompt is the house rules (4.1) with the fare rules 2 to 4 left in place (a fare seen incidentally may be recorded) and this research guide appended to the task:
 
@@ -661,10 +663,10 @@ The default topic text (from the existing code) for `events_and_closures` is "Ev
 ### 5.7 `agent_run`, fare hunt (`agent_fare_hunt`)
 
 - **Purpose.** Find fares the price APIs miss: budget airlines, airline sales, promo fares, deal posts with specific dates. Every saved fare links to the page that showed it.
-- **Trigger.** "Hunt for fares" on a flight route. `POST /v1/trips/{id}/agent-runs` with `kind = 'fare_hunt'` and `route_refs` (one to three routes) and optional instructions.
+- **Trigger.** "Hunt for fares" on a flight route. `POST /v1/trips/{trip_id}/agent-runs` with `kind = 'fare_hunt'` and `route_ids` (one to three routes, each mapped to a `R1` to `R3` reference) and optional instructions.
 - **Inputs.** Routes and their `cheapest_known`, date window, party size, home currency, blocked list. Instructions optional (bypass shared cache).
 - **Model and limits.** Sonnet 5.5, effort `medium`, `max_tokens` 8,000 per turn, 20 turns, 10 searches, 10 fetches, `max_content_tokens` 5,000, 8-minute deadline, task budget 150,000, hard stop $0.80, one run at a time per account. 40 credits, or 8 from shared cache (section 8.4).
-- **Cache policy.** Fare hunts are cached by route pair and date window for 6 to 12 hours (`shared_research_cache` with `topic = 'fare_hunt'`). The cached payload is the list of accepted quotes with sources. A hit re-validates the quotes for this trip's route (route and date rules) and inserts those that still pass, tagged `source = 'agent_cache'`; price age is shown.
+- **Cache policy.** Fare hunts are cached by route pair and date window for 6 to 12 hours (`shared_research_cache` with `kind = 'agent_result'` and `params.topic = 'fare_hunt'`). The cached payload is the list of accepted quotes with sources. A hit re-validates the quotes for this trip's route (route and date rules) and inserts those that still pass as `fare_observations` rows with `source = 'agent'` and `confidence = 'indicative'` (the run records `served_from_cache`); price age is shown.
 - **Failure handling.** Partial runs keep everything already accepted. A run that saved nothing is refunded. A run stopped by the user is billed pro rata by turns used with a minimum of 8 credits.
 
 Task template (adapts `task_prompt` and `FLIGHT_GUIDE` from the existing code):
@@ -700,9 +702,9 @@ Tools: both server tools, `submit_flight_quotes`, `add_note`, `lookup_airports`,
 ### 5.8 `agent_run`, deep research (`agent_deep_research`)
 
 - **Purpose.** An open-ended research run for a trip: events, closures, reservations needed, transport quirks, neighborhoods. Notes with sources, plus any fares seen on the way.
-- **Trigger.** "Deep research" on the trip overview. `POST /v1/trips/{id}/agent-runs` with `kind = 'deep_research'`, a topic (fixed list or custom up to 300 characters), optional instructions.
+- **Trigger.** "Deep research" on the trip overview. `POST /v1/trips/{trip_id}/agent-runs` with `kind = 'deep_research'`, a topic (fixed list or custom up to 300 characters), optional instructions.
 - **Limits, credit cost, failure handling.** Same as 5.7 (40 credits, 8 from shared cache, caps, refund rules).
-- **Cache policy.** Shared cache key is destination, window and topic (section 8). A hit returns the cached notes (re-labeled with their age) for 8 credits; the notes are copied into the user's `notes` with `source = 'agent_cache'`. Topics with custom text or instructions bypass the cache.
+- **Cache policy.** Shared cache key is destination, window and topic (section 8). A hit returns the cached notes (re-labeled with their age) for 8 credits; the notes are copied into the user's `notes` (`kind = 'agent'`, `urls` from the cached `sources`). Topics with custom text or instructions bypass the cache.
 
 Task template (adapts the research branch and `RESEARCH_GUIDE`):
 
@@ -739,19 +741,19 @@ Start now. Remember to call finish_run at the end.
 
 - **Purpose.** Let a Free user see one full deep agent run before paying.
 - **Trigger.** A one-time "Try a deep research run free" offer on a Free user's trip (deep research only, never fare hunt, because fare hunts produce personal route data that cannot be served from cache).
-- **Rules.** One per user for life (`users.taster_used_at`, set when the run is admitted and never cleared, even on refund of a failed run, unless the run saved nothing and failed for our reasons, in which case it is reset once). No credits are charged; the run is metered against a separate taster allowance of $0.80 outside the monthly Free ceiling (README: "Free $0.25 plus the one-time taster").
+- **Rules.** One per user for life. The taster is a one-time `promo` row in `credit_grants` (`restricted_action = 'agent_run'`, `period_key = 'taster'`, no `expires_at`, credits equal to the `agent_run` price; `plans.limits.taster_agent_runs = 1` on `free`), so the unique index on (`user_id`, `kind`, `period_key`) gives once per user. It is spent when the run is admitted and stays spent, even after a refund of a failed run, unless the run saved nothing and failed for our reasons, in which case `settle_credits(reservation, 0)` returns it once. The user pays nothing; the run is metered against a separate taster allowance of $0.80 outside the monthly Free ceiling (README: "Free $0.25 plus the one-time taster").
 - **Served from cache when possible.** The key is computed as for deep research. A hit costs nothing and does not consume the taster (the UI says "Someone researched this recently. Here it is."). A miss runs the real loop with caps of 6 searches, 6 fetches, 12 turns and a $0.50 stop so the offer is cheap, and the result is written to the cache for everyone.
 - **Everything else** (prompt, tools, ingest, labels) is the deep research feature. After the run the UI shows the normal credit and plan choices; no paywall appears before the result.
 
 ### 5.10 Scheduled routines (Pro; `routine_scan`, `routine_agent`)
 
-Scheduled agents are off for every tier until Pro launches (README). The worker, scheduler and tables ship in the first release behind `feature_flags` key `pro.routines = false`. Before Pro, scheduled work is API price checks, the weekly digest and cache warming only.
+Scheduled agents are off for every tier until Pro launches (README). The worker, scheduler and tables ship in the first release behind the `feature_flags` key `scheduled_agent_routines` (off) and the `tier_pro` flag. Before Pro, scheduled work is API price checks, the weekly digest and cache warming only.
 
 - **Purpose.** Keep watching a trip. Two kinds of routine: a `scan` (cheap, one route and window, Batch) and an `agent` routine (a full fare hunt or deep research on a schedule).
-- **Trigger.** The scheduler process reads `routines` rows that are due and enqueues jobs on the `scheduled` queue with jitter of 0 to 20 minutes (load is bursty at 08:00 and 20:00 local time).
+- **Trigger.** The scheduler process reads `routines` rows that are due and enqueues jobs in the `ai` lane at scheduled priority (scans in the `batch` lane) with jitter of 0 to 20 minutes (load is bursty at 08:00 and 20:00 local time).
 - **Limits.** Up to 3 routines per trip, each at most once a day with at least 12 hours between runs. A scan runs when API prices moved by more than 5% or when the window is under 45 days away, not on a fixed clock. Agent routines use the `agent_run` caps and cost 40 credits each from the Pro allowance; the routine pauses itself when the balance is below 40 or the ceiling has no $0.80 of headroom, and the user is told "Paused: not enough credits".
 - **Scan (Batch).** One request per route and window: server tools with 6 searches and 3 fetches, effort `low`, the fare-hunt system prompt and a shortened task, output through `submit_flight_quotes`-shaped strict schema (Batch cannot hold a multi-turn loop, so the request uses structured output `output_config.format` with the quotes schema instead of a tool, and the worker feeds the parsed quotes through the same `submit_quotes` validators, including provenance against the result blocks returned in the batch response). Internal stop $0.15. Scans are not sold; they run inside the Pro ceiling. `custom_id = scan:{route_id}:{window}:{date}`. `pause_turn` results are resubmitted in the next batch.
-- **Agent routine.** Same as 5.7 or 5.8 with `runs.kind` `fare_hunt` or `deep_research` and `runs.routine_id` set; interactive priority is lower than a user-started run.
+- **Agent routine.** Same as 5.7 or 5.8 with `runs.kind` `fare_hunt` or `deep_research` and `runs.routine_id` set (`routines.kind` is `fare_hunt` or `deep_research`; scans are `price_check` or `batch_scan`); interactive priority is lower than a user-started run.
 - **Output.** Accepted quotes update `fare_observations` and may trigger `price_alerts`; notes appear under "Found by AI". The weekly digest (below) summarizes changes.
 - **Weekly digest (`digest`).** Haiku 4.5 via Batch, one call per active trip for Plus and above: a short plain-text summary of price movement, new notes and upcoming deadlines, built from data already in the database (no web). About $0.003 each. Not sold; included with Plus and up.
 
@@ -772,20 +774,21 @@ System and task prompts for a scan are the fare-hunt prompts with this replaceme
 
 | Table | Written by | Holds |
 |---|---|---|
-| `ai_usage` | worker, one row per model response | user, trip, run, feature, model, request id, turn, token counts, searches, cost, stop reason, cache status |
-| `provider_calls` | fare and places provider wrappers | non-LLM provider spend (SerpApi, Geoapify), attributed to a user |
-| `credit_ledger` | reserve, settle, refund, grant, purchase, expire, adjust | integer credit deltas with `balance_after` and `idempotency_key` |
-| `credit_grants` | monthly and pass grants and purchases | pools with `expires_at` and `remaining`, used for spend order |
-| `runs`, `run_events` | API and worker | lifecycle, rollups, and an event log for the UI |
+| `ai_usage` | API at admission, worker as it runs and at settle; one row per metered action | `user_id`, `trip_id`, `run_id`, `action`, `model`, `input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_write_tokens`, `web_searches`, `via_batch`, `cost_usd_micros`, `credits_reserved`, `credits_charged`, `state` (`reserved`, `settled`, `released`), `cache_hit`, `reservation_id`, `idempotency_key` |
+| `run_events` | worker, one row per response, tool call and ingest decision | `run_id`, `seq`, `type`, `tool_name`, `summary`, `payload`; per-response detail (`response.id` as `request_id`, turn, tokens split by cache TTL, `stop_reason`, `stop_details.category`) is in the payload of `info` rows with `payload.kind = 'usage'` |
+| `provider_calls` | fare and places provider wrappers | non-LLM provider spend (SerpApi, Geoapify) in `cost_usd_micros`, attributed to a user; Claude cost lives in `ai_usage` |
+| `credit_ledger` | `reserve_credits`, `settle_credits`, `expire_credit_grants` and the grant writers | integer `delta` with `entry_type`, `charged`, `reservation_id`, `idempotency_key` |
+| `credit_grants` | monthly and pass grants and purchases | pools with `credits`, `remaining` and `expires_at`, used for spend order |
+| `runs` | API and worker | lifecycle, `cost_usd_micros`, counts, `report`, `served_from_cache`, `cache_key`, `reservation_id`, `cancel_requested` |
 
-Columns this spec relies on (the authoritative DDL is in [03-database-schema.md](03-database-schema.md); if a name there differs, that file wins and this list is the contract): `ai_usage(user_id, trip_id, run_id, feature, model, request_id, turn, input_tokens, cache_write_5m_tokens, cache_write_1h_tokens, cache_read_tokens, output_tokens, web_searches, web_fetches, batch, cost_micro_usd, stop_reason, stop_category, shared_cache)` where `shared_cache` is one of `hit`, `miss`, `refresh`, `bypass`; `credit_ledger(user_id, household_id, delta, kind, feature, run_id, balance_after, idempotency_key, grant_id)` where `kind` is one of `grant_monthly`, `grant_pass`, `purchase`, `reserve`, `settle`, `refund`, `expire`, `adjust`, `clawback`.
+Columns this spec relies on are the ones in 03 section 5.11 to 5.13 (03 wins on any difference): `ai_usage(user_id, trip_id, run_id, action, model, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, web_searches, via_batch, cost_usd_micros, credits_reserved, credits_charged, state, cache_hit, reservation_id, idempotency_key)`, where `cache_hit` is true for a shared-cache hit (a bypass is a run with no `cache_key`); `credit_ledger(user_id, grant_id, entry_type, delta, charged, reservation_id, action, run_id, trip_id, usage_id, idempotency_key, note)` where `entry_type` is one of `grant`, `reserve`, `settle`, `refund`, `expire`, `clawback`, `adjust`. There is no `balance_after`; balances come from `credit_grants` and the `credit_balances` view.
 
-Model prices are a versioned constant in `ai/pricing.py` (per-million prices for input, 5-minute write, 1-hour write, read and output per model, search fee, batch multiplier), with an `effective_from` date. A price change is a code change with a new version; old `ai_usage` rows are never recomputed. The price version is stored in `ai_usage.cost_micro_usd` implicitly by date.
+Model prices are a versioned constant in `ai/pricing.py` (per-million prices for input, 5-minute write, 1-hour write, read and output per model, search fee, batch multiplier), with an `effective_from` date. A price change is a code change with a new version; old `ai_usage` rows are never recomputed. The price version is implicit in `ai_usage.cost_usd_micros` by date.
 
 ### 6.2 Cost from `response.usage`
 
 ```python
-def cost_micro(usage, model, batch: bool) -> int:
+def cost_usd_micros(usage, model, batch: bool) -> int:
     p = PRICES[model]                     # micro-dollars per million tokens
     tokens = (usage.input_tokens * p.input
               + usage.cache_creation.ephemeral_5m_input_tokens * p.write_5m
@@ -798,7 +801,7 @@ def cost_micro(usage, model, batch: bool) -> int:
     return round(tokens + searches)
 ```
 
-Stored per response, in the same transaction as the `run_events` row, together with `response.id` (as `request_id`), `stop_reason` and `stop_details.category`.
+Each response adds its cost to `ai_usage.cost_usd_micros` and `runs.cost_usd_micros`, in the same transaction as its `run_events` usage row (payload: `response.id` as `request_id`, turn, token counts split by 5-minute and 1-hour cache writes, `stop_reason`, `stop_details.category`). `ai_usage.cache_write_tokens` is the sum of both write kinds.
 
 ### 6.3 Reserve then settle
 
@@ -811,42 +814,42 @@ sequenceDiagram
     participant DB as Postgres
     participant W as Worker
     participant M as Anthropic
-    C->>A: POST /v1/trips/{id}/agent-runs (Idempotency-Key)
+    C->>A: POST /v1/trips/{trip_id}/agent-runs (Idempotency-Key)
     A->>DB: check kill switches, entitlement, one-run-at-a-time
     A->>DB: BEGIN; lock balance rows (FOR UPDATE)
     A->>DB: check ceilings and $0.80 month headroom
-    A->>DB: insert credit_ledger reserve (-40), insert runs (queued), COMMIT
+    A->>DB: insert ai_usage, reserve_credits (reserve rows, -40), insert runs (queued), COMMIT
     A-->>C: 202 {run_id, credits_reserved: 40}
     W->>DB: claim run (SKIP LOCKED), status running
     loop each turn
         W->>M: messages.stream
         M-->>W: response + usage
-        W->>DB: insert ai_usage, run_events (one transaction)
+        W->>DB: update ai_usage totals, insert run_events (one transaction)
         W->>DB: spend so far >= stop? then break
     end
     W->>DB: decide outcome, settle
     alt saved something (or pro rata)
-        W->>DB: insert settle (keep reserve), partial refund if pro rata
+        W->>DB: settle_credits(reservation, charged): settle row, refund rows if pro rata
     else nothing saved, failed, refused
-        W->>DB: insert refund (+40)
+        W->>DB: settle_credits(reservation, 0): refund rows (+40)
     end
     W->>DB: runs.status, rollups; publish event
-    C->>A: SSE /v1/runs/{id}/events (tails run_events)
+    C->>A: SSE /v1/agent-runs/{id}/stream (tails run_events)
 ```
 
 Steps in detail:
 
-1. **Admission** (API, one transaction). (a) Kill switch check (6.6). (b) The feature must be allowed for the caller's capability on this trip (see [01-product-spec.md](01-product-spec.md)). (c) For `agent_run` and `research`, reject if another `runs` row for this account is `queued` or `running` and of kind `agent_run` (one at a time per account; up to 3 research or workflow runs may run together). (d) Lock the payer's balance rows and confirm the balance covers the price. The payer is the person who starts the action, or the household pool when that person belongs to a Family household. (e) Ceiling checks: monthly spend plus the feature's hard stop must fit in the ceiling (agent run: $0.80 of monthly headroom; other features: their hard stop), and the daily budget must be open unless this is an admitted agent run. (f) Insert the `reserve` ledger row (negative delta, `idempotency_key = run_id:reserve`) and the `runs` row in the same transaction; the client may retry the POST with the same `Idempotency-Key` without a second reservation.
-2. **Run.** The worker writes `ai_usage` rows as it goes.
-3. **Settle.** Exactly one settlement path, idempotent on `run_id:settle` or `run_id:refund`:
-   - Saved something (an accepted quote or at least one note) and ended `ok`, `partial` or at a stop: keep the reservation. Spend is by feature price, not by actual tokens, so pricing is predictable.
-   - Nothing saved, `failed`, refused, deadline with nothing saved, or service error: refund in full (`refund` row, `+delta`).
+1. **Admission** (API, one transaction). (a) Kill switch check (6.6). (b) The feature must be allowed for the caller's capability on this trip (see [01-product-spec.md](01-product-spec.md)). (c) For `agent_run` and `research`, reject if another `runs` row for this account is `queued` or `running` and of kind `agent_run` (one at a time per account; up to 3 research or workflow runs may run together). (d) Lock the payer's balance rows and confirm the balance covers the price. The payer is the person who starts the action, or the household pool when that person belongs to a Family household. (e) Ceiling checks: monthly spend plus the feature's hard stop must fit in the ceiling (agent run: $0.80 of monthly headroom; other features: their hard stop), and the daily budget must be open unless this is an admitted agent run. (f) In one transaction insert the `ai_usage` row (unique `idempotency_key`), call `reserve_credits(user, trip, price, action, run, idem)` (it writes the negative `reserve` rows, and raises SQLSTATE `WF402` when the pools cannot cover the price, which the API returns as 402 `insufficient_credits`) and insert the `runs` row; the client may retry the POST with the same `Idempotency-Key` without a second reservation.
+2. **Run.** The worker updates the action's `ai_usage` totals as it goes.
+3. **Settle.** Exactly one settlement path, `settle_credits(reservation_id, credits_charged, usage_id)`, which is idempotent (a second call returns 0) and also sets `ai_usage.state` and `credits_charged`:
+   - Saved something (an accepted quote or at least one note) and ended `ok`, `partial` or at a stop: charge the full reservation (`credits_charged` = reserved). Spend is by feature price, not by actual tokens, so pricing is predictable.
+   - Nothing saved, `failed`, refused, deadline with nothing saved, or service error: refund in full (`credits_charged` 0, which writes `refund` rows with positive `delta`).
    - Stopped by the user: pro rata by turns used, minimum 8 credits; refund the rest.
    - Stopped at the $0.80 limit: billed in full only if it saved something, else refunded.
-4. **Crash safety.** A reaper job finds `runs` in `running` whose `heartbeat_at` is older than 2 minutes, marks them `failed` with `failure_code = 'worker_lost'` and refunds. The heartbeat is written every 20 seconds.
-5. **Spend order.** Credits are taken from `credit_grants` in this order: monthly allowance, then trip pass credits for the trip (if any), then purchased credits oldest first. The reservation records which grants it drew from so a refund returns credits to the same grants (and an expired grant returns nothing, which the UI explains).
-6. **Free users** have credits too. The monthly grant of 12 is written lazily at first use (`grant_monthly`, `idempotency_key = user:{id}:{yyyymm}`), so idle accounts cost no writes.
-7. **Shared-cache hits** reserve the lower price (1 for research, 8 for agent run), are settled immediately and write an `ai_usage` row with `shared_cache = 'hit'` and cost 0 so the hit rate is reportable.
+4. **Crash safety.** A reaper job finds `runs` in `running` whose `worker_id` has no heartbeat for 2 minutes (the worker heartbeat of 02 section 5, plus the latest `run_events.ts`), marks them `interrupted` with `runs.error = 'worker_lost'` and settles at 0. `release_stale_reservations()` (every minute, 30 minute default) is the backstop for reservations whose worker never came back.
+5. **Spend order.** `reserve_credits` takes credits from `credit_grants` in this order: `monthly` and `household_monthly`, then `promo`, then `trip_pass` credits for the trip (if any), then `adjustment`, then `purchase` oldest expiry first. Each draw is a `reserve` ledger row with its `grant_id`, so a refund returns credits to the same grants (and an expired grant returns nothing, which the UI explains).
+6. **Free users** have credits too. The monthly grant of 12 is written lazily at first use (a `monthly` grant with `period_key` `YYYY-MM`, unique per user), so idle accounts cost no writes.
+7. **Shared-cache hits** reserve the lower price (1 for research, 8 for agent run), are settled immediately and write an `ai_usage` row with `cache_hit = true` and cost 0 so the hit rate is reportable.
 
 Credits and ledger rules for purchases, grants, expiry and refunds are in [07-monetization-spec.md](07-monetization-spec.md).
 
@@ -862,9 +865,11 @@ Credits and ledger rules for purchases, grants, expiry and refunds are in [07-mo
 | `draft_day` | 1 | 0 | 0 | $0.03 | `max_tokens` 1,500 |
 | `explain`, `packing_list`, `booking_import` | 1 | 0 | 0 | $0.01 | `max_tokens` 400, 900, 1,200 |
 
-Enforcement layers: `max_uses` on the server tools is the only server-enforced cap on search and fetch spend, so it is set on every request (for a multi-request question, the remaining budget is passed to each request). Our dollar stop is checked before each turn and again after each response using the price table: `run_spend_micro(run) = SUM(ai_usage.cost_micro_usd WHERE run_id)`. One request can overshoot a stop by at most one turn of output (about $0.12), so the stops are set below the credit budget by design (the typical run costs $0.56 and a run at the caps about $0.72). When a stop is hit the loop ends, everything already saved stays, `runs.status = 'partial'` and the user sees "Stopped at the spending limit".
+The six credit actions read their numbers from `credit_action_prices` (`hard_stop_micros`, `max_turns`, `max_searches`, `max_fetches`); `taster`, `routine_scan`, `packing_list` and `booking_import` are feature-level caps kept in code. Enforcement layers: `max_uses` on the server tools is the only server-enforced cap on search and fetch spend, so it is set on every request (for a multi-request question, the remaining budget is passed to each request). Our dollar stop is checked before each turn and again after each response using the price table: `run_spend_micros(run) = runs.cost_usd_micros` (kept current by the worker after every response; it equals the run's `ai_usage.cost_usd_micros`). One request can overshoot a stop by at most one turn of output (about $0.12), so the stops are set below the credit budget by design (the typical run costs $0.56 and a run at the caps about $0.72). When a stop is hit the loop ends, everything already saved stays, `runs.status = 'partial'` and the user sees "Stopped at the spending limit".
 
 ### 6.5 Ceilings and daily budgets
+
+The amounts below are the `monthly_ceiling_micros` and `daily_ceiling_micros` keys of `plans.limits` (03 section 11.1).
 
 | Tier or pass | Monthly provider-spend ceiling | Daily budget |
 |---|---|---|
@@ -875,7 +880,7 @@ Enforcement layers: `max_uses` on the server tools is the only server-enforced c
 | Group Trip Pass | $3.60 per pass | $0.40 |
 | Pro | $5.50 | $1.25 |
 
-- The ceiling covers all provider spend attributed to the account: Claude and search fees from `ai_usage`, SerpApi and Geoapify from `provider_calls`. A view `user_month_spend` sums both for the calendar month in UTC (subscribers: the billing period) and powers the ceiling check and the in-app usage meter. The trip's capabilities come from the best of owner tier and pass (see [07-monetization-spec.md](07-monetization-spec.md)); spend on a pass is attributed to the pass while the pass is active.
+- The ceiling covers all provider spend attributed to the account: Claude and search fees from `ai_usage`, SerpApi and Geoapify from `provider_calls`. The query in 03 section 7.4 sums both for the calendar month in UTC (subscribers: the billing period); the API role reads it through `my_provider_spend_micros(since)`. It powers the ceiling check and the in-app usage meter. The trip's capabilities come from the best of owner tier and pass (see [07-monetization-spec.md](07-monetization-spec.md)); spend on a pass is attributed to the pass while the pass is active.
 - Purchased credits raise the ceiling by their cost value ($0.02 per credit spent), because that spend is separately paid.
 - When a ceiling is hit, live and AI actions stop and cached data keeps working. The message says when it resets or offers a credit pack. Scheduled work pauses first, user-started actions last.
 - Daily budget exception: an agent run is admitted when the month has $0.80 of headroom even if the daily budget is lower; its spend still counts toward the day, so no other paid action runs until the next UTC day.
@@ -886,21 +891,24 @@ Enforcement layers: `max_uses` on the server tools is the only server-enforced c
 
 ### 6.6 Kill switches
 
-Rows in `kill_switches` (`key`, `state` in `on`, `off`, `degraded`, `reason`, `updated_by`, `updated_at`). The API reads them through a 10-second in-process cache; the worker rechecks before every turn. `off` rejects at admission and stops running loops at the next turn (settled as in 6.3). Admins flip them from the admin console ([08-admin-control-center.md](08-admin-control-center.md)); every change writes `audit_log`.
+Rows in `kill_switches` (`key`, `description`, `engaged`, `reason`, `engaged_by`, `engaged_at`, `auto_rule`, `updated_at`; `engaged = true` means the feature is off). The API reads them through a 5-second in-process cache and fails closed ([08-admin-control-center.md](08-admin-control-center.md) section 6.5); the worker rechecks before every turn. An engaged switch rejects at admission and stops running loops at the next turn (settled as in 6.3). Admins flip them from the admin console ([08-admin-control-center.md](08-admin-control-center.md)); every change writes `audit_log`.
 
-| Key | Effect when off |
+| Key | Effect when engaged |
 |---|---|
 | `ai.all` | Every Claude call stops; non-AI features keep working |
-| `ai.free` | Free-tier AI off (automatic at 80% of the daily Anthropic budget) |
-| `ai.unpaid` | Everything except Pro off (automatic at 95%) |
-| `ai.explain`, `ai.draft`, `ai.research`, `ai.agent_run`, `ai.taster`, `ai.import`, `ai.packing` | That feature off |
-| `ai.web_search`, `ai.web_fetch` | Server tools removed from requests; features that need them return "unavailable" |
-| `ai.model.sonnet`, `ai.model.haiku` | Route to the other model where the feature allows it, else off |
-| `ai.batch` | Scans, digests and cache warming paused |
-| `ai.routines` | Scheduler stops enqueuing (also the Pro flag) |
-| `ai.shared_cache_write` | Stop writing to the shared cache (used during a poisoning incident) |
+| `ai.free_tier` | Free-tier AI off (automatic at 80% of the daily Anthropic budget, through `auto_rule`) |
+| `ai.all_but_paid` | AI off for everyone except paid tiers (automatic at 95%) |
+| `ai.agent_runs` | New agent runs off (running ones finish or are cancelled) |
+| `provider.anthropic` | Every Anthropic call stops (an outage) |
+| `ai.explain`, `ai.draft`, `ai.research`, `ai.taster`, `ai.import`, `ai.packing` | That feature off (not seeded in 03 section 11.5, see Schema notes) |
+| `ai.web_search`, `ai.web_fetch` | Server tools removed from requests; features that need them return "unavailable" (not seeded) |
+| `ai.model.sonnet`, `ai.model.haiku` | Route to the other model where the feature allows it, else off (not seeded) |
+| `ai.batch` | Scans, digests and cache warming paused (not seeded) |
+| `ai.shared_cache_write` | Stop writing to the shared cache (used during a poisoning incident; not seeded) |
 
-Automatic breakers: a daily spend breaker pauses scheduled work if organization spend today exceeds 1.5 times the trailing 7-day mean; at 80% of the daily Anthropic budget `ai.free` turns off; at 95% `ai.unpaid` turns off; five config errors (HTTP 400) in 10 minutes turn off that feature; a cost per active payer above $2 (Plus) or $6 (Pro) raises an alert but does not stop anyone.
+Scheduled routines are gated by the `scheduled_agent_routines` and `tier_pro` feature flags, not by a kill switch.
+
+Automatic breakers: a daily spend breaker pauses scheduled work if organization spend today exceeds 1.5 times the trailing 7-day mean; at 80% of the daily Anthropic budget `ai.free_tier` engages; at 95% `ai.all_but_paid` engages; five config errors (HTTP 400) in 10 minutes turn off that feature; a cost per active payer above $2 (Plus) or $6 (Pro) raises an alert but does not stop anyone.
 
 ### 6.7 Model allowlist and workspaces
 
@@ -908,7 +916,7 @@ Separate Anthropic workspaces for production, staging and evals, each with its o
 
 ### 6.8 Reconciliation
 
-A daily job pulls the Anthropic Usage and Cost Admin API for the production workspace (admin key held only by the scheduler), sums our `ai_usage.cost_micro_usd` for the same day and alerts if the gap exceeds 3%. A dashboard in the admin console shows cost per feature, tier and user, cache hit ratio and refusal rate. The monthly repricing job compares credits sold with real cost per feature and opens a task when a feature drifts more than 20%.
+A daily job pulls the Anthropic Usage and Cost Admin API for the production workspace (admin key held only by the scheduler), sums our `ai_usage.cost_usd_micros` for the same day and alerts if the gap exceeds 3%. A dashboard in the admin console shows cost per feature, tier and user, cache hit ratio and refusal rate. The monthly repricing job compares credits sold with real cost per feature and opens a task when a feature drifts more than 20%.
 
 ### 6.9 Capacity
 
@@ -941,23 +949,23 @@ The existing `task_prompt()` put the date and routine name ahead of the task JSO
 
 ## 8. Shared research cache
 
-The same destination, window and topic is researched once and served to everyone. Table: `shared_research_cache`.
+The same destination, window and topic is researched once and served to everyone. Table: `shared_research_cache` (03 section 5.11).
 
 ### 8.1 Columns the code relies on
 
-`key` (text, primary key), `topic`, `place_id` (canonical Geoapify or GeoNames id for the destination), `window_start`, `window_end`, `payload` (jsonb: notes or quotes, each with `urls`, `retrieved_at`), `status` (`fresh`, `stale`, `refreshing`, `flagged`), `expires_at`, `refreshing_until` (lease), `hit_count`, `model`, `prompt_version`, `cost_micro_usd`, `created_by_run_id`, `updated_at`.
+`key` (`char(64)`, primary key), `kind` (`ai_research` for research notes, `destination_brief` for briefs, `agent_result` for fare hunts and deep research; `visa_summary`, `neighborhoods` and `rentals` belong to other features), `provider`, `params` (jsonb: the normalized input, including `topic`, `place_id` (canonical Geoapify or GeoNames id for the destination), `window_start` and `window_end`), `response` (jsonb: notes or quotes), `sources` (jsonb: the URLs with `retrieved_at`), `response_bytes`, `model`, `prompt_version`, `fetched_at`, `expires_at`, `stale_until`, `hit_count`, `last_hit_at`. There is no `status` column: an entry is fresh until `expires_at`, stale (served with "checked N days ago" and refreshed in the background) until `stale_until`, and purged after it; `stale_until` is `expires_at` plus one TTL by default. A refresh lease, a `flagged` state, `cost` and the creating run are not columns (see Schema notes).
 
 ### 8.2 Keys
 
 ```
-key = sha256( topic | place_id | round_start(window_start) | round_end(window_end) | prompt_version | feature_family )
+key = sha256( kind | topic | place_id | round_start(window_start) | round_end(window_end) | prompt_version | model )
 ```
 
 - `topic` is from the fixed list (`destination_brief`, `events_and_closures`, `reservations_needed`, `getting_around`, `seasonal_notes`, `fare_hunt`).
 - Windows are rounded so near-identical trips share: for research, start rounds down and end rounds up to the week boundary (Monday). Exact dates are filtered on read so a user only sees items that overlap their own dates.
 - Fare hunts key on exact origin set, destination set, depart window and return rule, `trip_type` and `passengers` are not in the key (price is stored per person where the page allowed it and scaled on read), cabin is.
 - `prompt_version` is part of the key, so a prompt change naturally cold-starts the cache.
-- Jobs with custom question text or traveler instructions never read or write the cache (`ai_usage.shared_cache = 'bypass'`).
+- Jobs with custom question text or traveler instructions never read or write the cache (the run has no `cache_key`; `ai_usage.cache_hit` stays false).
 
 ### 8.3 TTLs
 
@@ -976,17 +984,16 @@ Stale entries are served with "checked N days ago" and refreshed in the backgrou
 ```python
 async def get_or_run(key, run_fn):
     row = db.get(key)
-    if row and row.status in ("fresh", "stale") and row.expires_at > now():
+    if row and row.expires_at > now():                         # fresh; a stale row (expires_at < now < stale_until) is served by the caller and refreshed here
         bump(row); return row, "hit"
-    lock = await advisory_lock(db, hashtextextended(key, 0))   # pg_try_advisory_xact_lock
+    lock = await advisory_lock(db, hashtextextended(key, 0))   # session-level pg_try_advisory_lock: the lease survives the transaction and dies with the worker
     if not lock:
         row = await wait_for_fresh(key, timeout=90)            # LISTEN/NOTIFY on a channel per key, poll fallback
         if row: return row, "hit"                              # waiter is charged the hit price
         raise Busy()                                           # client shows "Queued"
     row = db.get(key)                                          # re-check after acquiring
-    if row and row.status == "fresh" and row.expires_at > now():
+    if row and row.expires_at > now():
         return row, "hit"
-    mark_refreshing(key, lease=10 minutes)
     row = await run_fn()                                       # the real job, on the first requester's budget
     return row, "miss"
 ```
@@ -996,12 +1003,12 @@ So 50 users asking for "Lisbon, April" cause one model run. Credits: the first r
 ### 8.5 Privacy and poisoning
 
 - Shared jobs use only destination, dates and party size. Names, notes and free-text instructions never enter the prompt. Personal touches come from a cheap Haiku pass afterward that rephrases nothing factual and adds no new claims.
-- A hostile page could steer a brief everyone sees. Mitigations: the ingest validators; the provenance check; a Haiku `classifier` pass for instruction-like or promotional text before caching (affiliate domains, phone numbers and "book now" phrasing are rejected); plain-text notes with domain-only link labels; and a "Report a problem" control on every note that sets the entry `flagged`, removes it from serving, and re-runs it on the next request. Three reports from different users pause the topic for that destination until an admin reviews it.
+- A hostile page could steer a brief everyone sees. Mitigations: the ingest validators; the provenance check; a Haiku `classifier` pass for instruction-like or promotional text before caching (affiliate domains, phone numbers and "book now" phrasing are rejected); plain-text notes with domain-only link labels; and a "Report a problem" control on every note that sets the entry's `expires_at` and `stale_until` to now (so it is no longer served and is purged), and re-runs it on the next request. Three reports from different users pause the topic for that destination until an admin reviews it.
 - Hit rates (assumptions to measure): research 30% at 1,000 monthly active users, 55% at 10,000, 75% at 100,000; fare hunts 10%, 25% and 40%.
 
 ### 8.6 Cache warming
 
-A nightly Batch job on the `scheduled` queue warms the most requested keys: for each of the top 200 destinations by trip count and each of the next 3 months, run `destination_brief` and `seasonal_notes`, and refresh `events_and_closures` for windows starting within 30 days. Budget is a platform line in `ai_usage` (`user_id` null, `feature = 'cache_warm'`), capped per day by `feature_flags` key `ai.warm_daily_usd` (default $5) and halted by `ai.batch`.
+A nightly Batch job in the `batch` lane warms the most requested keys: for each of the top 200 destinations by trip count and each of the next 3 months, run `destination_brief` and `seasonal_notes`, and refresh `events_and_closures` for windows starting within 30 days. Budget is a platform line in `ai_usage` (`user_id` null, `action = 'research'`, `idempotency_key` `warm:{key}`, `via_batch` true), capped per day by the `feature_flags` row `setting_ai_warm_daily_usd` (`rules` holds the dollar value, default $5) and halted by the `ai.batch` kill switch (not seeded, see Schema notes).
 
 ## 9. Batch API
 
@@ -1011,7 +1018,7 @@ Batch fits scans, the digest, nightly evals and cache warming (latency up to 24 
 - Key requests `custom_id = scan:{route_id}:{window}:{date}` (scans), `digest:{trip_id}:{week}`, `warm:{key}`, `eval:{suite}:{case_id}`. Results arrive in any order: always match by `custom_id`.
 - Batch rejects server-side `fallbacks`: a `refusal` is a failed item; write it to `ai_usage` and skip.
 - Savings are on tokens only. With 6 searches at $0.06 of a $0.125 scan, Batch saves 26%, not 50%; fewer searches per scan is the bigger lever. Estimated cost per scan $0.0925.
-- A `batch` flag on `ai_usage` halves the token part in 6.2. Poll every 60 seconds; a batch older than 24 hours is marked expired and its items re-queued once.
+- `ai_usage.via_batch` halves the token part in 6.2. Poll every 60 seconds; a batch older than 24 hours is marked expired and its items re-queued once.
 - Prompt caching in batch is best-effort; use the 1-hour TTL for batches that share a prefix.
 
 ## 10. Evals and release gates
@@ -1032,15 +1039,15 @@ Fare correctness is the trust core. Build these before launch and run them throu
 
 Release gates:
 
-1. A prompt, model, tool schema, effort or `max_uses` change ships only with a passing eval run recorded against its `prompt_version` (stored in the repository and stamped on `runs` and `ai_usage`).
+1. A prompt, model, tool schema, effort or `max_uses` change ships only with a passing eval run recorded against its `prompt_version` (stored in the repository and stamped on `runs.prompt_version` and on `shared_research_cache.prompt_version`).
 2. Canary: a new prompt version serves 5% of eligible runs for 48 hours; rollback if ingest rejection rate, suspect-flag rate or grounding-failure rate rises by more than 20% relative, or refusal rate exceeds 0.5%.
-3. Pro launch gate (README): 200 measured API agent runs average $0.60 or less per run, or more than 15% of Plus payers buy agent-run credits. The measurement is per-run cost from `ai_usage` sums.
+3. Pro launch gate (README): 200 measured API agent runs average $0.60 or less per run, or more than 15% of Plus payers buy agent-run credits. The measurement is per-run cost from `runs.cost_usd_micros` (equal to the run's `ai_usage.cost_usd_micros`).
 4. Online checks: a daily canary re-checks 20 accepted fares against a fresh fetch (in a sandboxed job that never touches blocked domains); every agent-found fare has a "Price was different" button that feeds the eval set; thumbs on `explain` and drafts feed the quality judge.
 5. Regression tests use a fake Messages client replaying recorded fixtures (`server_tool_use`, `pause_turn`, `refusal`, `max_tokens`) in place of the old `fake_claude.py`; CI never calls Anthropic.
 
 ## 11. Observability
 
-- `run_events` kinds: `started`, `tool_call`, `tool_result`, `server_tool`, `ingest_accept`, `ingest_rejection`, `warning`, `usage`, `stopped`, `finished`, `error`. Summaries are kept by default; full payloads for 14 days.
+- `run_events.type` values (03): `info`, `warning`, `error`, `tool_use`, `tool_result`, `text`, `result`, `rejection`. The finer kinds this spec uses (`started`, `server_tool`, `ingest_accept`, `ingest_rejection`, `usage`, `stopped`, `finished`) are in `payload.kind`. Summaries are kept by default; full payloads for 14 days.
 - Metrics: cost per feature, per tier and per active payer; turns, searches and fetches per run; cache hit ratio (prompt and shared); refusal rate; ingest acceptance rate; queue wait time; p50 and p95 latency; credits sold vs real cost.
 - Alerts: cost per active payer, reconciliation gap over 3%, refusal rate, unmatched `ai_usage` model, reaper firing, daily spend breaker.
 
@@ -1069,9 +1076,23 @@ Before `booking_import`, a local redactor replaces emails, phone numbers, long d
 
 ### 12.4 Consent, retention and disclosure
 
-- First use of any AI feature shows the consent screen ("Your trip details and questions are sent to Anthropic to generate suggestions"), stores a `consents` row with a timestamp and policy version, and respects an "AI off" switch in settings that disables every feature in this file for that user. The switch is checked at admission.
+- First use of any AI feature shows the consent screen ("Your trip details and questions are sent to Anthropic to generate suggestions"), stores a `consents` row (`kind = 'ai_processing'`, `version`, `granted`, timestamp), and respects an "AI off" switch (withdrawing that consent, or `trips.ai_enabled` per trip) that disables every feature in this file. The switch is checked at admission.
 - Anthropic's API does not train on API traffic by default; retention is per the commercial terms. Confirm the retention and data processing terms before launch and document them in the privacy policy ([10-quality-security-launch.md](10-quality-security-launch.md)).
 - Every AI result is labeled ("AI suggestion, check details before booking" or "Found by AI, check the source"), links to its sources, and has thumbs up and down that double as the report channel.
 - `run_events` payloads that contain fetched page text are deleted after 14 days; stored notes keep their sources.
-- Account deletion removes `runs`, `run_events`, `notes` and `ai_usage` rows tied to the user; `ai_usage` rows needed for financial reconciliation are kept with the user id replaced by a null and the trip id removed.
+- Account deletion removes `runs`, `run_events`, `notes` and `ai_usage` rows tied to the user; `ai_usage` rows needed for financial reconciliation are kept with `user_id` null (and `trip_id` null once the trip is deleted).
 - Affiliate data stays out of AI: the model never sees click, conversion or partner information.
+
+## Schema notes
+
+Things this file needs that 03-database-schema.md does not have yet. Model prices stay a code constant (`ai/pricing.py`, 6.1) because 03 has no price table for them.
+
+- `ai_usage` has no per-response rows, `request_id`, `turn`, `stop_reason`, `web_fetches` or separate 5-minute and 1-hour cache-write counts. This file puts them in `run_events` usage rows (`payload`) and sums the cache-write kinds into `cache_write_tokens`. Platform work (`digest`, `cache_warm`, `classifier`, `eval`) has no credit action, so its `ai_usage` rows borrow the closest `ai_action` (`research` for cache warming and `explain` for the rest) with `user_id` null.
+- `run_kind` has no values for `packing_list`, `booking_import`, `digest`, `cache_warm`, `classifier` or `eval`; `packing_list` and `booking_import` use `explain`.
+- `ai_usage.cache_hit` is a boolean; the `hit`, `miss`, `refresh`, `bypass` split in the admin dashboards is derived (`bypass` is a run with no `cache_key`; `refresh` is a background refresh of a stale row).
+- `shared_research_cache` has no refresh-lease column, no `flagged` state, no report counter and no creating-run or cost column. The refresh lease is a session advisory lock; a flagged entry is expired at once; the "three reports pause the topic" rule (8.5) needs a report table (08 lists the same gap for content reports).
+- `runs` has no `heartbeat_at` or `failure_code`: the reaper uses the worker heartbeat and the latest `run_events.ts`, and the failure reason is in `runs.error`.
+- `add_note.topic` (2.5) has no column on `notes`; the executor prefixes it to the title or drops it.
+- `itinerary_items` has no `source` column, so AI drafts are not flagged after acceptance; `notes` has no separate retrieval time (`created_at` is used).
+- Kill switch keys `ai.explain`, `ai.draft`, `ai.research`, `ai.taster`, `ai.import`, `ai.packing`, `ai.web_search`, `ai.web_fetch`, `ai.model.sonnet`, `ai.model.haiku`, `ai.batch` and `ai.shared_cache_write` (6.6) are not in the 03 seed.
+- `taster` needs its `promo` grant written at sign-up or at the first offer (5.9); 03 seeds only the `taster_agent_runs` limit.

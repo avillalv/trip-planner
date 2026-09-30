@@ -802,3 +802,4 @@ Things this file needs that 03-database-schema.md does not have yet. Nothing her
 - Affiliate seeds: 03 section 11.4 has no rows for `travelpayouts_tripcom_flights` or `travelpayouts_omio` (8.1). `link_clicks` has no tier column (8.7).
 - Group payments (Phase 4, section 10): 03 has no collection table, no column for the organizer's Stripe Connect account id, and no `disputed` status on `settlements`.
 - Partner guide sponsorship terms (start and end dates, price, invoice reference) and print order tax have no columns (11.2, 11.3).
+- 03 section 11.1 seeds `polls` and `cost_splitting` as false for `trip_pass`, which contradicts the README group-tools rule (and 2.2 above). The seed needs `true` for `trip_pass`, and `group_payments` (Phase 4) added for `pro` and `group_trip_pass`.
