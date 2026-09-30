@@ -371,12 +371,10 @@ Final flight data setup: **Travelpayouts Data API as the free baseline for all t
 
 ### 4.3 Places alternatives
 
-| Option | Price | Storage terms | Notes |
-|---|---|---|---|
-| Geoapify (current) | Free 3,000 credits a day; paid from $59/mo | Not verified. Ask in writing whether persistent storage is allowed (`places_cache` stores 7 days) | OSM-based, good value; attribution to OpenStreetMap (ODbL) and Geoapify |
-| Google Places (New) | Text Search Pro about $32 per 1,000 after 5,000 free a month; Enterprise about $35 per 1,000 after 1,000 free (reported, verify; [pricing](https://developers.google.com/maps/billing-and-pricing/pricing)) | `place_id` may generally be stored; other content has limited caching and needs a Google map or attribution. Verify | Best quality, 10x to 100x the cost per call; only for a rare detail lookup |
-| Foursquare Places | Pro endpoints free for 500 calls then $15 per 1,000; Premium $18.75 per 1,000 (reported, verify; pricing change 2026-06-01; [pricing](https://foursquare.com/pricing/)) | Not verified | Strong POI data, cheaper than Google |
-| Overture Maps or self-hosted OSM (Photon, Pelias) | Infra only | ODbL: attribution and share-alike on derived databases | Viable at 100k MAU when autocomplete volume makes request credits expensive |
+- **Geoapify (current):** free 3,000 credits a day, paid from $59/mo. OSM-based, good value; attribute OpenStreetMap (ODbL) and Geoapify. Storage terms not verified: ask in writing (`places_cache` stores 7 days).
+- **Google Places (New):** Text Search Pro about $32 per 1,000 after 5,000 free a month (reported, verify; [pricing](https://developers.google.com/maps/billing-and-pricing/pricing)). Best quality at 10x to 100x the cost; `place_id` may be stored but other content has caching limits. Only for a rare detail lookup.
+- **Foursquare Places:** Pro free for 500 calls then $15 per 1,000 (reported, verify; pricing change 2026-06-01; [pricing](https://foursquare.com/pricing/)). Caching policy not verified.
+- **Overture Maps or self-hosted OSM (Photon, Pelias):** infra only, ODbL share-alike on derived databases. Viable at 100k MAU.
 
 Stay on Geoapify at 1k and 10k MAU (upgrading the plan as needed), get written confirmation on caching and storage, and keep the `places` interface swappable so Foursquare or self-hosted Photon can take autocomplete at 100k MAU.
 
@@ -507,5 +505,3 @@ Data export: `GET /api/me/export` returns a JSON archive of the user's trips. It
 - **Medium:** Travelpayouts terms and thresholds (user-initiated searches only, "Book" button rules, 50,000 MAU and conversion floors for the Search API) come from search summaries (reported, verify, 2026-09-30). Read the full agreement before integrating.
 - **Low:** Frankfurter (ECB data) and OurAirports (public domain per its docstring) look fine; confirm there is no attribution duty.
 - Not verified at all: the Duffel primary pricing page, Skyscanner commission rates and user minimum, per-program affiliate commission tables, Ignav data provenance, the Amadeus shutdown date on a primary page.
-
-Sources (found by search on 2026-09-30): [Google v. SerpApi coverage](https://ipwatchdog.com/2025/12/26/google-sues-serpapi-parasitic-scraping-circumvention-protection-measures/), [SerpApi legal](https://serpapi.com/legal), [SerpApi pricing summary](https://scrapegraphai.com/blog/serpapi-pricing), [Amadeus shutdown](https://www.phocuswire.com/amadeus-shut-down-self-service-apis-portal-developers), [Duffel pricing](https://duffel.com/pricing), [Travelpayouts Data API](https://support.travelpayouts.com/hc/en-us/articles/203956163-Aviasales-Data-API), [Travelpayouts Search API requirements](https://support.travelpayouts.com/hc/en-us/articles/210995808-Requirements-for-Aviasales-Flight-Search-API-access), [Geoapify pricing](https://www.geoapify.com/pricing/), [Google Maps Platform pricing](https://developers.google.com/maps/billing-and-pricing/pricing), [Foursquare pricing](https://foursquare.com/pricing/), [Wikimedia APIs](https://www.mediawiki.org/wiki/Wikimedia_REST_API/en), [Frankfurter](https://frankfurter.dev/).

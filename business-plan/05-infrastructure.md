@@ -32,12 +32,10 @@ Good news for the port: the `runs` table is already a Postgres-backed queue with
 
 | File | Assumption | Change |
 |---|---|---|
-| `backend/tripplanner/supervisor.py` | A parent process supervises web and worker, restarts with backoff, runs migrations and a backup at startup | Delete. The platform restarts containers. Migrations move to a pre-deploy step (section 5.5) |
-| `backend/tripplanner/process.py` | `start_parent_watchdog` polls the supervisor PID because Windows does not kill children | Delete the watchdog. Keep `RedactSecrets` and `configure_logging` (switch to JSON output) |
+| `supervisor.py`, `process.py` | A parent process supervises web and worker, runs migrations and a backup at startup, and a PID watchdog exists because Windows does not kill children | Delete both (keep `RedactSecrets`, switch `configure_logging` to JSON). The platform restarts containers. Migrations move to a pre-deploy step (section 5.5) |
 | `backend/tripplanner/worker/main.py` | Single worker, singleton heartbeat row (`id=1`), backup scheduling in the worker loop | One heartbeat row per instance; backups leave the app entirely |
 | `backend/tripplanner/worker/scheduler.py` | In-process APScheduler, one job per routine, per-process thread pools, `catch_up` for a sleeping PC, `kill_orphan(pid)` | Replace with a durable queue and a `next_run_at` scanner (section 4). Two instances of this code would double-fire every routine |
-| `worker/agents/runner.py`, `services/claude_cli.py`, `agent_bridge/` | Shells out to the Claude Code CLI (`find_claude`, `NO_WINDOW`, CLI sign-in state), MCP bridge started with `sys.executable`, PID tracking | Cannot be multi-tenant (one CLI login, one machine). Rebuild the agent loop on the Claude Messages API with tool use, inside a normal job. `submit_flight_quotes`, `add_note` and `finish_run` become in-process client tools; the evidence rules and blocked domains (Airbnb, Vrbo, Booking) stay |
-| `backend/tripplanner/api/agent.py`, `AGENT_INGEST_API_KEY` | One global ingest key, accepted only from loopback | Direct in-process writes from the job, no HTTP hop |
+| `worker/agents/runner.py`, `services/claude_cli.py`, `agent_bridge/` | Shells out to the Claude Code CLI (`find_claude`, `NO_WINDOW`, CLI sign-in state), MCP bridge started with `sys.executable`, PID tracking | Cannot be multi-tenant (one CLI login, one machine). Rebuild the agent loop on the Claude Messages API with tool use, inside a normal job. The loopback-only ingest API and `AGENT_INGEST_API_KEY` go away. `submit_flight_quotes`, `add_note` and `finish_run` become in-process client tools; the evidence rules and blocked domains (Airbnb, Vrbo, Booking) stay |
 | `backend/tripplanner/services/backups.py` | `pg_dump.exe`, `PROGRAMFILES\PostgreSQL`, local backup folder, 03:30 local time, keep 14 | Managed Postgres backups plus point-in-time recovery (PITR). Keep a logical `pg_dump` job only as an off-provider copy in object storage |
 | `backend/tripplanner/services/system_status.py` | Reports Claude CLI path, version and sign-in; worker status from the singleton heartbeat | Readiness checks: database, queue depth and oldest age, Anthropic reachability, provider budgets |
 | `backend/tripplanner/paths.py` | `%LOCALAPPDATA%`, repo-relative `data/`, `.env` at repo root, `frontend/dist` beside the backend | Container paths via env vars. No writable local state: logs to stdout, files to object storage |
@@ -46,8 +44,7 @@ Good news for the port: the `runs` table is already a Postgres-backed queue with
 | `backend/tripplanner/main.py`, `spa.py` | The API serves the SPA from disk; no CORS; docs open at `/api/docs` | API serves JSON only. The web build goes to Cloudflare Pages. Docs disabled or gated in production |
 | `backend/tripplanner/db.py` | Default SQLAlchemy pool, no timeouts, connects to localhost | Explicit pool size per process, statement and lock timeouts, TLS to the database, pooler-compatible settings |
 | `services/serpapi_budget.py`, `services/app_settings.py`, `AppSetting` | One global monthly cap sized to the free 250 searches; global key-value settings | Per-account credit and provider-spend ceilings plus one global provider budget (section 4.5). Per-user settings table |
-| `backend/tripplanner/setup_db.py`, `scripts/setup.mjs` | Creates roles and databases with a Postgres superuser prompt | Dev only. Production databases come from `render.yaml` or the provider console |
-| `scripts/*.ps1`, `package.json` (`autostart:*`, `share`, `backup`, `restore`) | Windows Task Scheduler, Tailscale serve, Windows Firewall | Keep for the personal install; not part of the hosted product. Docker and CI scripts sit beside them |
+| `setup_db.py`, `scripts/*.ps1`, `package.json` (`autostart:*`, `share`, `backup`, `restore`) | Superuser-prompt database setup, Windows Task Scheduler, Tailscale, Windows Firewall | Keep for the personal install only. Production databases come from `render.yaml`; Docker and CI scripts sit beside these |
 | Data model | Single household: no ownership or membership on trips, routines, runs, places, settings | Trip-scoped membership (`trip_members`), UUID public ids, `owner_user_id` and `linked_user_id` on `people`, row-level security as a second layer. Schema detail is in [06-database-and-data-integrations.md](06-database-and-data-integrations.md) |
 | `README.md` (repo root) | Windows 11 requirements, autostart, Tailscale, `pg_dump.exe` backups | Split into a personal-install doc and an operations runbook |
 
@@ -139,15 +136,14 @@ Why this over AWS or Google Cloud now: at 1k to 10k MAU the infrastructure bill 
 
 ### When to graduate
 
-Move to AWS ECS Fargate + RDS (or Cloud Run + Cloud SQL) at around 50k MAU or $1,500 a month on Render, or sooner if any of these is true:
+Move to AWS ECS Fargate + RDS (or Cloud Run + Cloud SQL) at around 50k MAU or $1,500 a month on Render, or sooner if any of these is true.
 
-| Trigger | Threshold |
-|---|---|
-| Database | Primary above 60 percent CPU sustained, larger than the provider's biggest plan, or a read replica and cross-region failover are needed |
-| Cost | Render bill above about $1,500 a month with clear savings from reserved AWS capacity |
-| Compliance or contracts | Partner deals needing a VPC, private link, SOC 2 evidence, or an EU region |
-| Scale | Queue wait p95 above 5 minutes despite adding workers, or about 50k MAU |
-| Team | You hire someone who has run AWS before |
+
+- Database: primary above 60 percent CPU sustained, larger than the provider's biggest plan, or a read replica and cross-region failover are needed.
+- Cost: Render bill above about $1,500 a month with clear savings from reserved AWS capacity.
+- Contracts: partner deals needing a VPC, private link, SOC 2 evidence or an EU region.
+- Scale: queue wait p95 above 5 minutes despite adding workers, or about 50k MAU.
+- Team: you hire someone who has run AWS before.
 
 Migration path: build the Terraform and a second environment while still on Render, restore a PITR snapshot into RDS, use logical replication for a near-zero-downtime cutover, then flip Cloudflare DNS. Supabase Auth and Cloudflare are unaffected by the move.
 
@@ -178,8 +174,7 @@ What the scheduler runs is fixed by the decisions of record. Scheduled agents ar
 2. **Jitter.** Spread each routine by a stable per-routine offset (hash of routine id) inside a 30 to 60 minute window, so checks do not all fire at the same minute.
 3. **Fair claim.** Claim by least-recently-served user, not oldest job: order by (priority, that user's running jobs, queued_at). Cap concurrent jobs per account (for example 2 on Free, 4 on Plus and Trip Pass, 8 on Premium) and per lane. Agent runs are capped separately at one at a time per account (a partial unique index on running agent runs).
 4. **Lanes.** `api`: many small provider calls, 20 to 50 concurrent per worker instance. `ai`: 4 to 10 per instance, long-running. `notify`: high concurrency, tiny jobs. Scale by adding instances on queue depth and oldest-job age.
-5. **Priority.** Premium gets the priority queue when it launches, with aging so other jobs are never starved.
-6. **Graceful shutdown.** Workers finish or checkpoint on SIGTERM, heartbeat per job (`locked_at`, `heartbeat_at`), and a reaper requeues jobs whose heartbeat is stale instead of marking everything interrupted.
+5. **Priority and shutdown.** Premium gets the priority queue when it launches, with aging so other jobs are never starved. Workers checkpoint on SIGTERM, heartbeat per job, and a reaper requeues jobs with a stale heartbeat.
 
 ### 4.4 Dedup of identical searches across users
 
@@ -189,8 +184,7 @@ Most travelers search the same popular routes, so every provider call is normali
 - Table `search_cache(search_key PK, payload, fetched_at, expires_at, hits, cost_units)` plus an in-flight marker. A Procrastinate `queueing_lock` (or unique partial index) collapses concurrent identical jobs into one; the others wait on the cache row.
 - Fan-out: each user's job reads the shared result and writes that user's own price rows, alerts and notes. The expensive call is paid once.
 - AI research uses the same idea, keyed by (destination, month, interests bucket, model, prompt version) with a longer TTL. A research question served from this cache costs 1 credit instead of 8. Cache hit rate is the most important cost metric; target above 60 percent at 10k MAU.
-- Keep the existing `ApiCall.cached` flag and report hit rate from it.
-- Privacy: the shared cache stores only public facts (prices, places, web research), never user notes or itineraries.
+- Report hit rate from the existing `ApiCall.cached` flag. The shared cache stores only public facts (prices, places, web research), never user notes or itineraries.
 
 ### 4.5 Per-account budget checks before enqueue
 
@@ -226,14 +220,11 @@ Rules:
 - Per-run hard stops are enforced in code by the run itself, not only by the ledger. Agent run: 20 turns, 10 web searches, 10 page fetches, effort `medium`, stop at $0.80. Research question: 5 searches, 8 fetches, stop at $0.16.
 - A run that hits its hard stop finishes with what it has and settles real spend; it never continues past the cap.
 - Free accounts get a hard stop plus an upsell prompt. Paid accounts get a notification at 80 percent of the monthly ceiling and a hard stop at 100 percent, with the option to buy a credit pack.
-- The cost unit covers Claude tokens (input, output, cache read, cache write, web search, batch discount) and provider searches, using a versioned price table.
-- A global circuit breaker (daily Claude spend, per-provider quota) pauses non-urgent lanes and pages the founder.
-- Estimates come from per-feature averages in `ai_usage`; settling with real usage makes drift self-correct.
+- A global circuit breaker (daily Claude spend, per-provider quota) pauses non-urgent lanes and pages the founder. Estimates come from per-feature averages in `ai_usage`, and settling with real usage corrects drift.
 
 ### 4.6 Retries and idempotency
 
-- Retry policy by error class: transient (429, 5xx, timeouts) uses exponential backoff with jitter, max 5 attempts, honoring `Retry-After`. Permanent errors (400, validation, budget exhausted) fail immediately. Claude `overloaded` and rate-limit responses back off the whole `ai` lane, not just the job.
-- After the last attempt a job goes to a dead-letter state, visible in an admin view and counted in a metric.
+- Retry policy by error class: transient (429, 5xx, timeouts) uses exponential backoff with jitter, max 5 attempts, honoring `Retry-After`. Permanent errors (400, validation, budget exhausted) fail immediately. Claude `overloaded` and rate-limit responses back off the whole `ai` lane, and exhausted jobs go to a visible dead-letter state.
 - Idempotency keys: scheduled runs are unique on `(routine_id, slot_at)`; user-initiated runs carry an `Idempotency-Key` header with a unique index per user; provider writes use `INSERT ... ON CONFLICT DO NOTHING` on (user, trip, flight signature, checked_at bucket); notifications are unique on `(user_id, alert_id, channel)` so a retry never sends a second push.
 - Jobs must be safe to re-run: write results in one transaction at the end, or checkpoint at defined points (the existing `RunLog` events are a good base).
 - Batch API: a nightly job submits a batch (50 percent cheaper, up to 24 hours), stores the `batch_id`, and a poller job collects results. Batch is only for offline work: shared-cache warming, nightly digests and scheduled fare scans. Never for multi-turn agents or anything a user is waiting on.
@@ -266,8 +257,7 @@ iOS builds run separately (a Mac mini or Xcode Cloud, since iOS builds need macO
 
 | Environment | Purpose | Data | Third parties |
 |---|---|---|---|
-| Local | Daily development | Local Postgres, seed data | Provider keys optional; Claude calls mocked or on a low-limit dev key |
-| CI | Tests | Ephemeral Postgres per run | All providers mocked |
+| Local and CI | Development and tests | Local or ephemeral Postgres, seed data | Providers mocked; Claude on a low-limit dev key |
 | Preview (per PR) | Review | Small instance with seed data | Sandbox keys, APNs sandbox, a separate Supabase project |
 | Staging | Release rehearsal | Synthetic or anonymized data | Separate Anthropic workspace with a low spend limit, App Store sandbox, APNs sandbox |
 | Production | Users | Real | Separate Anthropic workspace and separate keys per environment |
@@ -327,14 +317,12 @@ Build this before launch; a runaway agent loop is the most likely way to lose mo
 - Dashboard (Grafana or Metabase): spend per day, model, feature and tier, cost per active user, p95 and p99 user cost, top 20 spenders, cache hit rate, batch share, cost of failed or retried calls, and gross margin per tier (revenue after Apple's 15% fee, minus AI, minus infra).
 - Alerts: daily global spend above 1.5 times the trailing 7-day average, plus an absolute daily cap; any account above its daily ceiling by a margin (a bug signal, since the ledger should prevent it); any job passing its turn or dollar cap; cache hit rate down more than 20 points; Anthropic 429 or overloaded rate above 5 percent for 10 minutes.
 - Measure real cost per agent run from day one. Premium launches only when it is $0.60 or less per run over 200 runs, or when more than 15 percent of Plus payers buy agent-run credits ([03-ai-features-and-costs.md](03-ai-features-and-costs.md)).
-- Kill switches (feature flags in the database): pause the `ai` lane, force Haiku for a feature, disable web search, disable free-tier AI, keep scheduled agents off. Practice using them.
-- Backstop outside our code: Anthropic workspace spend limits per environment.
+- Kill switches (database feature flags): pause the `ai` lane, force Haiku for a feature, disable web search or free-tier AI, keep scheduled agents off. Practice them. Anthropic workspace spend limits are the backstop outside our code.
 
 ### 6.5 Uptime and health
 
 - External probes (Better Stack or UptimeRobot) on `/api/health/ready` from two regions, plus a synthetic check that signs in with a test account and loads a trip. Public status page.
-- Heartbeat monitors for the scheduler ("routine scan ran in the last 3 minutes"), nightly jobs (dump to object storage), and the queue ("oldest job under 10 minutes").
-- Targets: API availability 99.9 percent (about 43 minutes a month), and price-alert delivery within 30 minutes of a scheduled check.
+- Heartbeat monitors for the scheduler (scan ran in the last 3 minutes), nightly jobs, and the queue (oldest job under 10 minutes). Targets: API availability 99.9 percent, price-alert delivery within 30 minutes of a scheduled check.
 - The founder is on call: keep alerts few, and phone only for outage, data-loss risk and spend runaway. A Supabase Auth outage blocks new sign-ins but not requests with a valid JWT; list it in the runbooks.
 
 ## 7. Security and resilience
@@ -350,9 +338,8 @@ Build this before launch; a runaway agent loop is the most likely way to lose mo
 | Multi-tenancy | Every query goes through one data-access layer that checks `trip_members` or ownership; tenancy tests try to read another account's trip, run, place and budget; Postgres row-level security as a second lock behind the app checks. See [04-users-and-accounts.md](04-users-and-accounts.md) |
 | AI-specific | Web search results and user text are untrusted input to the model: no tool can write outside the calling account's scope, no shared credentials in prompts, output validated against schemas before it is written, per-run turn and dollar caps, and the blocked domains (Airbnb, Vrbo, Booking) enforced in the fetch tool |
 | Secrets and keys | See 5.4. Least-privilege database roles: `app` (DML only), `migrator` (DDL), `readonly` (analytics) |
-| Data protection | Encryption at rest (provider default), TLS to the database, field-level encryption only for the truly sensitive (never store passport numbers) |
+| Data protection | Encryption at rest (provider default), TLS to the database, field-level encryption only for the truly sensitive (never store passport numbers). Dependabot, `pip-audit` and pinned lockfiles cover dependencies |
 | Privacy and App Store | In-app account deletion that really deletes (Guideline 5.1.1(v), including the Supabase Auth user), data export job, privacy manifest and nutrition labels, retention limits on run logs, a data processing agreement with each processor (Anthropic, Cloudflare, Supabase, Render, Sentry, email) |
-| Dependencies | Dependabot, `pip-audit`, `npm audit`, pinned lockfiles (`uv.lock`, `package-lock.json`) |
 
 ### Backups, PITR and disaster recovery
 
@@ -416,7 +403,7 @@ Phases and effort match the roadmap in the [README](README.md); the mobile and s
 2. **Keeping the Claude Code CLI path.** The CLI has one local sign-in, cannot be metered per user, cannot be parallelized safely, and needs a process per run. Final decision: replace it fully with Messages API calls with tool use, run in our own worker. This is a rewrite of `worker/agents/runner.py`, `services/claude_cli.py`, `agent_bridge/` and the ingest API. Managed Agents was considered and deferred.
 3. **Batch API for scheduled work.** The draft argued Batch suits overnight refresh but not twice-daily price checks. Final decision: the scheduler runs API price checks (provider calls, mostly no LLM) plus batch scans, and Batch is used only for offline jobs (cache warming, nightly digests, scheduled fare scans). It is never used for multi-turn agents or anything a user waits on. Scheduled agents are off for everyone until Premium.
 4. **Supabase as a default.** The draft rejected Supabase because this app has a real backend and clients would not use its database API or RLS. That reasoning holds for its database, storage and API, but not for Auth. Final decision: Supabase is used for Auth only (sign-in, with JWTs verified by FastAPI), and the database is Render Postgres. Neon was considered for branching and not chosen.
-5. **Scale-to-zero platforms (Cloud Run, Fly) as the first home.** The workload is mostly long-running background work, which favors always-on workers, and Cloud Run Services scale by request. Final decision: Render for the first home; AWS or Google Cloud at about 50k MAU or $1,500 a month.
-6. **CDN for the SPA as a headline component.** The draft treated the web app as a bonus. The roadmap ships a hosted web beta before iOS, so the web build lives on Cloudflare Pages from Phase 1. Cloudflare's WAF and rate rules in front of the API still matter more than SPA edge caching.
-7. **Over-building for 100k MAU.** Do not adopt Kubernetes, microservices, multi-region or per-tenant databases. One Postgres primary with good indexes, a queue and stateless containers carries the product to roughly 50k MAU. The saved time goes to dedup, caching and budget enforcement, which decide margin.
-8. **Nightly `pg_dump` as the backup story.** Fourteen local dumps do not survive a hosted setup. Final decision: PITR is the primary protection, a weekly off-provider logical dump is the secondary, and a restore drill matters more than either.
+5. **Scale-to-zero platforms (Cloud Run, Fly) as the first home.** The workload is mostly long-running background work, which favors always-on workers. Final decision: Render first; AWS or Google Cloud at about 50k MAU or $1,500 a month.
+6. **CDN for the SPA as a headline component.** The draft treated the web app as a bonus. The roadmap ships a hosted web beta before iOS, so the web build lives on Cloudflare Pages from Phase 1. WAF and rate rules in front of the API still matter more than edge caching.
+7. **Over-building for 100k MAU.** No Kubernetes, microservices, multi-region or per-tenant databases. One Postgres primary, a queue and stateless containers carry the product to roughly 50k MAU; the saved time goes to dedup, caching and budget enforcement, which decide margin.
+8. **Nightly `pg_dump` as the backup story.** Final decision: PITR is the primary protection, a weekly off-provider dump is the secondary, and a restore drill matters more than either.
