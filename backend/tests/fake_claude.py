@@ -26,7 +26,7 @@ def emit(event: dict) -> None:
     print(json.dumps(event), flush=True)
 
 
-def assistant(*blocks: dict, model: str = "claude-sonnet-5") -> None:
+def assistant(*blocks: dict, model: str = "claude-sonnet-5-5") -> None:
     emit({"type": "assistant", "message": {"model": model, "role": "assistant", "content": list(blocks)}})
 
 
@@ -52,7 +52,7 @@ def result(**overrides: object) -> None:
             "cache_read_input_tokens": 30000,
             "output_tokens": 1500,
         },
-        "modelUsage": {"claude-sonnet-5": {"costUSD": 0.1234}},
+        "modelUsage": {"claude-sonnet-5-5": {"costUSD": 0.1234}},
         "terminal_reason": "completed",
     }
     event.update(overrides)
@@ -86,7 +86,7 @@ def main() -> None:
     init = {
         "type": "system",
         "subtype": "init",
-        "model": "claude-opus-5" if scenario == "wrong_model" else "claude-sonnet-5",
+        "model": "claude-sonnet-5" if scenario == "wrong_model" else "claude-sonnet-5-5",
         "claude_code_version": "2.1.283",
         "tools": TOOLS,
         "mcp_servers": [{"name": "trip", "status": "failed" if scenario == "mcp_failed" else "connected"}],

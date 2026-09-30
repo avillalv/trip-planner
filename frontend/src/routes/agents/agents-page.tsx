@@ -107,7 +107,7 @@ export function AgentsPage() {
             <h1 className="type-title">Agents</h1>
             <p className="mt-2 max-w-prose text-ink-soft">
               Claude searches the web on a schedule and saves what it finds, with links, for you to review. Runs use
-              your Claude subscription and always the Sonnet model.
+              your Claude subscription and always Sonnet 5.5.
             </p>
           </div>
           <Button onClick={() => openNew('flight_agent')}>

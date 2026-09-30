@@ -34,12 +34,12 @@ from tripplanner.services.runs import RunLog, cancel_requested
 from tripplanner.worker.agents.prompts import SYSTEM_PROMPT, task_prompt
 from tripplanner.worker.agents.stream import StreamParser, StreamState
 
-# Every agent run uses Sonnet. There is deliberately no --fallback-model.
-MODEL = "sonnet"
+# Every agent run uses Sonnet 5.5, pinned by full id: the CLI's "sonnet" alias can lag behind (on
+# 2.1.283 it still meant Sonnet 5). There is deliberately no --fallback-model.
+MODEL = "claude-sonnet-5-5"
 # Claude Code runs some background work (e.g. reading pages that WebFetch opens) on its small
-# "haiku" model. Pointing that at Sonnet too keeps every model call in a run on Sonnet.
-# Update this when a newer Sonnet ships; the run log warns if any other model shows up.
-BACKGROUND_MODEL = "claude-sonnet-5"
+# "haiku" model. Pointing that at the same Sonnet keeps every model call in a run on it.
+BACKGROUND_MODEL = MODEL
 WEB_TOOLS = ("WebSearch", "WebFetch")
 MCP_SERVER = "trip"
 # (max turns, timeout in minutes) when the routine doesn't set them.
@@ -268,10 +268,10 @@ def explain_failure(text: str) -> str:
 
 
 def guard_problem(state: StreamState) -> str | None:
-    """Stop runs that aren't on Sonnet or can't reach the trip tools."""
+    """Stop runs that aren't on the pinned Sonnet or can't reach the trip tools."""
     for model in filter(None, [state.model, *state.models_seen]):
-        if "sonnet" not in model.lower():
-            return f"Claude started with {model} instead of Sonnet, so the run was stopped."
+        if not model.lower().startswith(MODEL):
+            return f"Claude started with {model} instead of Sonnet 5.5 ({MODEL}), so the run was stopped."
     if state.model is not None and state.mcp_servers.get(MCP_SERVER) != "connected":
         status = state.mcp_servers.get(MCP_SERVER, "missing")
         return f"The trip tools didn't start ({status}), so nothing could be saved. The run was stopped."

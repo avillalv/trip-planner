@@ -111,7 +111,7 @@ function Command({ run }: { run: RunDetail }) {
           </pre>
           <p className="mt-2 max-w-prose text-xs text-ink-soft">
             Claude can search the web, open pages, and use the trip tools, which save through the app's checks. It has
-            no shell or file access, and the model is always Sonnet.
+            no shell or file access, and the model is always Sonnet 5.5.
           </p>
         </section>
       )}

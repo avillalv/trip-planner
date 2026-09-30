@@ -330,7 +330,7 @@ function RoutineForm({ initial, routineId, onDone }: { initial: RoutineDraft; ro
       </form>
 
       <DialogFooter className="items-center sm:justify-between">
-        <p className="text-xs text-ink-soft">Every run uses the Sonnet model.</p>
+        <p className="text-xs text-ink-soft">Every run uses Sonnet 5.5.</p>
         <div className="flex flex-col-reverse gap-2 sm:flex-row">
           <Button type="button" variant="outline" onClick={onDone}>
             Cancel

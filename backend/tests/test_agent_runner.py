@@ -40,7 +40,7 @@ def arg_after(argv: list[str], flag: str) -> str:
 def test_every_agent_command_uses_sonnet_without_a_fallback() -> None:
     argv = build_command(["claude"], Path("run"), max_turns=40)
 
-    assert arg_after(argv, "--model") == "sonnet"
+    assert arg_after(argv, "--model") == "claude-sonnet-5-5"
     assert argv.count("--model") == 1
     assert not any(a.startswith("--fallback-model") for a in argv)
 
@@ -76,7 +76,7 @@ def test_background_work_is_pinned_to_sonnet_too() -> None:
     env = runner.run_env({"PATH": "C:/bin", "ANTHROPIC_DEFAULT_HAIKU_MODEL": "claude-haiku-4-5"})
 
     assert env["ANTHROPIC_DEFAULT_HAIKU_MODEL"] == runner.BACKGROUND_MODEL
-    assert "sonnet" in runner.BACKGROUND_MODEL
+    assert runner.BACKGROUND_MODEL == runner.MODEL == "claude-sonnet-5-5"
 
 
 def test_mcp_config_holds_no_secrets(test_settings: Settings) -> None:
@@ -158,7 +158,7 @@ def test_a_successful_run_is_logged_and_measured(agent, db_session: Session) -> 
         "text",
         "result",
     ]
-    assert log[1].summary.startswith("Claude Code 2.1.283 started with claude-sonnet-5")
+    assert log[1].summary.startswith("Claude Code 2.1.283 started with claude-sonnet-5-5")
     assert log[2].summary == "Searched the web for “LAX to Tokyo fares November”"
     assert (log[4].tool_name, log[4].summary) == ("submit_flight_quotes", "Submitted 2 prices")
     assert log[5].summary.startswith("submit_flight_quotes: 2 accepted")
@@ -171,7 +171,7 @@ def test_the_prompt_command_and_environment_reach_claude(agent, db_session: Sess
     seen = json.loads(agent.record.read_text(encoding="utf-8"))
     run: Run = agent.run
 
-    assert arg_after(seen["argv"], "--model") == "sonnet"
+    assert arg_after(seen["argv"], "--model") == "claude-sonnet-5-5"
     assert not seen["api_key_leaked"]
     assert seen["background_model"] == runner.BACKGROUND_MODEL
     assert "Prefer nonstop flights." in seen["prompt"] and '"LAX"' in seen["prompt"]
