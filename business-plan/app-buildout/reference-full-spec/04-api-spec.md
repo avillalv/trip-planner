@@ -1,6 +1,6 @@
 # 04. API specification
 
-Part of the [Wayfold build specification](../README.md). The README decisions (tiers, credit action codes, table names, non-negotiable rules) are final and this file follows them. Table, column, enum and limit-key names come from [03-database-schema.md](03-database-schema.md) (the database), the agents behind the AI endpoints in [06-ai-agents-spec.md](06-ai-agents-spec.md), purchases and paywall logic in [07-monetization-spec.md](07-monetization-spec.md), and the admin console in [08-admin-control-center.md](08-admin-control-center.md).
+Part of the [Hermi build specification](../README.md). The README decisions (tiers, credit action codes, table names, non-negotiable rules) are final and this file follows them. Table, column, enum and limit-key names come from [03-database-schema.md](03-database-schema.md) (the database), the agents behind the AI endpoints in [06-ai-agents-spec.md](06-ai-agents-spec.md), purchases and paywall logic in [07-monetization-spec.md](07-monetization-spec.md), and the admin console in [08-admin-control-center.md](08-admin-control-center.md).
 
 Written 2026-09-30. This file defines every HTTP endpoint the web and iOS clients and the partner systems call. It is written so the route modules can be built one per section, in FastAPI, and the TypeScript client generated from the result.
 
@@ -10,8 +10,8 @@ Written 2026-09-30. This file defines every HTTP endpoint the web and iOS client
 
 | Item | Rule |
 |---|---|
-| API base | `https://api.wayfold.app/v1` in production, `https://api.staging.wayfold.app/v1` in staging, `http://localhost:8000/v1` in development. All paths below are relative to it unless they start with `/go`, `/health` or `/.well-known` (those are served at the host root). |
-| Redirect host | `https://go.wayfold.app/go/{click_id}` (same service, separate hostname so cookies and CSP never mix with the API). |
+| API base | `https://api.hermi.world/v1` in production, `https://api.staging.hermi.world/v1` in staging, `http://localhost:8000/v1` in development. All paths below are relative to it unless they start with `/go`, `/health` or `/.well-known` (those are served at the host root). |
+| Redirect host | `https://go.hermi.world/go/{click_id}` (same service, separate hostname so cookies and CSP never mix with the API). |
 | Format | JSON (`application/json; charset=utf-8`) in and out. Dates are `YYYY-MM-DD`, times `HH:MM:SS`, timestamps RFC 3339 in UTC (`2026-09-30T14:05:00Z`). Only the SSE and redirect endpoints return something else. |
 | Names | `snake_case` for fields, `kebab-case` for path segments, plural nouns for collections. |
 | Ids | Every public id is a UUIDv7 string. Integer ids from the existing Trip Planner never appear. Ids are opaque: clients never parse them. |
@@ -22,7 +22,7 @@ Written 2026-09-30. This file defines every HTTP endpoint the web and iOS client
 
 ### 1.2 Authentication
 
-- Sign-in happens in Supabase Auth (Sign in with Apple, Google, email code). The client sends the Supabase access token on every call: `Authorization: Bearer <jwt>`. The web build may instead send the HttpOnly session cookie; cookie requests must also send `X-Wayfold-Client: web` and a same-origin `Origin` (CSRF guard carried over from `X-Trip-Planner: 1`).
+- Sign-in happens in Supabase Auth (Sign in with Apple, Google, email code). The client sends the Supabase access token on every call: `Authorization: Bearer <jwt>`. The web build may instead send the HttpOnly session cookie; cookie requests must also send `X-Hermi-Client: web` and a same-origin `Origin` (CSRF guard carried over from `X-Trip-Planner: 1`).
 - One FastAPI dependency, `CurrentUser`, verifies signature (JWKS, cached 1 hour and refreshed at most once a minute on an unknown `kid`, 02 section 6), `iss`, `aud`, `exp` and `sub`, resolves `auth_identities(provider, subject)` to a `users` row, and rejects any status other than `active` with `403 account_inactive` (status `pending_deletion` gets `403 account_pending_deletion`, and only `POST /me/deletion/cancel` and `GET /me` work). A first-time valid JWT with no identity row is handled by `POST /me/bootstrap`, the only endpoint that accepts a JWT without a users row.
 - Agent workers do not use user tokens. The worker calls internal functions directly, not HTTP. The legacy `/api/agent/v1` bridge is removed.
 - Partner callers (webhooks) authenticate with signatures or shared secrets (section 6). Admin callers use the admin API (section 5.25).
@@ -46,7 +46,7 @@ Every non-2xx response has `Content-Type: application/problem+json` and this sha
 
 ```ts
 type Problem = {
-  type: string              // "https://api.wayfold.app/problems/<code>"
+  type: string              // "https://api.hermi.world/problems/<code>"
   title: string             // short, stable English summary
   status: number
   code: string              // machine code from the catalogue (section 3)
@@ -123,7 +123,7 @@ A rejected call returns `429 rate_limited` with `Retry-After` (seconds). Startin
 | `X-Request-Id` | both | Client may send one (uuid); server always returns one and logs it with every line. |
 | `X-Client-Version` | request | `ios/1.2.0` or `web/2026.10.3`. The server answers `426 client_upgrade_required` only when below `min_client_version` from `GET /me`. |
 | `Accept-Language` | request | Locale for error `detail` and AI output. |
-| `X-Wayfold-Client` | request | `web`, `ios`. Required with cookie auth. |
+| `X-Hermi-Client` | request | `web`, `ios`. Required with cookie auth. |
 | `Idempotency-Key`, `If-Match`, `If-None-Match` | request | See 1.6 and 1.7. |
 | `Deprecation`, `Sunset` | response | Set on endpoints being retired. |
 | `Server-Timing` | response | `db;dur=12, ai;dur=840` for debugging. |
@@ -136,7 +136,7 @@ Anything longer than about 2 seconds (agent runs, exports, deletions, print orde
 
 ### 1.11 CORS and security headers
 
-Allowed origins: the web app, `capacitor://localhost`, `https://localhost`. Allowed headers include `Authorization`, `Content-Type`, `Idempotency-Key`, `If-Match`, `If-None-Match`, `X-Wayfold-Client`, `X-Client-Version`, `X-Request-Id`. Exposed headers: `ETag`, `RateLimit-*`, `Retry-After`, `Idempotent-Replay`, `X-Request-Id`, `Location`. HSTS, `X-Content-Type-Options: nosniff`, and `Referrer-Policy: no-referrer` on all responses.
+Allowed origins: the web app, `capacitor://localhost`, `https://localhost`. Allowed headers include `Authorization`, `Content-Type`, `Idempotency-Key`, `If-Match`, `If-None-Match`, `X-Hermi-Client`, `X-Client-Version`, `X-Request-Id`. Exposed headers: `ETag`, `RateLimit-*`, `Retry-After`, `Idempotent-Replay`, `X-Request-Id`, `Location`. HSTS, `X-Content-Type-Options: nosniff`, and `Referrer-Policy: no-referrer` on all responses.
 
 ### 1.12 Tenant isolation and logging
 
@@ -384,7 +384,7 @@ A household belongs to a Family subscriber and shares the tier, the pooled 150 c
 | `GET /households/current` | user | none | none to `Household \| null` | Household the caller belongs to, with members and pooled credit balance. |
 | `POST /households` | user with tier `family` | Family | `{ name: string }` to 201 `Household` | Creates `households` and an `owner` `household_members` row. One household per Family subscription. |
 | `PATCH /households/{id}` | household owner | none | `{ name? }` to `Household` | Rename. |
-| `POST /households/{id}/invites` | household owner | seats left under 6 | `{ email?: string }` to 201 `HouseholdInvite` | Universal link `https://wayfold.app/h/<token>`, 7 day expiry, single use. Email sent through Resend when `email` is set. |
+| `POST /households/{id}/invites` | household owner | seats left under 6 | `{ email?: string }` to 201 `HouseholdInvite` | Universal link `https://hermi.world/h/<token>`, 7 day expiry, single use. Email sent through Resend when `email` is set. |
 | `POST /household-invites/{token}/accept` | user | none | none to `Household` | Joins; entitlements recomputed (member gets Family tier, draws from the pool). Fails with `410 invite_expired`, `403 limit_reached` (6 seats), `409 already_member`. A user with their own paid sub is told their sub keeps running and stays separate. |
 | `DELETE /households/{id}/members/{user_id}` | household owner, or the member themself | none | 204 | Removes member; their entitlements recomputed at once. The owner cannot be removed while others remain. |
 | `DELETE /households/{id}` | household owner | none | 204 | Dissolves; members fall back to their own tier. |
@@ -480,7 +480,7 @@ type NearbyAirport = Airport & { distance_km: number }
 | `GET /invites/{token}` | none (rate limited) | none | none to `InvitePreview` | Public preview for the landing page: trip name, cover, inviter display name, role. No dates or places. `410 invite_expired` for bad tokens (same response for unknown and expired). |
 | `POST /invites/{token}/accept` | user | none | `{ person_id?: Uuid }` to 200 `Trip` | Redeems server side; the email need not match (Apple relay). Adds `trip_members`; single-use invites are consumed; link invites increment `use_count` up to `max_uses`. Free accounts join free and do not count toward their 2 active trips. `409 already_member` returns the trip id. |
 | `GET /trips/{trip_id}/share-links` | owner | none | none to `ShareLink[]` | |
-| `POST /trips/{trip_id}/share-links` | owner | `can_invite` | `ShareLinkCreate` to 201 `ShareLink` | Read-only public link `https://wayfold.app/s/<token>`. Default expiry 90 days (maximum 365). Redaction flags hide hotel address, prices and notes by default. |
+| `POST /trips/{trip_id}/share-links` | owner | `can_invite` | `ShareLinkCreate` to 201 `ShareLink` | Read-only public link `https://hermi.world/s/<token>`. Default expiry 90 days (maximum 365). Redaction flags hide hotel address, prices and notes by default. |
 | `PATCH /trips/{trip_id}/share-links/{link_id}` | owner | none | `Partial<ShareLinkCreate>` to `ShareLink` | |
 | `DELETE /trips/{trip_id}/share-links/{link_id}` | owner | none | 204 | Revokes; later views return `410 share_link_revoked`. |
 | `GET /shared/{token}` | none (per-IP and per-token limit) | none | none to `SharedTrip` | Public read of the redacted presentation data (5.15). `Cache-Control: public, max-age=60`. Never includes affiliate click ids; the "Book the plan" slide links come from `POST /shared/{token}/outbound` (5.21). |
@@ -923,7 +923,7 @@ type AfterTrip = { show: boolean; delayed: boolean | null; offer: AffiliateOffer
 
 ### 5.17 Group tools: polls, votes, expenses, shares, settlements
 
-Gate for the routes in this section: `group_tools` (polls and manual cost splitting are in Plus, Family, Pro, Trip Pass and Group Trip Pass; see section 4). Wayfold records who owes whom; any real money moves outside the app. Stripe collection is Phase 4, gated by `group_payments` (Group Trip Pass or Pro only), and never uses Apple In-App Purchase or unlocks a digital feature.
+Gate for the routes in this section: `group_tools` (polls and manual cost splitting are in Plus, Family, Pro, Trip Pass and Group Trip Pass; see section 4). Hermi records who owes whom; any real money moves outside the app. Stripe collection is Phase 4, gated by `group_payments` (Group Trip Pass or Pro only), and never uses Apple In-App Purchase or unlocks a digital feature.
 
 | Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
 |---|---|---|---|---|
@@ -985,7 +985,7 @@ Optional "Have a human book this" requests, fulfilled by an advisor under a host
 type ConciergeIn = {
   kind: "stay" | "cruise" | "complex_trip" | "other"
   lodging_id?: Uuid; budget?: Money; notes: string; preferred_contact: "email" | "in_app"   // budget becomes budget_max_minor; notes becomes brief (with lodging_id and preferred_contact appended)
-  disclosure_accepted: true                    // "A human advisor may book this and Wayfold earns a commission from the agency."
+  disclosure_accepted: true                    // "A human advisor may book this and Hermi earns a commission from the agency."
 }
 type ConciergeRequest = Omit<ConciergeIn, "disclosure_accepted"> & {
   id: Uuid; trip_id: Uuid; status: "submitted" | "triaged" | "assigned" | "quoted" | "booked" | "completed" | "cancelled" | "declined"
@@ -1004,7 +1004,7 @@ type RoomBlockRequest = RoomBlockIn & { id: Uuid; trip_id: Uuid; status: "submit
 | `POST /purchases/restore` | user | none | none to `Entitlements` | Re-pulls the subscriber after "Restore purchases". |
 | `GET /me/credits` | user | none | none to `CreditBalance` | Balance split by source, expiry dates and next monthly grant. Family members see the household pool. |
 | `GET /me/credits/ledger` | user | none | `?limit&cursor&kind=` to `Page<LedgerEntry>` | From `credit_ledger`, newest first; `kind` filters `entry_type`. |
-| `GET /credits/packs` | user | none | none to `CreditPack[]` | `credits_50`, `credits_150`, `credits_400` (plan codes) with their store product ids (`wayfold_credits_50` and so on). The price is shown by StoreKit, not by us. |
+| `GET /credits/packs` | user | none | none to `CreditPack[]` | `credits_50`, `credits_150`, `credits_400` (plan codes) with their store product ids (`hermi_credits_50` and so on). The price is shown by StoreKit, not by us. |
 | `POST /credits/packs/claim` | user | none | `{ product_id: string, transaction_id: string }` with `Idempotency-Key` to `CreditBalance` | Verifies the transaction through RevenueCat, grants credits keyed by `transaction_id` (never twice). Usually already granted by the webhook; this returns the balance. `409 state_conflict` if the transaction belongs to another user. |
 | `GET /trips/{trip_id}/pass` | viewer | none | none to `TripPass \| null` | Pass status and expiry for the trip settings screen. |
 | `GET /me/passes` | user | none | none to `TripPass[]` | Includes an unapplied pass waiting to be bound to a trip (a `store_transactions` row with `kind = 'pass'` and no `trip_passes` row yet). |
@@ -1034,7 +1034,7 @@ type LedgerEntry = {
   delta: number; charged: number | null; action: CreditAction | null
   trip_id: Uuid | null; run_id: Uuid | null; note: string
 }
-type CreditPack = { plan_code: "credits_50" | "credits_150" | "credits_400"; product_id: "wayfold_credits_50" | "wayfold_credits_150" | "wayfold_credits_400"; credits: number; valid_months: 12 }
+type CreditPack = { plan_code: "credits_50" | "credits_150" | "credits_400"; product_id: "hermi_credits_50" | "hermi_credits_150" | "hermi_credits_400"; credits: number; valid_months: 12 }
 type TripPass = {
   id: Uuid; product: "trip_pass" | "group_trip_pass" /* plan_code */; trip_id: Uuid | null   // id is trip_passes.id, or store_transactions.id while unapplied
   starts_at: string | null; expires_at: string | null; status: "unapplied" | "active" | "expired" | "refunded" | "upgraded"   // upgraded: replaced by a Group Trip Pass on the same trip
@@ -1063,7 +1063,7 @@ type PaywallOffer = {
 } | null
 ```
 
-Mapping (decision table the endpoint implements, detail in 07): `sharing` leads with Trip Pass for a one-trip group or Plus annual for repeat planners; `live_routes` and `agent_taster_used` lead with Plus annual; `credits` shows credit packs first for Plus and Family members and Plus for Free; `group_tools` leads with Group Trip Pass; `routines` shows Pro; `trip_limit` shows Plus and the option to archive. Credit packs are never shown beside an upsell on a trips home screen. `reason` on `GET /paywall/offer` accepts every `PaywallHint.reason` plus the client-initiated trigger codes `export_footer`, `ninth_stay`, `lifecycle_14d` and `alert_limit` ([07-monetization-spec.md](07-monetization-spec.md) section 6.2). Product ids in `lead` and `alternatives` are `store_products.product_id` values such as `wayfold_plus_annual` and `wayfold_trip_pass`.
+Mapping (decision table the endpoint implements, detail in 07): `sharing` leads with Trip Pass for a one-trip group or Plus annual for repeat planners; `live_routes` and `agent_taster_used` lead with Plus annual; `credits` shows credit packs first for Plus and Family members and Plus for Free; `group_tools` leads with Group Trip Pass; `routines` shows Pro; `trip_limit` shows Plus and the option to archive. Credit packs are never shown beside an upsell on a trips home screen. `reason` on `GET /paywall/offer` accepts every `PaywallHint.reason` plus the client-initiated trigger codes `export_footer`, `ninth_stay`, `lifecycle_14d` and `alert_limit` ([07-monetization-spec.md](07-monetization-spec.md) section 6.2). Product ids in `lead` and `alternatives` are `store_products.product_id` values such as `hermi_plus_annual` and `hermi_trip_pass`.
 
 ### 5.21 Affiliate: outbound links, redirect and offers
 
@@ -1071,7 +1071,7 @@ All outbound partner links go through `/go/{click_id}`. The server mints a click
 
 | Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
 |---|---|---|---|---|
-| `POST /outbound` | user (viewer on the trip) | 60 an hour per user | `OutboundIn` to 201 `OutboundLink` | Checks trip access, picks the program (feature flags, geography, A/B cell, kill switch per partner), inserts `link_clicks` with a random 128 bit base62 `click_id` (and `short_id` of 8 to 12 characters where a network limits sub-id length), returns `https://go.wayfold.app/go/<click_id>`. Repeat clicks for the same entity and surface within 30 seconds return the same link. `404 not_found` when no program applies (the client then shows the plain link). User id, trip id and email never appear in the URL. |
+| `POST /outbound` | user (viewer on the trip) | 60 an hour per user | `OutboundIn` to 201 `OutboundLink` | Checks trip access, picks the program (feature flags, geography, A/B cell, kill switch per partner), inserts `link_clicks` with a random 128 bit base62 `click_id` (and `short_id` of 8 to 12 characters where a network limits sub-id length), returns `https://go.hermi.world/go/<click_id>`. Repeat clicks for the same entity and surface within 30 seconds return the same link. `404 not_found` when no program applies (the client then shows the plain link). User id, trip id and email never appear in the URL. |
 | `POST /shared/{token}/outbound` | none (share token) | 30 an hour per IP | `{ offer_ref: string }` to 201 `OutboundLink` | For the "Book the plan" slide on share pages. No user is attached; the click row has `user_id` null, `entity_type = 'share_link'` and the share link id as `entity_id`. |
 | `GET /go/{click_id}` | none | known id; the affiliate redirect needs it fresh (under 10 minutes) and unused | none to `302 Location: <partner url>` | Sets `clicked_at`, `redirect_status`, `opened_in`, `country` and `platform` on `link_clicks`; marks the id used. Headers: `Cache-Control: no-store`, `Referrer-Policy: no-referrer`. Never renders a page, sets a cookie or runs a script. There is no `url=` parameter; an id that never existed gets `404` with an empty body and `X-Robots-Tag: noindex`, while a known id that is expired or already used gets a 302 to the plain non-affiliate destination so nobody is stranded. Partner kill switch on: the same 302 to the plain destination. |
 | `GET /trips/{trip_id}/offers` | viewer | none | `?context=&entity_id=` to `AffiliateOffer[]` | Offers per context: `destination`, `flight_chosen`, `lodging_shortlist`, `itinerary_day`, `place`, `checklist`, `after_trip`, `presentation`. At most one card per screen view except user-requested lists. Sorting is always stated and is never by commission. Returns `[]` when the user set `hide_booking_links` (the client then renders plain links), for domestic trips on eSIM items, and before a chosen flight or booking on insurance. |
@@ -1133,7 +1133,7 @@ type PrintOrder = { id: Uuid; trip_id: Uuid; status: "draft" | "awaiting_payment
 
 ### 5.24 Advisors (year 2, outline)
 
-Wayfold for Advisors is a workspace product sold on the web through Stripe ($29 a seat a month, $24 annual), not through the App Store. Only outlined here; the detailed contract is written when the year 2 build starts. All routes are hidden behind the `advisor_workspaces` flag and return `404` when it is off.
+Hermi for Advisors is a workspace product sold on the web through Stripe ($29 a seat a month, $24 annual), not through the App Store. Only outlined here; the detailed contract is written when the year 2 build starts. All routes are hidden behind the `advisor_workspaces` flag and return `404` when it is off.
 
 | Endpoint | Auth | Notes |
 |---|---|---|
@@ -1182,7 +1182,7 @@ Replay protection: a webhook older than 7 days is stored and ignored unless it i
 
 ## 7. Mapping from the existing Trip Planner API
 
-| Existing route (under `/api/v1`) | Wayfold route (under `/v1`) | Change |
+| Existing route (under `/api/v1`) | Hermi route (under `/v1`) | Change |
 |---|---|---|
 | `/trips`, `/trips/{id}` | same | UUIDv7 ids, membership scoping, `version`, `capabilities` |
 | `/trips/{id}/activities`, `/activities/{id}` | `/trips/{id}/items`, `/items/{id}` | Renamed; adds `sort_order`, reorder, move, `cost` |
@@ -1206,8 +1206,8 @@ FastAPI generates the OpenAPI 3.1 schema from the Pydantic 2 models and route de
 
 - `GET /v1/openapi.json` is served in development and staging only; production disables `/docs` and `/openapi.json`. The admin and webhook routers are created with `include_in_schema=False` so they never enter the public schema (the admin console has its own generated client from a second schema, `/v1/admin/openapi.json`).
 - Give every route an explicit `operation_id` of the form `module_action` (`trips_create`, `flights_live_search`, `agent_runs_start`) so generated function names are stable, and a `tags` entry per module in section 5. Declare `responses={...}` with `Problem` for every documented error code so the client types include them. Mark credit-spending routes with the `x-credits: <action>` and `x-idempotency-required: true` extensions.
-- `npm run gen:api` runs `uv run python -m wayfold.tools.dump_openapi > frontend/src/lib/api/openapi.json` and then `openapi-typescript openapi.json -o src/lib/api/schema.d.ts`. Commit both files. CI fails if regenerating changes the committed `schema.d.ts` (drift check), and a contract test fails if a route is missing `operation_id` or a 4xx response model.
-- The web and iOS (Capacitor) clients use `openapi-fetch` on top of the generated `paths` type. `client.ts` sets `baseUrl` from `VITE_API_BASE_URL`, middleware adds `Authorization`, `X-Wayfold-Client`, `X-Client-Version` and `X-Request-Id`, adds an `Idempotency-Key` for routes marked `x-idempotency-required`, refreshes once on 401, maps `application/problem+json` to a typed `ApiError` keyed by `code`, and sends `If-Match` from the cached `ETag`.
+- `npm run gen:api` runs `uv run python -m hermi.tools.dump_openapi > frontend/src/lib/api/openapi.json` and then `openapi-typescript openapi.json -o src/lib/api/schema.d.ts`. Commit both files. CI fails if regenerating changes the committed `schema.d.ts` (drift check), and a contract test fails if a route is missing `operation_id` or a 4xx response model.
+- The web and iOS (Capacitor) clients use `openapi-fetch` on top of the generated `paths` type. `client.ts` sets `baseUrl` from `VITE_API_BASE_URL`, middleware adds `Authorization`, `X-Hermi-Client`, `X-Client-Version` and `X-Request-Id`, adds an `Idempotency-Key` for routes marked `x-idempotency-required`, refreshes once on 401, maps `application/problem+json` to a typed `ApiError` keyed by `code`, and sends `If-Match` from the cached `ETag`.
 - SSE is not described by OpenAPI. The stream route is documented with a `text/event-stream` response and the event payloads in section 5.13; the client has a small hand-written reader (`lib/api/sse.ts`) that uses the generated `RunEvent` type.
 - Enums in this file are closed in the schema but clients treat unknown values as "other" (1.1).
 - Backend layout: one router module per section (`api/me.py`, `api/trips.py`, `api/flights.py`, `api/lodging.py`, `api/itinerary.py`, `api/places.py`, `api/ai.py`, `api/agent_runs.py`, `api/group.py`, `api/billing.py`, `api/affiliate.py`, `api/webhooks.py`, `api/admin/`), all using the shared dependencies `CurrentUser`, `require_trip(trip_id, min_role)`, `require_gate(...)` and `idempotent(...)`.
@@ -1232,7 +1232,7 @@ POST /v1/trips
 ```
 POST /v1/trips/0192a1f0-...-7c1/invites
 { "role": "editor", "email": "sam@example.com" }
--> 201 { "id": "0192a1f1-...", "url": "https://wayfold.app/i/Qx7...", "uses_left": 1, "expires_at": "2026-10-07T..." }
+-> 201 { "id": "0192a1f1-...", "url": "https://hermi.world/i/Qx7...", "uses_left": 1, "expires_at": "2026-10-07T..." }
 
 # Sam opens the link, signs in, and POST /v1/me/bootstrap creates his Free account.
 GET  /v1/invites/Qx7...          -> 200 { "trip_name": "Lisbon in May", "inviter_name": "Maya", "role": "editor" }
@@ -1285,7 +1285,7 @@ GET /v1/trips/0192a1f0-...-7c1/offers?context=flight_chosen
           "disclosure": "We earn a commission if you book here.",
           "non_affiliate": { "label": "Search on the airline's site", "url": "https://..." } }]
 POST /v1/outbound { "entity_type": "fare", "entity_id": "0192a2b1-...", "surface": "flight-chosen", "trip_id": "0192a1f0-...-7c1" }
--> 201 { "click_id": "3vQ9kT2mX0bE7nLw1ZpCya", "url": "https://go.wayfold.app/go/3vQ9kT2mX0bE7nLw1ZpCya" }
+-> 201 { "click_id": "3vQ9kT2mX0bE7nLw1ZpCya", "url": "https://go.hermi.world/go/3vQ9kT2mX0bE7nLw1ZpCya" }
 GET  /go/3vQ9kT2mX0bE7nLw1ZpCya   -> 302 Location: https://www.aviasales.com/...?marker=...&sub_id=8Kq2xPv1Lm
 ```
 

@@ -1,8 +1,8 @@
 # Phase 1: the launch app (months 1 to 6)
 
-Part of the [Wayfold build specification](../README.md). Written 2026-09-30.
+Part of the [Hermi build specification](../README.md). Written 2026-09-30.
 
-Phase 1 is a complete, polished Wayfold that a solo developer working with Claude Code can build in
+Phase 1 is a complete, polished Hermi that a solo developer working with Claude Code can build in
 about six months and publish to the App Store (and the web). It earns money from day one:
 subscriptions, trip passes, credit packs and affiliate links. Everything else waits for
 [Phase 2](../phase-2-growth/README.md) or [Phase 3](../phase-3-scale/README.md).
@@ -39,7 +39,7 @@ section 9 and are part of Phase 1:
 
 | Feature | Effort | Beats |
 |---|---|---|
-| "Verify this plan": paste an itinerary from ChatGPT, Gemini, Layla or Mindtrip; Wayfold checks each place, opening hours and price with sources and marks what it could not confirm (`research` credits per checked item, capped per run) | M | Every AI planner |
+| "Verify this plan": paste an itinerary from ChatGPT, Gemini, Layla or Mindtrip; Hermi checks each place, opening hours and price with sources and marks what it could not confirm (`research` credits per checked item, capped per run) | M | Every AI planner |
 | Imports named for each rival: TripIt, Tripsy and Wanderlog entries on the import screen, and Google Maps saved-list import (pasted list link or exported file; never scraped) | S to M | TripIt, Tripsy, Wanderlog |
 | Evidence freshness: a "may be out of date" flag after 14 days and a one-tap recheck | S | AI planners |
 | Trust pages: "How we earn" (every affiliate partner and that nothing is ranked by commission), a plain billing page, and a one-tap cancel link in the app | S | Wanderlog, Layla, Tripsy |
@@ -59,7 +59,7 @@ how pasted imports perform in the beta.
 | First-import Trip Pass | Once per user; the import must add at least 3 items including a flight or a stay; verified email; the trip has no active pass and the user has no active Plus |
 | Calendar feed imports | Opt-in "Keep checking this calendar"; polled every 6 hours; changes are shown as a preview the user confirms, never applied automatically |
 | Web purchases | None in Phase 1: the web paywall says "Upgrade in the iOS app". Web billing arrives with Android in Phase 2. |
-| Free collaborators | 1 per trip; share links (read-only, with the "Made with Wayfold" footer) on every tier |
+| Free collaborators | 1 per trip; share links (read-only, with the "Made with Hermi" footer) on every tier |
 
 ### Not in Phase 1
 
@@ -68,7 +68,7 @@ how pasted imports perform in the beta.
 | Family plan and households | 2 |
 | Group Trip Pass, polls, manual cost splitting, room-block requests | 2 |
 | Comments on items | 2 |
-| Email-forward import (plans@wayfold.app) | 2 |
+| Email-forward import (plans@hermi.world) | 2 |
 | Flight status, delay and gate alerts | 2 |
 | Pro tier and scheduled agent routines | 2 |
 | Concierge lane (host agency) | 2 |
@@ -76,7 +76,7 @@ how pasted imports perform in the beta.
 | Native Android app | 2 |
 | After-trip flight compensation prompt, memories and "Year in travel" card | 2 |
 | Stripe group payments | 3 |
-| Wayfold for Advisors | 3 |
+| Hermi for Advisors | 3 |
 | Partner guides, printed trip books, in-app hotel booking (LiteAPI), white-label and API, card and loyalty offers | 3 |
 
 ## Month plan

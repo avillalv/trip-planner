@@ -77,7 +77,7 @@ As the owner, I want a checklist before anything goes live, so that no guide bre
 **G-6. Sponsor sees results.**
 As a sponsor, I want a monthly report, so that I can see what I paid for.
 - PDF and CSV with views, taps, entries copied into itineraries, saved trips containing a guide entry, outbound clicks through `/go` and top origin countries; the period and the method are stated; counts are aggregated with small-count suppression below 10.
-- No user ids, emails or trip contents. The report says "Sponsorship does not affect ranking anywhere in Wayfold."
+- No user ids, emails or trip contents. The report says "Sponsorship does not affect ranking anywhere in Hermi."
 
 **G-7. Founder runs the pilot.**
 As the founder, I want a free pilot for one destination, so that I have numbers to sell with.
@@ -144,10 +144,10 @@ Grants and policy already in 03 sections 6.1 and 6.4 (the app sees published row
 
 ```sql
 -- Partner guides: the API reads published guides and never the sponsorship terms (finance data); the row policy in 6.4 limits it to status = 'published'.
-REVOKE SELECT ON partner_guides FROM wayfold_app;
+REVOKE SELECT ON partner_guides FROM hermi_app;
 GRANT SELECT (id, slug, title, summary, destination_name, country_code, lat, lon, partner_name, partner_url, program_id,
               author_name, language, body_md, entries, cover_image_url, cover_attribution, is_sponsored, disclosure_text,
-              status, published_at, updated_at) ON partner_guides TO wayfold_app;
+              status, published_at, updated_at) ON partner_guides TO hermi_app;
 
 -- Guides: the app sees published rows only (columns are limited by the grants above).
 ALTER TABLE partner_guides ENABLE ROW LEVEL SECURITY;
@@ -186,14 +186,14 @@ CREATE TABLE partner_guide_versions (
   created_at      timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT uq_partner_guide_versions UNIQUE (guide_id, version)
 );
-REVOKE ALL ON partner_guide_versions FROM wayfold_app;                       -- admin console only
+REVOKE ALL ON partner_guide_versions FROM hermi_app;                         -- admin console only
 
 ALTER TABLE partner_guides
   ADD COLUMN sources jsonb NOT NULL DEFAULT '[]'::jsonb,
   ADD COLUMN review_checklist jsonb NOT NULL DEFAULT '{}'::jsonb,            -- the reviewer's ticked items, kept for the audit
   ADD CONSTRAINT ck_partner_guides_sources CHECK (jsonb_typeof(sources) = 'array');
 -- Re-issue the app column grant to include sources (published rows only):
-GRANT SELECT (sources) ON partner_guides TO wayfold_app;
+GRANT SELECT (sources) ON partner_guides TO hermi_app;
 
 -- Aggregated, anonymous counters. No user id, no trip id, no device id: the sponsor report is built from this table only.
 CREATE TABLE guide_metrics_daily (
@@ -209,7 +209,7 @@ CREATE TABLE guide_metrics_daily (
   PRIMARY KEY (guide_id, day, surface, country_code),
   CONSTRAINT ck_guide_metrics_surface CHECK (surface IN ('destination_shelf', 'guides_screen', 'guide_page'))
 );
-REVOKE ALL ON guide_metrics_daily FROM wayfold_app;
+REVOKE ALL ON guide_metrics_daily FROM hermi_app;
 -- The API bumps counters through one SECURITY DEFINER function, so the app role can neither read nor edit the table.
 CREATE FUNCTION bump_guide_metric(p_guide uuid, p_surface text, p_country country_code2, p_field text) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
@@ -221,7 +221,7 @@ BEGIN
     USING p_guide, p_surface, COALESCE(p_country, 'ZZ');
 END $$;
 REVOKE ALL ON FUNCTION bump_guide_metric(uuid, text, country_code2, text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION bump_guide_metric(uuid, text, country_code2, text) TO wayfold_app;
+GRANT EXECUTE ON FUNCTION bump_guide_metric(uuid, text, country_code2, text) TO hermi_app;
 
 CREATE TABLE sponsor_reports (
   id              uuid PRIMARY KEY DEFAULT uuidv7(),
@@ -236,7 +236,7 @@ CREATE TABLE sponsor_reports (
   CONSTRAINT uq_sponsor_reports_period UNIQUE (guide_id, period_start, period_end),
   CONSTRAINT ck_sponsor_reports_period CHECK (period_end >= period_start)
 );
-REVOKE ALL ON sponsor_reports FROM wayfold_app;
+REVOKE ALL ON sponsor_reports FROM hermi_app;
 ```
 
 User preference `hide_partner_guides` lives in `users.prefs` (no column). Retention: `guide_metrics_daily` 25 months (same as `link_clicks`); `sponsor_reports` 7 years with the contract; versions kept with the guide.
@@ -295,7 +295,7 @@ Extends [08 section 6.10 (full spec)](../reference-full-spec/08-admin-control-ce
 ## 9. Legal and compliance
 
 1. **Advertising disclosure.** US: FTC endorsement rules (16 CFR Part 255) require a clear, adjacent disclosure; the label sits in the card and the page. UK: "Ad" on the card (ASA and CMA). EU: commercial intent and paid placement are material information; every list states its ordering basis (here: recency) and that payment plays no part. The rules are already collected in [08-affiliate-revenue.md section 7.4](../context/business-plan/08-affiliate-revenue.md).
-2. **Contract terms (one page, counsel reviews once).** No ranking influence anywhere; Wayfold's editorial control over what publishes; sponsor supplies or approves facts but cannot edit the label; no user-level data; aggregate reporting only; term and end date; fees and invoicing; removal for policy breach; sponsor warrants licences for images and claims.
+2. **Contract terms (one page, counsel reviews once).** No ranking influence anywhere; Hermi's editorial control over what publishes; sponsor supplies or approves facts but cannot edit the label; no user-level data; aggregate reporting only; term and end date; fees and invoicing; removal for policy breach; sponsor warrants licences for images and claims.
 3. **Accuracy and claims.** The reviewer checks claims against sources; no health, safety, visa or insurance advice beyond official links; no claim that AI wrote a guide.
 4. **Images.** Licensed or supplied with written permission; credit shown; alt text required.
 5. **Privacy.** Guide views are not tied to a user; the metrics table has no user id; the privacy policy says guide engagement is counted in aggregate. No sponsor pixels or third-party scripts on guide pages (CSP already blocks them).

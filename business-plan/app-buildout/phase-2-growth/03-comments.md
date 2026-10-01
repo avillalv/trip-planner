@@ -316,7 +316,7 @@ signal for invitees.
 #### P2-026 Comments API [M, needs P2-025]
 - Description: list, counts, create, edit, delete, report, reads; rate limits; activity log rows.
 - Accept: viewers can comment; non members get 404; soft delete rules.
-- Touches: `apps/api/wayfold/modules/collaboration/comments.py`.
+- Touches: `apps/api/hermi/modules/collaboration/comments.py`.
 
 #### P2-027 Thread UI and badges [L, needs P2-026]
 - Description: thread sheet, composer, count chips and unread dots on Day card, Lodging card, Poll card,

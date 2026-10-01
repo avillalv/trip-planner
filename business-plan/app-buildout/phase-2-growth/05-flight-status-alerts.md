@@ -24,7 +24,7 @@ are all **reported, verify** until read on each vendor's own terms and pricing p
 
 **Goal.** Tell travelers, in plain facts and on time, when a flight on their trip is delayed, changes
 gate or terminal, is cancelled or diverted, and show live status on the trip. The airline remains the
-source of truth; Wayfold states where the data came from and when it was checked, like every other
+source of truth; Hermi states where the data came from and when it was checked, like every other
 fact in the product.
 
 **Why now.**
@@ -214,7 +214,7 @@ type FlightStatusEvent = { id: number; kind: string; delay_min: number | null; o
 type FlightLookup = { found: boolean; leg: Omit<TrackedFlight, "id" | "trip_id"> | null }
 ```
 
-**Provider interface** (`apps/api/wayfold/providers/flightstatus/`): `lookup(airline, number, date)`,
+**Provider interface** (`apps/api/hermi/providers/flightstatus/`): `lookup(airline, number, date)`,
 `subscribe(leg)` and `unsubscribe(leg)` where the vendor supports push alerts, `poll(leg)`, and
 `parse_webhook(body)`; every call writes `provider_calls` (cost in micro-dollars, cached flag) and
 honors the kill switch; the vendor is chosen by config and a second vendor can be added behind the same
@@ -309,7 +309,7 @@ starts more generously for Free (2 legs, delay and cancellation only, slower cad
 the trust moment for TripIt switchers; if the bake-off shows a leg costs more than about $0.10, fall back to
 the win plan's version by changing `flight_status_legs` for Free to 1 and removing push for delays under 60
 minutes. Free gets delay and cancellation alerts on purpose: they are the feature TripIt users love and the
-trust moment that makes Wayfold the place they keep trips. The upgrade reason is coverage (more legs,
+trust moment that makes Hermi the place they keep trips. The upgrade reason is coverage (more legs,
 faster cadence, gate and belt), not the basic safety alert. Revisit after 60 days of measured cost.
 
 ### Candidate providers (reported, verify)
@@ -416,7 +416,7 @@ D30 of users with at least one tracked leg versus without.
   webhook support, commercial use, attribution and redistribution terms.
 - Accept: decision memo in `docs/`; the price table in section 6 replaced with measured numbers and the
   vendors' own terms; budget and leg cap settings updated.
-- Touches: `apps/api/wayfold/providers/flightstatus/`, `docs/`.
+- Touches: `apps/api/hermi/providers/flightstatus/`, `docs/`.
 
 #### P2-044 Schema, RLS, settings and flags [M, needs P2-043]
 - Description: migration `0021_flight_status`, policies, limits, flags, kill switch, settings.

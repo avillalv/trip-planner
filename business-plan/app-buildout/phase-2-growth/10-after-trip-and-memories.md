@@ -26,7 +26,7 @@ and at year end offer a shareable "Year in travel" card.
 
 - The after-trip moment is where Phase 1 goes quiet: once a trip is done the app has no reason to be
   opened until the next one. Memories and the year card give people a reason to come back and a reason to
-  show Wayfold to friends, which feeds the invite loop without any ad spend.
+  show Hermi to friends, which feeds the invite loop without any ad spend.
 - The compensation prompt is the most natural post-trip affiliate surface (Compensair pays a fixed amount
   per confirmed application, AirHelp 15 to 20 percent of its fee on an approved claim; reported, verify)
   and it only exists once flight status data (pack 05) and the AirHelp program (pack 08) are available.
@@ -72,10 +72,10 @@ instead) and adds the once-only settle-up reminder.
 | AFT-6 | As a member, I get one settle-up reminder. | If expenses are unsettled at the wrap-up, one reminder per person (notify lane, `send_group_settle_reminders`), opt-in respected. |
 | MEM-1 | As a member, I add photos and highlights to a finished trip. | A Memories tab appears when the trip has ended. Members add up to the tier limit of photos (Free 20, paid and passes 100, Pro 200; defaults, `plans.limits.memory_photos_per_trip`), captions up to 200 characters and a star on highlights. Uploads go to R2 by signed URL; the server resizes, strips all EXIF data including GPS, keeps only the capture date, and creates thumbnails. |
 | MEM-2 | As a member, I see a recap generated from the trip. | A recap card shows days, nights, cities, countries, flights (from chosen and tracked flights), the route on a map, the trip rating average (if shown), and the top highlights. It is computed from data already in the trip; no AI is used. |
-| MEM-3 | As an owner, I can share memories as a read-only page. | A memory share link (a share link of kind `memories`, expiry 90 days default) shows highlights, captions, the route map and the recap, with redaction flags on by default (traveler names, prices, notes and exact lodging addresses hidden), `noindex`, revocable, with the "Made with Wayfold" line on Free. Photos are served by short-lived signed URLs; no face recognition; photos are never public by default. |
-| MEM-4 | As a person, my photos are mine. | The uploader can delete their photos any time; deleting a trip deletes its photos after the 30 day trash window; account deletion removes the user's photos; export includes photos and captions. Children: photos are user content entered by adults; Wayfold does not analyze faces, does not use photos for any AI feature and does not collect children's data as data of their own (age gate and travelers-as-names rules unchanged). |
+| MEM-3 | As an owner, I can share memories as a read-only page. | A memory share link (a share link of kind `memories`, expiry 90 days default) shows highlights, captions, the route map and the recap, with redaction flags on by default (traveler names, prices, notes and exact lodging addresses hidden), `noindex`, revocable, with the "Made with Hermi" line on Free. Photos are served by short-lived signed URLs; no face recognition; photos are never public by default. |
+| MEM-4 | As a person, my photos are mine. | The uploader can delete their photos any time; deleting a trip deletes its photos after the 30 day trash window; account deletion removes the user's photos; export includes photos and captions. Children: photos are user content entered by adults; Hermi does not analyze faces, does not use photos for any AI feature and does not collect children's data as data of their own (age gate and travelers-as-names rules unchanged). |
 | YIT-1 | As a traveler, I can see my year in travel. | From 1 December to 31 January the Trips home shows a "Your 2026 in travel" card for anyone with at least one finished trip that year. The summary shows trips, countries, cities, nights away, about how far you flew (great-circle distance between the airports of chosen and tracked flights, labeled "about"), your top destination, your longest trip and new countries. |
-| YIT-2 | As a traveler, I can share a card, safely. | A generated image (1080 by 1920 story and 1080 by 1080 square, three passport-themed covers) with no names, no photos by default, no dates and no partner links; a small "Made with Wayfold" line and the wayfold.app address. Shared through the system share sheet or saved as an image; the person can hide countries or cities before sharing. |
+| YIT-2 | As a traveler, I can share a card, safely. | A generated image (1080 by 1920 story and 1080 by 1080 square, three covers: sky, night and paper) with no names, no photos by default, no dates and no partner links; a small "Made with Hermi" line and the hermi.world address. Shared through the system share sheet or saved as an image; the person can hide countries or cities before sharing. |
 | YIT-3 | As a person, I choose whether to be told. | The card is an in-app card; an email "Your year in travel is ready" goes only to people who opted into marketing email (opt-in, one click unsubscribe); never a push (Apple guideline 4.10). Turn-off in Settings, Notifications. |
 | YIT-4 | As the business, the card stays honest. | Stats count only trips where the user is a member and that have ended in the year; deleted and trashed trips are excluded; numbers come from stored data only; wrong-looking numbers can be corrected by editing trips, then "Refresh". |
 
@@ -143,14 +143,14 @@ CREATE TABLE share_cards (                                         -- generated 
   kind           text NOT NULL DEFAULT 'year_in_travel',
   year           smallint NOT NULL CHECK (year BETWEEN 2026 AND 2100),
   stats          jsonb NOT NULL,                                      -- trips, countries[], cities[], nights, km_flown, top_destination, longest_trip_nights, new_countries[]
-  theme          text NOT NULL DEFAULT 'navy',                        -- navy, burgundy, paper
+  theme          text NOT NULL DEFAULT 'sky',                         -- sky, night, paper
   hidden         text[] NOT NULL DEFAULT '{}',                        -- fields the person chose to hide on the card (countries, cities)
   image_key      text,                                                -- R2 key of the last rendered card (private)
   computed_at    timestamptz NOT NULL DEFAULT now(),
   shared_count   integer NOT NULL DEFAULT 0,
   CONSTRAINT uq_share_cards_user_kind_year UNIQUE (user_id, kind, year),
   CONSTRAINT ck_share_cards_kind CHECK (kind IN ('year_in_travel')),
-  CONSTRAINT ck_share_cards_theme CHECK (theme IN ('navy', 'burgundy', 'paper'))
+  CONSTRAINT ck_share_cards_theme CHECK (theme IN ('sky', 'night', 'paper'))
 );
 
 -- Tier limits (plans.limits), defaults tuned with measured storage cost.
@@ -250,7 +250,7 @@ type DelaySheet = {
 type YearInTravel = {
   year: number; trips: number; countries: { code: string; name: string }[]; cities: string[]; nights_away: number
   km_flown_about: number; top_destination: string | null; longest_trip_nights: number; new_countries: string[]
-  theme: "navy" | "burgundy" | "paper"; hidden: ("countries" | "cities")[]
+  theme: "sky" | "night" | "paper"; hidden: ("countries" | "cities")[]
 }
 ```
 
@@ -278,12 +278,13 @@ validation_failed` (unsupported image, too large), `503 feature_disabled` with t
    text "20 of 20 photos used" with the soft offer "Keep more photos with Plus or a Trip Pass", [Share
    memories] (creates a memory link with redaction options, same sheet as plan share links).
 4. **Memory share page** (public, read-only, `noindex`): recap, highlights, captions, route map; no
-   traveler names, prices, notes or addresses unless the owner turned redaction off; "Made with Wayfold"
+   traveler names, prices, notes or addresses unless the owner turned redaction off; "Made with Hermi"
    on Free; "Report" link (existing moderation path).
 5. **Year in travel** (Trips home card, then a full screen): stats with big numbers in the mono face,
-   cover theme chooser (three passport covers with guilloche linework and stamp-style country marks),
-   "Hide countries" and "Hide cities" switches, [Share] (system share sheet) and [Save image]. Preview shows
-   exactly what will be shared; the card carries no names, no photos and no dates.
+   cover theme chooser offering three covers (sky, night, paper) with the trip's route pattern and a
+   ticket-stub tag per country, "Hide countries" and "Hide cities" switches, [Share] (system share sheet)
+   and [Save image]. Preview shows exactly what will be shared; the card carries no names, no photos and
+   no dates.
 6. **Settings.** Notifications rows: "Year in travel email" (marketing opt-in) and "Trip reminders" (existing).
 
 States. Loading skeletons. Empty Memories: "No memories yet", "Add a few photos from the trip. Only people
@@ -371,7 +372,7 @@ No PII, no captions, no place names, no numbers that identify a trip; buckets an
 
 Funnels: after-trip card viewed to rating submitted; memories opened to photo added to page shared; year
 card viewed to shared (the viral proxy); `year_card_shared` to new signups from `share_link_viewed` and
-the wayfold.app landing is measured with a referrer-free first-party visit count, never with tracking
+the hermi.world landing is measured with a referrer-free first-party visit count, never with tracking
 parameters on the card link.
 
 ## 10. Tests
@@ -413,7 +414,7 @@ parameters on the card link.
   official links with link checker coverage.
 - Accept: prompt once per trip per person, never a push, not shown without a flight; eligibility never
   claimed; disclosure beside the button.
-- Touches: `apps/api/wayfold/modules/aftertrip/`, `apps/web/src/routes/after-trip/`.
+- Touches: `apps/api/hermi/modules/aftertrip/`, `apps/web/src/routes/after-trip/`.
 
 #### P2-096 Flight status link and partner wiring [S, needs P2-095, pack 05 and pack 08 optional]
 - Description: use tracked leg data for the delay hint and its source line, add Compensair now and AirHelp
@@ -446,7 +447,7 @@ parameters on the card link.
 - Accept: golden fixtures pass; numbers labeled "about" where estimated.
 
 #### P2-102 Year card renderer and sharing [L, needs P2-101]
-- Description: image renderer with three passport themes and two formats, preview screen, hide switches,
+- Description: image renderer with three themes (sky, night, paper) and two formats, preview screen, hide switches,
   share sheet and save image (iOS and web; Android in pack 09), card alt text, signed URLs.
 - Accept: no names, photos, dates or partner links on the image; snapshots pass; render under 2 seconds.
 

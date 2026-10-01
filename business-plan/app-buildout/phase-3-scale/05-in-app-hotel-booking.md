@@ -5,17 +5,17 @@ Part of [Phase 3: scale](README.md). Tickets P3-058 to P3-070. Written 2026-09-3
 | | |
 |---|---|
 | Feature flag | `inapp_hotel_booking` (created by this pack, off) |
-| Needs | A lawyer before building (seller-of-travel position, consumer law, terms of sale). A support process and probably a support hire, because Wayfold then owns every hotel problem. A contractor engineer is sensible; this is the highest-effort pack. No funding if Nuitee stays merchant of record. |
+| Needs | A lawyer before building (seller-of-travel position, consumer law, terms of sale). A support process and probably a support hire, because Hermi then owns every hotel problem. A contractor engineer is sensible; this is the highest-effort pack. No funding if Nuitee stays merchant of record. |
 | Builds on | Phase 1: lodging shortlist, stay comparison, affiliate system and disclosure component, itinerary, email, admin console. Phase 2: [concierge lane](../phase-2-growth/07-concierge-lane.md) and [direct affiliate programs](../phase-2-growth/08-direct-affiliate-programs.md) (the affiliate options this sits beside). |
 | Source names | Phase 1 files call this "year 2 and later" and "Phase 4", ticket WF-110. Spec of record: [07 section 11.1 (full spec)](../reference-full-spec/07-monetization-spec.md), [08-affiliate-revenue.md section 13.4](../context/business-plan/08-affiliate-revenue.md). |
 
 ## 1. Goal and revenue case
 
-**Goal.** Hotel search and booking inside Wayfold through LiteAPI (Nuitee), a self-serve REST API with 2M+ hotels (reported, verify). Wayfold sets a margin per search, Nuitee acts as merchant of record through its payment SDK so card data never touches Wayfold, and payouts are weekly for confirmed bookings. The "Book in Wayfold" option sits beside the affiliate options and never replaces or outranks them (09 section 3.3).
+**Goal.** Hotel search and booking inside Hermi through LiteAPI (Nuitee), a self-serve REST API with 2M+ hotels (reported, verify). Hermi sets a margin per search, Nuitee acts as merchant of record through its payment SDK so card data never touches Hermi, and payouts are weekly for confirmed bookings. The "Book in Hermi" option sits beside the affiliate options and never replaces or outranks them (09 section 3.3).
 
-**Pricing to the user.** The displayed rate is the supplier net rate plus Wayfold's margin, 5 to 15% (reported, verify). Bedbank rates are often priced to match public rates, so the usable margin is probably the low end (inference).
+**Pricing to the user.** The displayed rate is the supplier net rate plus Hermi's margin, 5 to 15% (reported, verify). Bedbank rates are often priced to match public rates, so the usable margin is probably the low end (inference).
 
-**Revenue per booking (09 section 3.3).** A $600 stay at 8% is $48 gross. After card fees, cancellations, chargebacks and support the net is about $15 to $60; the model uses $30. Wayfold also loses the affiliate commission it would have earned on the same stay (about $10 assumed), so incremental revenue is $20 per booking.
+**Revenue per booking (09 section 3.3).** A $600 stay at 8% is $48 gross. After card fees, cancellations, chargebacks and support the net is about $15 to $60; the model uses $30. Hermi also loses the affiliate commission it would have earned on the same stay (about $10 assumed), so incremental revenue is $20 per booking.
 
 **Revenue (base case).** Bookings = trips x attach (3% to 5% of trips, assumption) x $20 incremental.
 
@@ -43,10 +43,10 @@ Ambitious upside (09 section 6.4): $12.0k, $96.0k, $192.0k, $400.0k in years 2 t
 
 | # | Decision | Default and reason |
 |---|---|---|
-| D1 | Merchant of record | Nuitee (LiteAPI), through its payment SDK in a hosted web view. Wayfold never sees card numbers (PCI scope stays at the lightest level). Terms and cancellation policy show Nuitee as seller of record before payment. Wayfold as merchant of record on net rates is rejected for now. |
+| D1 | Merchant of record | Nuitee (LiteAPI), through its payment SDK in a hosted web view. Hermi never sees card numbers (PCI scope stays at the lightest level). Terms and cancellation policy show Nuitee as seller of record before payment. Hermi as merchant of record on net rates is rejected for now. |
 | D2 | Uniform margin, commission-blind order | One `margin_bps` per search, the same for every hotel, taken from configuration. Results are sorted only by the user's choice (price, guest rating, distance) and the order is explained. Margin cannot differ by hotel, so nothing can be ranked by it, and a test proves the order is independent of margin. |
-| D3 | Sits beside affiliate options | "Book in Wayfold" is one option in the same list as the partner links, sorted by the same user-chosen criteria, and the affiliate links and their disclosure stay. Never hidden, never placed first by default. |
-| D4 | No price claims we cannot prove | The server never fetches Airbnb, Vrbo or Booking.com pages, so Wayfold cannot claim to beat their prices. Show the total price and policy; no "best price" or "lowest price" wording. |
+| D3 | Sits beside affiliate options | "Book in Hermi" is one option in the same list as the partner links, sorted by the same user-chosen criteria, and the affiliate links and their disclosure stay. Never hidden, never placed first by default. |
+| D4 | No price claims we cannot prove | The server never fetches Airbnb, Vrbo or Booking.com pages, so Hermi cannot claim to beat their prices. Show the total price and policy; no "best price" or "lowest price" wording. |
 | D5 | Total price honesty | Display the full total for the stay including mandatory taxes and fees known to the supplier; list resort fees or pay-at-property charges separately and clearly. |
 | D6 | No packages | Hotel only. No dynamic packaging with flights (package-travel rules, skipped in 09 section 3.9). |
 | D7 | Allow-list launch | The flag first opens to an allow-list of users and destinations, then to everyone. |
@@ -57,16 +57,16 @@ Ambitious upside (09 section 6.4): $12.0k, $96.0k, $192.0k, $400.0k in years 2 t
 **H-1. Search in the trip.**
 As a traveler planning stays, I want to search hotels for my dates and party inside the trip, so that I do not start over elsewhere.
 - Search by destination (from the trip), dates and party (adults, children with ages, rooms); defaults come from the trip.
-- Results show photo, name, guest rating, distance to the trip center, total price for the stay in the trip currency, cancellation label (Free cancellation until {date} or Non-refundable), and a line "Sorted by {price}. Wayfold's fee does not affect the order."
+- Results show photo, name, guest rating, distance to the trip center, total price for the stay in the trip currency, cancellation label (Free cancellation until {date} or Non-refundable), and a line "Sorted by {price}. Hermi's fee does not affect the order."
 - Sort options: price, rating, distance. No default that depends on margin.
 
 **H-2. Compare beside other options.**
-As a traveler, I want to see "Book in Wayfold" next to the partner links, so that I can choose.
+As a traveler, I want to see "Book in Hermi" next to the partner links, so that I can choose.
 - On the stay comparison and shortlist the option appears alongside affiliate offers with the same disclosure pattern; affiliate options remain. Choosing either is tracked separately.
 
 **H-3. See the full terms before paying.**
 As a buyer, I want to know the total, what is included, who sells it and what happens if I cancel.
-- The hotel page and checkout show total price with taxes and fees, pay-at-property charges, cancellation policy with dates and amounts, bed type, board basis, the statement "Sold by Nuitee (LiteAPI), the merchant of record. Wayfold arranges the booking and earns a fee.", and the terms link.
+- The hotel page and checkout show total price with taxes and fees, pay-at-property charges, cancellation policy with dates and amounts, bed type, board basis, the statement "Sold by Nuitee (LiteAPI), the merchant of record. Hermi arranges the booking and earns a fee.", and the terms link.
 - The price is prebooked (locked) and shown with a countdown only as a factual expiry time, not as pressure ("Price held until 14:32").
 
 **H-4. Pay and get a confirmation.**
@@ -87,7 +87,7 @@ As a buyer, I want a person when something is wrong, so that I am not stranded.
 
 **H-7. Privacy and data.**
 As a buyer, I want guest details used only to make the booking.
-- Guest names, email and phone go only to the supplier and merchant of record as needed; Wayfold keeps them for support and scrubs them 90 days after check-out (section 4).
+- Guest names, email and phone go only to the supplier and merchant of record as needed; Hermi keeps them for support and scrubs them 90 days after check-out (section 4).
 
 ## 4. Database additions
 
@@ -122,7 +122,7 @@ CREATE TABLE hotel_bookings (
   currency                currency_code NOT NULL,
   net_minor               bigint NOT NULL CHECK (net_minor >= 0),            -- supplier net rate
   margin_bps              integer NOT NULL CHECK (margin_bps BETWEEN 0 AND 3000),
-  margin_minor            bigint NOT NULL CHECK (margin_minor >= 0),         -- Wayfold's gross margin at booking time
+  margin_minor            bigint NOT NULL CHECK (margin_minor >= 0),         -- Hermi's gross margin at booking time
   total_minor             bigint NOT NULL CHECK (total_minor >= net_minor),  -- what the guest paid, as shown
   pay_at_property_minor   bigint NOT NULL DEFAULT 0 CHECK (pay_at_property_minor >= 0),   -- fees due at the hotel, shown separately
   cancellation_policy     jsonb NOT NULL,                                    -- snapshot shown at booking: tiers with dates and amounts
@@ -168,8 +168,8 @@ CREATE INDEX ix_hotel_booking_events_booking ON hotel_booking_events (hotel_book
 -- Row-level security: the buyer sees their own bookings; trip members see the confirmed stay through lodging_options, not the row.
 ALTER TABLE hotel_bookings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY hotel_bookings_select ON hotel_bookings FOR SELECT USING (user_id = (SELECT app_user_id()));
-REVOKE INSERT, UPDATE, DELETE ON hotel_bookings FROM wayfold_app;       -- written only by the booking service (worker role)
-REVOKE ALL ON hotel_booking_events FROM wayfold_app;
+REVOKE INSERT, UPDATE, DELETE ON hotel_bookings FROM hermi_app;       -- written only by the booking service (worker role)
+REVOKE ALL ON hotel_booking_events FROM hermi_app;
 
 ALTER TABLE lodging_options DROP CONSTRAINT ck_lodging_options_added_via;
 ALTER TABLE lodging_options ADD CONSTRAINT ck_lodging_options_added_via
@@ -227,28 +227,28 @@ Jobs: `poll_hotel_bookings` (reconcile status with the supplier every 15 minutes
 
 Follows [05](../phase-1-launch/05-ui-ux-spec.md). The hosted payment page opens in the in-app browser with visible chrome.
 
-**Stay comparison (extends 6.11).** Purpose: one place to choose. A quiet option "Search and book in Wayfold" sits beside the partner options with the standard disclosure pattern, and the existing list explains its sort. States: flag off or country unavailable, the option is absent; LiteAPI down "Hotel booking in Wayfold is unavailable right now. Partner links still work."
+**Stay comparison (extends 6.11).** Purpose: one place to choose. A quiet option "Search and book in Hermi" sits beside the partner options with the standard disclosure pattern, and the existing list explains its sort. States: flag off or country unavailable, the option is absent; LiteAPI down "Hotel booking in Hermi is unavailable right now. Partner links still work."
 
-**Hotel search sheet and results.** Dates and party prefilled from the trip; results list with map toggle, sort menu (Price, Rating, Distance) and the line "Sorted by price. Wayfold's fee does not affect the order." Filters: free cancellation, rating, price range, distance. Skeleton loading; empty "No hotels found for these dates. Try other dates or another area."; error with retry; offline disabled.
+**Hotel search sheet and results.** Dates and party prefilled from the trip; results list with map toggle, sort menu (Price, Rating, Distance) and the line "Sorted by price. Hermi's fee does not affect the order." Filters: free cancellation, rating, price range, distance. Skeleton loading; empty "No hotels found for these dates. Try other dates or another area."; error with retry; offline disabled.
 
 **Hotel page.** Photo carousel, name, rating, address and map, amenities, room and rate options with the full total, taxes and fees lines, pay-at-property charges under "Pay at the hotel", cancellation policy with dates, who sells it, and [Continue]. Factual expiry only after prebook ("Price held until 14:32").
 
-**Checkout.** Guest details (lead guest name, email, phone), special requests (not guaranteed), terms and cancellation acknowledgement checkbox, total, the hosted payment page, and a clear [Book] only after payment succeeds. Copy: "Nuitee (LiteAPI) sells this room and processes your payment. Wayfold arranges the booking and earns a fee from the price shown. The fee does not change the order of results." Failure states explain whether any money moved.
+**Checkout.** Guest details (lead guest name, email, phone), special requests (not guaranteed), terms and cancellation acknowledgement checkbox, total, the hosted payment page, and a clear [Book] only after payment succeeds. Copy: "Nuitee (LiteAPI) sells this room and processes your payment. Hermi arranges the booking and earns a fee from the price shown. The fee does not change the order of results." Failure states explain whether any money moved.
 
-**Confirmation and My bookings.** Confirmation number, hotel contacts, voucher, add to calendar, cancel (with refund preview), "Problem with this booking". My bookings lists upcoming, past and cancelled. Booking appears in the trip's Stays with a "Booked in Wayfold" chip and in the itinerary.
+**Confirmation and My bookings.** Confirmation number, hotel contacts, voucher, add to calendar, cancel (with refund preview), "Problem with this booking". My bookings lists upcoming, past and cancelled. Booking appears in the trip's Stays with a "Booked in Hermi" chip and in the itinerary.
 
 **Cancel sheet.** Shows the exact refund and date, asks for confirmation, then the result with the refund timeline from the supplier.
 
-Accessibility: prices read with currency and units ("total for 4 nights"); policy tiers are a list with dates; status is text; focus returns to the booking after the payment view closes. Events: `hotel_search_started`, `hotel_results_viewed {sort}`, `hotel_offer_viewed`, `hotel_prebook_started`, `hotel_booking_confirmed {nights_bucket, refundable}`, `hotel_booking_failed {stage}`, `hotel_booking_cancelled`, `hotel_problem_reported`, `book_in_wayfold_chosen` (compare with `partner_link_clicked` in the same context).
+Accessibility: prices read with currency and units ("total for 4 nights"); policy tiers are a list with dates; status is text; focus returns to the booking after the payment view closes. Events: `hotel_search_started`, `hotel_results_viewed {sort}`, `hotel_offer_viewed`, `hotel_prebook_started`, `hotel_booking_confirmed {nights_bucket, refundable}`, `hotel_booking_failed {stage}`, `hotel_booking_cancelled`, `hotel_problem_reported`, `book_in_hermi_chosen` (compare with `partner_link_clicked` in the same context).
 
 ## 7. Billing
 
-- **Payments.** Collected and processed by Nuitee as merchant of record through the LiteAPI payment SDK; Wayfold does not use Stripe for this lane and holds no card data. Confirm in the sandbox how the payment transaction id is returned and how refunds flow (open item).
-- **Revenue.** Margin per search, paid weekly by Nuitee for confirmed bookings (reported, verify). Wayfold records `margin_minor` at booking and `commission_status` through payout; revenue is recognized at check-out (07 section 11.1); cancelled bookings earn nothing; clawbacks set `clawed_back`.
-- **Refunds.** Follow the rate's cancellation policy and the merchant of record's process; Wayfold support can ask Nuitee for exceptions and may issue goodwill credit only as an admin action outside this flow (never automatic).
+- **Payments.** Collected and processed by Nuitee as merchant of record through the LiteAPI payment SDK; Hermi does not use Stripe for this lane and holds no card data. Confirm in the sandbox how the payment transaction id is returned and how refunds flow (open item).
+- **Revenue.** Margin per search, paid weekly by Nuitee for confirmed bookings (reported, verify). Hermi records `margin_minor` at booking and `commission_status` through payout; revenue is recognized at check-out (07 section 11.1); cancelled bookings earn nothing; clawbacks set `clawed_back`.
+- **Refunds.** Follow the rate's cancellation policy and the merchant of record's process; Hermi support can ask Nuitee for exceptions and may issue goodwill credit only as an admin action outside this flow (never automatic).
 - **Currency.** Show the trip currency with the conversion shown; bookings are charged as the supplier quotes (verify which currencies Nuitee charges).
 - **No cashback and no credits.** This lane does not pay or credit users (08-affiliate-revenue.md section 13.6).
-- **Tax.** Hotel taxes are handled in the supplier rate and by the merchant of record; Wayfold's fee treatment for sales tax or VAT is confirmed with the accountant (verify). No Stripe Tax needed unless a separate service fee is ever charged, which this design avoids.
+- **Tax.** Hotel taxes are handled in the supplier rate and by the merchant of record; Hermi's fee treatment for sales tax or VAT is confirmed with the accountant (verify). No Stripe Tax needed unless a separate service fee is ever charged, which this design avoids.
 
 ## 8. Admin additions
 
@@ -263,20 +263,20 @@ New screen and support tooling; extends [08](../phase-1-launch/08-admin-control-
 
 ## 9. Legal and compliance
 
-1. **Seller of travel.** As a seller rather than a referrer, Wayfold probably needs seller-of-travel registration in some states and must follow consumer-protection and refund rules (inference; counsel to confirm). California, Florida, Hawaii, Washington and Iowa regulate sellers of travel ([10 section 3.8 (full spec)](../reference-full-spec/10-quality-security-launch.md)). Do not launch in a state until counsel confirms the position; the flag's `countries` rule and a per-state block list enforce it.
-2. **Merchant of record.** Nuitee is the seller and processes the payment; Wayfold's terms of sale say it arranges the booking and earns a fee. Get Nuitee's API and reseller terms reviewed, including liability for supplier failure, rate parity obligations, and permitted marketing.
+1. **Seller of travel.** As a seller rather than a referrer, Hermi probably needs seller-of-travel registration in some states and must follow consumer-protection and refund rules (inference; counsel to confirm). California, Florida, Hawaii, Washington and Iowa regulate sellers of travel ([10 section 3.8 (full spec)](../reference-full-spec/10-quality-security-launch.md)). Do not launch in a state until counsel confirms the position; the flag's `countries` rule and a per-state block list enforce it.
+2. **Merchant of record.** Nuitee is the seller and processes the payment; Hermi's terms of sale say it arranges the booking and earns a fee. Get Nuitee's API and reseller terms reviewed, including liability for supplier failure, rate parity obligations, and permitted marketing.
 3. **Price display and fees.** Show the total price including mandatory fees; list pay-at-property charges clearly. The FTC rule on unfair or deceptive fees covers short-term lodging (verify scope and effective date with counsel). EU and UK price-transparency and "drip pricing" rules apply to European users.
 4. **No ranking by margin.** Uniform margin, user-chosen sort, statement of the sort basis (EU Omnibus and the plan's non-negotiable rule 2). The ordering test in section 11 guards it.
 5. **Disclosure.** The fee is disclosed at search, at checkout and in confirmation; the affiliate commission sentence is unchanged on partner links.
 6. **Privacy.** Guest data goes to Nuitee and the property as needed to fulfil the booking; list Nuitee as a processor (or controller for its own use, per its terms), update the privacy policy and the App Privacy label answers if purchases are now collected in the app; scrub guest data 90 days after check-out.
 7. **Consumer rights.** Show cancellation terms before payment; store a snapshot of what was shown; state that hotel stays have no statutory withdrawal period in many jurisdictions but do follow the rate's policy (verify per country).
 8. **Apple.** A physical service consumed outside the app (Guideline 3.1.3(e)); payment happens in the supplier's hosted page; no digital feature is unlocked; describe the flow in reviewer notes (re-read the guideline on submission).
-9. **Accessibility and security.** Payment page in the in-app browser with visible chrome; no card data handled by Wayfold; SSRF and input controls on any supplier-provided URL (photos) through the existing checks.
+9. **Accessibility and security.** Payment page in the in-app browser with visible chrome; no card data handled by Hermi; SSRF and input controls on any supplier-provided URL (photos) through the existing checks.
 10. **Insurance.** No insurance sales; the existing insurance referral rules are unchanged.
 
 ## 10. Analytics
 
-Events in section 6. Metrics: search-to-offer, offer-to-prebook, prebook-to-confirmed conversion, booking failure rate after payment (target under 0.5%), cancellation rate, average nights and value, average margin per booking, net contribution after support cost (target at or above $20 incremental), attach rate (share of trips with a Wayfold hotel booking, base 3% to 4%), affiliate click share before and after launch (cannibalization), support contacts per 100 bookings, "no booking at arrival" incidents (target zero), payout lag days. The decision to continue after the first 200 bookings: incremental contribution per booking at or above $10 and incidents under 1 per 200; otherwise stop and keep affiliate links.
+Events in section 6. Metrics: search-to-offer, offer-to-prebook, prebook-to-confirmed conversion, booking failure rate after payment (target under 0.5%), cancellation rate, average nights and value, average margin per booking, net contribution after support cost (target at or above $20 incremental), attach rate (share of trips with a Hermi hotel booking, base 3% to 4%), affiliate click share before and after launch (cannibalization), support contacts per 100 bookings, "no booking at arrival" incidents (target zero), payout lag days. The decision to continue after the first 200 bookings: incremental contribution per booking at or above $10 and incidents under 1 per 200; otherwise stop and keep affiliate links.
 
 ## 11. Tests
 

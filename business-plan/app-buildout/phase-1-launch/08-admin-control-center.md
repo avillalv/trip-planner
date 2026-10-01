@@ -1,10 +1,10 @@
 # 08: Admin control center (Phase 1)
 
-Part of the [Wayfold build specification](../README.md), [Phase 1: the launch app](README.md). The shared README's decisions and table names override anything here; table, column, enum, flag and kill switch names come from [03-database-schema.md](03-database-schema.md). Written 2026-09-30.
+Part of the [Hermi build specification](../README.md), [Phase 1: the launch app](README.md). The shared README's decisions and table names override anything here; table, column, enum, flag and kill switch names come from [03-database-schema.md](03-database-schema.md). Written 2026-09-30.
 
 This file is complete for Phase 1. Screens, routes and roles that belong to later phases are not specified here; each one is listed as "Later: Phase 2 or 3" in section 6.10.
 
-The admin control center is an internal web console at `admin.wayfold.app`. It is how the founder (and later a few helpers) watch money, spend and health, answer support, and pull the brakes when something runs away. It is not a product feature and is never shown to customers. It ships in pieces across the roadmap (see section 11 and [09-build-roadmap.md](09-build-roadmap.md)); the first pieces (audit, users, kill switches, AI spend) must exist before the hosted web beta opens, because spend control is a launch safety requirement.
+The admin control center is an internal web console at `admin.hermi.world`. It is how the founder (and later a few helpers) watch money, spend and health, answer support, and pull the brakes when something runs away. It is not a product feature and is never shown to customers. It ships in pieces across the roadmap (see section 11 and [09-build-roadmap.md](09-build-roadmap.md)); the first pieces (audit, users, kill switches, AI spend) must exist before the hosted web beta opens, because spend control is a launch safety requirement.
 
 ## 1. Principles
 
@@ -20,7 +20,7 @@ The admin control center is an internal web console at `admin.wayfold.app`. It i
 
 ### 2.1 Where it lives
 
-- Hostname `admin.wayfold.app`, served by the same web build as a separate React Router route group (`/admin/*` inside the SPA, mapped from the admin hostname). The group is code-split into its own chunk and is excluded from the Capacitor iOS bundle by a Vite build flag (`VITE_BUILD_TARGET=ios` removes it), so customers never download admin code.
+- Hostname `admin.hermi.world`, served by the same web build as a separate React Router route group (`/admin/*` inside the SPA, mapped from the admin hostname). The group is code-split into its own chunk and is excluded from the Capacitor iOS bundle by a Vite build flag (`VITE_BUILD_TARGET=ios` removes it), so customers never download admin code.
 - The admin API is under `/v1/admin` on the main API host. It is a separate FastAPI router with its own dependency chain (section 2.3), its own rate limits, and its own OpenAPI tag so `npm run gen:api` produces a separate client.
 - `robots.txt` disallows everything and every admin response carries `X-Robots-Tag: noindex`.
 
@@ -28,13 +28,13 @@ The admin control center is an internal web console at `admin.wayfold.app`. It i
 
 Two independent layers, both required:
 
-1. **Edge layer: Cloudflare Access** in front of `admin.wayfold.app` and `/v1/admin/*`. It authenticates with the company identity provider (Google Workspace SSO) and enforces an IP allowlist or a managed device check (section 9). Cloudflare Access adds a signed `Cf-Access-Jwt-Assertion` header.
+1. **Edge layer: Cloudflare Access** in front of `admin.hermi.world` and `/v1/admin/*`. It authenticates with the company identity provider (Google Workspace SSO) and enforces an IP allowlist or a managed device check (section 9). Cloudflare Access adds a signed `Cf-Access-Jwt-Assertion` header.
 2. **App layer:** the API verifies that Cloudflare Access JWT (signature, audience, expiry), maps the verified email to a `users` row that has an `admin_users` row with `disabled_at` null, then requires a second factor (`admin_users.mfa_enrolled` must be true). WebAuthn passkeys (hardware key or platform authenticator) are preferred; TOTP is the fallback. SMS is never used.
 
 Rules:
 
 - An identity that passes Cloudflare Access but has no enabled `admin_users` row gets a 403 and an alert.
-- Admin sessions are separate from customer sessions: a customer JWT is rejected on `/v1/admin`, and an admin session is rejected everywhere else. An admin has a `users` row plus an `admin_users` row (`user_id`; the first one is created with `wayfold admin-grant`, 03 section 11.6) but signs in only through Cloudflare Access and 2FA, never through Supabase Auth or a customer session.
+- Admin sessions are separate from customer sessions: a customer JWT is rejected on `/v1/admin`, and an admin session is rejected everywhere else. An admin has a `users` row plus an `admin_users` row (`user_id`; the first one is created with `hermi admin-grant`, 03 section 11.6) but signs in only through Cloudflare Access and 2FA, never through Supabase Auth or a customer session.
 - Session: 8 hours absolute, 30 minutes idle. Cookie is `HttpOnly`, `Secure`, `SameSite=Strict`, scoped to the admin host.
 - **Step-up 2FA** (a fresh WebAuthn or TOTP check inside the last 5 minutes) is required for: revealing PII, money actions, kill switch changes, settings changes, impersonation, deletion processing, role changes and CSV exports.
 - Enrollment: the owner invites an email; the invitee signs in through SSO, registers two factors (one passkey and one recovery code set; `mfa_enrolled` becomes true), and is activated by the owner. Recovery codes are single use and stored hashed.
@@ -140,8 +140,8 @@ Every admin write, reveal, export and sign-in writes one `audit_log` row. Reads 
 
 ## 5. Console conventions
 
-- **Layout:** left navigation grouped as Monitor (Overview, Imports, Provider health, System health), People (Users, Referrals, Support inbox, Moderation), Money (Subscriptions, Credits and AI spend, Affiliate, Finance), Control (Kill switches, Flags, Settings), Audit. Items hidden when the role has no access. The passport design tokens are reused, with a neutral "Wayfold admin" header so it cannot be mistaken for the customer app.
-- **Environment banner:** production shows a thin burgundy bar labeled "Production"; staging shows a navy bar. Destructive buttons are disabled on staging data copied from production.
+- **Layout:** left navigation grouped as Monitor (Overview, Imports, Provider health, System health), People (Users, Referrals, Support inbox, Moderation), Money (Subscriptions, Credits and AI spend, Affiliate, Finance), Control (Kill switches, Flags, Settings), Audit. Items hidden when the role has no access. The Hermi design tokens are reused (05 section 2), with a neutral "Hermi admin" header so it cannot be mistaken for the customer app.
+- **Environment banner:** production shows a thin `--tp-route-a-ink` (`#C4264D`) bar labeled "Production"; staging shows a `--tp-sky` bar. Destructive buttons are disabled on staging data copied from production.
 - **Lists:** server-side pagination (cursor), 50 rows a page, sortable columns, filters stored in the URL so a view can be shared with another admin. Maximum 10,000 rows in any CSV.
 - **Masking:** emails as `a***@g***.com`, names as initials, trip titles truncated to 20 characters, no addresses, no phone numbers, no notes text, no passport or document data, and no imported file, feed address or pasted text, anywhere. User ids are shown as the last 8 characters of the UUID with copy.
 - **Confirmation tiers:** `W` actions show a dialog with the effect and a reason box. `X` actions add a typed confirmation (for example the word `KILL-AI` or the user's short id) and a step-up 2FA check.
@@ -203,7 +203,7 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
   - *Revoke an import-reward pass* (`passes.revoke`, engineer and owner): ends a pass with `source = 'import_reward'` for abuse (status `expired`), removes its unspent credits and logs before and after. Purchased passes cannot be revoked here.
   - *Open referrals*: jump to the referral abuse view (section 6.9) filtered to this user.
 - **Impersonation, read-only, with consent:**
-  1. Support opens the request and picks a reason category; the user gets an in-app prompt and an email: "Wayfold support asks to view your account to help with ticket 4821. They cannot change anything." with Approve and Decline.
+  1. Support opens the request and picks a reason category; the user gets an in-app prompt and an email: "Hermi support asks to view your account to help with ticket 4821. They cannot change anything." with Approve and Decline.
   2. On approval the API mints a 15 minute impersonation token bound to that admin and user, carrying an `imp` claim. The API rejects every non-GET request with that token and hides secrets, payment details and notes bodies.
   3. The admin UI shows a full-width banner with a countdown and an End button. Each page fetched writes an `audit_log` row with `impersonation_id`. Start, end and expiry are logged.
   4. The user sees the event in Settings, "Support access log". Without consent there is no impersonation; there is no override, including for the owner.
@@ -344,7 +344,7 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
 ### 6.11 Support inbox
 
 - **Purpose:** answer users within 2 business days (the commitment in the plan) with full context.
-- **Data shown** (`support_tickets`): ticket id, `source` (`in_app` with `app_version` and `platform` attached, `email` to support@wayfold.app, or `admin`), `subject`, `category`, `status` (`open`, `pending`, `resolved`, `closed`), `priority` (`low`, `normal`, `high`, `urgent`), `assigned_admin_id`, SLA timer, linked user (card with tier, entitlements, recent errors), thread (`messages`), `internal_notes` and `tags`.
+- **Data shown** (`support_tickets`): ticket id, `source` (`in_app` with `app_version` and `platform` attached, `email` to support@hermi.world, or `admin`), `subject`, `category`, `status` (`open`, `pending`, `resolved`, `closed`), `priority` (`low`, `normal`, `high`, `urgent`), `assigned_admin_id`, SLA timer, linked user (card with tier, entitlements, recent errors), thread (`messages`), `internal_notes` and `tags`.
 - **Filters:** status, assignee, priority, tag, source, tier, overdue, contains refund.
 - **Actions:** reply (email via Resend), internal note, assign, tag, merge duplicates, link or unlink user, set priority, close, insert a macro, jump to the user screen actions (grant credits, extend pass) with the ticket id prefilled as the reason.
 - **Macros:** versioned templates with variables (`{first_name}`, `{ticket_id}`, `{product}`), kept as markdown files in the repo (`admin/macros/*.md`) and loaded at deploy, so changes are reviewed in pull requests and no new table is needed. Launch set: refund guidance (refunds go through Apple at reportaproblem.apple.com, we can reverse credits), cancellation help (Manage Subscriptions link), deletion does not cancel an Apple subscription, how to restore purchases, credits explained, data export ready, affiliate disclosure explained, import help, referral credits explained, report received, outage apology.
@@ -410,7 +410,7 @@ Each screen lists purpose, data shown, filters, actions and guardrails.
 
 ```
 +----------------------------------------------------------------------------------+
-| WAYFOLD ADMIN   [Production]                anthony (owner)   [Sign out]        |
+| HERMI ADMIN     [Production]                anthony (owner)   [Sign out]         |
 +-------------+--------------------------------------------------------------------+
 | MONITOR     | Overview     Range: [Today v]  Platform: [All v]    as of 14:05Z   |
 |  Overview   |                                                                    |
@@ -581,8 +581,8 @@ Base path `/v1/admin`. All routes require an admin session (section 2). Conventi
 ## 9. Security rules
 
 1. **Network gate.** Cloudflare Access with an IP allowlist (founder's fixed addresses or a WARP device posture check) in front of the host and path. The origin accepts admin traffic only from Cloudflare (authenticated origin pulls). A request that reaches the origin without a valid Access JWT is dropped and alerted.
-2. **Separate identity.** Admin sessions are not customer sessions; different token audience (`wayfold-admin`), different cookie scope, different code path, separate rate limit bucket.
-3. **Least privilege in the database.** Admin routes use the database role `wayfold_admin` (03 section 6.1, `BYPASSRLS`, used by the admin console only). The grants in 03 give it all DML on every table before that block narrows them; the narrowing this section wants (`INSERT` and `SELECT` only on `audit_log`, no `DELETE` on money tables such as `credit_ledger` and `store_transactions`) is the `REVOKE` block at the end of 03 section 6.1. `wayfold_app` cannot read `audit_log` or `admin_users`.
+2. **Separate identity.** Admin sessions are not customer sessions; different token audience (`hermi-admin`), different cookie scope, different code path, separate rate limit bucket.
+3. **Least privilege in the database.** Admin routes use the database role `hermi_admin` (03 section 6.1, `BYPASSRLS`, used by the admin console only). The grants in 03 give it all DML on every table before that block narrows them; the narrowing this section wants (`INSERT` and `SELECT` only on `audit_log`, no `DELETE` on money tables such as `credit_ledger` and `store_transactions`) is the `REVOKE` block at the end of 03 section 6.1. `hermi_app` cannot read `audit_log` or `admin_users`.
 4. **No raw PII in lists.** Masking is done in the API serializer, not the UI, so a raw response never carries it. Emails are searchable only by hash. Reveal is per record, reasoned, rate limited and audited. No passport, document, payment card or note text is ever exposed. Logs and Sentry events from admin routes are scrubbed of masked fields.
 5. **Rate limits** (per admin, Postgres token bucket plus a Cloudflare rule): 120 requests a minute on reads, 20 a minute on writes, 5 a minute on `X` actions, 30 reveals an hour, 5 exports an hour, 10 step-up attempts an hour with lockout and alert.
 6. **Step-up and confirmation** on every money, destructive, reveal and control action (section 2.2); typed confirmation on `X` actions.

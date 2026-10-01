@@ -1,10 +1,10 @@
-# Pack 04: Email-forward import (plans@wayfold.app)
+# Pack 04: Email-forward import (plans@hermi.world)
 
 Part of [Phase 2: growth](README.md). Written 2026-09-30. Builds on the Phase 1 import system
 ([Phase 1 04 section 5.26](../phase-1-launch/04-api-spec.md): calendar file, calendar feed and pasted
 confirmations, preview then confirm, `trip_imports`) and on the `booking_import` extraction
 ([06 section 5.3](../reference-full-spec/06-ai-agents-spec.md), [06 section 12.3](../reference-full-spec/06-ai-agents-spec.md)). Phase 1 states that
-"email-forward import (plans@wayfold.app) is Later: Phase 2" and its schema section 14 names the tables this
+"email-forward import (plans@hermi.world) is Later: Phase 2" and its schema section 14 names the tables this
 pack creates (`forwarding_addresses`, `inbound_emails`, `trip_imports.source` value `email_forward` and
 `trip_imports.inbound_email_id`). The Phase 1 README adds that the email-forward decision is taken at the
 month 4 review based on how pasted imports perform in the beta; if it was pulled into Phase 1, skip this
@@ -23,7 +23,7 @@ for launch ([01 section 7](../reference-full-spec/01-product-spec.md)), so the i
 ## 1. Goal and why now
 
 **Goal.** Forward any confirmation email (airline, hotel, train, car, restaurant, tour) to
-`plans@wayfold.app` and get a reviewed import preview in the right trip within a minute, with no copy and
+`plans@hermi.world` and get a reviewed import preview in the right trip within a minute, with no copy and
 paste. Nothing is saved until the person confirms, exactly as with every other import.
 
 **Why now.**
@@ -45,7 +45,7 @@ paste. Nothing is saved until the person confirms, exactly as with every other i
 
 | ID | Story | Acceptance |
 |---|---|---|
-| EML-1 | As a user, I find my forwarding address in the app. | Settings, Forward bookings shows `plans@wayfold.app`, a Copy button, my verified sender addresses, and a personal address `plans+<token>@wayfold.app` for mail that arrives from a mailbox I have not verified. Copy explains Gmail, Outlook and Apple Mail steps, including an optional auto-forward filter for a sender such as an airline. |
+| EML-1 | As a user, I find my forwarding address in the app. | Settings, Forward bookings shows `plans@hermi.world`, a Copy button, my verified sender addresses, and a personal address `plans+<token>@hermi.world` for mail that arrives from a mailbox I have not verified. Copy explains Gmail, Outlook and Apple Mail steps, including an optional auto-forward filter for a sender such as an airline. |
 | EML-2 | As a user, I verify the addresses I forward from. | Adding an address sends a one-time code link; a verified address can belong to one account only. Mail from an unverified, unknown sender is dropped without a reply (no backscatter), and counted for admin health. |
 | EML-3 | As a user, I review what was found. | A forwarded email becomes an import preview (`trip_imports.source = 'email_forward'`, status `previewed`) shown in "Bookings to review" (Trips home card, Activity item, optional push "We found a booking in your email"). Each candidate is a flight, stay or item with the source line "From your email on 3 Oct, checked" and the sender domain. It uses the Phase 1 review screen: [Add all], per item edit, duplicates unchecked. Nothing is saved until I confirm. |
 | EML-4 | As a user, my booking lands in the right trip. | The preview's target is suggested by date overlap (trip range plus or minus 3 days) and destination (airport or city). One clear match is preselected (`existing_trip`); several matches or none default to "Create a new trip"; the user can change it before confirming. |
@@ -129,7 +129,7 @@ ALTER TABLE consents ADD CONSTRAINT ck_consents_kind
   CHECK (kind IN ('terms', 'privacy', 'ai_processing', 'marketing_email', 'push_notifications', 'analytics', 'concierge_sharing', 'email_forwarding'));
 
 INSERT INTO feature_flags (key, description, enabled, rollout_pct, rules, variants) VALUES
-('email_forward_import', 'Forward booking emails to plans@wayfold.app', false, 100, '{}', '{}')
+('email_forward_import', 'Forward booking emails to plans@hermi.world', false, 100, '{}', '{}')
 ON CONFLICT (key) DO NOTHING;
 INSERT INTO feature_flags (key, kind, description, enabled, rollout_pct, rules, variants) VALUES
 ('setting_email_import', 'setting', 'Email import limits: days an emailed preview is kept, emails per user per day, global emails per hour, maximum message size in bytes', true, 100,
@@ -160,7 +160,7 @@ Receiving infrastructure (decision ticket P2-032, candidates "reported, verify")
 | Resend inbound (receiving emails) | Same vendor as outbound email; confirm it is generally available and what limits apply (reported, verify). |
 | Postmark inbound, Mailgun routes or Amazon SES receiving | Mature fallbacks; SES writes to S3 and notifies by SNS (S3 would hold the raw mail, so it needs a short lifecycle). |
 
-Whatever is chosen: MX for the receiving address must not break the existing `support@wayfold.app` mailbox
+Whatever is chosen: MX for the receiving address must not break the existing `support@hermi.world` mailbox
 (per address routing), inbound is delivered to `POST /v1/webhooks/inbound-email` with a signature, and the
 provider must expose SPF, DKIM and DMARC verdicts (or the Worker computes them).
 
@@ -183,7 +183,7 @@ The import endpoints are Phase 1 ([Phase 1 04 section 5.26](../phase-1-launch/04
 
 ```ts
 type Forwarding = {
-  address: "plans@wayfold.app"; personal_address: string
+  address: "plans@hermi.world"; personal_address: string
   senders: { id: Uuid; email: string; verified: boolean }[]
   received_this_month: number
 }
@@ -232,7 +232,7 @@ Errors: `402 insufficient_credits` on `/imports/{id}/ai-extract`, `403 ai_consen
    with the trip picker and, per item, Add, Update existing, Mark cancelled or Skip, and [Add all]. Each item
    shows its source: "From your email on 3 Oct, sender lufthansa.com".
 3. **Empty and error states**. Empty: "No forwarded bookings yet", "Forward a confirmation to
-   plans@wayfold.app and it shows up here.", [Copy address]. Unrecognized: "We could not find a booking in
+   plans@hermi.world and it shows up here.", [Copy address]. Unrecognized: "We could not find a booking in
    this email. You were not charged." with [Paste it instead]. Needs credits: "We can read the rest with 1
    credit.", [Read with AI] (opens the credit sheet; free path: confirm what was found, paste, or dismiss).
    Failed: "We could not read this email. Your credits were not used."

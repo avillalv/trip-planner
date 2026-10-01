@@ -40,7 +40,7 @@ Booking.com pages.
 - Approvals need live traffic and screenshots of disclosure and placement, which only exist after
   Phase 1 launches. Applications have lead times, so they start the first week of Phase 2.
 - Competitive reasons. TripIt sells subscriptions and Wanderlog is ad supported (reported, verify;
-  [business plan](../context/business-plan/01-business-plan.md)); Wayfold's public promise is "no ads, honest labels", so
+  [business plan](../context/business-plan/01-business-plan.md)); Hermi's public promise is "no ads, honest labels", so
   better direct program rates are the way to earn more per click without adding any placement.
 - The Skyscanner relationship is also a hedge: the risk register lists SerpApi terms as a medium
   likelihood risk to live fares, and a licensed fare source would remove it.
@@ -238,7 +238,7 @@ The outbound API and redirect are Phase 1 and are unchanged ([04 section 5.21](.
   content read) and `POST /affiliate/programs/{code}/status` (owner only, two-person approval for
   `active`).
 
-**Adapters** (`apps/api/wayfold/modules/affiliate/adapters/`), each behind the provider interface and
+**Adapters** (`apps/api/hermi/modules/affiliate/adapters/`), each behind the provider interface and
 logged in `provider_calls`:
 
 | Adapter | Job | Source | Sub-id where it returns |
@@ -285,7 +285,7 @@ purchases through a partner never unlock app features and nothing is worded as i
 Guideline 3.1.1). No advertising SDKs, no device ids: sub-ids are random per-click tokens, conversions are
 pulled by our server, so the app stays outside App Tracking Transparency (note it in the review notes and
 verify with Apple; Airalo's reported "tracked via Impact and Adjust" mobile attribution does not apply
-because Wayfold links out and uses server-side matching).
+because Hermi links out and uses server-side matching).
 
 Expected impact (assumptions; replace with measured numbers when available):
 
@@ -302,7 +302,7 @@ triggers the stop decision; Phase 2's exit review reports the trend ([README](RE
 
 Compliance checklist per program before `active`: terms read and filed, app use and link-out confirmed in
 writing where the terms are unclear, sub-id length and character rules confirmed, cashback and incentive
-clauses checked (Wayfold offers none), disclosure wording agreed, country and category restrictions set in
+clauses checked (Hermi offers none), disclosure wording agreed, country and category restrictions set in
 `countries_allowed` and `countries_blocked`, a test booking recorded, a kill switch tested.
 
 ## 7. Admin additions
@@ -387,7 +387,7 @@ The `placement` enum gains `after_trip` (pack 10) and `activity` already exists.
   (Booking.com only after confirming its current network), follow up weekly, record decisions.
 - Accept: every application has a status and next action date; approvals move programs to `active` with
   two-person approval.
-- Touches: `apps/api/wayfold/modules/affiliate/`, `apps/web/src/routes/admin/affiliate/`.
+- Touches: `apps/api/hermi/modules/affiliate/`, `apps/web/src/routes/admin/affiliate/`.
 
 #### P2-077 Impact adapter and conversion import [L, needs P2-076, Phase 1 conversion import]
 - Description: Impact Actions API adapter, HMAC postback endpoint, sub-id matching (`subId1`), status

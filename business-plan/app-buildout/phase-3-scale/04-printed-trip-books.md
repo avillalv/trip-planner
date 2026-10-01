@@ -166,9 +166,9 @@ CREATE UNIQUE INDEX uq_print_orders_checkout ON print_orders (stripe_checkout_se
 CREATE UNIQUE INDEX uq_print_orders_vendor ON print_orders (printer, printer_order_id) WHERE printer_order_id IS NOT NULL;
 
 -- Money and fulfilment state is written by the billing and print workers, not the app role.
-REVOKE INSERT, UPDATE, DELETE ON print_orders FROM wayfold_app;
-GRANT INSERT ON print_orders TO wayfold_app;                                        -- quotes (status 'draft') only; enforced by the policy
-GRANT UPDATE (layout, copies, shipping_address, format, page_count) ON print_orders TO wayfold_app;   -- while draft (policy print_orders_update)
+REVOKE INSERT, UPDATE, DELETE ON print_orders FROM hermi_app;
+GRANT INSERT ON print_orders TO hermi_app;                                          -- quotes (status 'draft') only; enforced by the policy
+GRANT UPDATE (layout, copies, shipping_address, format, page_count) ON print_orders TO hermi_app;     -- while draft (policy print_orders_update)
 
 CREATE TABLE print_products (
   sku                text PRIMARY KEY,
@@ -192,7 +192,7 @@ CREATE TABLE print_products (
   CONSTRAINT ck_print_products_pages CHECK (min_pages IS NULL OR max_pages IS NULL OR max_pages >= min_pages)
 );
 SELECT add_updated_at_trigger('print_products');
-GRANT SELECT ON print_products TO wayfold_app;
+GRANT SELECT ON print_products TO hermi_app;
 INSERT INTO print_products (sku, product, format, name, size_label, vendor, vendor_sku, min_pages, max_pages, default_pages, price_minor, is_active) VALUES
 ('trip_book_8x8_hard', 'trip_book', 'hardcover', 'Trip book, hardcover', '8x8 in', 'TBD', 'TBD', 24, 60, 30, 4499, false),
 ('poster_map',         'poster',    'poster',    'Trip map poster',      'TBD',     'TBD', 'TBD', NULL, NULL, NULL, 2499, false)
@@ -209,7 +209,7 @@ CREATE TABLE print_order_events (
   created_at      timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX ix_print_order_events_order ON print_order_events (print_order_id, created_at);
-REVOKE ALL ON print_order_events FROM wayfold_app;
+REVOKE ALL ON print_order_events FROM hermi_app;
 
 -- Photos. If Phase 2 memories already stores trip photos, map to that table and skip this one.
 CREATE TABLE trip_photos (
@@ -295,7 +295,7 @@ Accessibility: every page image has alt text from the page title; the builder is
 
 - **Stripe Checkout** in payment mode, one line per item plus shipping, **Stripe Tax** for sales tax or VAT on physical goods (verify US nexus and registrations; start US only). Apple Pay and Google Pay appear where available. Card fees are modeled at about 3.5% of the order in the contribution figures ($1.60 on $44.99).
 - **No In-App Purchase.** Physical goods used outside the app (Guideline 3.1.3(e), confirm current text); the iOS app links to the web page only.
-- **Vendor cost.** The print vendor is paid from Wayfold's account (invoice or card on file per vendor). `print_orders.vendor_cost_minor` is recorded from the vendor's invoice to give real margin per order.
+- **Vendor cost.** The print vendor is paid from Hermi's account (invoice or card on file per vendor). `print_orders.vendor_cost_minor` is recorded from the vendor's invoice to give real margin per order.
 - **Refunds.** Full refund before submission (cancel). After shipment, misprints and damage are reprinted or refunded per the vendor policy and support discretion; refunds go through Stripe and set `refund_minor`; the vendor credit is claimed back where available.
 - **Accounting.** Revenue is recognized at shipment; sales tax collected is a liability tracked by Stripe Tax reports.
 

@@ -44,7 +44,7 @@ Start the build only when all of these hold. The first is from 09; the rest are 
 
 1. **Audience.** About 100k MAU (09 section 3.8), sustained for 3 months.
 2. **Economics.** The low-end figure at the current MAU is at least 3 times the first-year cost of counsel, the build and compliance upkeep (quotes from P3-082; the multiplier is a rule of thumb).
-3. **Access.** A specialist publisher network (CardRatings, Bankrate, or a CJ or Impact program) accepts Wayfold as a publisher. Issuers screen publishers; Chase is reported reachable only through CardRatings or Bankrate (08-affiliate-revenue.md section 4.3).
+3. **Access.** A specialist publisher network (CardRatings, Bankrate, or a CJ or Impact program) accepts Hermi as a publisher. Issuers screen publishers; Chase is reported reachable only through CardRatings or Bankrate (08-affiliate-revenue.md section 4.3).
 4. **Legal.** Counsel has written advice on the regimes in section 9 and accepts the design in section 2.
 5. **Trust.** Over the prior 6 months: affiliate "hide booking links" rate under 5% of users, no rise in trust-related support tickets, and App Store rating stable. If trust is slipping, fix that first.
 6. **Capacity.** A named person owns offer expiry, copy re-review and complaints (section 8).
@@ -58,7 +58,7 @@ If any item fails, re-check every 6 months. The decision record is written in P3
 | D1 | One place only | Offers appear only in the Money section of Before you go (inside the `money` checklist item). They never appear in flights, stays, itinerary, Discover, search, presentation, shared pages, PDFs or print. |
 | D2 | No AI involvement | Offer copy is issuer-approved text stored verbatim and shown unchanged. No model writes, summarizes or recommends a card. AI answers never mention specific cards or issuers. Agents never cite offers. |
 | D3 | No ranking, no targeting | The section lists offers alphabetically by issuer and says so. Payout never affects order, inclusion or visibility. No personalization from trip data, spending or any financial signal. A user sees the same offers as anyone else in their region. |
-| D4 | No financial data collected | Wayfold never asks for or stores income, credit score, card numbers or identity numbers. The only data is the outbound click (random sub-id) and the network's approval status. |
+| D4 | No financial data collected | Hermi never asks for or stores income, credit score, card numbers or identity numbers. The only data is the outbound click (random sub-id) and the network's approval status. |
 | D5 | Opt-in and quiet | Nothing commercial loads or renders until the user taps "Show partner offers" in the Money item, which records the `offers` consent (Phase 1 03 section 14 names this consent value). Withdrawable at any time in Settings or in the section. No push, no email, no paywall mention, no badge, no nudge. The checklist item is unchanged for users who never opt in. |
 | D6 | Region first | United States only at launch. Other regions stay off until counsel clears their financial-promotion rules. |
 | D7 | Two-person approval | An offer goes live only after legal approval and, where required, an issuer approval reference, recorded in the console by two different admins. Offers carry an expiry and a re-review date. |
@@ -70,12 +70,12 @@ If any item fails, re-check every 6 months. The decision record is written in P3
 As a traveler preparing for an international trip, I want to see money-related options in the Money checklist item, so that I can decide what to do about foreign card fees.
 - The Money item still shows the non-commercial guidance first (tell your bank, carry some cash, use a card without foreign transaction fees) with no links.
 - Below it is one plain line, "Partner offers for travel cards and loyalty programs", and a [Show partner offers] button. Until the user taps it no offer is requested from the server or rendered. Tapping records the `offers` consent (`PUT /me/consents/offers`) and expands a labeled section "Offers from partners" (text, not color only; "Ad" on UK and EU storefronts when those regions are later enabled) lists live offers for the user's region, alphabetical by issuer, each with the issuer's approved headline, key terms shown verbatim, required disclosures inline, and a link to the issuer's terms.
-- A line above the list: "Wayfold earns a commission if you are approved. It does not change which offers we show or their order. Offers are listed alphabetically."
+- A line above the list: "Hermi earns a commission if you are approved. It does not change which offers we show or their order. Offers are listed alphabetically."
 - At most 4 offers are shown; none is pre-selected or highlighted.
 
 **C-2. Traveler applies.**
 As a traveler, I want to go to the issuer's page, so that I can read everything and apply.
-- "View offer and terms" opens the issuer page through `/go/{click_id}` in the in-app browser with visible chrome; the disclosure sentence is next to the button; no application is taken inside Wayfold.
+- "View offer and terms" opens the issuer page through `/go/{click_id}` in the in-app browser with visible chrome; the disclosure sentence is next to the button; no application is taken inside Hermi.
 - No data beyond the random sub-id is passed.
 
 **C-3. Traveler turns offers off.**
@@ -177,12 +177,12 @@ CREATE TABLE card_offer_reviews (
   CONSTRAINT ck_card_offer_reviews_action CHECK (action IN ('submit', 'legal_approve', 'legal_reject', 'issuer_approve', 'publish', 'pause', 'expire', 'rereview', 'complaint'))
 );
 CREATE INDEX ix_card_offer_reviews_offer ON card_offer_reviews (card_offer_id, created_at);
-REVOKE ALL ON card_offer_reviews FROM wayfold_app;                                          -- admin only
+REVOKE ALL ON card_offer_reviews FROM hermi_app;                                          -- admin only
 
 -- The app sees live, in-window offers for the caller's region, and never the review or payout columns.
-REVOKE ALL ON card_offers FROM wayfold_app;
+REVOKE ALL ON card_offers FROM hermi_app;
 GRANT SELECT (id, program_id, kind, issuer_name, product_name, headline, key_terms, required_disclosures, terms_url,
-              image_url, regions, status, copy_version, valid_from, valid_to) ON card_offers TO wayfold_app;
+              image_url, regions, status, copy_version, valid_from, valid_to) ON card_offers TO hermi_app;
 ALTER TABLE card_offers ENABLE ROW LEVEL SECURITY;
 CREATE POLICY card_offers_live ON card_offers FOR SELECT
   USING (status = 'live' AND (valid_from IS NULL OR valid_from <= CURRENT_DATE) AND valid_to >= CURRENT_DATE);
@@ -247,7 +247,7 @@ Conversions: the existing nightly pull or postback stores approvals in `affiliat
 
 **Money item in Before you go (extends 6.20).** Purpose: help with money before a trip; offers are a small, labeled extra. Layout: the checklist item detail shows the plain guidance (tell your bank, cash, cards without foreign transaction fees) and done or not needed actions first, with no commercial content. Below a rule, one plain line "Partner offers for travel cards and loyalty programs" with [Show partner offers]. After the user opts in (consent `offers`), a section titled "Offers from partners" appears with the explainer line and up to 4 cards.
 
-Offer card: issuer and product name, headline, key terms as a description list (for example annual fee, foreign transaction fee, rewards, as the issuer states them), required disclosures in body text, a text label "Ad" or "Partner offer", the sentence "Wayfold earns a commission if you are approved here.", a terms link, and [View offer and terms] opening through `/go`. Overflow menu: Turn off partner offers, Report this offer.
+Offer card: issuer and product name, headline, key terms as a description list (for example annual fee, foreign transaction fee, rewards, as the issuer states them), required disclosures in body text, a text label "Ad" or "Partner offer", the sentence "Hermi earns a commission if you are approved here.", a terms link, and [View offer and terms] opening through `/go`. Overflow menu: Turn off partner offers, Report this offer.
 
 States: no live offers or region not allowed, the section is absent; loading skeleton; offline "Offers need a connection" (plain guidance still visible); consent withdrawn, the section collapses to the one-line prompt; expired offers vanish.
 
@@ -268,7 +268,7 @@ There is no user billing and nothing in the app is paid. Revenue is a network co
 - **Reporting.** Finance reports add card and loyalty commissions by offer and network, approvals, pending versus approved versus rejected, and payout dates; revenue is recognized when the network approves, net of reversals.
 - **Payouts.** Per network terms (verify payment thresholds and lag); `affiliate_payouts` records receipts (03 section 5.15).
 - **Tax and 1099.** Commission income from US networks is reported by the network; finance keeps the records.
-- **No cashback, no rewards to users.** Wayfold does not pay users any share (08-affiliate-revenue.md section 13.6).
+- **No cashback, no rewards to users.** Hermi does not pay users any share (08-affiliate-revenue.md section 13.6).
 - **Apple.** These are offers for financial products used outside the app. No in-app purchase is involved and nothing digital is unlocked. Check the App Review guideline on financial products and credit offers for any extra requirements on disclosure (verify text on the submission day) and describe the section in reviewer notes.
 
 ## 8. Admin additions
@@ -287,13 +287,13 @@ New "Card and loyalty offers" screen (Control group), extends [08](../phase-1-la
 This is the reason the pack is last. Counsel confirms each item before the first offer goes live; the lists are questions to ask, not advice.
 
 1. **Advertising disclosure.** FTC endorsement rules require a clear, adjacent disclosure (the sentence in section 3). UK and EU rules differ; the UK treats affiliate links as advertising ("Ad") and credit-card promotion is a regulated financial promotion, so the UK and EU stay off until counsel clears them (D6).
-2. **Consumer finance advertising.** Credit card advertising must not be unfair, deceptive or abusive, and must show required terms. Issuers provide approved language and disclosures (for example fees and rates); Wayfold displays them verbatim and does not summarize, rewrite or add claims. Counsel confirms which federal and state rules reach a publisher that only links out.
+2. **Consumer finance advertising.** Credit card advertising must not be unfair, deceptive or abusive, and must show required terms. Issuers provide approved language and disclosures (for example fees and rates); Hermi displays them verbatim and does not summarize, rewrite or add claims. Counsel confirms which federal and state rules reach a publisher that only links out.
 3. **Licensing.** Whether simple referral linking requires any state registration or licence (usually not for referral only, but verify).
 4. **Network and issuer terms.** Issuers screen publishers, review all copy, may restrict placement, targeting, incentives and traffic types, and may require approvals per page. Get written approval before publishing each offer and keep it with the record (`issuer_approval_ref`).
 5. **No advice.** No "best card for Japan", no comparisons or rankings, no eligibility predictions, no personalized suggestions; AI never produces or discusses card content (D2). The section's explainer says the offers are advertisements.
 6. **Data protection.** No financial data is collected (D4). The random sub-id carries no user id, trip id or device id (08-affiliate-revenue.md section 7.2). Click logs stay within the existing privacy policy wording; add card offers to the affiliate section of the policy and to the App Privacy answers if anything changes (it should not).
 7. **Apple.** Guideline review for financial offers (verify the text); no dark patterns; the in-app browser with visible chrome; no claim that an application unlocks anything.
-8. **Minors and eligibility.** Offers state issuer eligibility as the issuer states it; Wayfold does not collect age, so the terms text and the destination page carry eligibility; the section is not shown to guest accounts.
+8. **Minors and eligibility.** Offers state issuer eligibility as the issuer states it; Hermi does not collect age, so the terms text and the destination page carry eligibility; the section is not shown to guest accounts.
 9. **Incentives.** No user incentive for applying (cashback rule above); no link between offers and app features.
 10. **Complaint and takedown.** A reported offer can be paused in one action; issuer takedown requests are honored the same day; a record of each request is kept.
 

@@ -1,6 +1,6 @@
 # 09: Build roadmap (Phase 1, months 1 to 6)
 
-Part of the [Wayfold build specification](../README.md) and of [Phase 1](README.md). The shared decisions in the [root README](../README.md) (tier codes, credit codes, table names) and the Phase 1 scope and month plan in the [Phase 1 README](README.md) are final; this file sequences the work.
+Part of the [Hermi build specification](../README.md) and of [Phase 1](README.md). The shared decisions in the [root README](../README.md) (tier codes, credit codes, table names) and the Phase 1 scope and month plan in the [Phase 1 README](README.md) are final; this file sequences the work.
 
 This file has two halves. The first is the plan: what each month is for, week-level milestones, the critical path, a capacity check and what to cut first. The second is an ordered backlog of 129 tickets (WF-001 to WF-129, numbered for Phase 1 only; WF-116 to WF-129 were appended for the features adopted from the competitive analysis and sit inside their months), each small enough for one Claude Code session. Two of them (WF-122 and WF-129) are already on the cut list and are not counted in the committed plan (section 4). A section at the end explains how to work through it with Claude Code.
 
@@ -207,7 +207,7 @@ Conventions for every ticket:
   3. If any route or schema changed: `npm run gen:api` was run and the regenerated `apps/web/src/lib/api/schema.d.ts` is committed.
   4. If any model or migration changed: the migration follows `.claude/rules/database-migrations.md` (expand and contract, one head, tested from empty and from the previous revision).
   5. New environment variables are documented in `.env.example`; no secrets in the repo.
-  6. UI copy follows the copy rules (sentence case, plain verbs, no em dashes) and the passport design tokens.
+  6. UI copy follows the copy rules (sentence case, plain verbs, no em dashes) and the Hermi design tokens.
   7. The work respects the non-negotiable rules in the [root README](../README.md) (no ranking by commission, no fetching Airbnb, Vrbo or Booking.com pages, sources on every AI fact).
   8. A new analytics event is added to the catalogue in [10-quality-security-launch.md](10-quality-security-launch.md) section 4 and to `packages/shared/src/events.ts` before it fires.
 
@@ -215,8 +215,8 @@ Conventions for every ticket:
 
 #### WF-001 Name, domain and email [M1, S]
 - Depends on: none.
-- Description: pick the working name Wayfold, check the trademark and App Store name, buy `wayfold.app`, set up `support@`, `no-reply@` and the Resend sending domain with SPF, DKIM and DMARC. Start the Apple Developer enrollment the same day. Spec: [02-architecture.md](02-architecture.md).
-- Accept: domain resolves through Cloudflare; a test email from `no-reply@wayfold.app` passes SPF, DKIM and DMARC; name availability notes saved in `docs/adr/0001-name.md`; enrollment submitted.
+- Description: confirm the name Hermi: run the trademark search (classes 9, 39, 42, with an attorney opinion on the Hermio and Hermès risks in [brand/BRAND.md](../brand/BRAND.md)), reserve the App Store name "Hermi: Group Trip Planner", buy `hermi.world` (and `heyhermi.com` as a redirect), set up `support@`, `no-reply@` and the Resend sending domain with SPF, DKIM and DMARC. If the search or the opinion blocks the name, the fallback names are in the same brand file. Start the Apple Developer enrollment the same day. Spec: [02-architecture.md](02-architecture.md).
+- Accept: domain resolves through Cloudflare and `heyhermi.com` redirects to it; a test email from `no-reply@hermi.world` passes SPF, DKIM and DMARC; the trademark search results, the attorney opinion and the name availability notes are saved in `docs/adr/0001-name.md`; the App Store name is reserved; enrollment submitted.
 - Touches: `docs/adr/`, `infra/cloudflare/` (record list in `rules.md`), `infra/scripts/`.
 - Tests: a script `infra/scripts/check-mail-auth` that queries the DNS records and exits non-zero if any is missing.
 - Done: DoD plus the decision recorded and the script run against the live domain.
@@ -225,7 +225,7 @@ Conventions for every ticket:
 - Depends on: WF-001.
 - Description: a static page on Cloudflare Pages with the positioning line "Plan together. Know the fare.", the logo, a waitlist form (email plus "who do you plan trips with" and "which app do you use today"), and a privacy note. Waitlist entries land in a table or Resend audience.
 - Accept: form submit stores one entry per email (duplicates ignored); confirmation email sent; page scores 90 or more on Lighthouse mobile; no ad or tracking SDKs; privacy text links to a policy page.
-- Touches: `apps/web/public/` (static landing page deployed to Cloudflare Pages), a small `POST /v1/waitlist` route in `apps/api/wayfold/modules/notifications/`.
+- Touches: `apps/web/public/` (static landing page deployed to Cloudflare Pages), a small `POST /v1/waitlist` route in `apps/api/hermi/modules/notifications/`.
 - Tests: route accepts valid email, rejects invalid, dedupes, rate limits; Playwright submit flow.
 - Done: DoD plus page live on the production domain.
 
@@ -239,7 +239,7 @@ Conventions for every ticket:
 
 #### WF-004 Scaffold the repository [M1, M]
 - Depends on: WF-003.
-- Description: create the Wayfold monorepo with the tree in [02-architecture.md](02-architecture.md) section 2: `apps/api` (Python 3.13, uv, FastAPI), `apps/worker`, `apps/web` (Vite, React 19, TanStack Query, Tailwind 4), `packages/shared`, `packages/tokens`, `packages/eslint-config`, `infra/`, `.github/` (workflows and Dependabot), `docs/` (`apps/ios` arrives in WF-080), a uv workspace and npm workspaces, root `package.json` scripts (`setup`, `start`, `dev`, `test`, `lint`, `format`, `gen:api`), `.env.example`, a project `CLAUDE.md` and `.claude/rules/` stubs (database migrations, agent routines, frontend).
+- Description: create the Hermi monorepo with the tree in [02-architecture.md](02-architecture.md) section 2: `apps/api` (Python 3.13, uv, FastAPI), `apps/worker`, `apps/web` (Vite, React 19, TanStack Query, Tailwind 4), `packages/shared`, `packages/tokens`, `packages/eslint-config`, `infra/`, `.github/` (workflows and Dependabot), `docs/` (`apps/ios` arrives in WF-080), a uv workspace and npm workspaces, root `package.json` scripts (`setup`, `start`, `dev`, `test`, `lint`, `format`, `gen:api`), `.env.example`, a project `CLAUDE.md` and `.claude/rules/` stubs (database migrations, agent routines, frontend).
 - Accept: `npm run setup && npm test && npm run lint` pass on a clean clone on Linux and Windows; `GET /health/live` returns 200.
 - Touches: repo root (`package.json`, `pyproject.toml`), `apps/api/pyproject.toml`, `apps/web/package.json`, `packages/`, `infra/`, `.github/`, `.claude/`.
 - Tests: one pytest for the health route, one vitest smoke render.
@@ -247,9 +247,9 @@ Conventions for every ticket:
 
 #### WF-005 Port reusable modules [M1, L]
 - Depends on: WF-004.
-- Description: copy and adapt from the Trip Planner repo the modules that carry over: flight route and fare logic, itinerary and lodging logic, presentation mode, passport design tokens (into `packages/tokens`, plus the two added in [05-ui-ux-spec.md](05-ui-ux-spec.md) section 2: `--tp-edge` and `--tp-warning-ink`), Travelpayouts, Geoapify, Wikipedia and Frankfurter providers, evidence rules in `services/agent_ingest.py`, and agent prompts. Leave behind passcode auth, the Claude CLI runner, the MCP bridge, APScheduler, Windows scripts and Tailscale sharing. Follow the module map in [02-architecture.md](02-architecture.md). Port the flight and provider modules first; the rest may land as each feature ticket needs it.
+- Description: copy and adapt from the Trip Planner repo the modules that carry over: flight route and fare logic, itinerary and lodging logic, presentation mode, Hermi design tokens ([05-ui-ux-spec.md](05-ui-ux-spec.md) section 2; the values replace the old repo's, only the plumbing and neutral names are ported; into `packages/tokens`, including every token that section marks new, such as `--tp-edge`, `--tp-warning-ink` and `--tp-sky`), Travelpayouts, Geoapify, Wikipedia and Frankfurter providers, evidence rules in `services/agent_ingest.py`, and agent prompts. Leave behind passcode auth, the Claude CLI runner, the MCP bridge, APScheduler, Windows scripts and Tailscale sharing. Follow the module map in [02-architecture.md](02-architecture.md). Port the flight and provider modules first; the rest may land as each feature ticket needs it.
 - Accept: ported modules import cleanly and keep their original unit tests passing; a `docs/porting-map.md` lists each source file and its new home; no Windows-only code in `apps/` or `packages/`.
-- Touches: `apps/api/wayfold/providers/`, `apps/api/wayfold/modules/*/service.py` (ported logic), `packages/tokens/`, `apps/web/src/lib/`.
+- Touches: `apps/api/hermi/providers/`, `apps/api/hermi/modules/*/service.py` (ported logic), `packages/tokens/`, `apps/web/src/lib/`.
 - Tests: the original tests for each ported module, adapted; a test that greps for forbidden imports (`subprocess` Claude CLI, `apscheduler`).
 - Done: DoD plus the porting map reviewed.
 
@@ -257,7 +257,7 @@ Conventions for every ticket:
 - Depends on: WF-004.
 - Description: a settings module (`config.py`, the only place environment variables are read) with `ENVIRONMENT` (`local`, `ci`, `preview`, `staging`, `production`) as in 02 section 7. The app refuses to start without the required secrets for its environment, keeps scheduled agents off (scheduled agent routines are not part of Phase 1), and tests refuse to run when `ENVIRONMENT=production`. There is no personal or single-household mode.
 - Accept: settings load from env with typed validation; missing required secrets fail fast with a clear message listing names only; `.env.example` lists every variable.
-- Touches: `apps/api/wayfold/config.py`, `.env.example`, `apps/api/tests/test_config.py`.
+- Touches: `apps/api/hermi/config.py`, `.env.example`, `apps/api/tests/test_config.py`.
 - Tests: settings matrix (each environment), refusal when production, required-secret errors.
 - Done: DoD plus `.env.example` checked against `config.py` in CI.
 
@@ -273,7 +273,7 @@ Conventions for every ticket:
 - Depends on: WF-007.
 - Description: multi-stage Dockerfile (`node:22` builds the web, `python:3.13-slim` with `uv sync --frozen --no-dev`, non-root), commands `api`, `worker`, `scheduler`, `migrate`; `infra/docker/compose.yml` (Postgres 18, Mailpit, MinIO); `/health/live` and `/health/ready` (database reachable, migrations at head).
 - Accept: `docker compose up` serves the API; image runs as non-root; ready fails when migrations are behind; image scanned with Trivy in CI.
-- Touches: `infra/docker/Dockerfile`, `infra/docker/compose.yml`, `apps/api/wayfold/main.py` (health routes).
+- Touches: `infra/docker/Dockerfile`, `infra/docker/compose.yml`, `apps/api/hermi/main.py` (health routes).
 - Tests: readiness test with a stale migration; container smoke test in CI.
 - Done: DoD plus image size noted in the PR.
 
@@ -295,9 +295,9 @@ Conventions for every ticket:
 
 #### WF-011 Migration framework and database roles [M1, M]
 - Depends on: WF-008.
-- Description: Alembic on Postgres 18 with `lock_timeout` and `statement_timeout`, an advisory lock around `upgrade head`, a check for multiple heads, UUIDv7 helper, and the roles from [03-database-schema.md](03-database-schema.md) section 6.1: `wayfold_owner` (owns objects, runs migrations), `wayfold_app` (the API, subject to RLS), `wayfold_worker` (jobs, bypasses RLS) and `wayfold_admin` for the admin API (see [08-admin-control-center.md](08-admin-control-center.md)). Write the expand and contract policy into `.claude/rules/database-migrations.md`.
-- Accept: migrations run from empty and from the previous revision; two heads fail CI; `wayfold_app` cannot run DDL; the rules file documents the policy.
-- Touches: `apps/api/wayfold/migrations/`, `apps/api/wayfold/db.py`, `.claude/rules/database-migrations.md`.
+- Description: Alembic on Postgres 18 with `lock_timeout` and `statement_timeout`, an advisory lock around `upgrade head`, a check for multiple heads, UUIDv7 helper, and the roles from [03-database-schema.md](03-database-schema.md) section 6.1: `hermi_owner` (owns objects, runs migrations), `hermi_app` (the API, subject to RLS), `hermi_worker` (jobs, bypasses RLS) and `hermi_admin` for the admin API (see [08-admin-control-center.md](08-admin-control-center.md)). Write the expand and contract policy into `.claude/rules/database-migrations.md`.
+- Accept: migrations run from empty and from the previous revision; two heads fail CI; `hermi_app` cannot run DDL; the rules file documents the policy.
+- Touches: `apps/api/hermi/migrations/`, `apps/api/hermi/db.py`, `.claude/rules/database-migrations.md`.
 - Tests: migration-from-empty test, head-count test, role privilege tests.
 - Done: DoD plus the rules file updated.
 
@@ -305,7 +305,7 @@ Conventions for every ticket:
 - Depends on: WF-011.
 - Description: migration for `users`, `auth_identities`, `devices`, `trips`, `trip_members`, `trip_invites`, `trip_share_links`, `trip_destinations`, `people` (with `owner_user_id`, `linked_user_id`), `trip_people`, `activity_log`, `support_tickets`, `idempotency_keys` (the 24 hour replay store for `Idempotency-Key`). `trips` carries `version`, `editors_can_invite` and `calendar_token_hash`; `users` carries the `suspended` status and the column-level update grant of 03 section 6.1. No household tables (Phase 2). UUIDv7 public ids, `timestamptz`, money as integer minor units. DDL in [03-database-schema.md](03-database-schema.md).
 - Accept: migration applies cleanly; constraints and indexes match 03; models and Pydantic schemas exist.
-- Touches: `apps/api/wayfold/migrations/versions/`, `apps/api/wayfold/modules/{auth,trips,collaboration}/models.py`.
+- Touches: `apps/api/hermi/migrations/versions/`, `apps/api/hermi/modules/{auth,trips,collaboration}/models.py`.
 - Tests: constraint tests (unique member per trip, valid roles), schema-vs-DDL comparison test.
 - Done: DoD plus seed data for two test users and a shared trip.
 
@@ -313,7 +313,7 @@ Conventions for every ticket:
 - Depends on: WF-012.
 - Description: verify Supabase JWTs (signature by JWKS with `kid`, issuer, audience, expiry), map `sub` to `users` and `auth_identities`, create the user on first sign-in (with the "Me" `people` row), and retire the passcode path. Spec: [04-api-spec.md](04-api-spec.md).
 - Accept: expired, wrong-audience and tampered tokens get 401; first request creates exactly one user under concurrency; Apple "Hide My Email" addresses are accepted.
-- Touches: `apps/api/wayfold/security/jwt.py`, `apps/api/wayfold/modules/auth/`, `apps/api/wayfold/deps.py`.
+- Touches: `apps/api/hermi/security/jwt.py`, `apps/api/hermi/modules/auth/`, `apps/api/hermi/deps.py`.
 - Tests: token matrix with a local JWKS, concurrent first-login test.
 - Done: DoD plus `SUPABASE_URL` documented.
 
@@ -321,16 +321,16 @@ Conventions for every ticket:
 - Depends on: WF-013.
 - Description: one data-access layer every route uses: `require_trip_access(user, trip_id, min_role)` from `trip_members`, and query helpers that always filter by tenant. No route queries trip tables directly; an import-linter rule and a test enforce it.
 - Accept: all existing routes use the layer; a lint rule or test fails if a route imports a trip model directly; roles `owner`, `editor`, `viewer` enforced.
-- Touches: `apps/api/wayfold/deps.py` (`require_trip`), `apps/api/wayfold/db.py`, every module's `repo.py` and `router.py`.
+- Touches: `apps/api/hermi/deps.py` (`require_trip`), `apps/api/hermi/db.py`, every module's `repo.py` and `router.py`.
 - Tests: permission matrix tests per role and endpoint.
 - Done: DoD.
 
 #### WF-015 Row-level security [M1, M]
 - Depends on: WF-014.
-- Description: Postgres RLS as a second lock: policies on trip-scoped tables keyed to a session variable set per request (`app.user_id`), the `wayfold_app` role subject to RLS, `wayfold_admin` with explicit admin policies.
+- Description: Postgres RLS as a second lock: policies on trip-scoped tables keyed to a session variable set per request (`app.user_id`), the `hermi_app` role subject to RLS, `hermi_admin` with explicit admin policies.
 - Accept: a query with no session variable returns zero rows; a forced bug (app check removed) still cannot read another tenant's data.
-- Touches: `apps/api/wayfold/migrations/versions/`, `apps/api/wayfold/db.py` (set variable per transaction).
-- Tests: policy tests that bypass the app layer and query as `wayfold_app`.
+- Touches: `apps/api/hermi/migrations/versions/`, `apps/api/hermi/db.py` (set variable per transaction).
+- Tests: policy tests that bypass the app layer and query as `hermi_app`.
 - Done: DoD plus policy list documented.
 
 #### WF-016 Cross-tenant leak tests [M1, M]
@@ -345,7 +345,7 @@ Conventions for every ticket:
 - Depends on: WF-013.
 - Description: `client.ts` with `VITE_API_BASE_URL`, `Authorization` middleware, one refresh attempt on 401, CORS origins for web, staging and Capacitor, and public keys (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_REVENUECAT_KEY_IOS`, `VITE_SENTRY_DSN`, `VITE_POSTHOG_KEY`) documented.
 - Accept: the client works against staging; 401 triggers refresh then sign-out; no cookies used for hosted mode.
-- Touches: `apps/web/src/lib/api/client.ts`, `apps/web/src/lib/env.ts`, `apps/api/wayfold/main.py` (CORS).
+- Touches: `apps/web/src/lib/api/client.ts`, `apps/web/src/lib/env.ts`, `apps/api/hermi/main.py` (CORS).
 - Tests: vitest client tests with a mock server; CORS preflight test.
 - Done: DoD.
 
@@ -361,7 +361,7 @@ Conventions for every ticket:
 - Depends on: WF-014, WF-018.
 - Description: trips CRUD, destinations, dates and currency, archive, duplicate, trip switcher. Limits (2 active trips on Free) are enforced by the resolver in WF-023.
 - Accept: create, edit, archive and duplicate work for the owner and are refused for viewers; a signed-in user creates a trip on staging.
-- Touches: `apps/api/wayfold/modules/trips/`, `apps/web/src/routes/trips/`.
+- Touches: `apps/api/hermi/modules/trips/`, `apps/web/src/routes/trips/`.
 - Tests: CRUD, archive and duplicate tests; tenancy cases.
 - Done: DoD plus Month 1 gate review recorded.
 
@@ -371,7 +371,7 @@ Conventions for every ticket:
 - Depends on: WF-012.
 - Description: migration for `admin_users`, `audit_log` (append only, update and delete rejected by trigger; `retention_class` of 03 section 8), `content_reports`, `consents`, `data_exports`, `deletion_requests`, `rate_limit_counters`, `airports`, `fx_rates`; seed airports and the Phase 1 plans (`free`, `plus`, `trip_pass`, credit packs), store products, credit prices, flags and kill switches (03 section 11). Product analytics stay in PostHog, so there is no `analytics_events` table.
 - Accept: `audit_log` rejects `UPDATE` and `DELETE`; seeds are idempotent.
-- Touches: `apps/api/wayfold/migrations/versions/`, `apps/api/wayfold/modules/{admin,auth,flights}/models.py`, `apps/api/wayfold/seed/`.
+- Touches: `apps/api/hermi/migrations/versions/`, `apps/api/hermi/modules/{admin,auth,flights}/models.py`, `apps/api/hermi/seed/`.
 - Tests: trigger test, seed idempotency test.
 - Done: DoD.
 
@@ -379,7 +379,7 @@ Conventions for every ticket:
 - Depends on: WF-012.
 - Description: migration for `flight_routes`, `fare_observations`, `trip_fare_links`, `chosen_flights`, `price_alerts`, `itinerary_days`, `itinerary_items`, `places_cache`, `saved_places`, `lodging_options`, `lodging_votes`, `checklist_items`, `notes`, `route_price_insights`. No polls, expenses or settlements (Phase 2). Rows that two people edit carry `version` (03 convention 11).
 - Accept: migration applies; every trip-scoped table has `trip_id` for RLS; indexes on common lookups.
-- Touches: `apps/api/wayfold/migrations/versions/`, `apps/api/wayfold/modules/{flights,itinerary,places,lodging,trips}/models.py`.
+- Touches: `apps/api/hermi/migrations/versions/`, `apps/api/hermi/modules/{flights,itinerary,places,lodging,trips}/models.py`.
 - Tests: schema-vs-DDL test; foreign key and cascade tests.
 - Done: DoD.
 
@@ -387,7 +387,7 @@ Conventions for every ticket:
 - Depends on: WF-012.
 - Description: migration for `plans`, `store_products`, `subscriptions`, `entitlements`, `trip_passes` (with a `source` of `purchase` or `import_reward`), `store_transactions`, `webhook_events`, `affiliate_programs`, `affiliate_link_templates`, `link_clicks`, `affiliate_conversions` (unique on program and network transaction id). No Stripe, concierge, partner guide, print or advisor tables.
 - Accept: migration applies; uniqueness on store transaction id and webhook event id; one active pass per trip.
-- Touches: `apps/api/wayfold/migrations/versions/`, `apps/api/wayfold/modules/{billing,affiliate}/models.py`.
+- Touches: `apps/api/hermi/migrations/versions/`, `apps/api/hermi/modules/{billing,affiliate}/models.py`.
 - Tests: uniqueness and idempotency constraint tests.
 - Done: DoD.
 
@@ -395,7 +395,7 @@ Conventions for every ticket:
 - Depends on: WF-022, WF-019, WF-014.
 - Description: a resolver that returns a trip's capabilities as the best of its owner's tier (`free`, `plus`) and any pass on that trip; enforces the limits of the Phase 1 tier table (active trips: Free 2, Plus fair use 25; cached-fare route per trip: Free 1; live routes: Plus 3, Trip Pass 2; alerts; collaborators: Free 1, Plus and Trip Pass 6); `GET /v1/me/entitlements`; paywall codes `third_trip`, `collaborators`, `track_live`, `credits`. Credit charging attaches when the ledger lands (WF-044).
 - Accept: every limited route calls the resolver; creating a third active trip on Free returns the `third_trip` paywall code and archived trips do not count; Plus with a Trip Pass takes the higher limit; invitees get the owner's tier on that trip only.
-- Touches: `apps/api/wayfold/modules/billing/` (resolver), `apps/api/wayfold/modules/trips/service.py` (`trip_capabilities()`), `packages/shared/src/entitlements.ts`.
+- Touches: `apps/api/hermi/modules/billing/` (resolver), `apps/api/hermi/modules/trips/service.py` (`trip_capabilities()`), `packages/shared/src/entitlements.ts`.
 - Tests: table-driven tier and pass tests, invitee tests.
 - Done: DoD.
 
@@ -403,15 +403,15 @@ Conventions for every ticket:
 - Depends on: WF-014.
 - Description: `people` with `owner_user_id` and `linked_user_id`, `trip_people`, "Which traveler are you?" linking. Children are a first name and a color only. Households are not built in Phase 1.
 - Accept: a person can be linked to a user and unlinked; removal keeps history; no birthdate or email fields exist for travelers.
-- Touches: `apps/api/wayfold/modules/trips/` (people), `apps/web/src/routes/trips/`.
+- Touches: `apps/api/hermi/modules/trips/` (people), `apps/web/src/routes/trips/`.
 - Tests: link, unlink and removal tests.
 - Done: DoD.
 
 #### WF-025 Invites, roles and share links [M2, M]
 - Depends on: WF-014.
-- Description: invite by link (`trip_invites`), accept, roles (owner, editor, viewer), leave, transfer ownership, and read-only `trip_share_links` with revoke, available on every tier (a Free owner's share page carries the "Made with Wayfold" footer); invitees join free and get the trip's capabilities on that trip. Tokens are 128-bit random, stored as SHA-256 hashes.
+- Description: invite by link (`trip_invites`), accept, roles (owner, editor, viewer), leave, transfer ownership, and read-only `trip_share_links` with revoke, available on every tier (a Free owner's share page carries the "Made with Hermi" footer); invitees join free and get the trip's capabilities on that trip. Tokens are 128-bit random, stored as SHA-256 hashes.
 - Accept: expired and used invites fail; owner cannot be removed without transfer; revoked link stops working immediately; a Free owner can create a share link; the collaborator limit hooks into the resolver (enforced in WF-026).
-- Touches: `apps/api/wayfold/modules/collaboration/`, `apps/web/src/routes/invite/`.
+- Touches: `apps/api/hermi/modules/collaboration/`, `apps/web/src/routes/invite/`.
 - Tests: invite lifecycle tests, role change tests, link revoke test.
 - Done: DoD.
 
@@ -419,7 +419,7 @@ Conventions for every ticket:
 - Depends on: WF-023, WF-025.
 - Description: enforce the Phase 1 collaborator rule: a Free owner can have 1 collaborator (accepted or pending, editor or viewer) per trip, so couples plan free; Plus and Trip Pass owners up to 6; joining someone else's trip is always free. A second Free invite returns 402 with the `collaborators` paywall body; the Invite sheet shows "1 of 1 on Free" and keeps the free path visible. If an owner's Plus or pass lapses, collaborators beyond the limit become viewers and nothing is deleted.
 - Accept: a Free owner invites one person and sees the paywall on the second; pending invites count; lapse handling demotes extras and sets a banner flag; the invitee never needs a plan to join.
-- Touches: `apps/api/wayfold/modules/collaboration/service.py`, `apps/api/wayfold/modules/billing/` (resolver hook), `apps/web/src/routes/invite/`.
+- Touches: `apps/api/hermi/modules/collaboration/service.py`, `apps/api/hermi/modules/billing/` (resolver hook), `apps/web/src/routes/invite/`.
 - Tests: Free, Plus, pass and lapse tests; invitee-on-Free test; paywall body test.
 - Done: DoD.
 
@@ -427,7 +427,7 @@ Conventions for every ticket:
 - Depends on: WF-025.
 - Description: `activity_log` writes for trip changes (who added, moved or removed what) with actor attribution, and a feed endpoint and screen. Notes marked private never appear.
 - Accept: an edit by one member appears in the other's feed within 30 seconds; private notes excluded; deleted users show as "Deleted user".
-- Touches: `apps/api/wayfold/modules/collaboration/` (activity), `apps/web/src/routes/activity/`.
+- Touches: `apps/api/hermi/modules/collaboration/` (activity), `apps/web/src/routes/activity/`.
 - Tests: write-on-change tests, privacy test.
 - Done: DoD.
 
@@ -435,7 +435,7 @@ Conventions for every ticket:
 - Depends on: WF-013, WF-020.
 - Description: a Postgres token bucket per account and route class (AI endpoints 10 a minute, places search 30, outbound 60 an hour, import classes from [10-quality-security-launch.md](10-quality-security-launch.md) section 2.3), Cloudflare rules on auth and public routes, signup limits (5 accounts per IP per day), disposable-email blocking, `Retry-After` on 429. Limits are read from settings so they can change without a deploy.
 - Accept: limits enforced per route class; 429 bodies use the shared error format; new route classes can be added with one config entry.
-- Touches: `apps/api/wayfold/security/rate_limit.py`, `infra/cloudflare/rules.md`.
+- Touches: `apps/api/hermi/security/rate_limit.py`, `infra/cloudflare/rules.md`.
 - Tests: bucket tests with a fake clock, signup velocity test.
 - Done: DoD.
 
@@ -443,7 +443,7 @@ Conventions for every ticket:
 - Depends on: WF-020.
 - Description: a daily Frankfurter job into `fx_rates`; money display in original and converted currency; integer minor units everywhere.
 - Accept: conversion rounds consistently; stale rates show a notice.
-- Touches: `apps/worker/wayfold_worker/jobs/refresh_fx_rates.py`, `apps/web/src/lib/money.ts`.
+- Touches: `apps/worker/hermi_worker/jobs/refresh_fx_rates.py`, `apps/web/src/lib/money.ts`.
 - Tests: conversion tests, stale-rate test.
 - Done: DoD.
 
@@ -451,7 +451,7 @@ Conventions for every ticket:
 - Depends on: WF-014, WF-021, WF-005, WF-020.
 - Description: flight routes and Travelpayouts cached fares as the free baseline, fare observations and links to trips, chosen flight (with "Mark as booked" and the price paid, used by WF-075).
 - Accept: Free gets 1 cached-fare route per trip; cached reads never spend credits; observations dedupe; every fare shows its age.
-- Touches: `apps/api/wayfold/modules/flights/`, `apps/api/wayfold/providers/travelpayouts.py`, `apps/web/src/routes/flights/`.
+- Touches: `apps/api/hermi/modules/flights/`, `apps/api/hermi/providers/travelpayouts.py`, `apps/web/src/routes/flights/`.
 - Tests: provider mocked tests, limit tests, dedupe tests.
 - Done: DoD.
 
@@ -459,7 +459,7 @@ Conventions for every ticket:
 - Depends on: WF-030.
 - Description: `price_alerts` rules on cached fares (1 on Free, more with live routes), drop detection as a pure function over `fare_observations`, alert list and create screens. The scheduled check arrives with WF-051 and delivery with WF-047.
 - Accept: the detection function triggers once per drop; duplicate triggers blocked by a unique key; limit per tier enforced by the resolver.
-- Touches: `apps/api/wayfold/modules/flights/`, `apps/web/src/routes/flights/`.
+- Touches: `apps/api/hermi/modules/flights/`, `apps/web/src/routes/flights/`.
 - Tests: threshold tests, idempotent trigger test.
 - Done: DoD.
 
@@ -467,7 +467,7 @@ Conventions for every ticket:
 - Depends on: WF-014, WF-021.
 - Description: itinerary days and items, drag and drop, calendar view with a phone-friendly list mode and a "Move to..." sheet, conflict hints, ICS file export.
 - Accept: day reorder works on web and phone; ICS file imports into Apple Calendar; edits by viewers rejected; two editors changing one item get a 409 with the latest row.
-- Touches: `apps/api/wayfold/modules/itinerary/`, `apps/web/src/routes/itinerary/`.
+- Touches: `apps/api/hermi/modules/itinerary/`, `apps/web/src/routes/itinerary/`.
 - Tests: CRUD and role tests, ICS golden file, component tests, conflict test.
 - Done: DoD.
 
@@ -475,7 +475,7 @@ Conventions for every ticket:
 - Depends on: WF-014, WF-021.
 - Description: Geoapify search with `places_cache`, saved places, ideas list, MapLibre map with clustering, "Open in Apple Maps" handoff, attributions (OpenStreetMap, Wikimedia), Wikipedia summaries.
 - Accept: repeated searches hit the cache; places search rate limited at 30 a minute; map remains smooth with 200 markers.
-- Touches: `apps/api/wayfold/modules/places/`, `apps/web/src/routes/places/`.
+- Touches: `apps/api/hermi/modules/places/`, `apps/web/src/routes/places/`.
 - Tests: cache tests, rate limit test, marker clustering test.
 - Done: DoD.
 
@@ -483,7 +483,7 @@ Conventions for every ticket:
 - Depends on: WF-014, WF-021.
 - Description: lodging options, pasted links, hearts (`lodging_votes`), compare view for 2 to 4 stays. Pasted links stay exactly as pasted; the server never fetches Airbnb, Vrbo or Booking.com pages; a separate labeled "Book via partner" button is built from the URL text only (wired in WF-068). Builds the shared SSRF guard `security/ssrf.py` and `providers/link_preview.py` that WF-072 reuses, with the hostile URL table of 10 section 2.5.
 - Accept: no outbound request to those domains in tests (network blocked in test); hearts counted once per member; sort order is stated and never by commission; hostile URLs are refused.
-- Touches: `apps/api/wayfold/modules/lodging/`, `apps/api/wayfold/security/ssrf.py`, `apps/api/wayfold/providers/link_preview.py`, `apps/web/src/routes/lodging/`.
+- Touches: `apps/api/hermi/modules/lodging/`, `apps/api/hermi/security/ssrf.py`, `apps/api/hermi/providers/link_preview.py`, `apps/web/src/routes/lodging/`.
 - Tests: network-blocked test, heart tests, link preservation test, SSRF table test.
 - Done: DoD.
 
@@ -491,7 +491,7 @@ Conventions for every ticket:
 - Depends on: WF-021.
 - Description: trip, day, item and stay notes with optional `source_url`, `source_site`, `checked_at` and a private flag; a shared source chip component. AI-found notes must carry a source (enforced in WF-049 and WF-055).
 - Accept: notes save with sources; private notes are visible only to their author; chips open the source.
-- Touches: `apps/api/wayfold/modules/trips/` (notes), `apps/web/src/components/`.
+- Touches: `apps/api/hermi/modules/trips/` (notes), `apps/web/src/components/`.
 - Tests: CRUD and privacy tests.
 - Done: DoD.
 
@@ -500,14 +500,14 @@ Conventions for every ticket:
 - Description: bottom tab bar under 768 px (Trips, Itinerary, Flights, Lodging, More), safe areas, 44 pt targets, 16 px inputs, bottom sheets for dialogs, empty states with one action, error states (offline, 401, out of credits, 429, maintenance, forced update).
 - Accept: every main route works at 390 px wide; no horizontal scroll; Playwright mobile project (iPhone 15 profile) passes.
 - Touches: `apps/web/src/app/` (layout), `apps/web/src/routes/errors.tsx`, `apps/web/playwright.config.ts`.
-- Tests: mobile viewport smoke test, axe checks in light and dark, and the contrast unit test over the token pairs in [05-ui-ux-spec.md](05-ui-ux-spec.md) section 2, including `--tp-edge` (control borders) and `--tp-warning-ink` (small warning text).
+- Tests: mobile viewport smoke test, axe checks in light and dark, and the contrast unit test over the Hermi palette token pairs in [05-ui-ux-spec.md](05-ui-ux-spec.md) section 2.3, including `--tp-edge` (control borders), `--tp-warning-ink` (small warning text) and `--tp-sky-ink` on `--tp-sky`.
 - Done: DoD.
 
 #### WF-037 Sentry and structured logs [M2, S]
 - Depends on: WF-009.
 - Description: JSON logs with `request_id`, `job_id`, `run_id`, opaque `user_id`; Sentry in API, worker and web with PII scrubbing; `RedactSecrets` covers `Authorization` and `x-api-key`; prompts and feed URLs never logged above DEBUG.
 - Accept: a thrown error reaches Sentry with release and environment; a log scan test finds no emails, tokens or feed URLs.
-- Touches: `apps/api/wayfold/logging.py`, `apps/web/src/lib/sentry.ts`.
+- Touches: `apps/api/hermi/logging.py`, `apps/web/src/lib/sentry.ts`.
 - Tests: redaction tests.
 - Done: DoD.
 
@@ -515,7 +515,7 @@ Conventions for every ticket:
 - Depends on: WF-018.
 - Description: the typed `analytics.capture` helper on server and client with the first events (`signup_completed`, `trip_created`, `first_itinerary_item_added`, `invite_sent`, `invite_accepted`); session replay off or masked; opt-out respected; no ad SDKs. Events beyond these arrive with each feature and are completed in WF-098.
 - Accept: events fire once; opt-out stops all events; unknown names and properties are rejected server side.
-- Touches: `apps/web/src/lib/analytics.ts`, `apps/api/wayfold/analytics.py`, `packages/shared/src/events.ts`.
+- Touches: `apps/web/src/lib/analytics.ts`, `apps/api/hermi/analytics.py`, `packages/shared/src/events.ts`.
 - Tests: event firing tests, opt-out test, unknown-property test.
 - Done: DoD.
 
@@ -549,7 +549,7 @@ Conventions for every ticket:
 - Depends on: WF-012.
 - Description: migration for `routines` (price checks only in Phase 1), `runs`, `run_events`, `ai_usage`, `credit_ledger`, `credit_grants`, `credit_debts`, `credit_action_prices`, `provider_calls`, `provider_call_rollups`, `shared_research_cache`; the unique partial index `uq_runs_one_active_agent`; `idempotency_key` uniques; the credit functions of 03 section 5.13 (`reserve_credits`, `settle_credits`, `record_credit_debt`, `settle_credit_debt`, `ensure_free_monthly_grant`, `ensure_taster_grant`).
 - Accept: migration applies; a second concurrent agent run for one account is refused at admission (409 `run_already_active`); ledger idempotency key unique; `reserve_credits` refuses an account with a credit debt.
-- Touches: `apps/api/wayfold/migrations/versions/`, `apps/api/wayfold/modules/ai/models.py`, `modules/credits/models.py`.
+- Touches: `apps/api/hermi/migrations/versions/`, `apps/api/hermi/modules/ai/models.py`, `modules/credits/models.py`.
 - Tests: concurrency test for the one-run-per-account admission check; duplicate idempotency key rejected.
 - Done: DoD plus costs stored as micro-dollars.
 
@@ -557,7 +557,7 @@ Conventions for every ticket:
 - Depends on: WF-020.
 - Description: `feature_flags` and `kill_switches` tables (`key`, `kind`, `enabled`, `rollout_pct`, `rules`, `variants`; switches carry `reason`, `engaged_by`, `expires_at`, `auto_rule`; admin-set switches must carry an expiry) and a runtime that evaluates flags (cached 5 seconds per process, invalidated by `NOTIFY`) and **fails closed** for paid calls if the tables cannot be read. Seed keys are in [03-database-schema.md](03-database-schema.md) section 11.5, plus the Phase 1 switches `import.ics`, `import.feed`, `import.paste`, `referrals` and `public_pages`, added to the seeds and to `packages/shared/src/flags.ts`.
 - Accept: flipping `ai.all` blocks AI calls within 5 seconds; engaging or clearing a switch writes `audit_log`; unreadable table blocks paid calls; each new switch blocks only its feature.
-- Touches: `apps/api/wayfold/modules/admin/flags.py`, `apps/api/wayfold/migrations/versions/`, `packages/shared/src/flags.ts`.
+- Touches: `apps/api/hermi/modules/admin/flags.py`, `apps/api/hermi/migrations/versions/`, `packages/shared/src/flags.ts`.
 - Tests: evaluation rules (percent, tier, platform), fail-closed test, audit test.
 - Done: DoD plus a practice drill written in `docs/runbooks/kill-switches.md`.
 
@@ -565,7 +565,7 @@ Conventions for every ticket:
 - Depends on: WF-041.
 - Description: a versioned price constant in `ai/pricing.py` (06 section 6.1; not a database table) holding the model prices (Claude Haiku 4.5 `claude-haiku-4-5`, Claude Sonnet 5.5 `claude-sonnet-5-5`, web search per use) and a metering wrapper that converts `response.usage` (input, output, cache read and write, web searches) into micro-dollars and writes an `ai_usage` row in the same transaction as the run event. Spec: [06-ai-agents-spec.md](06-ai-agents-spec.md).
 - Accept: cost matches a hand calculation for 5 sample responses; Batch calls are halved on tokens; `provider_calls` records SerpApi and Geoapify spend with account and trip.
-- Touches: `apps/api/wayfold/modules/ai/metering.py`, `modules/ai/pricing.py`.
+- Touches: `apps/api/hermi/modules/ai/metering.py`, `modules/ai/pricing.py`.
 - Tests: table-driven cost tests, rollback test (no usage row if the event insert fails).
 - Done: DoD plus price table never edited in place.
 
@@ -573,7 +573,7 @@ Conventions for every ticket:
 - Depends on: WF-041.
 - Description: reserve, settle, refund, expire and adjust operations on `credit_ledger` with `credit_grants`; spend order (allowance, pass credits, purchased credits oldest first); `SELECT ... FOR UPDATE` on the balance; lazy monthly grants (Free 12, Plus 60); the one-time lifetime taster grant for one deep agent run; purchased credits expire after 12 months. Action prices: `explain` 1, `live_search` 1, `draft_day` 1, `draft_trip` 4, `research` 8 (1 from cache), `agent_run` 40 (8 from cache).
 - Accept: parallel reservations never overspend; a failed or empty action is refunded; a stopped agent run is billed pro rata with an 8 credit minimum; negative balance after a refund blocks new actions; the taster is granted once per account.
-- Touches: `apps/api/wayfold/modules/credits/`, `packages/shared/src/credits.ts`.
+- Touches: `apps/api/hermi/modules/credits/`, `packages/shared/src/credits.ts`.
 - Tests: concurrency test with 20 parallel reservations; every ledger `kind`; expiry; spend order; taster once.
 - Done: DoD plus balance shown from the ledger, never cached without a version.
 
@@ -581,7 +581,7 @@ Conventions for every ticket:
 - Depends on: WF-044.
 - Description: per-account monthly and daily provider-spend ceilings (Free $0.25 and $0.05 plus the one-time taster, Plus $2.25 and $0.40, Trip Pass $1.80 and $0.40), reserve-then-settle in one transaction with the job enqueue, the agent-run admission rule (month headroom of $0.80 even above the daily budget), and cached data still working when a ceiling is hit.
 - Accept: a ceiling stops paid work but never cached reads; a run is admitted with $0.80 monthly headroom even if the day is exhausted, and then blocks other paid actions that day; ledger unreadable means refuse.
-- Touches: `apps/api/wayfold/modules/credits/budget.py`.
+- Touches: `apps/api/hermi/modules/credits/budget.py`.
 - Tests: boundary tests per tier, admission rule, fail-closed test.
 - Done: DoD plus ceilings read from settings (changeable through [08-admin-control-center.md](08-admin-control-center.md)).
 
@@ -589,7 +589,7 @@ Conventions for every ticket:
 - Depends on: WF-041.
 - Description: Procrastinate on Postgres with lanes `api`, `ai`, `notify`, `batch`; per-account concurrency caps (Free 2, Plus 4), fair claim by least recently served account, retries with backoff and jitter, dead-letter state, stale-heartbeat reaper, graceful SIGTERM; `runs` remains the user-visible record.
 - Accept: a job enqueued in the same transaction as its budget reservation; 2 workers never run a job twice; a killed worker's job is requeued; a busy account cannot starve others.
-- Touches: `apps/api/wayfold/jobs.py`, `apps/worker/wayfold_worker/app.py`, `apps/worker/wayfold_worker/jobs/`.
+- Touches: `apps/api/hermi/jobs.py`, `apps/worker/hermi_worker/app.py`, `apps/worker/hermi_worker/jobs/`.
 - Tests: two-worker test, reaper test, fairness test, retry classification test.
 - Done: DoD plus queue depth and oldest job age exposed to health endpoints.
 
@@ -597,7 +597,7 @@ Conventions for every ticket:
 - Depends on: WF-046.
 - Description: a `notify` lane service with preferences by type, quiet hours, per-trip mute, unique keys per user and alert, and Resend email templates for invites, price drops, booked-fare drops, run results, pre-trip reminders and deletion confirmation, plus unsubscribe handling. Push delivery is added in WF-086.
 - Accept: a retried job never sends twice; quiet hours defer; marketing needs opt-in.
-- Touches: `apps/api/wayfold/modules/notifications/`, `apps/worker/wayfold_worker/jobs/send_email.py`.
+- Touches: `apps/api/hermi/modules/notifications/`, `apps/worker/hermi_worker/jobs/send_email.py`.
 - Tests: dedupe test, quiet hours test, preference test.
 - Done: DoD.
 
@@ -605,7 +605,7 @@ Conventions for every ticket:
 - Depends on: WF-043, WF-044.
 - Description: a Messages API client with prompt caching layout (tools, system, task, volatile tail), model allowlist, `max_tokens` per feature, and the single-call actions `explain` (Haiku), `packing_list` (Haiku, 1 credit in the `explain` price class, `POST /trips/{id}/ai/packing-list`, personal data redacted before the call), `draft_day` and `draft_trip` (Sonnet) with schema-validated output and source links. The `booking_import` action is built in WF-073.
 - Accept: each action reserves, calls, meters, settles; outputs fail validation closed; AI output is labeled as a suggestion; the kill switch blocks calls.
-- Touches: `apps/api/wayfold/modules/ai/client.py`, `modules/ai/features/`.
+- Touches: `apps/api/hermi/modules/ai/client.py`, `modules/ai/features/`.
 - Tests: recorded-response tests with a fake client; hard-stop tests ($0.01, $0.03, $0.10); kill switch tests (`ai.all`, `ai.explain`, `ai.packing`, `ai.draft`); packing list sends placeholders, never names.
 - Done: DoD plus prompt cache read ratio logged.
 
@@ -613,7 +613,7 @@ Conventions for every ticket:
 - Depends on: WF-048, WF-045.
 - Description: the multi-turn agent on the Messages API with server web search and fetch tools and in-process client tools `submit_flight_quotes`, `add_note`, `finish_run`. Caps: 20 turns, 10 searches, 10 fetches, `medium` effort, 8 minutes, $0.80 hard stop, one run at a time. Keep evidence rules (fares must be seen on a page during the run) and blocked domains Airbnb, Vrbo and Booking.com enforced in the fetch tool. Port the prompts from the old `agent_ingest.py` rules. Manual fare hunt and deep research only; scheduled routines are not in Phase 1.
 - Accept: a run stops at each cap and keeps saved work, marked `partial`; a fare without page evidence is rejected; blocked domains never fetched; prompt-injection test pages cannot write outside the account; every saved note carries a source URL.
-- Touches: `apps/worker/wayfold_worker/agents/` (`AgentLoop`, tools, prompts), `apps/api/wayfold/modules/ai/ingest.py`, `modules/ai/context.py`, `apps/worker/wayfold_worker/jobs/run_agent.py`.
+- Touches: `apps/worker/hermi_worker/agents/` (`AgentLoop`, tools, prompts), `apps/api/hermi/modules/ai/ingest.py`, `modules/ai/context.py`, `apps/worker/hermi_worker/jobs/run_agent.py`.
 - Tests: fake-tool loop tests for every cap; evidence tests; blocked-domain tests; injection fixtures.
 - Done: DoD plus a manual staging run under $0.80 recorded.
 
@@ -621,7 +621,7 @@ Conventions for every ticket:
 - Depends on: WF-049.
 - Description: the `research` action (5 searches, 8 fetches, $0.16) with `shared_research_cache` keyed by destination, rounded window, topic and prompt version; single-flight advisory lock; hits cost 1 credit, cold requests 8; poisoning defenses (validators, instruction-like text classifier, report flag sets `flagged`); jobs with free-text instructions bypass the cache.
 - Accept: 50 concurrent requests for one key cause one model run; no user text enters a shared prompt; flagged entries are not served.
-- Touches: `apps/api/wayfold/modules/ai/research.py`, `modules/ai/cache.py`.
+- Touches: `apps/api/hermi/modules/ai/research.py`, `modules/ai/cache.py`.
 - Tests: single-flight test, bypass test, flagged entry test, credit pricing test.
 - Done: DoD plus hit rate computed from `ai_usage.cache_hit`.
 
@@ -629,7 +629,7 @@ Conventions for every ticket:
 - Depends on: WF-046, WF-031.
 - Description: one leader (advisory lock) scans `routines.next_run_at` every 30 to 60 seconds with `FOR UPDATE SKIP LOCKED`, enqueues due jobs with a stable per-routine jitter, advances the slot; jobs `refresh_cached_fares` (every 6 hours for routes with alerts), `check_fare_route` (live routes daily within 120 days of departure, within tier limits) and `evaluate_price_alerts` (notify lane). It only schedules API price checks; no agent job is ever scheduled in Phase 1.
 - Accept: two schedulers never double-fire; an outage fires one check, not twelve; no agent job is ever scheduled; an alert triggers once per drop and hands a request to the notify lane.
-- Touches: `apps/worker/wayfold_worker/scheduler.py`, `apps/worker/wayfold_worker/jobs/scan_due_routines.py`, `jobs/evaluate_price_alerts.py`.
+- Touches: `apps/worker/hermi_worker/scheduler.py`, `apps/worker/hermi_worker/jobs/scan_due_routines.py`, `jobs/evaluate_price_alerts.py`.
 - Tests: two-leader test, jitter stability test, misfire test, idempotent notification test.
 - Done: DoD plus scheduler heartbeat exposed.
 
@@ -637,7 +637,7 @@ Conventions for every ticket:
 - Depends on: WF-030, WF-045, WF-042.
 - Description: a provider interface with SerpApi behind the `serpapi_live_fares` flag, a canonical search key and shared `provider_calls` result cache (6 hours for fares), single-flight, per-account ceiling checks, `live_search` costs 1 credit, a cached result under 6 hours old is free and says so.
 - Accept: 10 users searching one route cause one provider call; flag off hides live search; provider kill switch works; no Airbnb, Vrbo or Booking.com fetches. Rental search sits behind the same flag.
-- Touches: `apps/api/wayfold/providers/serpapi.py`, `apps/api/wayfold/modules/flights/` (search cache), `apps/api/wayfold/modules/lodging/` (rental search).
+- Touches: `apps/api/hermi/providers/serpapi.py`, `apps/api/hermi/modules/flights/` (search cache), `apps/api/hermi/modules/lodging/` (rental search).
 - Tests: dedupe test, flag test, ceiling test, provider error test.
 - Done: DoD.
 
@@ -645,7 +645,7 @@ Conventions for every ticket:
 - Depends on: WF-049, WF-014.
 - Description: start, stream events (server-sent events), cancel and list runs; one at a time per account; credit preview before start; results saved as notes and fares with source links; the one-time lifetime taster ("Try a fare hunt, free") and the post-taster card.
 - Accept: a second start while one runs returns a clear error; cancel stops at the next checkpoint and settles pro rata; events show sources; the taster works once and then shows the credit price.
-- Touches: `apps/api/wayfold/modules/ai/router.py`, `apps/web/src/routes/agents/`.
+- Touches: `apps/api/hermi/modules/ai/router.py`, `apps/web/src/routes/agents/`.
 - Tests: API tests, SSE test, cancel test, taster test.
 - Done: DoD.
 
@@ -653,7 +653,7 @@ Conventions for every ticket:
 - Depends on: WF-053.
 - Description: first-use consent ("Your trip details and questions are sent to Anthropic to generate suggestions") stored in `consents` with timestamp, an AI off toggle, "AI suggestion, check details before booking" labels, thumbs up or down that doubles as a content report.
 - Accept: no AI call without consent; toggle off blocks AI; reports create moderation items (queue screen in WF-106).
-- Touches: `apps/web/src/components/ai/`, `apps/api/wayfold/modules/auth/` (consents).
+- Touches: `apps/web/src/components/ai/`, `apps/api/hermi/modules/auth/` (consents).
 - Tests: consent gating test, report creation test.
 - Done: DoD.
 
@@ -661,7 +661,7 @@ Conventions for every ticket:
 - Depends on: WF-035, WF-049.
 - Description: a shared component that shows "Found on [site], checked [date]" on every AI-found fact (fares, notes, research items, imported confirmations show "From your pasted text" instead), opens the source, shows age for fares, and offers "Price was different" on agent-found fares (feeds the eval set). The server rejects any AI-saved fact without `source_url` and `checked_at` (the `checked_at` column on notes and items is added here; the 14-day freshness flag and the recheck are WF-120).
 - Accept: no AI-found fact renders without a label; a fact without a source is rejected at ingest; labels are readable (body-size text, contrast tokens) and work with VoiceOver.
-- Touches: `apps/web/src/components/evidence/`, `apps/api/wayfold/modules/ai/ingest.py`, `apps/api/wayfold/modules/trips/` (notes).
+- Touches: `apps/web/src/components/evidence/`, `apps/api/hermi/modules/ai/ingest.py`, `apps/api/hermi/modules/trips/` (notes).
 - Tests: component snapshot tests, ingest rejection test, a test that scans AI-saved rows for missing sources.
 - Done: DoD.
 
@@ -669,7 +669,7 @@ Conventions for every ticket:
 - Depends on: WF-042, WF-045.
 - Description: automatic breakers (80 percent of daily Anthropic budget turns off Free AI, 95 percent stops all but paid, 90 percent of SerpApi quota narrows live checks, provider error-rate trips), a daily job that pulls the Anthropic usage and cost admin API and compares it with `ai_usage` (alert above 3 percent), and the alert rules in [08-admin-control-center.md](08-admin-control-center.md) section 10.
 - Accept: a simulated spend surge trips the right breaker and pages; reconciliation gap alert fires in a drill; breakers are logged to `audit_log` as `system`.
-- Touches: `apps/api/wayfold/modules/ai/breakers.py`, `apps/worker/wayfold_worker/jobs/reconcile_anthropic_usage.py`.
+- Touches: `apps/api/hermi/modules/ai/breakers.py`, `apps/worker/hermi_worker/jobs/reconcile_anthropic_usage.py`.
 - Tests: threshold tests, half-open probe test, reconciliation diff test.
 - Done: DoD.
 
@@ -683,9 +683,9 @@ Conventions for every ticket:
 
 #### WF-058 Admin foundation [M3, L]
 - Depends on: WF-020, WF-013.
-- Description: `admin.wayfold.app` route group (excluded from the iOS build), `/v1/admin` router, Cloudflare Access JWT check, `admin_users`, WebAuthn and TOTP 2FA with step-up, roles (`support`, `ops`, `finance`, `owner`) and the permission table, admin DB role, rate limits, strict CSP. Spec: [08-admin-control-center.md](08-admin-control-center.md) sections 2, 3 and 9.
+- Description: `admin.hermi.world` route group (excluded from the iOS build), `/v1/admin` router, Cloudflare Access JWT check, `admin_users`, WebAuthn and TOTP 2FA with step-up, roles (`support`, `ops`, `finance`, `owner`) and the permission table, admin DB role, rate limits, strict CSP. Spec: [08-admin-control-center.md](08-admin-control-center.md) sections 2, 3 and 9.
 - Accept: customer tokens rejected on admin and the reverse; unknown identities get 403; permission matrix test passes; disabled admin loses access in 60 seconds.
-- Touches: `apps/api/wayfold/modules/admin/`, `apps/web/src/routes/admin/`, `infra/cloudflare/` (access policy or docs).
+- Touches: `apps/api/hermi/modules/admin/`, `apps/web/src/routes/admin/`, `infra/cloudflare/` (access policy or docs).
 - Tests: role by route matrix test, step-up tests, session expiry tests.
 - Done: DoD plus Cloudflare Access configured and documented.
 
@@ -693,7 +693,7 @@ Conventions for every ticket:
 - Depends on: WF-058.
 - Description: `audit_log` writer used in the same transaction as every admin write, redaction, `denied` rows, nightly hash chain to R2 object lock, and the audit viewer.
 - Accept: each admin write yields one row with before and after and reason; update and delete rejected; viewer filters work.
-- Touches: `apps/api/wayfold/modules/admin/audit.py`, `apps/web/src/routes/admin/audit/`.
+- Touches: `apps/api/hermi/modules/admin/audit.py`, `apps/web/src/routes/admin/audit/`.
 - Tests: atomicity test, redaction test.
 - Done: DoD.
 
@@ -701,7 +701,7 @@ Conventions for every ticket:
 - Depends on: WF-058, WF-042, WF-056.
 - Description: the switches screen with state, expiry and effect counts, confirmation dialog with typed key and step-up, mandatory expiry, auto-expiry notification, breaker history.
 - Accept: every manual off has an expiry; `ai.all` off blocks AI within 5 seconds; expiry writes a `system` audit row; drill recorded.
-- Touches: `apps/api/wayfold/modules/admin/killswitches.py`, `apps/web/src/routes/admin/killswitches/`.
+- Touches: `apps/api/hermi/modules/admin/killswitches.py`, `apps/web/src/routes/admin/killswitches/`.
 - Tests: expiry and fail-closed tests, UI confirmation tests.
 - Done: DoD plus a timed drill (under 30 seconds to stop AI).
 
@@ -709,7 +709,7 @@ Conventions for every ticket:
 - Depends on: WF-058, WF-043, WF-045.
 - Description: spend by feature, tier and model, top spenders, ceiling hits, runaway detection, live runs, cancel a run, reconciliation gap, cache hit rates.
 - Accept: a seeded runaway appears in the list; cancel settles pro rata; numbers match `ai_usage`.
-- Touches: `apps/api/wayfold/modules/admin/ai_spend.py`, `apps/web/src/routes/admin/ai-spend/`.
+- Touches: `apps/api/hermi/modules/admin/ai_spend.py`, `apps/web/src/routes/admin/ai-spend/`.
 - Tests: detection rule tests, cancel test.
 - Done: DoD plus the Month 3 gate review recorded.
 
@@ -717,7 +717,7 @@ Conventions for every ticket:
 - Depends on: WF-018, WF-019.
 - Description: a guest can create and edit a local trip on the device without an account (`guest_trip_created`); the "Save your trip" sheet appears when the guest tries to invite, sync, use AI, export or buy; on sign-up the local trips are claimed into the new account exactly once (`guest_claimed`). Guests cannot call AI or invite.
 - Accept: guest creates a trip with no network account; claim moves trips to the new user once and is idempotent; guest requests never reach tenant tables without a claim; nothing is stored server side for an unclaimed guest.
-- Touches: `apps/web/src/features/guest/`, `apps/api/wayfold/modules/auth/` (claim), `apps/api/wayfold/modules/trips/`.
+- Touches: `apps/web/src/features/guest/`, `apps/api/hermi/modules/auth/` (claim), `apps/api/hermi/modules/trips/`.
 - Tests: claim idempotency test, guest restriction tests, Playwright guest flow.
 - Done: DoD.
 
@@ -725,7 +725,7 @@ Conventions for every ticket:
 - Depends on: WF-055, WF-048, WF-044.
 - Description: adds the "May be out of date" flag and the recheck. The evidence label (WF-055) shows an amber chip when `checked_at` is more than 14 days old (computed at read time, `stale` and `stale_after_days` on `Evidence` and `Note`, 04 section 5.14), nothing hidden or removed. `POST /notes/{id}/recheck` and `POST /items/{id}/recheck` run the `recheck` feature (06 section 5.12): Haiku 4.5, one `web_fetch` of the stored source URL, strict JSON result (`confirmed`, `changed`, `not_shown`, `unreachable`), code-grounded `current_value`, 1 credit in the `explain` price class (run kind `recheck`, kill switch `ai.recheck`, flag `evidence_recheck`), refunded when unreachable. `confirmed` moves `checked_at` to today; `changed` and `not_shown` change nothing and offer "Save as a note". Editors and owners see the button at any age, viewers the chip only. Fares are not rechecked.
 - Accept: a 15-day-old finding shows the chip and a 13-day-old one does not; a recheck of an unchanged page moves the date and charges 1 credit; an unreachable page refunds; a changed page leaves the old text and shows the new value with its source; a blocked host is never fetched; no search is ever run.
-- Touches: `apps/api/wayfold/modules/ai/features/recheck.py`, `apps/api/wayfold/modules/trips/` (notes evidence), `apps/web/src/components/evidence/`.
+- Touches: `apps/api/hermi/modules/ai/features/recheck.py`, `apps/api/hermi/modules/trips/` (notes evidence), `apps/web/src/components/evidence/`.
 - Tests: freshness boundary test (14 days), grounding test for `current_value`, refund test, role test, injection fixture on a fetched page, blocked-host test, component test for the chip and result sheet.
 - Done: DoD plus the recheck eval set (60 page pairs, 06 section 10) committed in `docs/evals/`.
 
@@ -735,7 +735,7 @@ Conventions for every ticket:
 - Depends on: WF-022, WF-023, WF-044.
 - Description: `POST /v1/webhooks/revenuecat` (secret header compared in constant time, idempotent on event id in `webhook_events`), `entitlements` and `subscriptions` updates for Plus monthly and annual (7-day trial on annual only), `POST /v1/purchases/sync`, nightly reconcile against the RevenueCat REST API (`reconcile_entitlements`), `app_user_id` linked to the account UUID; grants cross-checked by a REST fetch.
 - Accept: replayed webhooks change nothing; grace, billing retry, expiry and refund handled; reconcile flags mismatches; sync unlocks instantly before the webhook arrives.
-- Touches: `apps/api/wayfold/modules/billing/revenuecat.py`, `apps/worker/wayfold_worker/jobs/reconcile_entitlements.py`.
+- Touches: `apps/api/hermi/modules/billing/revenuecat.py`, `apps/worker/hermi_worker/jobs/reconcile_entitlements.py`.
 - Tests: fixture event suite (every event type in 10 section 1.4), replay test, out-of-order test.
 - Done: DoD.
 
@@ -743,7 +743,7 @@ Conventions for every ticket:
 - Depends on: WF-063, WF-044.
 - Description: monthly allowance grants on renewal (Plus, 60) or calendar month (Free, lazy), pack grants `credits_50`, `credits_150`, `credits_400` keyed by store transaction id (12 month expiry, spent last), `REFUND` reversal allowing negative balance; jobs `grant_monthly_credits` and `expire_credits`.
 - Accept: a transaction id grants exactly once; a refund reverses the grant and blocks AI until positive; ledger history shows each step.
-- Touches: `apps/api/wayfold/modules/billing/grants.py`, `apps/worker/wayfold_worker/jobs/`.
+- Touches: `apps/api/hermi/modules/billing/grants.py`, `apps/worker/hermi_worker/jobs/`.
 - Tests: duplicate event test, refund test, expiry test.
 - Done: DoD.
 
@@ -751,7 +751,7 @@ Conventions for every ticket:
 - Depends on: WF-063.
 - Description: `trip_pass` non-renewing subscription handling, buy then pick a trip, transaction recorded in `store_transactions` (`kind = 'pass'`) and, once a trip is known, in `trip_passes`, 90 days from binding, an unapplied pass waiting in Settings (`GET /v1/me/passes`), `POST /v1/me/passes/{pass_id}/bind` and `POST /v1/me/passes/{pass_id}/move` (once); limits (2 live routes, 60 live checks, 40 credits, up to 6 collaborators); job `expire_trip_passes`.
 - Accept: a pass binds to exactly one trip; expiry handled on the server; pass shown in trip settings; a second apply attempt is refused.
-- Touches: `apps/api/wayfold/modules/billing/passes.py`, `apps/web/src/routes/trip-settings/`.
+- Touches: `apps/api/hermi/modules/billing/passes.py`, `apps/web/src/routes/trip-settings/`.
 - Tests: bind, expire, move-once tests.
 - Done: DoD.
 
@@ -759,7 +759,7 @@ Conventions for every ticket:
 - Depends on: WF-023, WF-018.
 - Description: server-decided paywall moments (Trip Pass first when a trip is within 120 days, annual Plus first with 2 or more active trips, credit packs when credits run out, `collaborators` when a Free owner invites a second person, `track_live` for live routes), `GET /paywall`, purchase screens with price, period and trial terms, Terms and Privacy links, Restore, and a visible free path. Purchases happen only in the iOS app; on the web the same sheet returns `purchasable: false` and shows what the upgrade gives, the free path and "Upgrade in the iOS app" with an App Store link, and no price, purchase button or checkout (there are no web purchases in Phase 1). The paywall legal row links to "How billing works" (WF-124). Adds the trigger `out_of_credits_verify` for plan checks and rechecks. Anti-patterns avoided: no fake urgency.
 - Accept: the paywall code returned by the server drives the screen; Plus annual is shown first with the trial only on annual; the close control is always visible; web shows "Upgrade in the iOS app" and no price or purchase control.
-- Touches: `apps/web/src/routes/paywall/`, `apps/api/wayfold/modules/billing/router.py`.
+- Touches: `apps/web/src/routes/paywall/`, `apps/api/hermi/modules/billing/router.py`.
 - Tests: decision table tests, component tests.
 - Done: DoD.
 
@@ -767,7 +767,7 @@ Conventions for every ticket:
 - Depends on: WF-022, WF-014.
 - Description: `POST /v1/outbound` (checks trip access, picks program by flags, geography and cell, inserts `link_clicks`, returns `/go/{click_id}`) and `GET /go/{click_id}` (fresh under 10 minutes, single use, 302 from a stored template, `Cache-Control: no-store`, `Referrer-Policy: no-referrer`). No open redirects; user id, trip id and email never in URLs.
 - Accept: expired, reused or unknown ids fail safely; no `url=` parameter path exists; repeat clicks within 30 seconds deduped; 60 an hour rate limit.
-- Touches: `apps/api/wayfold/modules/affiliate/router.py`, `modules/affiliate/service.py`.
+- Touches: `apps/api/hermi/modules/affiliate/router.py`, `modules/affiliate/service.py`.
 - Tests: redirect tests, open-redirect attack tests, dedupe test.
 - Done: DoD.
 
@@ -775,7 +775,7 @@ Conventions for every ticket:
 - Depends on: WF-067.
 - Description: link template builders for Travelpayouts, Viator and Stay22; a shared `PartnerButton` component that always renders "We earn a commission if you book here.", an "Ad" label on UK and EU storefronts, sort explanations on lists, a "Hide booking links" setting; placements on lodging, flights, things to do, cars and eSIM cards; Airbnb listings get plain links only. Public pages carry no partner buttons in Phase 1.
 - Accept: a component test fails if a partner button renders without disclosure; no list sorts by commission (a test checks ordering code); all placements go through `/go`.
-- Touches: `apps/web/src/components/partner-button.tsx`, `apps/api/wayfold/modules/affiliate/`.
+- Touches: `apps/web/src/components/partner-button.tsx`, `apps/api/hermi/modules/affiliate/`.
 - Tests: disclosure snapshot tests, ordering test, country label test.
 - Done: DoD plus placement map in `docs/affiliate-placements.md`.
 
@@ -783,7 +783,7 @@ Conventions for every ticket:
 - Depends on: WF-067, WF-046.
 - Description: nightly jobs that pull Travelpayouts, Viator and Stay22 booking statistics and payments, idempotent upsert on program and network transaction id with status history, match by sub-id, and track the unmatched share.
 - Accept: a rerun changes nothing; status transitions (pending, approved, rejected, paid) recorded; unmatched share computed; failure alerts.
-- Touches: `apps/worker/wayfold_worker/jobs/import_affiliate_conversions.py`.
+- Touches: `apps/worker/hermi_worker/jobs/import_affiliate_conversions.py`.
 - Tests: fixture payloads, idempotency test, unmatched share test.
 - Done: DoD.
 
@@ -791,7 +791,7 @@ Conventions for every ticket:
 - Depends on: WF-021, WF-068.
 - Description: `checklist_items` by destination: official visa and entry links first, then labeled partner items (eSIM, insurance referral, transfers, bookings). At least half of the items are unmonetized; insurance uses insurer-approved copy only; the AI gives no insurance, visa or legal advice. The after-trip flight compensation prompt is Phase 2.
 - Accept: checklist templates generated by destination; at least half of the items have no partner link; copy reviewed against [08-affiliate-revenue.md](../context/business-plan/08-affiliate-revenue.md) rules.
-- Touches: `apps/api/wayfold/modules/trips/` (checklist), `apps/web/src/routes/checklist/`.
+- Touches: `apps/api/hermi/modules/trips/` (checklist), `apps/web/src/routes/checklist/`.
 - Tests: template tests (ratio of monetized items), copy lint for forbidden advice phrases.
 - Done: DoD.
 
@@ -799,7 +799,7 @@ Conventions for every ticket:
 - Depends on: WF-032, WF-014, WF-019.
 - Description: import a trip from a calendar file (TripIt, Tripsy or Google Calendar export; the optional `origin` records which entry was used). `POST /trips/{id}/imports/ics` accepts one `.ics` file up to 1 MB; a strict parser in a resource-limited subprocess (CPU 5 seconds, memory 256 MB) reads `VEVENT`s, handles `VTIMEZONE`, floating times and all-day events, caps 500 events, ignores `ATTACH` and never fetches any URL it finds; events map to itinerary items, flights and stays with an `import` source; a preview screen ("We found 12 items") lets the user deselect before saving; duplicates are skipped by `UID`. Kill switch `import.all`.
 - Accept: golden files from TripIt, Google Calendar and Apple Calendar import correctly; re-importing the same file adds nothing; malformed, oversized and hostile files fail with a clear message and never crash the worker; no network access during parsing.
-- Touches: `apps/api/wayfold/modules/trips/import_ics.py`, `apps/api/wayfold/modules/itinerary/`, `apps/web/src/routes/import/`.
+- Touches: `apps/api/hermi/modules/trips/import_ics.py`, `apps/api/hermi/modules/itinerary/`, `apps/web/src/routes/import/`.
 - Tests: golden files, dedupe test, property-based fuzzing of the parser (Hypothesis in CI, corpus committed), limits tests (size, event count, recurrence explosion), no-network test.
 - Done: DoD plus the fuzz corpus and regression files committed.
 
@@ -807,7 +807,7 @@ Conventions for every ticket:
 - Depends on: WF-071, WF-046, WF-034.
 - Description: import from a calendar feed URL (TripIt iCal feed, Google Calendar secret address). The user pastes the URL (`webcal://` is rewritten to `https://`); a `fetch_ics_feed` job in the `api` lane fetches it once through the shared SSRF guard (public addresses only, pinned IP, at most 3 manual redirects, 3 second connect and 5 second total timeout, 1 MB cap counted after decompression, `text/calendar` only) and hands the body to the WF-071 parser and preview. The feed URL is a secret: it is never logged or sent to analytics, it is held (encrypted) only until the preview is confirmed or discarded, and it is kept after that only when the person turns on "Keep checking this calendar" (WF-123); otherwise the user repastes it to refresh. Airbnb, Vrbo and Booking.com hosts are refused. Kill switches `import.all` and, for polling, `import.polling`.
 - Accept: the hostile URL table (loopback, link-local, private and mapped addresses, decimal and hex IPs, rebinding, redirect to private, loops, `file:` and `gopher:`, userinfo, non-standard ports, oversized and compressed bodies) is refused; the URL never appears in logs, Sentry, `provider_calls` or events; limit of 5 feed imports per user per hour.
-- Touches: `apps/api/wayfold/providers/ics_feed.py`, `apps/api/wayfold/security/ssrf.py`, `apps/worker/wayfold_worker/jobs/fetch_ics_feed.py`, `apps/web/src/routes/import/`.
+- Touches: `apps/api/hermi/providers/ics_feed.py`, `apps/api/hermi/security/ssrf.py`, `apps/worker/hermi_worker/jobs/fetch_ics_feed.py`, `apps/web/src/routes/import/`.
 - Tests: SSRF table test with a fake resolver, redirect tests, gzip bomb test, log and Sentry scrub test, rate limit test.
 - Done: DoD plus the threat model updated with the feed import.
 
@@ -815,7 +815,7 @@ Conventions for every ticket:
 - Depends on: WF-048, WF-071.
 - Description: the `booking_import` action. The user pastes booking confirmation text (up to 12,000 characters); the server redacts personal data before any model call (names become "Traveler 1", emails, phone numbers, booking and confirmation codes, card-like and passport-like numbers, home addresses are removed; booking codes are re-attached locally from the original text, never taken from the model), Haiku extracts flights, stays and reservations as schema-validated items, each shown in a preview as "From your pasted text" (evidence label) before saving. 1 credit in the `explain` price class, refunded on an empty or failed extraction, AI consent required. Links inside pasted text are never fetched. Kill switch `ai.import`.
 - Accept: the outbound model request contains none of the test PII; output that fails validation is discarded; instructions hidden in pasted text do not change behavior; a pasted Airbnb or Vrbo confirmation works without any fetch; the user confirms every item before it is saved.
-- Touches: `apps/api/wayfold/modules/ai/features/booking_import.py`, `apps/api/wayfold/modules/trips/import_paste.py`, `apps/web/src/routes/import/`.
+- Touches: `apps/api/hermi/modules/ai/features/booking_import.py`, `apps/api/hermi/modules/trips/import_paste.py`, `apps/web/src/routes/import/`.
 - Tests: a redaction corpus of 40 real-shaped confirmations asserting zero PII in the recorded request, extraction eval set (10 section 1.5), injection fixtures, refund test, consent test.
 - Done: DoD plus the redaction corpus and eval results saved in `docs/evals/`.
 
@@ -823,7 +823,7 @@ Conventions for every ticket:
 - Depends on: WF-065, WF-071.
 - Description: the first qualifying import on a trip (calendar file, calendar feed or pasted confirmations) earns a free Trip Pass for that trip, once per account, with the same limits as a paid Trip Pass (WF-065) and 90 days from grant, recorded as a `trip_passes` row with `source = 'import_reward'` (no store transaction) and an idempotent 40-credit grant. Conditions (settled): at least 3 items saved from the import including a flight or a stay, a verified email, no active pass on that trip and no active Plus; `grant_import_reward()` in 03 section 5.9 enforces them. Google Maps and pasted-places imports and calendar change confirmations never qualify. Plus owners are thanked but get no reward. Nothing is granted for empty or duplicate imports, and an import that does not qualify does not consume the reward.
 - Accept: the reward is granted once per account and never twice for the same file or trip; junk imports under 3 items, imports with no flight or stay, unverified emails and Plus owners grant nothing and keep the reward available; the pass appears in trip settings as free; expiry works like a paid pass; admin can revoke it.
-- Touches: `apps/api/wayfold/modules/billing/passes.py`, `apps/api/wayfold/modules/trips/` (import hook), `apps/web/src/routes/import/`.
+- Touches: `apps/api/hermi/modules/billing/passes.py`, `apps/api/hermi/modules/trips/` (import hook), `apps/web/src/routes/import/`.
 - Tests: once-per-account test, idempotency test under concurrent imports, minimum item test, flight-or-stay test, verified-email test, Plus owner test, places-only import test, revoke test.
 - Done: DoD.
 
@@ -831,7 +831,7 @@ Conventions for every ticket:
 - Depends on: WF-031, WF-047, WF-051, WF-030.
 - Description: on a chosen flight the user can add what they paid ("Mark as booked" plus price); the daily check compares current fares for the same route and dates and alerts when one is lower: "You paid $X, it is now $Y. Check the airline's change and credit rules." The copy never promises a refund or rebooking. Uses `price_alerts` with kind `booked_fare` (add the value by an expand migration if 03 lacks it). Free accounts use cached fares (their one alert can be a booked-fare watch); Plus and Trip Pass follow live route limits. Settled thresholds: the fare must be at least 5 percent and at least $10 (converted) below what was paid, at most one alert per flight every 7 days, never a partner link; email now and push after WF-086.
 - Accept: a lower fare that clears both thresholds triggers exactly one alert and a second within 7 days triggers none; a drop under 5 percent or under $10, and an equal or higher fare, trigger none; the alert shows the fare's source and age; copy passes the no-advice lint; a flight marked as departed stops watching.
-- Touches: `apps/api/wayfold/modules/flights/`, `apps/worker/wayfold_worker/jobs/evaluate_price_alerts.py`, `apps/web/src/routes/flights/`.
+- Touches: `apps/api/hermi/modules/flights/`, `apps/worker/hermi_worker/jobs/evaluate_price_alerts.py`, `apps/web/src/routes/flights/`.
 - Tests: threshold tests (5 percent and $10 edges), 7-day repeat test, currency test, no-partner-link test, copy lint test.
 - Done: DoD.
 
@@ -847,7 +847,7 @@ Conventions for every ticket:
 - Depends on: WF-058, WF-059.
 - Description: search by email hash, id and other keys, masked list, profile tabs, per-record reveal with reason and rate limit.
 - Accept: no raw email or name in any list response; reveal audited; search never returns partial PII matches.
-- Touches: `apps/api/wayfold/modules/admin/users.py`, `apps/web/src/routes/admin/users/`.
+- Touches: `apps/api/hermi/modules/admin/users.py`, `apps/web/src/routes/admin/users/`.
 - Tests: serializer masking scan test, reveal limit test.
 - Done: DoD.
 
@@ -855,7 +855,7 @@ Conventions for every ticket:
 - Depends on: WF-063, WF-058.
 - Description: the subscriptions and store transactions screens, RevenueCat sync status, failed webhook list, dry-run replay, reconcile button, refund reversal visibility. Spec: [08](08-admin-control-center.md) section 6.3.
 - Accept: a failed event can be replayed without double grants; mismatches listed.
-- Touches: `apps/api/wayfold/modules/admin/billing.py`, `apps/web/src/routes/admin/subscriptions/`.
+- Touches: `apps/api/hermi/modules/admin/billing.py`, `apps/web/src/routes/admin/subscriptions/`.
 - Tests: replay idempotency test, permission tests.
 - Done: DoD.
 
@@ -863,7 +863,7 @@ Conventions for every ticket:
 - Depends on: WF-058, WF-023.
 - Description: rollup jobs every 5 minutes and the overview (MAU, DAU, signups, trials, conversions, MRR, revenue by stream, AI spend versus budget, affiliate clicks and EPC, import and referral counts, alerts, kill rule card), with stale-data indicators. Spec: [08](08-admin-control-center.md) section 6.1.
 - Accept: each tile matches a hand query on seeded data; stale rollups warn; the kill rule numbers are correct; affiliate clicks and conversions appear (Month 4 exit).
-- Touches: `apps/api/wayfold/modules/admin/overview.py`, `apps/worker/wayfold_worker/jobs/rollups.py`, `apps/web/src/routes/admin/overview/`.
+- Touches: `apps/api/hermi/modules/admin/overview.py`, `apps/worker/hermi_worker/jobs/rollups.py`, `apps/web/src/routes/admin/overview/`.
 - Tests: rollup tests with fixtures, tile rendering tests.
 - Done: DoD plus the Month 4 gate review recorded.
 
@@ -871,7 +871,7 @@ Conventions for every ticket:
 - Depends on: WF-071, WF-072, WF-073, WF-033.
 - Description: the import screen lists entries named for TripIt, Tripsy, Wanderlog, Google Calendar and Google Maps (plain text, no logos), each opening the matching method with two or three steps for getting the data out of that app (05 section 6.30); `trip_imports.origin` records the entry (03 section 5.9) and the `origin` event property carries it. Adds the `places_text` source: `POST /imports/places` takes pasted place names (one per line, up to 20,000 characters and 200 places), matches each by place search (Geoapify, no AI, no credits) and returns candidates of kind `place` that import as ideas with no day; a single Google Maps list link returns `422 list_link_not_readable` (never opened) and the screen offers to keep the link as a note. The rival instructions are checked against each app's current help pages before merge and again before launch (2 non-ticket hours); where an app has no export the entry says so.
 - Accept: each entry opens the right method; pasting Wanderlog or Maps place names gives a preview with matched places and "Not the right place"; a pasted Maps list link is never requested (no network call, asserted); a places-only import never triggers the first-import reward; the entry is stored and no other parsing changes; no third-party logos.
-- Touches: `apps/api/wayfold/modules/trips/import_places.py`, `apps/api/wayfold/modules/places/`, `apps/web/src/routes/import/`.
+- Touches: `apps/api/hermi/modules/trips/import_places.py`, `apps/api/hermi/modules/places/`, `apps/web/src/routes/import/`.
 - Tests: place-matching golden set (30 lists), no-network test for list links, reward exclusion test, origin analytics test, copy lint.
 - Done: DoD plus the rival help-page check dated in `docs/import-sources.md`.
 
@@ -879,7 +879,7 @@ Conventions for every ticket:
 - Depends on: WF-048, WF-055, WF-073, WF-044.
 - Description: the tables `plan_verifications` and `plan_verification_items` with policies and grants (03 section 5.20 and 6), the run kinds `verify_extract` and `verify_plan`, the `verify_plan` credit action and price row, flag `verify_plan` and kill switch `ai.verify`. `POST /trips/{id}/verify-plan` redacts the pasted text (the WF-073 redactor), calls Haiku once with a strict schema and no tools (06 section 5.11, up to 8,000 characters and 25 items), applies the grounding checks (every name, hours and price must appear in the text), stores only the items (never the text) and returns the price of step 2. Also `GET`, `PUT selection` (cap by `verify_items_per_run`: Free 5, Plus and Trip Pass 12), `DELETE`. 1 credit in the `explain` price class, refunded when nothing is recognized.
 - Accept: the recorded model request contains none of the test PII; a name not in the text is dropped; over-cap selection is refused; the pasted text is in no table, log or event; a viewer cannot start a check; a member cannot update verdicts or evidence columns (grants test).
-- Touches: `apps/api/wayfold/modules/verification/`, `apps/api/wayfold/modules/ai/features/verify_extract.py`, migrations and models for 03 section 5.20.
+- Touches: `apps/api/hermi/modules/verification/`, `apps/api/hermi/modules/ai/features/verify_extract.py`, migrations and models for 03 section 5.20.
 - Tests: grounding tests, redaction corpus reuse, grants and RLS tests, refund test, idempotency test, consent and kill switch tests.
 - Done: DoD plus 03 section 5.20 migration reviewed.
 
@@ -887,7 +887,7 @@ Conventions for every ticket:
 - Depends on: WF-116, WF-033, WF-050, WF-049.
 - Description: `POST /plan-verifications/{id}/check` and the `run_verify_plan` worker job (06 section 5.11). Per selected item (4 at a time): place search match (name similarity 0.8, 30 km), shared cache lookup (`place_check`, 14 days), then at most one Haiku request with `web_search` (1) and `web_fetch` (1, 4,000 content tokens) and a strict schema; the verdict (green, amber, red, unchecked) is decided in code after grounding every reported value in a tool result, with hours compared as weekday windows and prices within 15 percent; green and amber always carry a cited page and date. Reserves 1 credit per item, settles to the items that ended green, amber or red, refunds the rest (provider error, budget stop, blocked source), admits like an agent run (month headroom for items x $0.02), per-item $0.02 and per-run 3 minute caps, cancel between items. `POST /plan-verifications/{id}/import` writes the ticked items as itinerary items (`source = 'verify_plan'`, `check_url`, `checked_at`).
 - Accept: a fixture plan of 9 items with known truths yields the expected verdicts; an invented place is never green; a value the model reports that is not in the fetched content is discarded; Airbnb, Vrbo and Booking.com pages are never opened; credits charged equal the items checked and the rest are returned; a stopped run refunds unchecked items; the import carries evidence into the trip.
-- Touches: `apps/api/wayfold/modules/verification/`, `apps/worker/wayfold_worker/jobs/run_verify_plan.py`, `apps/api/wayfold/modules/ai/features/verify_check.py`, `apps/api/wayfold/modules/places/` (hours parser).
+- Touches: `apps/api/hermi/modules/verification/`, `apps/worker/hermi_worker/jobs/run_verify_plan.py`, `apps/api/hermi/modules/ai/features/verify_check.py`, `apps/api/hermi/modules/places/` (hours parser).
 - Tests: verdict table tests, hours and price comparison tests, grounding tests, injection fixtures in fetched pages, budget stop test, refund and settle tests, concurrency test, blocked-domain test, cache hit test, fake Messages client with recorded fixtures (06 section 10).
 - Done: DoD plus the first accuracy numbers written to `docs/evals/verify-plan.md`.
 
@@ -895,7 +895,7 @@ Conventions for every ticket:
 
 #### WF-080 Capacitor shell, signing and CI [M5, L, needs a Mac or Xcode Cloud]
 - Depends on: WF-017, WF-036.
-- Description: `apps/ios` Capacitor project (bundled, no `server.url`), bundle id `app.wayfold.ios` with Push, Associated Domains, Sign in with Apple, In-App Purchase and App Attest, icon and splash from the brand files, signing, Xcode Cloud or Fastlane build, build flag that excludes admin routes.
+- Description: `apps/ios` Capacitor project (bundled, no `server.url`), bundle id `world.hermi.ios` with Push, Associated Domains, Sign in with Apple, In-App Purchase and App Attest, icon and splash from the brand files, signing, Xcode Cloud or Fastlane build, build flag that excludes admin routes.
 - Accept: the app launches on a device against staging; the release build contains no admin code; CI produces a signed build.
 - Touches: `apps/ios/`, `apps/ios/fastlane/`, `apps/web/vite.config.ts`.
 - Tests: native launch smoke test; bundle inspection script.
@@ -913,7 +913,7 @@ Conventions for every ticket:
 - Depends on: WF-080, WF-013.
 - Description: native Apple sign-in exchanged through Supabase, Keychain session storage, "Hide My Email" relay handling, server-to-server notification handling for email changes and deletion.
 - Accept: sign in works on device; token revoke on deletion works (tested with WF-092); reviewers can sign in with the demo account.
-- Touches: `apps/web/src/lib/native/apple-sign-in.ts`, `apps/api/wayfold/modules/auth/apple.py`.
+- Touches: `apps/web/src/lib/native/apple-sign-in.ts`, `apps/api/hermi/modules/auth/apple.py`.
 - Tests: exchange tests, notification handler tests.
 - Done: DoD.
 
@@ -921,13 +921,13 @@ Conventions for every ticket:
 - Depends on: WF-080, WF-013.
 - Description: App Attest as in [10-quality-security-launch.md](10-quality-security-launch.md) section 2.4: challenge and attestation endpoints, assertions on the first AI action of a session and on account creation, one attested device per Free allowance per 30 days, and the stricter fallback (half the Free AI allowance, email verification, per-IP limits) when attestation is unavailable. The same attested-device signal feeds the referral and import-reward checks.
 - Accept: attestation verifies on a real device; fallback verified; normal planning is never blocked; a second account on one device does not get a second Free allowance.
-- Touches: `apps/api/wayfold/security/attest.py`, `apps/api/wayfold/modules/auth/` (devices), `apps/web/src/lib/native/`.
+- Touches: `apps/api/hermi/security/attest.py`, `apps/api/hermi/modules/auth/` (devices), `apps/web/src/lib/native/`.
 - Tests: attestation fixture tests, counter replay test, fallback test; device test.
 - Done: DoD.
 
 #### WF-084 Purchases in the app [M5, L]
 - Depends on: WF-063, WF-066, WF-080, WF-082.
-- Description: `@revenuecat/purchases-capacitor`, `logIn` and `logOut` tied to sign-in, products in App Store Connect (`wayfold_plus_monthly`, `wayfold_plus_annual` with 7-day trial on annual only, `wayfold_trip_pass`, credit packs; ids as in [03-database-schema.md](03-database-schema.md) section 11.2), paywall purchase flow with price and period first, trial length and after-trial price, Terms and Privacy links, Restore on the paywall and in Settings, sync call after purchase. Replaces the WF-076 harness.
+- Description: `@revenuecat/purchases-capacitor`, `logIn` and `logOut` tied to sign-in, products in App Store Connect (`hermi_plus_monthly`, `hermi_plus_annual` with 7-day trial on annual only, `hermi_trip_pass`, credit packs; ids as in [03-database-schema.md](03-database-schema.md) section 11.2), paywall purchase flow with price and period first, trial length and after-trial price, Terms and Privacy links, Restore on the paywall and in Settings, sync call after purchase. Replaces the WF-076 harness.
 - Accept: every sandbox purchase unlocks within seconds; Restore works on a second device; paywall text meets Guideline 3.1.2.
 - Touches: `apps/web/src/lib/native/purchases.ts`, `apps/web/src/routes/paywall/`.
 - Tests: mocked purchase flow tests; sandbox checklist in WF-102.
@@ -945,7 +945,7 @@ Conventions for every ticket:
 - Depends on: WF-047, WF-081.
 - Description: `devices` registration, direct APNs with a `.p8` key over HTTP/2, 410 cleanup, collapse ids, topics (price drop, booked-fare drop, run result, invite accepted, trip starts tomorrow), local notifications for "leave for the airport". Permission is requested after the first invite or alert.
 - Accept: a price drop arrives on device within 30 minutes of the check; dead tokens deleted; asking for permission happens after the first alert, not at launch.
-- Touches: `apps/api/wayfold/providers/apns.py`, `apps/api/wayfold/modules/notifications/`, `apps/web/src/lib/native/push.ts`.
+- Touches: `apps/api/hermi/providers/apns.py`, `apps/api/hermi/modules/notifications/`, `apps/web/src/lib/native/push.ts`.
 - Tests: APNs client tests with a fake, 410 cleanup test.
 - Done: DoD.
 
@@ -977,7 +977,7 @@ Conventions for every ticket:
 - Depends on: WF-032.
 - Description: a live subscribable feed `GET /trips/{trip_id}/calendar.ics?token=` authenticated by a per-trip secret token (stored as `calendar_token_hash`, rotated by `POST /trips/{id}/calendar-token`), with itinerary items and booked flights and stays as events with stable UIDs and correct time zones, an "Add to calendar" button (`webcal://`), `Cache-Control: private, max-age=300`. Private notes and exact prices are excluded.
 - Accept: a calendar app shows edits within its refresh interval; rotating the token kills the old URL immediately; the token never appears in logs; 60 requests a minute per token.
-- Touches: `apps/api/wayfold/modules/itinerary/` (calendar feed), `apps/web/src/routes/trip-settings/`.
+- Touches: `apps/api/hermi/modules/itinerary/` (calendar feed), `apps/web/src/routes/trip-settings/`.
 - Tests: golden file, token rotation test, privacy test, rate limit test, log scrub test.
 - Done: DoD.
 
@@ -985,7 +985,7 @@ Conventions for every ticket:
 - Depends on: WF-025, WF-032.
 - Description: full-screen presentation with a swipe story view in portrait and wake lock; a shareable read-only link view from `trip_share_links` (noindex by default, redacted address, prices and notes); PDF export from present mode (Free adds a small footer).
 - Accept: share view shows no private notes or email; present mode works offline once cached; PDF matches the presentation; the Free footer is small and only on Free.
-- Touches: `apps/web/src/routes/present/`, `apps/api/wayfold/modules/collaboration/` (share links), `apps/api/wayfold/modules/itinerary/` (presentation data, PDF).
+- Touches: `apps/web/src/routes/present/`, `apps/api/hermi/modules/collaboration/` (share links), `apps/api/hermi/modules/itinerary/` (presentation data, PDF).
 - Tests: privacy test on share payload, Playwright present-mode test, PDF golden test.
 - Done: DoD.
 
@@ -993,7 +993,7 @@ Conventions for every ticket:
 - Depends on: WF-013, WF-047.
 - Description: in-app deletion request with re-authentication, 30 day grace, hard delete of trip data and files (including import previews, referral links and calendar tokens), transfer or delete shared trips, delete the Supabase Auth user, revoke the Sign in with Apple token, warning that an Apple subscription is not cancelled.
 - Accept: after the sweep no row in any table references the user; shared trips transfer or delete as chosen; the confirmation email is sent; backups purge on their cycle (documented).
-- Touches: `apps/api/wayfold/modules/auth/` (deletion), `apps/worker/wayfold_worker/jobs/delete_account.py`.
+- Touches: `apps/api/hermi/modules/auth/` (deletion), `apps/worker/hermi_worker/jobs/delete_account.py`.
 - Tests: end-to-end deletion test over all tables, grace cancel test.
 - Done: DoD.
 
@@ -1001,7 +1001,7 @@ Conventions for every ticket:
 - Depends on: WF-092.
 - Description: "Export my data" as JSON plus ICS through a job, stored in R2, emailed link with expiry, available on every tier.
 - Accept: export includes all user-owned data (checked against a list generated from the schema); link expires; another user cannot fetch it.
-- Touches: `apps/api/wayfold/modules/auth/` (export), `apps/worker/wayfold_worker/jobs/export_user_data.py`.
+- Touches: `apps/api/hermi/modules/auth/` (export), `apps/worker/hermi_worker/jobs/export_user_data.py`.
 - Tests: completeness test, expiry test, authorization test.
 - Done: DoD.
 
@@ -1023,7 +1023,7 @@ Conventions for every ticket:
 
 #### WF-096 Accessibility, i18n base and privacy manifest [M5, M]
 - Depends on: WF-080.
-- Description: VoiceOver labels and focus order, Dynamic Type, reduce motion, axe in Playwright, the contrast unit test over every token pair including `--tp-edge` and `--tp-warning-ink` with Increase Contrast swapping `--tp-rule` and `--tp-edge` to ink, `react-i18next` extraction of copy, `PrivacyInfo.xcprivacy` with required-reason API declarations, Info.plist purpose strings, privacy label answers matching click logging.
+- Description: VoiceOver labels and focus order, Dynamic Type, reduce motion, axe in Playwright, the contrast unit test over every Hermi palette token pair (05 section 2.3) including `--tp-edge`, `--tp-warning-ink` and `--tp-sky-ink` on `--tp-sky` with Increase Contrast swapping `--tp-rule` and `--tp-edge` to ink, `react-i18next` extraction of copy, `PrivacyInfo.xcprivacy` with required-reason API declarations, Info.plist purpose strings, privacy label answers matching click logging.
 - Accept: no axe critical issues; the token pairs pass in light, dark and Increase Contrast; all permission strings present; label answers match the policy.
 - Touches: `apps/web/src/lib/i18n/`, `apps/ios/App/PrivacyInfo.xcprivacy`, `packages/tokens/` (contrast test).
 - Tests: axe suite, token contrast test, string extraction test.
@@ -1041,7 +1041,7 @@ Conventions for every ticket:
 - Depends on: WF-038.
 - Description: fire every event in the Phase 1 catalogue ([10-quality-security-launch.md](10-quality-security-launch.md) section 4), including the new ones for imports (`import_started` with `origin`, `import_previewed`, `import_completed`, `import_failed`, `import_reward_granted`, `calendar_polling_enabled`, `calendar_changes_found`, `calendar_changes_applied`), onboarding switching, collaborator limit, offline, calendar feed, booked-fare watch and alert, evidence and rechecks, Verify this plan (`verify_started`, `verify_items_read`, `verify_checked`, `verify_imported`), trust pages and the cancel link, the sync indicator, the status banner, the Android install card, public pages, content reports, `/vs` pages and referrals. Funnels: activation, invite loop, paywall, AI, affiliate, switching (onboarding answer to import completed to reward to first itinerary edit).
 - Accept: each event fires once with only enum and bucket properties; no URL, file name, pasted text or trip title is ever an event property; opt-out stops every event.
-- Touches: `apps/web/src/lib/analytics.ts`, `apps/api/wayfold/analytics.py`, `packages/shared/src/events.ts`, `docs/analytics.md`.
+- Touches: `apps/web/src/lib/analytics.ts`, `apps/api/hermi/analytics.py`, `packages/shared/src/events.ts`, `docs/analytics.md`.
 - Tests: event firing tests, property allowlist test, opt-out test.
 - Done: DoD plus `docs/analytics.md` matches section 4 of 10.
 
@@ -1049,7 +1049,7 @@ Conventions for every ticket:
 - Depends on: WF-067, WF-069, WF-058.
 - Description: revenue by network, program and placement, conversion import status, unmatched share, and a disclosure audit that lists every placement and whether it renders the disclosure. Spec: [08](08-admin-control-center.md) section 6.7 (the link checker and two-person template approval are Phase 2).
 - Accept: numbers match `affiliate_conversions`; a placement without disclosure shows as a failure.
-- Touches: `apps/api/wayfold/modules/admin/affiliate.py`, `apps/web/src/routes/admin/`.
+- Touches: `apps/api/hermi/modules/admin/affiliate.py`, `apps/web/src/routes/admin/`.
 - Tests: aggregation tests, disclosure audit test.
 - Done: DoD.
 
@@ -1081,7 +1081,7 @@ Conventions for every ticket:
 - Depends on: WF-079, WF-098, WF-101.
 - Description: invite tooling for 30 to 50 TestFlight testers (plus waitlist invites), a weekly feedback loop, and a report with crash-free sessions, import completion, activation, week 1 retention and AI cost per active user against ceilings.
 - Accept: testers can be invited in batches; the report produces the Month 5 exit numbers.
-- Touches: `apps/api/wayfold/modules/admin/invites.py`, `infra/scripts/beta_report.py`.
+- Touches: `apps/api/hermi/modules/admin/invites.py`, `infra/scripts/beta_report.py`.
 - Tests: cohort calculation tests.
 - Done: DoD plus the Month 5 gate review recorded.
 
@@ -1089,7 +1089,7 @@ Conventions for every ticket:
 - Depends on: WF-072, WF-046, WF-086.
 - Description: after a feed import is applied the person can switch on "Keep checking this calendar" (off by default, never turned on for them): `PUT /imports/{id}/polling` calls `set_import_polling()` (03 section 5.9), keeps the feed URL encrypted (`feed_url_enc`, `FIELD_ENCRYPTION_KEY`) only while on, at most 3 polled feeds per account. The `poll_import_feeds` scheduler job (every 30 minutes, leader only) enqueues `fetch_import_feed` for due rows; each feed is read every 6 hours through the SSRF guard with a conditional request and a content hash (`last_content_hash`). A change builds a diff against the import's items (by `import_uid`) into `pending_changes`, sends a push and in-app notice, and the "Calendar changed" sheet lists new, changed (before and after) and removed events; `POST /imports/{id}/changes/confirm` applies only the ticked changes; nothing is ever applied automatically and removed events are never deleted for the person. Polling stops after 3 failures in a row (`calendar_poll_stopped`), 7 days after the trip ends, or when switched off (URL and pending changes deleted). Kill switches `import.polling` and `import.all`; flag `calendar_feed_polling`; `setting_calendar_polling`.
 - Accept: an unchanged feed creates no preview; a changed feed creates one preview and one notice; nothing changes in the trip until the person confirms; turning the switch off deletes the stored URL; the third failure stops polling and tells the person; the fourth polled feed is refused; the URL never appears in logs, Sentry, `provider_calls` or events; a polling confirmation never earns the import reward.
-- Touches: `apps/api/wayfold/modules/imports/`, `apps/worker/wayfold_worker/jobs/poll_import_feeds.py`, `apps/web/src/routes/import/`.
+- Touches: `apps/api/hermi/modules/imports/`, `apps/worker/hermi_worker/jobs/poll_import_feeds.py`, `apps/web/src/routes/import/`.
 - Tests: poll schedule test (6 hours), content hash test, diff test (added, changed, removed), confirm-only-ticked test, failure and stop tests, encryption and deletion tests, log scrub test, limit test, SSRF table reuse.
 - Done: DoD plus the threat model updated for stored feed addresses.
 
@@ -1105,7 +1105,7 @@ Conventions for every ticket:
 - Depends on: WF-100, WF-037.
 - Description: `GET /public/status` (04 section 5.28) mirrors the five component states of the hosted status page (02 section 8.1) and is cached 30 seconds; the app shows the quiet banner "Fares are delayed right now. Saved trips still work." with a "Service status" link only when a component is degraded, and Settings has "Service status". The banner never appears for one person's failed request.
 - Accept: degrading a component in staging shows the banner within a minute and clearing it removes it; the endpoint answers without auth and without touching the database more than once a minute; offline the app shows the offline banner instead.
-- Touches: `apps/api/wayfold/modules/admin/` (status read), `apps/api/wayfold/api/public.py`, `apps/web/src/components/status-banner/`.
+- Touches: `apps/api/hermi/modules/admin/` (status read), `apps/api/hermi/api/public.py`, `apps/web/src/components/status-banner/`.
 - Tests: endpoint contract test, banner component tests, caching test.
 - Done: DoD.
 
@@ -1113,7 +1113,7 @@ Conventions for every ticket:
 - Depends on: WF-121.
 - Description: `POST /imports/maps-file` reads a Google Takeout saved-list export (CSV, GeoJSON or KML, up to 5 MB and 200 places) locally and matches each title by place search (no AI, no credits); candidates of kind `place` import as ideas; notes and any Google Maps URLs stay as plain text and are never followed; a pasted list link is never opened (WF-121 already guides the export). Cut from the committed hours (section 3): build it only in reserve time.
 - Accept: golden exports from 3 Takeout variants import with the right matches; a file with no places says so; 201 places import the first 200 and warn; no network request is made for any URL in the file.
-- Touches: `apps/api/wayfold/modules/trips/import_maps.py`, `apps/web/src/routes/import/`.
+- Touches: `apps/api/hermi/modules/trips/import_maps.py`, `apps/web/src/routes/import/`.
 - Tests: golden files (CSV, GeoJSON, KML), no-network test, limits test, reward exclusion test.
 - Done: DoD.
 
@@ -1121,7 +1121,7 @@ Conventions for every ticket:
 
 #### WF-104 Store listing and privacy labels [M6, M]
 - Depends on: WF-101, WF-096.
-- Description: app name, subtitle, keywords (no competitor names), promotional text, description, six 6.9 inch screenshots (trip overview, itinerary on map, price-drop alert, import from another app, AI plan with evidence labels, offline mode; a shared trip or present mode if room), 1024 icon without alpha, age rating questionnaire, privacy labels, localizations (en-US, es, de). Products for Phase 1 only: Plus, Trip Pass, credit packs.
+- Description: app name "Hermi: Group Trip Planner", subtitle "Plan together. Know the fare.", keywords (no competitor names), promotional text, description, six 6.9 inch screenshots (trip overview, itinerary on map, price-drop alert, import from another app, AI plan with evidence labels, offline mode; a shared trip or present mode if room), 1024 icon without alpha, age rating questionnaire, privacy labels, localizations (en-US, es, de). Products for Phase 1 only: Plus, Trip Pass, credit packs.
 - Accept: all App Store Connect fields complete; screenshots from real builds; privacy labels match the policy, click logging and import processing.
 - Touches: `docs/store/`.
 - Tests: checklist review.
@@ -1131,7 +1131,7 @@ Conventions for every ticket:
 - Depends on: WF-058, WF-047.
 - Description: ticket intake (in-app contact with version, device, user id and error id attached; email to support), linking to users, replies via Resend, macros from `admin/macros/*.md` (including import problems and refund rules), SLA timers. Spec: [08](08-admin-control-center.md) section 6.11.
 - Accept: a ticket links to its user automatically; a reply uses a macro; overdue tickets flag; refund replies prompt an audited action.
-- Touches: `apps/api/wayfold/modules/admin/support.py`, `apps/web/src/routes/admin/support/`.
+- Touches: `apps/api/hermi/modules/admin/support.py`, `apps/web/src/routes/admin/support/`.
 - Tests: intake tests, macro rendering tests, SLA tests.
 - Done: DoD.
 
@@ -1139,15 +1139,15 @@ Conventions for every ticket:
 - Depends on: WF-058, WF-091.
 - Description: the basic content reports queue for reported shared trips, public sample trips and AI answers; actions (dismiss, hide, disable link, flag a research cache entry, suspend sharing for a user); in-app "Report" and "Block"; 24 hour response alert. Shared and public pages link here.
 - Accept: a report reaches the queue; disabling a link takes effect immediately and removes the page from the sitemap; flagged cache entries are not served; the reporter gets an acknowledgement.
-- Touches: `apps/api/wayfold/modules/admin/moderation.py`, `apps/web/src/components/report/`, `apps/web/src/routes/admin/`.
+- Touches: `apps/api/hermi/modules/admin/moderation.py`, `apps/web/src/components/report/`, `apps/web/src/routes/admin/`.
 - Tests: queue tests, action tests, takedown timing test.
 - Done: DoD.
 
 #### WF-107 Public sample trips and shared-trip pages [M6, L]
 - Depends on: WF-091, WF-106, WF-025.
-- Description: server-rendered pages that work without JavaScript: sample trips at `/samples/{slug}` (written by Wayfold from a system account, always indexable, with "Copy this trip" into the visitor's account after sign-up) and shared-trip pages at `/s/{shareId}` (owner-chosen; `noindex` by default, and an "Let search engines find this trip" toggle that adds a sitemap entry). Both redact addresses, prices, notes and traveler names; carry Open Graph tags, a sitemap, a report link, the evidence labels and a sign-up call to action; no partner buttons in Phase 1. Kill switch `public_pages`.
+- Description: server-rendered pages that work without JavaScript: sample trips at `/samples/{slug}` (written by Hermi from a system account, always indexable, with "Copy this trip" into the visitor's account after sign-up) and shared-trip pages at `/s/{shareId}` (owner-chosen; `noindex` by default, and an "Let search engines find this trip" toggle that adds a sitemap entry). Both redact addresses, prices, notes and traveler names; carry Open Graph tags, a sitemap, a report link, the evidence labels and a sign-up call to action; no partner buttons in Phase 1. Kill switch `public_pages`.
 - Accept: pages render without JavaScript; private data never appears in the HTML, JSON or meta tags; disabling a link returns 410 and drops it from the sitemap within 5 minutes; robots rules match the owner's choice; copying a sample creates an independent trip.
-- Touches: `apps/api/wayfold/modules/collaboration/` (public pages), `apps/web/src/routes/public/`, `apps/web/public/` (robots and sitemap), `apps/web/vite.config.ts`.
+- Touches: `apps/api/hermi/modules/collaboration/` (public pages), `apps/web/src/routes/public/`, `apps/web/public/` (robots and sitemap), `apps/web/vite.config.ts`.
 - Tests: privacy scan of rendered pages against sentinel strings, sitemap test, takedown test, no-JavaScript render test, Lighthouse check.
 - Done: DoD.
 
@@ -1155,7 +1155,7 @@ Conventions for every ticket:
 - Depends on: WF-044, WF-064, WF-083, WF-094.
 - Description: each user gets a referral link in Settings ("Invite friends"); when a referred person signs up, verifies their email and creates their first trip with dates, both accounts get 20 credits (settled values in the `setting_referral_credits` flag; `credit_grants` kind `promo`, expiring after 12 months; referral credits never raise the provider-spend ceiling). Uses the `referral_codes` and `referral_rewards` tables and the functions in 03 section 5.9. Abuse controls: no self-referral (same device key, IP hash or normalized email), a referrer is paid for at most 5 rewards in a rolling 30 days and 10 in a calendar year (the referred person still gets theirs), unique per referred account, rewards only from attested devices or verified email, reversal on refund or abuse flag, never tied to a rating or review. Kill switch `referrals.grant`.
 - Accept: a valid referral grants 20 credits to both sides once, expiring in 12 months; the sixth reward in 30 days and the eleventh in a calendar year pay the referrer nothing and the referred person in full; self, duplicate and farmed referrals grant nothing and are logged; admin can revoke and the ledger reverses; the referral link carries no user id or email.
-- Touches: `apps/api/wayfold/modules/credits/` (grants), `apps/api/wayfold/modules/auth/` (referrals), `apps/web/src/routes/settings/`.
+- Touches: `apps/api/hermi/modules/credits/` (grants), `apps/api/hermi/modules/auth/` (referrals), `apps/web/src/routes/settings/`.
 - Tests: reward-once test, self-referral tests, velocity and cap tests (5 per 30 days, 10 per year), expiry test, no-ceiling-raise test, reversal test, idempotency under concurrency.
 - Done: DoD.
 
@@ -1195,7 +1195,7 @@ Conventions for every ticket:
 - Depends on: WF-077, WF-044.
 - Description: grant credits, extend a pass, revoke an import-reward pass or referral credit, force sign-out, start export, queue or process deletion, hold AI; role limits and confirmation tiers. Comping subscriptions and impersonation are Phase 2.
 - Accept: limits enforced (for example support 50 credits a grant); each action audited with before and after.
-- Touches: `apps/api/wayfold/modules/admin/user_actions.py`.
+- Touches: `apps/api/hermi/modules/admin/user_actions.py`.
 - Tests: limit tests per role, audit tests, idempotency tests.
 - Done: DoD.
 
@@ -1203,7 +1203,7 @@ Conventions for every ticket:
 - Depends on: WF-058, WF-042.
 - Description: feature flags screen, provider health (SerpApi, Travelpayouts, Geoapify, Anthropic, Resend, RevenueCat), system health (queues, failures, webhook backlog, deploys), job retry. Spec: [08](08-admin-control-center.md) sections 6.6, 6.13 and 6.14. Experiments are Phase 2.
 - Accept: flags cannot touch disclosure or ranking keys; retry is idempotent; provider status matches probes.
-- Touches: `apps/api/wayfold/modules/admin/flags.py`, `providers.py`, `system.py`, `apps/web/src/routes/admin/`.
+- Touches: `apps/api/hermi/modules/admin/flags.py`, `providers.py`, `system.py`, `apps/web/src/routes/admin/`.
 - Tests: guardrail tests, retry idempotency test.
 - Done: DoD.
 
@@ -1227,13 +1227,13 @@ Conventions for every ticket:
 - Depends on: WF-068, WF-066, WF-094, WF-084.
 - Description: the public pages `/how-we-earn` (from `GET /public/how-we-earn`, built from `affiliate_programs` so every active partner is listed, with the rules, a sample labeled button and live counts) and `/billing` (plain billing text, prices from the same configuration as the paywall), both in the marketing shell and in the app from Account and the paywall legal row; the plan card gets a first-level "Cancel subscription" row that opens the App Store's subscription sheet (`Purchases.showManageSubscriptions()`; on the web "Cancel in the iOS app" with the store page link); `Entitlements.cancel_url`; the trial reminder, receipt and billing problem emails carry the cancel link; `/vs` pages and the App Store listing link to `/how-we-earn`. No affiliate card, paywall or survey on any of these.
 - Accept: adding an active `affiliate_programs` row makes it appear on `/how-we-earn` with no code change; the prices on `/billing` match the paywall (a test compares them); the cancel row is reachable in one tap from the Account screen and opens the subscription sheet in the sandbox build; the trial reminder email contains the link; the pages pass axe and have no em dashes.
-- Touches: `apps/web/src/routes/how-we-earn/`, `apps/web/src/routes/billing/`, `apps/api/wayfold/api/public.py`, `apps/api/wayfold/modules/affiliate/`, `apps/web/src/routes/account/`.
+- Touches: `apps/web/src/routes/how-we-earn/`, `apps/web/src/routes/billing/`, `apps/api/hermi/api/public.py`, `apps/api/hermi/modules/affiliate/`, `apps/web/src/routes/account/`.
 - Tests: partner-list generation test, price-match test, cancel row test, email template test, copy lint.
 - Done: DoD plus both pages added to the App Review notes (WF-111).
 
 #### WF-127 Android install: installable web app and install guide [M6, M]
 - Depends on: WF-088, WF-036.
-- Description: the web app manifest (name, icons, theme color, standalone display, start URL), a service worker that keeps opened trips readable offline on the web (reusing WF-088), the public page `/install/android` (three steps with screenshots for Chrome, a note for Samsung Internet, what works and what does not yet, 05 section 6.42), the dismissible "Add Wayfold to your home screen" card on Android Chrome after the first trip (once every 30 days at most, the browser's own install prompt), and a "Install on Android" row in Help. Copy never claims a Play Store app or push notifications.
+- Description: the web app manifest (name, icons, theme color sky `#2AA5FF`, standalone display, start URL), a service worker that keeps opened trips readable offline on the web (reusing WF-088), the public page `/install/android` (three steps with screenshots for Chrome, a note for Samsung Internet, what works and what does not yet, 05 section 6.42), the dismissible "Add Hermi to your home screen" card on Android Chrome after the first trip (once every 30 days at most, the browser's own install prompt), and a "Install on Android" row in Help. Copy never claims a Play Store app or push notifications.
 - Accept: Chrome on Android offers "Install app"; the installed app opens a trip offline; the card never shows before a trip exists, on iOS or when already installed; the guide's screenshots match the current Chrome menus on the day of release.
 - Touches: `apps/web/public/manifest.webmanifest`, `apps/web/src/sw.ts`, `apps/web/src/routes/install/`, `apps/web/src/components/install-card/`.
 - Tests: Lighthouse PWA check in CI, component tests for the card rules, Playwright Pixel 7 test for the manifest and offline read.
@@ -1277,7 +1277,7 @@ These tickets from the full build roadmap are out of scope for Phase 1. The "Old
 | WF-104 | Concierge flow | Phase 2 | |
 | WF-105 | Pro launch | Phase 2 | |
 | WF-106 | Partner guides | Phase 3 | |
-| WF-107 | Wayfold for Advisors: organizations, seats, workspaces | Phase 3 | |
+| WF-107 | Hermi for Advisors: organizations, seats, workspaces | Phase 3 | |
 | WF-108 | Advisor billing and admin | Phase 3 | |
 | WF-109 | Printed trip books | Phase 3 | |
 | WF-110 | LiteAPI hotel booking | Phase 3 | |

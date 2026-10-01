@@ -1,4 +1,4 @@
-# Wayfold product specification, Phase 1
+# Hermi product specification, Phase 1
 
 Part of the [Phase 1 build specification](README.md) and the [full build specification](../README.md). Written 2026-09-30. This file is the complete product specification for Phase 1 (months 1 to 6): everything the launch app does and nothing it does not. The Phase 1 scope in [README.md](README.md) is final. The shared decisions Phase 1 uses are repeated in section 1.4, so this file can be read on its own; the full tier ladder and the decisions for later phases are in [../README.md](../README.md).
 
@@ -10,7 +10,7 @@ How to read a feature entry: each has a user story, acceptance criteria written 
 
 ### 1.1 Vision
 
-Wayfold is where two or more people turn "we should go somewhere" into a booked, scheduled,
+Hermi is where two or more people turn "we should go somewhere" into a booked, scheduled,
 shared plan without a spreadsheet, a group chat full of links, or twelve browser tabs. It keeps
 the decisions in one place (dates, flights, stays, days), lets everyone vote, watches fares for
 you, and shows the whole plan as a clean full-screen presentation. AI does the tedious hunting
@@ -63,7 +63,7 @@ not sold in Phase 1.
 | Code | Name | Price (US) | Store product | Key limits |
 |---|---|---|---|---|
 | `free` | Free | $0 | none | 2 active trips, 1 cached-fare route per trip, 12 credits a month, one lifetime deep agent run ("taster"), 1 cached-fare alert, invite 1 collaborator per trip (so couples plan free), read-only share links, offline reading, joins others' trips free, checks up to 5 plan items per Verify run |
-| `plus` | Plus | $5.99 a month, $39.99 a year | auto-renewing subscription, group `wayfold_membership` | unlimited trips (fair use 25), 3 live routes checked daily within 120 days of departure, 60 credits a month, can invite up to 6 collaborators per trip, checks up to 12 plan items per Verify run |
+| `plus` | Plus | $5.99 a month, $39.99 a year | auto-renewing subscription, group `hermi_membership` | unlimited trips (fair use 25), 3 live routes checked daily within 120 days of departure, 60 credits a month, can invite up to 6 collaborators per trip, checks up to 12 plan items per Verify run |
 | `trip_pass` | Trip Pass | $9.99 | non-renewing subscription, 90 days | one trip: 2 live routes, max 60 live checks, 40 credits, up to 6 collaborators, 12 plan items per Verify run |
 | `credits_50` / `credits_150` / `credits_400` | Credit packs | $2.99 / $6.99 / $14.99 | consumable | purchased credits last 12 months and are spent last |
 
@@ -237,7 +237,7 @@ Success: account exists, trip is saved, no data was lost, no paywall was shown.
 
 1. "Present" opens the trip as full-screen slides built from what is saved now. (F-PRS-1)
 2. Keyboard, swipe, grid view, and PDF print work. A `free` trip shows a small "Made with
-   Wayfold" footer and PDF watermark. (F-PRS-2)
+   Hermi" footer and PDF watermark. (F-PRS-2)
 3. Owner can share the presentation as a read-only link. (F-COL-6)
 
 ### 3.9 Before you go
@@ -286,7 +286,7 @@ shared.
 
 1. A user who planned in ChatGPT, Gemini, Layla or Mindtrip taps "Verify a plan" (Trips home "+"
    menu, a trip's menu, or the import screen) and pastes the text. (F-AI-11)
-2. Wayfold reads the places out of it (1 credit) and shows the list with the price of checking
+2. Hermi reads the places out of it (1 credit) and shows the list with the price of checking
    them ("Check 7 places for 7 credits"). The user picks the items to check, up to 5 on Free and 12
    on Plus and Trip Pass.
 3. Each place comes back green (confirmed), amber (differs or only partly confirmed, with the
@@ -545,7 +545,7 @@ action code and price, or "none". Acceptance bullets are testable at API or UI l
     (F-COL-6).
   - Owner can revoke a pending invite or remove a member at any time; a revoked or removed
     collaborator frees the slot immediately.
-  - The invite email uses the inviter's display name and Wayfold's sending domain.
+  - The invite email uses the inviter's display name and Hermi's sending domain.
 - Tier: all owners invite, within the caps above; everyone can accept. Credits: none.
 - Edge cases: expired token shows "Ask <name> for a new link"; invite email differing from the
   account email is accepted (the token is the proof); a member already on the trip is told so; if
@@ -589,7 +589,7 @@ action code and price, or "none". Acceptance bullets are testable at API or UI l
   - `trip_share_links` creates a public read-only web page of itinerary and map, with redaction
     flags on by default: hide exact lodging address, prices, notes and traveler names.
   - Default expiry 90 days (owner can choose 1 to 365); owner can revoke at any time; views are throttled per IP and token.
-  - Page ends with "Get the app to edit" and shows the "Made with Wayfold" footer on `free`
+  - Page ends with "Get the app to edit" and shows the "Made with Hermi" footer on `free`
     trips.
   - Partner links on the page follow F-AFF rules and can be turned off by the owner.
   - Page layout, search indexing and evidence labels on shared pages are specified in F-WEB-1.
@@ -611,7 +611,7 @@ Reuse note: route, fare and choice logic carry over from the existing Trip Plann
 
 #### F-FLT-1 Routes
 
-- Story: As a planner, I want to describe where and when I might fly, so that Wayfold looks at
+- Story: As a planner, I want to describe where and when I might fly, so that Hermi looks at
   the right fares.
 - Acceptance:
   - A route (`flight_routes`) has up to 4 origin and 4 destination airports, a departure window,
@@ -766,7 +766,7 @@ rewritten; no ranking by commission.
 - Story: As a desktop user, I want to save a listing with one click from any site, so that I skip
   copy and paste.
 - Acceptance:
-  - A draggable "Save to Wayfold" bookmarklet opens the app with name, photos, price and rating
+  - A draggable "Save to Hermi" bookmarklet opens the app with name, photos, price and rating
     that the page in front of the user exposes, ready to review and save.
   - The bookmarklet reads only the open page in the user's own browser; the server never visits
     the site.
@@ -787,7 +787,7 @@ rewritten; no ranking by commission.
 #### F-LDG-4 Rental search
 
 - Story: As a planner, I want to search priced rentals for my dates, so that I find options
-  without leaving Wayfold.
+  without leaving Hermi.
 - Acceptance:
   - "Search rentals" takes destination, dates and guests, and lists priced results from licensed
     hotel and rental partners.
@@ -1064,7 +1064,7 @@ Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
     plan's first destination.
   - Step 1, read the plan: the person pastes text of up to 8,000 characters and optionally says
     which assistant wrote it (ChatGPT, Gemini, Layla, Mindtrip or other, shown but never trusted).
-    Personal data is replaced with placeholders before the model call (F-AI-10 rules). Wayfold
+    Personal data is replaced with placeholders before the model call (F-AI-10 rules). Hermi
     lists up to 25 items (place, day, time, stated hours, stated price). Costs 1 credit (`explain`
     price class), shown before the tap; text with no places is refunded and says so. The text is
     never stored and no link in it is opened.
@@ -1073,7 +1073,7 @@ Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
     The person ticks the items to check; the cap per run is 5 on Free and 12 on Plus and Trip Pass.
     Items over the cap stay "Not checked" and can be checked in another run, each run priced on its
     own.
-  - Step 2, check: for each selected item Wayfold looks the place up in place data, uses the
+  - Step 2, check: for each selected item Hermi looks the place up in place data, uses the
     shared cache when it has a fresh answer, and otherwise reads at most one page, to confirm that
     the place exists, that the stated opening hours fit the planned day and time, and that a stated
     price is within 15 percent of the page. The result is one of:
@@ -1089,7 +1089,7 @@ Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
     to the page. Colors always come with a word and an icon. A red item is never shown as a fact
     and never appears on a trip until the person chooses to add it.
   - The header states what was done, not a score: "Checked 7 of 9. 5 confirmed, 1 differs, 1 not
-    found. 2 not checked." Wayfold never calls a whole plan "verified".
+    found. 2 not checked." Hermi never calls a whole plan "verified".
   - The worker saves verdicts only with their evidence; a person cannot edit a verdict or a date.
     Only the tick marks for checking and importing are editable.
   - Credits are reserved for the selected items and settled to the items that ended green, amber
@@ -1200,7 +1200,7 @@ Reuse note: extends the existing `presentation` page.
   - Print or Save as PDF gives one 16:9 page per slide; maps print as a static stop plot;
     partner links stay live in PDF with the disclosure sentence printed, except the checklist,
     which prints without affiliate buttons.
-  - `free` trips show a small "Made with Wayfold" footer and PDF watermark; paid and passed trips
+  - `free` trips show a small "Made with Hermi" footer and PDF watermark; paid and passed trips
     do not.
   - No affiliate card or paywall appears during playback.
 - Tier: all (footer and watermark on `free` only).
@@ -1400,7 +1400,7 @@ Global rules (each is a testable requirement):
   - Plans screen shows `free`, `plus`, `trip_pass` and credit packs.
   - `plus` $5.99 a month or $39.99 a year (annual pre-selected, 7-day trial on annual only),
     `trip_pass` $9.99, `credits_50` $2.99, `credits_150` $6.99, `credits_400` $14.99.
-  - Plus monthly and annual share the `wayfold_membership` group; switching between them follows
+  - Plus monthly and annual share the `hermi_membership` group; switching between them follows
     StoreKit rules.
   - The trial screen states the price and renewal date; a reminder (local notification and email)
     is sent 2 days before conversion and carries the one-tap cancel link (F-SUB-7).
@@ -1564,7 +1564,7 @@ Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 ### 4.18 Switching import (F-IMP)
 
 People arrive with trips already in TripIt, a calendar app or their email. Import brings them in
-without retyping and without giving Wayfold a password. Wayfold never asks for a TripIt, Google or
+without retyping and without giving Hermi a password. Hermi never asks for a TripIt, Google or
 Wanderlog login, uses no sign-in tokens from those services, and has no access to anyone's inbox.
 The import screen has an entry for each app (F-IMP-4), a Google Maps list import (F-IMP-5) and an
 opt-in way to keep a calendar feed up to date (F-IMP-6).
@@ -1572,7 +1572,7 @@ opt-in way to keep a calendar feed up to date (F-IMP-6).
 #### F-IMP-1 Import from a calendar file or feed
 
 - Story: As a TripIt or Google Calendar user, I want to import a trip from a calendar file or
-  link, so that my bookings are in Wayfold without retyping.
+  link, so that my bookings are in Hermi without retyping.
 - Acceptance:
   - Import accepts an iCalendar (.ics) file chosen from the device (a TripIt single-trip export, a
     Tripsy or Google Calendar export, or any iCalendar file), or a calendar feed link pasted into a
@@ -1628,7 +1628,7 @@ opt-in way to keep a calendar feed up to date (F-IMP-6).
 #### F-IMP-3 First import earns a Trip Pass
 
 - Story: As a new user who brings a trip over, I want that trip to get full features, so that I
-  can judge Wayfold with my own data.
+  can judge Hermi with my own data.
 - Acceptance:
   - The first time an account completes an import (F-IMP-1 or F-IMP-2) that adds at least 3
     items including a flight or a stay, the trip that received them gets a Trip Pass for 90 days at
@@ -1680,7 +1680,7 @@ opt-in way to keep a calendar feed up to date (F-IMP-6).
   - Import accepts an exported Google Maps saved-list file (a Google Takeout "Saved" CSV, GeoJSON
     or KML file, up to 5 MB and 200 places) or pasted place names, one per line or copied from a
     list, up to 20,000 characters.
-  - Wayfold never opens, resolves or scrapes a Google Maps list link. If the person pastes a list
+  - Hermi never opens, resolves or scrapes a Google Maps list link. If the person pastes a list
     link, the screen explains that the list has to be exported first (two steps, with the Takeout
     path), offers "Keep this link as a note on the trip", and does not contact the address.
   - Each place is matched by name through place search (Geoapify); the preview shows the match
@@ -1697,13 +1697,13 @@ opt-in way to keep a calendar feed up to date (F-IMP-6).
 
 #### F-IMP-6 Keep checking this calendar
 
-- Story: As someone whose trip lives in a TripIt or Tripsy calendar feed, I want Wayfold to notice
+- Story: As someone whose trip lives in a TripIt or Tripsy calendar feed, I want Hermi to notice
   changes, so that my plan stays current without re-importing.
 - Acceptance:
   - After a feed import is applied, the result screen offers a switch "Keep checking this
     calendar", off by default and never turned on for the person. It says how often ("every 6
     hours") and that changes arrive as a preview to confirm.
-  - When on, Wayfold reads the feed every 6 hours. If events were added, changed or removed, the
+  - When on, Hermi reads the feed every 6 hours. If events were added, changed or removed, the
     trip shows "Your calendar changed: 3 updates" with a notification, and a preview listing each
     change (new, changed with before and after, removed). The person ticks what to apply and taps
     "Apply"; nothing is applied automatically, ever. Removed events are listed and never deleted
@@ -1714,7 +1714,7 @@ opt-in way to keep a calendar feed up to date (F-IMP-6).
   - Polling turns off by itself after 3 failed reads in a row (the person is told), 7 days after
     the trip ends, or when the person turns it off. At most 3 calendars can be kept up to date per
     account.
-  - Polling is one way: Wayfold never writes to the person's calendar. It is free, uses no AI and
+  - Polling is one way: Hermi never writes to the person's calendar. It is free, uses no AI and
     no credits, works on every tier, and does not count as an import for the reward (F-IMP-3).
   - Kill switches `import.polling` and `import.all`; flag `calendar_feed_polling`.
 - Tier: all. Credits: none.
@@ -1727,7 +1727,7 @@ opt-in way to keep a calendar feed up to date (F-IMP-6).
   the plan beside the rest of my life.
 - Acceptance:
   - The owner turns on "Calendar feed" in trip settings (off by default). It creates one feed per
-    trip at `https://wayfold.app/cal/<token>.ics` with a random 128 bit token, stored encrypted so
+    trip at `https://hermi.world/cal/<token>.ics` with a random 128 bit token, stored encrypted so
     the owner can copy it again. "Add to Apple Calendar" opens the `webcal://` form, "Copy link"
     serves Google Calendar, Outlook and others with a one-line how-to for each, and "Make a new
     link" revokes the old link at once.
@@ -1754,7 +1754,7 @@ opt-in way to keep a calendar feed up to date (F-IMP-6).
 
 ### 4.20 Public web pages (F-WEB)
 
-Public pages need no account and no app. They use the passport design and the same components as
+Public pages need no account and no app. They use the Hermi design and the same components as
 the app, follow the affiliate rules, and are screens 6.34 to 6.36 and 6.40 to 6.42 in [05-ui-ux-spec.md](05-ui-ux-spec.md).
 Only the page behavior is specified here; hosting and SEO plumbing are in
 [02-architecture.md](02-architecture.md) and the launch tasks in [09-build-roadmap.md](09-build-roadmap.md).
@@ -1766,10 +1766,10 @@ Only the page behavior is specified here; hosting and SEO plumbing are in
 - Acceptance:
   - The page at `/s/<shareId>` (created by F-COL-6) shows trip title, destinations, dates and the
     day by day plan with a map, with the redaction of F-COL-6 applied, evidence labels (F-NTE-2) on
-    AI-found items, the "Made with Wayfold" footer on `free` trips, and "Get the app to edit".
+    AI-found items, the "Made with Hermi" footer on `free` trips, and "Get the app to edit".
   - Search listing is opt-in: the owner's switch "Let search engines list this page" is off by
     default. Off, the page is `noindex`. On, the page has a title, a description, a canonical URL
-    and a preview image built from the trip's guilloche and destination. Listing needs an expiry,
+    and a preview image built from the trip's route pattern and destination. Listing needs an expiry,
     and an expired or revoked page returns 410 and drops out.
   - A "Report this page" link sends the page to the admin content reports queue.
   - No account wall, no paywall, no comments.
@@ -1777,13 +1777,13 @@ Only the page behavior is specified here; hosting and SEO plumbing are in
 
 #### F-WEB-2 Public sample trips
 
-- Story: As a visitor, I want to see a finished plan, so that I understand what Wayfold makes.
+- Story: As a visitor, I want to see a finished plan, so that I understand what Hermi makes.
 - Acceptance:
-  - A gallery at `/samples` lists 4 to 6 sample trips written by Wayfold (for example a long
+  - A gallery at `/samples` lists 4 to 6 sample trips written by Hermi (for example a long
     weekend in Lisbon, a week in Japan, a family road trip); each is at `/samples/<slug>` and uses
     the shared-trip page with overview, itinerary, map, stay shortlist with hearts, checklist and a
     fare chart labeled "Sample data, dated <date>".
-  - Samples are owned by a Wayfold system account, cannot be edited by visitors, contain no real
+  - Samples are owned by a Hermi system account, cannot be edited by visitors, contain no real
     people, and show every price and fact with a date and, for AI-found facts, the evidence label.
     A sample never presents a cached or stale price as current.
   - "Copy this trip" duplicates the structure into the visitor's account or guest trip using the
@@ -1803,23 +1803,23 @@ Only the page behavior is specified here; hosting and SEO plumbing are in
   - Every statement about another product has a source link and a "Checked <date>" label, like an
     evidence label, and is re-checked at least every 90 days; the page shows "Last checked
     <date>". A claim that cannot be sourced is not made. Prices show currency and date.
-  - Wayfold's own limits are stated (for example, no Android app until Phase 2).
+  - Hermi's own limits are stated (for example, no Android app until Phase 2).
   - No affiliate links or partner cards, no competitor logos (names as plain text), no
     disparaging words and no "best" claims.
   - Content is reviewed text in the repository, written by people from
     [../context/competitive-analysis/README.md](../context/competitive-analysis/README.md); nothing is scraped
     or fetched from competitor sites by the server.
-  - Pages are indexable, with a plain title ("Wayfold and TripIt"), a description and a canonical
+  - Pages are indexable, with a plain title ("Hermi and TripIt"), a description and a canonical
     URL. The comparison basis statement shows on UK and EU storefronts (section 6.4).
 - Tier: public.
 
 #### F-WEB-4 How we earn
 
-- Story: As a visitor or user, I want to see exactly how Wayfold makes money, so that I can trust
+- Story: As a visitor or user, I want to see exactly how Hermi makes money, so that I can trust
   its suggestions.
 - Acceptance:
   - A public page at `/how-we-earn`, needing no account, linked from Settings, every paywall,
-    empty states and every `/vs` page, states in plain words: Wayfold earns from subscriptions,
+    empty states and every `/vs` page, states in plain words: Hermi earns from subscriptions,
     Trip Passes, credits and commissions when someone books through a partner link; nothing is
     ranked by commission; every partner link is labeled; there are no ads; user data is never
     sold; Airbnb, Vrbo and Booking.com pages are never fetched.
@@ -1840,7 +1840,7 @@ Only the page behavior is specified here; hosting and SEO plumbing are in
     each plan's price and renewal; the 7-day trial on the annual plan, the reminder 2 days before
     it converts and what happens on day 8; that Trip Pass is one time and never renews; how credits
     expire; how to cancel (the one-tap link, F-SUB-7); what stays after cancelling; that refunds go
-    through Apple and what Wayfold can do; that no card details are stored; that purchases are in
+    through Apple and what Hermi can do; that no card details are stored; that purchases are in
     the iOS app only for now; and what stays free.
   - Prices on the page come from the same configuration as the paywall, so they cannot disagree.
   - It is reviewed with every price change and included in the App Review notes.
@@ -1848,11 +1848,11 @@ Only the page behavior is specified here; hosting and SEO plumbing are in
 
 #### F-WEB-6 Public status page and service status
 
-- Story: As a user who sees something wrong, I want to check whether Wayfold has a problem, so that
+- Story: As a user who sees something wrong, I want to check whether Hermi has a problem, so that
   I know it is not me.
 - Acceptance:
-  - A public status page at `status.wayfold.app` (also linked as `/status`) is hosted outside
-    Wayfold's own infrastructure, so it works during an outage. It shows five components (web app,
+  - A public status page at `status.hermi.world` (also linked as `/status`) is hosted outside
+    Hermi's own infrastructure, so it works during an outage. It shows five components (web app,
     API, AI features, fare data, push), each operational, degraded or down, with 90 days of uptime
     and posted incidents in plain words with times.
   - The app shows a quiet banner when a component is degraded ("Fares are delayed right now. Saved
@@ -1864,20 +1864,20 @@ Only the page behavior is specified here; hosting and SEO plumbing are in
 
 #### F-WEB-7 Android install guide
 
-- Story: As an Android user, I want to use Wayfold like an app, so that I can plan with friends who
+- Story: As an Android user, I want to use Hermi like an app, so that I can plan with friends who
   have iPhones.
 - Acceptance:
-  - The web app is installable: a web app manifest (name, icons, theme, standalone display) and a
+  - The web app is installable: a web app manifest (name, icons, sky theme color `#2AA5FF`, standalone display) and a
     service worker that keeps opened trips readable offline, so Chrome on Android offers "Install
     app" and "Add to Home screen".
   - A page at `/install/android` explains in 3 short steps with screenshots how to install from
     Chrome (and notes Samsung Internet), what works (full planning, editing, sharing, reading
     offline) and what does not yet (push notifications for price drops arrive by email; native
     Android app is planned), and links to Settings, Help, "Install on Android".
-  - On Android Chrome a dismissible card "Add Wayfold to your home screen" appears after the person
+  - On Android Chrome a dismissible card "Add Hermi to your home screen" appears after the person
     has created a trip (never on the first screen, never a modal), once every 30 days at most, and
     uses the browser's own install prompt.
-  - Wayfold is tested on Android Chrome (phone and tablet sizes) before each release: sign-in,
+  - Hermi is tested on Android Chrome (phone and tablet sizes) before each release: sign-in,
     creating and editing a trip, sharing, offline reading and the install flow.
   - Copy never claims a Play Store app or push that does not exist.
 - Tier: all. Credits: none.
@@ -1886,10 +1886,10 @@ Only the page behavior is specified here; hosting and SEO plumbing are in
 
 #### F-REF-1 Invite a friend, both get credits
 
-- Story: As a user, I want to tell a friend about Wayfold and be thanked with credits, so that
+- Story: As a user, I want to tell a friend about Hermi and be thanked with credits, so that
   sharing is worth it.
 - Acceptance:
-  - Every signed-in account has a referral link `https://wayfold.app/r/<code>` and a code, in
+  - Every signed-in account has a referral link `https://hermi.world/r/<code>` and a code, in
     Account, "Invite friends", with the native share sheet. A friend can also type the code
     ("Have a friend's code?") at sign-in or in onboarding. There is no attribution SDK, so the code
     arrives through the link on the web, the universal link when the app is installed, or typing.
@@ -2036,7 +2036,7 @@ Notes:
   trial screens state dates).
 - Consistent help location and no cognitive-test-only steps (email code is paste-friendly,
   autofill works).
-- The design system colors (passport theme) are checked in light and dark themes for contrast.
+- The design system colors (Hermi theme, 05 section 2.3) are checked in light and dark themes for contrast.
 - Accessibility checks are in CI (axe on key screens) and a manual screen reader pass runs
   before each release.
 
@@ -2096,7 +2096,7 @@ Each line is a pointer only. These features are not specified, built or sold in 
 - Family plan and households: Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 - Group Trip Pass, polls, manual cost splitting, room-block requests: Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 - Comments on items (comments with mentions included): Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
-- Email-forward import (plans@wayfold.app): Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
+- Email-forward import (plans@hermi.world): Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 - Flight status, delay and gate alerts: Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 - Pro tier and scheduled agent routines: Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 - Concierge lane (host agency): Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
@@ -2105,7 +2105,7 @@ Each line is a pointer only. These features are not specified, built or sold in 
 - "Paste your group chat" to draft a plan, and repair-a-day when plans change: Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 - After-trip flight compensation prompt, memories and "Year in travel" card: Later: Phase 2, see [../phase-2-growth/README.md](../phase-2-growth/README.md).
 - Stripe group payments: Later: Phase 3, see [../phase-3-scale/README.md](../phase-3-scale/README.md).
-- Wayfold for Advisors: Later: Phase 3, see [../phase-3-scale/README.md](../phase-3-scale/README.md).
+- Hermi for Advisors: Later: Phase 3, see [../phase-3-scale/README.md](../phase-3-scale/README.md).
 - Partner guides, printed trip books, in-app hotel booking (LiteAPI), white-label and API, card and loyalty offers: Later: Phase 3, see [../phase-3-scale/README.md](../phase-3-scale/README.md).
 
 ### 7.2 Not planned
@@ -2129,5 +2129,5 @@ Each line is a pointer only. These features are not specified, built or sold in 
   TripIt, Tripsy or Wanderlog, and no scraping of Google Maps lists). Phase 1 imports only files,
   feed links the user pastes, and text the user pastes. Also out: loyalty program tracking and visa application filing.
 - Social feed, browsing of other people's trips, user reviews of places, and user-generated public
-  guides. The public sample trips are a fixed list written by Wayfold.
+  guides. The public sample trips are a fixed list written by Hermi.
 - Languages other than English at launch, and right-to-left languages.

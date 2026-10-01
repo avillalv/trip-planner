@@ -1,6 +1,6 @@
-# Wayfold: build specification
+# Hermi: build specification
 
-Written 2026-09-30. This folder is everything needed to build Wayfold, a collaborative trip
+Written 2026-09-30. This folder is everything needed to build Hermi, a collaborative trip
 planner for iOS and the web that earns money from subscriptions, trip passes, AI credits,
 affiliate commissions and a concierge booking lane, without ads and without making the product
 worse for free users.
@@ -10,15 +10,16 @@ self-contained: copy this whole folder into a new repository and start with
 [prompts/KICKOFF.md](prompts/KICKOFF.md). The business reasoning behind each decision is in
 [context/](context/business-plan/README.md).
 
-![Wayfold logo](brand/wayfold-logo-preview.png)
+![Hermi logo](brand/hermi-logo-preview.png)
 
-## What Wayfold is
+## What Hermi is
 
-Wayfold helps couples, families and friend groups plan a trip together: pick dates and flights,
+Hermi helps couples, families and friend groups plan a trip together: pick dates and flights,
 shortlist and vote on places to stay, plan each day, and walk through the plan in a full-screen
 presentation. AI agents hunt fares and research events, and every fact they save links to the page
-it came from. The brand is a passport: security-paper background, navy ink, burgundy accents,
-guilloche linework, and a logo of an open passport with a route folded across it.
+it came from. The design language is "two routes, one trip": a pale sky ground, deep ink, a sky
+blue brand, two traveler routes in pink and yellow that meet at a plane, and a logo of an H made
+of two dotted routes with a plane as the crossbar.
 
 Positioning line: **Plan together. Know the fare.**
 
@@ -33,7 +34,7 @@ feature packs you add afterwards, one at a time.
 |---|---|---|
 | [phase-1-launch/](phase-1-launch/README.md) | Months 1 to 6 | The full specification for the launch app: product, architecture, database, API, UI, AI, monetization, admin, a month-by-month roadmap with tickets, and quality and launch. Everything needed and nothing more. |
 | [phase-2-growth/](phase-2-growth/README.md) | Months 7 to 12 | Feature packs: Family plan, Group Trip Pass with polls and cost splitting, comments, email-forward import, flight status alerts, Pro with scheduled agents, the concierge lane, direct affiliate programs, native Android, memories and sharing cards |
-| [phase-3-scale/](phase-3-scale/README.md) | Year 2 and later | Feature packs: Stripe group payments, Wayfold for Advisors, partner guides, printed trip books, in-app hotel booking (LiteAPI), white-label and API, card and loyalty offers |
+| [phase-3-scale/](phase-3-scale/README.md) | Year 2 and later | Feature packs: Stripe group payments, Hermi for Advisors, partner guides, printed trip books, in-app hotel booking (LiteAPI), white-label and API, card and loyalty offers |
 | [brand/](brand/BRAND.md) | Now | Logo files, colors, type, icon rules |
 | [prompts/](prompts/README.md) | Now | The 28 build prompts that build all of Phase 1 in order, the orchestrator rules, and the kickoff prompt ([prompts/KICKOFF.md](prompts/KICKOFF.md)) |
 | [context/](context/business-plan/README.md) | Background | The business plan and competitive analysis this build came from, so this folder stands alone in a new repository |
@@ -52,13 +53,13 @@ Competitive context for these choices (TripIt, Trippy, Wanderlog and others) is 
 | Code | Name | Price (US) | Store product | Key limits |
 |---|---|---|---|---|
 | `free` | Free | $0 | none | 2 active trips, 1 cached-fare route per trip, 12 credits a month, one lifetime deep agent run ("taster"), 1 cached-fare alert, invite 1 collaborator per trip (so couples plan free), offline reading, joins others' trips free |
-| `plus` | Plus | $5.99 a month, $39.99 a year | auto-renewing subscription, group `wayfold_membership` | unlimited trips (fair use 25), 3 live routes checked daily within 120 days of departure, 60 credits a month, can invite collaborators |
+| `plus` | Plus | $5.99 a month, $39.99 a year | auto-renewing subscription, group `hermi_membership` | unlimited trips (fair use 25), 3 live routes checked daily within 120 days of departure, 60 credits a month, can invite collaborators |
 | `family` | Family | $8.99 a month, $59.99 a year | auto-renewing subscription, same group | Plus for up to 6 household members, 150 pooled credits, 5 live routes |
 | `pro` | Pro (launches later) | $11.99 a month, $99 a year | auto-renewing subscription, same group | 240 credits, 6 live routes, scheduled agent routines, priority queue |
 | `trip_pass` | Trip Pass | $9.99 | non-renewing subscription, 90 days | one trip: 2 live routes, max 60 live checks, 40 credits, up to 6 collaborators |
 | `group_trip_pass` | Group Trip Pass | $19.99 | non-renewing subscription, 90 days | one trip: up to 12 travelers, 80 credits, polls, cost splitting, room-block request |
 | `credits_50` / `credits_150` / `credits_400` | Credit packs | $2.99 / $6.99 / $14.99 | consumable | purchased credits last 12 months and are spent last |
-| `advisor_seat` | Wayfold for Advisors (year 2) | $29 a seat a month, $24 annual | Stripe on the web, not the App Store | client workspaces, branded presentations, proposals, commission tracking |
+| `advisor_seat` | Hermi for Advisors (year 2) | $29 a seat a month, $24 annual | Stripe on the web, not the App Store | client workspaces, branded presentations, proposals, commission tracking |
 
 Group tools (Phase 2): polls and manual cost splitting are in every paid plan (`plus`, `family`, `pro`) and
 both passes; Free users use them on trips that have them. The Group Trip Pass adds up to 12 travelers
@@ -102,12 +103,12 @@ research and agents.
   pasted listing links are never rewritten. The server never fetches Airbnb, Vrbo or Booking.com
   pages.
 - **Concierge**: an optional "Have a human book this" request on stays, cruises and complex trips,
-  fulfilled by an advisor under a host travel agency. Users get perks; Wayfold earns the agency
+  fulfilled by an advisor under a host travel agency. Users get perks; Hermi earns the agency
   commission. Always optional and disclosed.
 - **Group payments**: cost splitting and collection for real-world trip costs through Stripe
   (never Apple In-App Purchase, never for digital features).
 - **Later**: in-app hotel booking via LiteAPI, labeled partner guides, printed trip books,
-  Wayfold for Advisors, white-label.
+  Hermi for Advisors, white-label.
 - **Never**: banner ads, selling user data, ranking anything by commission, lifetime plans.
 
 ### Stack
@@ -158,11 +159,11 @@ Provider spend is stored in micro-dollars. All timestamps are `timestamptz` in U
 
 ## Reusing the existing Trip Planner code
 
-Wayfold is built on top of the existing **Trip Planner** repository, [https://github.com/avillalv/trip-planner](https://github.com/avillalv/trip-planner) (`backend/`,
+Hermi is built on top of the existing **Trip Planner** repository, [https://github.com/avillalv/trip-planner](https://github.com/avillalv/trip-planner) (`backend/`,
 `frontend/`), a working single-household app. Build sessions clone it read-only to
 `.reference/trip-planner/` (gitignored) and port from it; never modify it. Much of it
 carries over: flight route and fare logic, itinerary and lodging features, presentation mode,
-the passport design tokens, Travelpayouts, Geoapify, Wikipedia and Frankfurter providers, the
-evidence rules in `services/agent_ingest.py`, and the agent prompts. What does not carry over:
-passcode auth, the Claude Code CLI runner and MCP bridge, APScheduler, Windows-only scripts, and
+the design token plumbing (not its passport colors, which the Hermi palette replaces),
+Travelpayouts, Geoapify, Wikipedia and Frankfurter providers, the evidence rules in
+`services/agent_ingest.py`, and the agent prompts. What does not carry over: passcode auth, the Claude Code CLI runner and MCP bridge, APScheduler, Windows-only scripts, and
 Tailscale sharing. [phase-1-launch/02-architecture.md](phase-1-launch/02-architecture.md) maps each module.

@@ -1,6 +1,6 @@
 # 07: Monetization specification (Phase 1)
 
-Part of the [Wayfold build specification](../README.md), [Phase 1: the launch app](README.md). Tier codes, prices, credit grants, credit action codes, ceilings and table names come from the [README](../README.md) and are final; table, column, enum and limit-key names come from [03-database-schema.md](03-database-schema.md). Where this file needs a value the README does not give (for example a cap or a timer), it is marked "default" and lives in `feature_flags` so it can change without a release. Rates, cookie windows and program rules for affiliate partners are "reported, verify": read each on the network's own terms page after sign-up.
+Part of the [Hermi build specification](../README.md), [Phase 1: the launch app](README.md). Tier codes, prices, credit grants, credit action codes, ceilings and table names come from the [README](../README.md) and are final; table, column, enum and limit-key names come from [03-database-schema.md](03-database-schema.md). Where this file needs a value the README does not give (for example a cap or a timer), it is marked "default" and lives in `feature_flags` so it can change without a release. Rates, cookie windows and program rules for affiliate partners are "reported, verify": read each on the network's own terms page after sign-up.
 
 Written 2026-09-30.
 
@@ -14,7 +14,7 @@ Phase 1 sells Free, Plus, Trip Pass and three credit packs, only inside the iOS 
 | Trip Pass | The trip owner | App Store in-app purchase, non-renewing subscription | 2 to 7 |
 | Credit packs | The user | App Store consumable | 5 |
 | Affiliate commissions | The partner | Our redirect `/go/{click_id}` | 8 |
-| Referral credits and the first-import Trip Pass (growth cost, not revenue) | Wayfold | No store involved | 9, 10 |
+| Referral credits and the first-import Trip Pass (growth cost, not revenue) | Hermi | No store involved | 9, 10 |
 
 Principles that every rule below follows:
 
@@ -30,16 +30,16 @@ Principles that every rule below follows:
 
 ### 2.1 App Store products
 
-Subscription group `wayfold_membership` holds every auto-renewing product. In Phase 1 it holds Plus monthly and Plus annual, at the lowest level, so the higher levels can be added above it later (Later: Phase 2). One group means nobody holds two memberships at once. Apple Family Sharing is off on every product. Prices are US tier prices; use Apple's automatic regional pricing first, then tune India, Brazil, Mexico and Turkey by hand after launch.
+Subscription group `hermi_membership` holds every auto-renewing product. In Phase 1 it holds Plus monthly and Plus annual, at the lowest level, so the higher levels can be added above it later (Later: Phase 2). One group means nobody holds two memberships at once. Apple Family Sharing is off on every product. Prices are US tier prices; use Apple's automatic regional pricing first, then tune India, Brazil, Mexico and Turkey by hand after launch.
 
 | Product ID | Type | Price (US) | Duration | Group and level | Trial or intro offer | Entitlement granted |
 |---|---|---|---|---|---|---|
-| `wayfold_plus_monthly` | Auto-renewing subscription | $5.99 | 1 month | `wayfold_membership`, level 3 | none | `plus` |
-| `wayfold_plus_annual` | Auto-renewing subscription | $39.99 | 1 year | `wayfold_membership`, level 3 | 7-day free trial (the only intro offer at launch) | `plus` |
-| `wayfold_trip_pass` | Non-renewing subscription | $9.99 | 90 days | none | none | `trip_pass` (one trip) |
-| `wayfold_credits_50` | Consumable | $2.99 | n/a | none | none | 50 purchased credits |
-| `wayfold_credits_150` | Consumable | $6.99 | n/a | none | none | 150 purchased credits |
-| `wayfold_credits_400` | Consumable | $14.99 | n/a | none | none | 400 purchased credits |
+| `hermi_plus_monthly` | Auto-renewing subscription | $5.99 | 1 month | `hermi_membership`, level 3 | none | `plus` |
+| `hermi_plus_annual` | Auto-renewing subscription | $39.99 | 1 year | `hermi_membership`, level 3 | 7-day free trial (the only intro offer at launch) | `plus` |
+| `hermi_trip_pass` | Non-renewing subscription | $9.99 | 90 days | none | none | `trip_pass` (one trip) |
+| `hermi_credits_50` | Consumable | $2.99 | n/a | none | none | 50 purchased credits |
+| `hermi_credits_150` | Consumable | $6.99 | n/a | none | none | 150 purchased credits |
+| `hermi_credits_400` | Consumable | $14.99 | n/a | none | none | 400 purchased credits |
 
 Product IDs are the `store_products.product_id` values seeded in 03 section 11.2 (plan codes such as `plus` and `credits_50` are `plans.code`). Plus annual is pre-selected on the paywall and Trip Pass is the lead offer for a trip with dates.
 
@@ -49,7 +49,7 @@ Later: Phase 2 or 3: the Family, Pro and Group Trip Pass products, web billing w
 
 Rules:
 
-- Apple allows one introductory offer per group per user. Only `wayfold_plus_annual` carries one at launch. Win-back and promotional offers wait until after launch (section 7.10).
+- Apple allows one introductory offer per group per user. Only `hermi_plus_annual` carries one at launch. Win-back and promotional offers wait until after launch (section 7.10).
 - Every product needs localized display names and descriptions, a paywall review screenshot and the subscription terms text. Use Apple's standard EULA plus our Terms and Privacy links.
 - Adding products later never changes a product ID. New price points for experiments get new product IDs (section 6.7).
 
@@ -67,9 +67,9 @@ The entitlement service resolves to this table, which mirrors the `plans.limits`
 | `travelers_per_trip` | 2 | 8 | 8 |
 | `price_alerts` (`live_alerts` false on Free; the booked-fare drop watch does not count here) | 1 cached-fare | 3 | 2 |
 | `imports` (including Google Maps lists and calendar polling) and `calendar_feed` | yes | yes | yes |
-| Share links (read-only, `Made with Wayfold` footer on Free) | yes | yes | yes |
+| Share links (read-only, `Made with Hermi` footer on Free) | yes | yes | yes |
 | `verify_items_per_run` (items one "Verify this plan" check may include) | 5 | 12 | 12 |
-| `hide_presentation_footer` (true removes the Made with Wayfold footer and PDF watermark) | false (shown) | true | true |
+| `hide_presentation_footer` (true removes the Made with Hermi footer and PDF watermark) | false (shown) | true | true |
 
 Everyone joins other people's trips free, on every tier, and gets that trip's capabilities on that trip.
 
@@ -85,25 +85,25 @@ RevenueCat (RC) sits between StoreKit 2 and our server. It validates receipts, h
 
 | Item | Setting |
 |---|---|
-| Project and app | One RC project "Wayfold", one iOS app (bundle ID `app.wayfold.ios`, default) with the App Store Connect in-app purchase key. Later: Phase 2: Android joins the same project. |
+| Project and app | One RC project "Hermi", one iOS app (bundle ID `world.hermi.ios`, default) with the App Store Connect in-app purchase key. Later: Phase 2: Android joins the same project. |
 | App user ID | Our `users.id` (UUIDv7), never email. Call `Purchases.logIn(userId)` on sign-in and `logOut()` on sign-out. Anonymous IDs are not used because purchases are disabled until sign-in. |
 | Attributes | Set `$email` off (we do not send it), `tier` not sent. Only `app_user_id`. No ad or attribution integrations. |
 | Products | The six products in 2.1, each imported from App Store Connect. |
-| Entitlements | `plus` (attached to `wayfold_plus_monthly`, `wayfold_plus_annual`). Trip passes and packs are not relied on as RC entitlements (see 3.3). The `family` and `pro` entitlements are added in Phase 2. |
+| Entitlements | `plus` (attached to `hermi_plus_monthly`, `hermi_plus_annual`). Trip passes and packs are not relied on as RC entitlements (see 3.3). The `family` and `pro` entitlements are added in Phase 2. |
 | Offerings | See 3.2. |
-| Webhook | `POST https://api.wayfold.app/v1/webhooks/revenuecat` with an `Authorization` header holding a long random secret, environment-specific (sandbox events go to staging only). |
+| Webhook | `POST https://api.hermi.world/v1/webhooks/revenuecat` with an `Authorization` header holding a long random secret, environment-specific (sandbox events go to staging only). |
 | Fees | RC is free under about $2,500 in monthly tracked revenue, then about 1% (verify). |
 
 ### 3.2 Offerings and packages
 
-An offering is what the paywall shows. The server chooses the offering (section 6); the app fetches it by identifier from RC and renders our own React paywall in the passport theme (RC Paywalls UI is not used).
+An offering is what the paywall shows. The server chooses the offering (section 6); the app fetches it by identifier from RC and renders our own React paywall in the Hermi theme (RC Paywalls UI is not used).
 
 | Offering ID | Packages (RC package to product) | Used when |
 |---|---|---|
-| `default` | `$rc_annual` = `wayfold_plus_annual` (highlighted, trial), `$rc_monthly` = `wayfold_plus_monthly` (under "More options"), `trip_pass` = `wayfold_trip_pass` | Generic upgrade |
-| `trip_first` | `trip_pass` = `wayfold_trip_pass` (lead), `$rc_annual` = `wayfold_plus_annual`, `$rc_monthly` = `wayfold_plus_monthly` | A trip with dates inside 120 days; live tracking and invite triggers |
-| `plus_first` | `$rc_annual` = `wayfold_plus_annual` (highlighted), `trip_pass`, `$rc_monthly` | Two or more active trips; third-trip limit |
-| `credits` | `wayfold_credits_50`, `wayfold_credits_150`, `wayfold_credits_400` | Out of credits |
+| `default` | `$rc_annual` = `hermi_plus_annual` (highlighted, trial), `$rc_monthly` = `hermi_plus_monthly` (under "More options"), `trip_pass` = `hermi_trip_pass` | Generic upgrade |
+| `trip_first` | `trip_pass` = `hermi_trip_pass` (lead), `$rc_annual` = `hermi_plus_annual`, `$rc_monthly` = `hermi_plus_monthly` | A trip with dates inside 120 days; live tracking and invite triggers |
+| `plus_first` | `$rc_annual` = `hermi_plus_annual` (highlighted), `trip_pass`, `$rc_monthly` | Two or more active trips; third-trip limit |
+| `credits` | `hermi_credits_50`, `hermi_credits_150`, `hermi_credits_400` | Out of credits |
 | `exp_*` | Variants created for experiments (section 6.7) | Experiments |
 
 The paywall shows at most three visible choices; credit packs appear only in the `credits` offering or as a secondary row on a credit-out paywall.
@@ -115,7 +115,7 @@ The paywall shows at most three visible choices; credit packs appear only in the
 3. For a trip pass, the app asks "Which trip is this for?" before it starts the purchase (pre-selected when the purchase started from a trip) and sends the `trip_id` with `POST /v1/purchases/sync`. A pass bought with no trip stays unapplied until `POST /v1/me/passes/{pass_id}/bind` (7.7).
 4. A nightly reconcile job lists RC subscribers who changed in the last 48 hours and compares them with our rows; differences raise an alert and are repaired from RC.
 
-Non-renewing subscriptions are not a reliable RC entitlement (RC treats them like one-off purchases, verify in the dashboard). So `wayfold_trip_pass` arrives as a `NON_RENEWING_PURCHASE` transaction; the server writes a `store_transactions` row (`kind = 'pass'`) and, once the trip is known, a `trip_passes` row. The 90 days (`starts_at`, `expires_at`), the trip binding and expiry are ours.
+Non-renewing subscriptions are not a reliable RC entitlement (RC treats them like one-off purchases, verify in the dashboard). So `hermi_trip_pass` arrives as a `NON_RENEWING_PURCHASE` transaction; the server writes a `store_transactions` row (`kind = 'pass'`) and, once the trip is known, a `trip_passes` row. The 90 days (`starts_at`, `expires_at`), the trip binding and expiry are ours.
 
 ### 3.4 Webhook handling
 
@@ -234,9 +234,9 @@ One credit is a budget of up to $0.02 of provider spend. Credit action codes, pr
 
 | Plan | When credits are granted | `period_key` |
 |---|---|---|
-| Monthly (`wayfold_plus_monthly`) | On `INITIAL_PURCHASE` and each `RENEWAL` (a paid period) | `YYYYMMDD` of the period start |
-| Annual (`wayfold_plus_annual`) | On purchase, and then on each monthly anniversary by the scheduler while the entitlement is active, until the annual period ends | `YYYYMMDD` of the anniversary |
-| Trial (`wayfold_plus_annual` trial) | Plus allowance (60) is granted at trial start but the ceiling for the trial is the normal Plus ceiling; trial exposure is about $0.45 in live checks and credits for a typical trial | `YYYYMMDD` of the trial start |
+| Monthly (`hermi_plus_monthly`) | On `INITIAL_PURCHASE` and each `RENEWAL` (a paid period) | `YYYYMMDD` of the period start |
+| Annual (`hermi_plus_annual`) | On purchase, and then on each monthly anniversary by the scheduler while the entitlement is active, until the annual period ends | `YYYYMMDD` of the anniversary |
+| Trial (`hermi_plus_annual` trial) | Plus allowance (60) is granted at trial start but the ceiling for the trial is the normal Plus ceiling; trial exposure is about $0.45 in live checks and credits for a typical trial | `YYYYMMDD` of the trial start |
 | Grace or billing retry | No new grant during `billing_retry`; during `in_grace` the current period's pool remains spendable; if payment recovers, the grant for the new period is written with the recovered period start | |
 | Free | Lazily written on first credit use each month; idle accounts cost nothing | `YYYY-MM` |
 
@@ -310,7 +310,7 @@ The engine behind `GET /v1/paywall/offer?reason={code}&trip_id={id}&surface={sur
   "reason": "limit_reached",
   "trigger": "track_live",
   "offering": "trip_first",
-  "highlight": "wayfold_plus_annual",
+  "highlight": "hermi_plus_annual",
   "copy_key": "paywall.track_live.trip",
   "trip_summary": "Live prices for Lisbon in April, checked daily until you fly",
   "free_path": {"label": "Not now", "action": "dismiss"},
@@ -391,7 +391,7 @@ Counters are read server-side from `users.prefs` (`paywall`: the times of recent
 
 ### 6.7 Experiments
 
-Server-side assignment: `variant = hash(user_id || experiment_key) mod 100` against the experiment's allocation, stored in `feature_flags` with `key = 'exp_{name}'` (keys are lowercase snake_case), the allocation and `started_at` in `rules`, the cells in `variants` and the owner in `description`. A user keeps their variant. Every variant discloses price and terms; no variant hides the free path. Price tests need separate App Store product IDs and an RC offering per variant (for example `wayfold_trip_pass_b` at $7.99 and `wayfold_trip_pass_c` at $12.99, `wayfold_plus_annual_b` at $34.99).
+Server-side assignment: `variant = hash(user_id || experiment_key) mod 100` against the experiment's allocation, stored in `feature_flags` with `key = 'exp_{name}'` (keys are lowercase snake_case), the allocation and `started_at` in `rules`, the cells in `variants` and the owner in `description`. A user keeps their variant. Every variant discloses price and terms; no variant hides the free path. Price tests need separate App Store product IDs and an RC offering per variant (for example `hermi_trip_pass_b` at $7.99 and `hermi_trip_pass_c` at $12.99, `hermi_plus_annual_b` at $34.99).
 
 | # | Experiment | Variants | Primary metric | Guardrail |
 |---|---|---|---|---|
@@ -408,7 +408,7 @@ Rules: one experiment per trigger at a time; pre-register the metric and minimum
 
 ### 7.1 Trials
 
-- Only `wayfold_plus_annual` has a 7-day free trial, one per Apple ID per group. The paywall shows "7 days free, then $39.99 a year" with the renewal date, and a reminder two days before it converts. The reminder email and the local notification carry the one-tap cancel link (7.11).
+- Only `hermi_plus_annual` has a 7-day free trial, one per Apple ID per group. The paywall shows "7 days free, then $39.99 a year" with the renewal date, and a reminder two days before it converts. The reminder email and the local notification carry the one-tap cancel link (7.11).
 - During the trial: status `in_trial`, full Plus capabilities and the normal Plus allowance, the normal Plus ceiling. Exposure for a typical trial is about $0.45.
 - Trial to paid: `RENEWAL` event with a paid period; status `active`. Trial cancelled: access until the trial ends, then `EXPIRATION`.
 - No trial for monthly plans, passes or packs. Reinstalls and new devices cannot restart a trial (Apple enforces one per Apple ID per group).
@@ -541,7 +541,7 @@ Rules:
 
 ### 8.3 Creating a click: `/v1/outbound` and `/go/{click_id}`
 
-1. The app calls `POST /v1/outbound` with `{entity_type, entity_id, surface, trip_id, checklist_item_kind?}` (authenticated; see [04-api-spec.md](04-api-spec.md)). The server checks trip access, checks that the program's kill switch is on, chooses the program (feature flags, geography, A/B cell; never commission), builds the target URL from the stored template and inserts a `link_clicks` row, then returns `https://go.wayfold.app/go/{click_id}`. Rate limit: 60 an hour per user (04 section 1.8), with repeat clicks on the same entity within 30 seconds returning the same `click_id`.
+1. The app calls `POST /v1/outbound` with `{entity_type, entity_id, surface, trip_id, checklist_item_kind?}` (authenticated; see [04-api-spec.md](04-api-spec.md)). The server checks trip access, checks that the program's kill switch is on, chooses the program (feature flags, geography, A/B cell; never commission), builds the target URL from the stored template and inserts a `link_clicks` row, then returns `https://go.hermi.world/go/{click_id}`. Rate limit: 60 an hour per user (04 section 1.8), with repeat clicks on the same entity within 30 seconds returning the same `click_id`.
 2. `click_id` is a random 128-bit value encoded in base62 (about 22 characters), generated only by this authenticated call. Where a network limits sub-id length, `link_clicks.short_id` (8 to 12 characters) is sent instead; the click id itself never leaves our system except in our own URL.
 3. The app opens the URL in `SFSafariViewController` (Capacitor Browser plugin). The web app opens a new tab with `rel="noopener noreferrer"`.
 4. `GET /go/{click_id}` looks the row up; checks it is under 10 minutes old and has not been used; sets `clicked_at`; returns HTTP 302 to the partner URL built from the stored template, with the sub-id. Headers: `Cache-Control: no-store`, `Referrer-Policy: no-referrer`. The response has no body and renders no page, so there is no third-party script, pixel or cookie from us. A known but expired or used id returns a 302 to the plain destination (the non-affiliate route) so the user is never stranded; an id that never existed returns 404 with an empty body.
@@ -609,7 +609,7 @@ Referral credits reward people who bring a friend who actually plans a trip. The
 
 ### 9.1 Codes, links and redeeming
 
-- Every user has one code (`referral_codes`: 8 characters from an alphabet without 0, O, 1 and I) and a link `https://wayfold.app/r/{code}`. The link is a page on the marketing site that opens the app through a universal link; its text comes from `GET /referrals/{code}`. The app shares it through the native share sheet and never reads the contact list.
+- Every user has one code (`referral_codes`: 8 characters from an alphabet without 0, O, 1 and I) and a link `https://hermi.world/r/{code}`. The link is a page on the marketing site that opens the app through a universal link; its text comes from `GET /referrals/{code}`. The app shares it through the native share sheet and never reads the contact list.
 - A code is redeemed by a signed-in, non-guest account, either in `POST /me/bootstrap` at sign-up or with `POST /me/referral/redeem` within 14 days of sign-up. A guest keeps the code locally and it travels with the claim. One referrer per account, set once (`uq_referral_rewards_referee`).
 - `GET /me/referral` returns the code, link, counts and credits earned; `GET /me/referral/rewards` returns the history.
 
@@ -681,7 +681,7 @@ The free Trip Pass rewards people who switch from another planner by importing a
 
 Later: Phase 2: Family plan and households (products, pooled credits, household rules), Group Trip Pass with polls and manual cost splitting and the room-block request, Pro with scheduled routines, the concierge lane, direct affiliate programs beyond Travelpayouts, Stay22 and Viator, Android purchases and web billing.
 
-Later: Phase 3: Stripe and Stripe Connect group payments, Wayfold for Advisors (Stripe Billing), partner guides, printed trip books, in-app hotel booking through LiteAPI, and white-label and API.
+Later: Phase 3: Stripe and Stripe Connect group payments, Hermi for Advisors (Stripe Billing), partner guides, printed trip books, in-app hotel booking through LiteAPI, and white-label and API.
 
 None of these changes the principles in section 1.
 

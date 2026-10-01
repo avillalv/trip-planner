@@ -1,6 +1,6 @@
 # 10. Quality, security and launch
 
-Part of the [Wayfold build specification](../README.md). Shared names, tiers, credit prices and the table list come from the README and win over anything here. Written 2026-09-30.
+Part of the [Hermi build specification](../README.md). Shared names, tiers, credit prices and the table list come from the README and win over anything here. Written 2026-09-30.
 
 This file is the quality bar. It covers testing, security, privacy and compliance, the analytics event catalogue, observability, the App Store submission, the launch checklist and the runbooks. Architecture is in [02-architecture.md](02-architecture.md), the API in [04-api-spec.md](04-api-spec.md), AI evals in detail in [06-ai-agents-spec.md](06-ai-agents-spec.md), and money rules in [07-monetization-spec.md](07-monetization-spec.md).
 
@@ -119,7 +119,7 @@ Full set adds: paywall states for each tier, out-of-credits state, offline banne
 
 ### 1.7 iOS tests
 
-- **Capacitor smoke (Maestro, simulator):** cold launch, sign in with a test account, open a cached trip with the network off (airplane mode on the simulator), add a note offline, restore network and see it sync, open `https://app.wayfold.app/i/<token>` as a universal link, accept notification permission after the first invite, purchase `plus_monthly` with a StoreKit configuration file, restore purchases.
+- **Capacitor smoke (Maestro, simulator):** cold launch, sign in with a test account, open a cached trip with the network off (airplane mode on the simulator), add a note offline, restore network and see it sync, open `https://app.hermi.world/i/<token>` as a universal link, accept notification permission after the first invite, purchase `plus_monthly` with a StoreKit configuration file, restore purchases.
 - **XCUITest:** only for native pieces the web view cannot reach: the Sign in with Apple sheet with a sandbox account, the share sheet, the StoreKit purchase sheet, push permission prompts, and the Keychain-backed session after app restart.
 - **Manual device pass before each release** (30 minutes): iPhone 12 or newer on the lowest supported iOS, poor network (Network Link Conditioner), VoiceOver on, Dynamic Type at the largest size, dark mode, low power mode, background app refresh off.
 - **Sandbox purchase matrix:** purchase, cancel, upgrade Plus to Family, downgrade, refund, restore on a second device, billing retry, Trip Pass and Group Trip Pass each bound to a trip, credit packs, expired pass. Each row passes before each submission.
@@ -149,11 +149,11 @@ Pass criteria are written into the test script as thresholds; the job fails when
 
 Baseline: OWASP ASVS level 2 for a web application with sensitive personal data (travel plans reveal when a home is empty). Penetration test by an outside firm before public launch and yearly after. Threat model reviewed at each phase gate.
 
-### 2.1 ASVS level 2 checklist (items that matter for Wayfold)
+### 2.1 ASVS level 2 checklist (items that matter for Hermi)
 
 Status values: `build` = must be built and tested before the named gate, `verify` = confirm configuration.
 
-| ASVS area | Requirement for Wayfold | Gate |
+| ASVS area | Requirement for Hermi | Gate |
 |---|---|---|
 | V1 Architecture | Threat model document; trust boundaries drawn (client, API, worker, providers, AI); one place for authorization (`require_trip`, `entitlements.require`) | Phase 1 |
 | V2 Authentication | No passwords stored; Supabase Auth handles sign-in; email codes are 6 digits, single use, expire in 10 minutes, 5 attempts then invalidate; Sign in with Apple and Google use authorization code with PKCE; generic error messages that do not reveal whether an email exists | Phase 1 |
@@ -169,7 +169,7 @@ Status values: `build` = must be built and tested before the named gate, `verify
 | V11 Business logic | Credits reserved and settled in one transaction; idempotency keys on purchases, grants and AI actions; per-account ceilings; one agent run at a time; refund reversals; limits on invites, members, text and uploads; no owner or role change through public APIs | Phase 1 |
 | V12 Files | Uploads go straight to R2 with signed URLs, size cap 10 MB, allowed types (JPEG, PNG, WebP, PDF), malware scan job before a file becomes visible, random object keys, no user-controlled paths | Phase 2 |
 | V13 API | Versioned routes; strict CORS list; content types enforced; rate limits per route class; `If-Match` on updates; mass assignment prevented by explicit schemas; OpenAPI is the contract and drift is a CI failure | Phase 1 |
-| V14 Configuration | Hardened container (non-root, read-only file system); `/docs` off in production; security headers (CSP, `X-Content-Type-Options`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, `frame-ancestors 'none'`); separate keys per environment; least-privilege database roles (`wayfold_owner` for migrations only, `wayfold_app`, `wayfold_worker`, `wayfold_admin`; see [03-database-schema.md](03-database-schema.md) section 6.1) | Phase 1 |
+| V14 Configuration | Hardened container (non-root, read-only file system); `/docs` off in production; security headers (CSP, `X-Content-Type-Options`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, `frame-ancestors 'none'`); separate keys per environment; least-privilege database roles (`hermi_owner` for migrations only, `hermi_app`, `hermi_worker`, `hermi_admin`; see [03-database-schema.md](03-database-schema.md) section 6.1) | Phase 1 |
 
 CSP for the web app: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' fonts.googleapis.com; img-src 'self' data: blob: https://*.tile-host https://upload.wikimedia.org; connect-src 'self' api host, Supabase, PostHog, Sentry; frame-ancestors 'none'`. The exact tile and image hosts are listed in `infra/cloudflare/rules.md` and tested in e2e with CSP violation reporting to Sentry.
 
@@ -179,7 +179,7 @@ CSP for the web app: `default-src 'self'; script-src 'self'; style-src 'self' 'u
 - Secret scanning: GitHub push protection on, `gitleaks` in CI and as a pre-commit hook, and a scheduled scan of the full history.
 - Separate values per environment and per service where the provider allows. A leak in staging must not expose production.
 - Rotation: quarterly for API keys, immediately on a laptop change, a departure, or a suspected leak. The rotation runbook in `docs/runbooks/key-rotation.md` lists every key: Anthropic, Supabase service role, Supabase hook secret, RevenueCat (webhook and REST), Stripe (secret and webhook), Travelpayouts, SerpApi, Geoapify, Viator, APNs `.p8`, Resend, R2, database roles, `GUEST_TOKEN_SECRET`, `ADMIN_SESSION_SECRET`, `FIELD_ENCRYPTION_KEY`. Webhook secrets support two active values during rotation.
-- JWT verification uses Supabase's published keys (JWKS), so Supabase-side rotation signs nobody out and Wayfold holds no signing secret.
+- JWT verification uses Supabase's published keys (JWKS), so Supabase-side rotation signs nobody out and Hermi holds no signing secret.
 - Anthropic: one workspace per environment with a hard monthly spend limit. Production limit is reviewed monthly.
 - Redaction: the log filter masks keys matching `key|secret|token|password|authorization|cookie|dsn` and JWT-shaped strings. A unit test feeds sample secrets through the logger and asserts masking.
 
@@ -253,7 +253,7 @@ Every webhook: read the raw body first (before any JSON parsing), verify, insert
 
 - **Prompt injection.** Tools bind `user_id`, `trip_id` and `run_id` from the run row; the model supplies only ids that are checked against the trip. No tool can email, post or spend. Web text and collaborator notes stay in `tool_result` blocks, never in the system prompt. Private notes are excluded from context. Evals gate every change (section 1.5).
 - **Clickjacking and XSS.** `frame-ancestors 'none'`, strict CSP, no inline scripts, React escaping, sanitized rich text only in one component.
-- **CSRF.** Bearer tokens are immune. The web cookie path requires the `X-Wayfold: 1` header plus `Origin` match.
+- **CSRF.** Bearer tokens are immune. The web cookie path requires the `X-Hermi: 1` header plus `Origin` match.
 - **Supply chain.** Lockfiles, pinned base image digests, pinned GitHub Actions by SHA, SBOM generated in CI, provenance attestation on the image.
 - **iOS app.** Keychain for tokens, no secrets in the bundle (public keys only), ATS on, no `server.url` in production, jailbreak not enforced, privacy manifest shipped, universal links validated server side.
 - **Denial of service.** Cloudflare rate rules and bot fight mode, body size limits, pagination caps (max 100), query timeouts, and kill switches.
@@ -274,7 +274,7 @@ The admin console (see [08-admin-control-center.md](08-admin-control-center.md))
 
 ## 3. Privacy and compliance
 
-Plain statement used in the app and policy: Wayfold does not sell personal data, does not show ads and does not track people across other companies' apps or sites. Legal texts are written by counsel and versioned; `consents` stores the accepted version. This section is the engineering side.
+Plain statement used in the app and policy: Hermi does not sell personal data, does not show ads and does not track people across other companies' apps or sites. Legal texts are written by counsel and versioned; `consents` stores the accepted version. This section is the engineering side.
 
 ### 3.1 GDPR and CCPA/CPRA
 
@@ -349,7 +349,7 @@ Apple guideline 5.1.2(i) requires disclosure and permission before personal data
 
 ### 3.7 Children
 
-- Age gate 13 or older at sign-up, 16 or older for EU and UK locales (age is self-declared, not stored as a birthdate beyond the declaration timestamp). Wayfold is not in the Kids category and is not directed at children.
+- Age gate 13 or older at sign-up, 16 or older for EU and UK locales (age is self-declared, not stored as a birthdate beyond the declaration timestamp). Hermi is not in the Kids category and is not directed at children.
 - Children on a trip (travelers) are entered by an adult as a first name and a color: no birthdate, no photo, no email, no account.
 - If a report or an account shows the user is under the age, the account is deleted and no data is kept.
 - Check state age assurance laws (Texas, Utah and others) for new duties before each submission.
@@ -361,7 +361,7 @@ The concierge lane ("Have a human book this") is fulfilled by an advisor under a
 
 - The concierge feature is behind the flag `concierge_requests`, enabled per region only after counsel confirms the host agency's registration covers that region. The state list is in `concierge_regions` config.
 - Every request shows who fulfills it: "Booked by [host agency name], seller of travel registration [number]" with the state registrations that apply, in the request screen, the confirmation email and the terms.
-- Wayfold does not hold customer funds for bookings. Payment to suppliers goes through the host agency or the supplier directly. Wayfold's own fee (if any) and commission arrangement are disclosed in plain words before the user submits.
+- Hermi does not hold customer funds for bookings. Payment to suppliers goes through the host agency or the supplier directly. Hermi's own fee (if any) and commission arrangement are disclosed in plain words before the user submits.
 - Consent is explicit and separate from app terms: the user agrees to share trip details and traveler names needed for booking with the advisor. Passport numbers are never collected in the app.
 - Advisors sign an agreement covering data handling, conduct and commission; they see only the requests assigned to them. Access is audited.
 - Insurance, visas and legal advice are outside the concierge scope.
@@ -369,7 +369,7 @@ The concierge lane ("Have a human book this") is fulfilled by an advisor under a
 
 ### 3.9 Insurance referral rules
 
-- Wayfold shows links to licensed insurance partners only. It does not sell, solicit, negotiate or advise on insurance, and does not collect payment for it. Affiliate compensation for insurance is a referral with no compensation tied to the sale of a policy where state law requires that; counsel confirms the program terms before any insurance link goes live.
+- Hermi shows links to licensed insurance partners only. It does not sell, solicit, negotiate or advise on insurance, and does not collect payment for it. Affiliate compensation for insurance is a referral with no compensation tied to the sale of a policy where state law requires that; counsel confirms the program terms before any insurance link goes live.
 - Copy is supplied or approved by the insurer or network. No coverage claims, no comparisons of coverage, no "you need this" language. Every card says "Partner offer. Check the policy terms" plus the commission disclosure.
 - The AI never gives insurance, visa or legal advice; it links to official sources (README rule 5). The AI eval "safety scope" enforces this.
 - The "Before you go" checklist lists insurance as one item among many, unranked, and at least half of the checklist items carry no monetization.
@@ -603,7 +603,7 @@ Monthly provider-spend ceilings per tier (README) are enforced by the ledger; th
 
 ### 5.5 Uptime and status
 
-Better Stack probes `/health/ready` from two regions and runs a synthetic check every 5 minutes that signs in with a test account and loads a trip. A public status page (`status.wayfold.app`) lists API, AI, sign-in, purchases and push. Service targets: API availability 99.9 percent, price alert delivery within 30 minutes of a scheduled check, p95 queue wait under 5 minutes.
+Better Stack probes `/health/ready` from two regions and runs a synthetic check every 5 minutes that signs in with a test account and loads a trip. A public status page (`status.hermi.world`) lists API, AI, sign-in, purchases and push. Service targets: API availability 99.9 percent, price alert delivery within 30 minutes of a scheduled check, p95 queue wait under 5 minutes.
 
 ## 6. App Store submission
 
@@ -613,7 +613,7 @@ Verify every item on the day of submission; Apple policy moves.
 
 **Account and setup**
 - [ ] Apple Developer Program enrolled (organization account with D-U-N-S if the company exists) and Paid Applications Agreement, bank and tax forms complete.
-- [ ] Bundle id `app.wayfold.ios` with Push Notifications, Associated Domains, Sign in with Apple, In-App Purchase, App Attest.
+- [ ] Bundle id `world.hermi.ios` with Push Notifications, Associated Domains, Sign in with Apple, In-App Purchase, App Attest.
 - [ ] Small Business Program enrolled.
 - [ ] Support URL, marketing URL and privacy policy URL live on our domain.
 
@@ -638,7 +638,7 @@ Verify every item on the day of submission; Apple policy moves.
 - [ ] Age rating questionnaire answered; 13+ gate in place.
 
 **Store listing**
-- [ ] Name, subtitle, promotional text, description, keywords, category Travel.
+- [ ] Name "Hermi: Group Trip Planner" (reserved in WF-001; the bare name is taken), subtitle, promotional text, description, keywords, category Travel.
 - [ ] Screenshots 6.9 inch (1320 by 2868), up to 10: trip overview, itinerary on map, price alert, AI plan, offline, shared trip, present mode. Icon 1024 by 1024 without alpha.
 - [ ] Localized metadata for en-US and one or two more storefronts.
 - [ ] App Privacy labels match section 3.4.
@@ -647,13 +647,13 @@ Verify every item on the day of submission; Apple policy moves.
 ### 6.2 Review notes (paste into App Store Connect)
 
 ```
-Wayfold helps people plan trips together: flights, places to stay, a day-by-day itinerary,
+Hermi helps people plan trips together: flights, places to stay, a day-by-day itinerary,
 and a full-screen presentation of the plan.
 
 Demo account (no Sign in with Apple needed):
-  Email: review@wayfold.app   Code: use the "Reviewer sign in" button on the sign-in screen
+  Email: review@hermi.world   Code: use the "Reviewer sign in" button on the sign-in screen
   The account is on the Plus tier and has a pre-filled trip ("Lisbon in May"), two members,
-  and 40 credits. A second account, review-free@wayfold.app, is on the Free tier to see the
+  and 40 credits. A second account, review-free@hermi.world, is on the Free tier to see the
   paywall. Purchases work in the sandbox.
 
 Where things are:
@@ -677,7 +677,7 @@ Push notifications are used for price alerts and trip reminders, requested after
 invite or alert.
 
 The backend is live and rate limits are relaxed for the reviewer accounts.
-Contact: +1 (xxx) xxx-xxxx, review@wayfold.app
+Contact: +1 (xxx) xxx-xxxx, review@hermi.world
 ```
 
 A "Reviewer sign in" path is a server-side allowlisted account that signs in with a fixed code; it exists only for these two emails and is disabled by a flag after approval. Verify the demo accounts against production the day before submission.
@@ -833,7 +833,7 @@ Covers Anthropic, SerpApi, Travelpayouts, Geoapify, Supabase Auth, RevenueCat, S
 
 ### 8.4 Data breach
 
-**Detect.** Sentry or log anomaly, tenant-test failure, unusual admin activity, a provider breach notice, a leaked key alert from secret scanning, a researcher report to `security@wayfold.app`, or a user report of seeing another person's data.
+**Detect.** Sentry or log anomaly, tenant-test failure, unusual admin activity, a provider breach notice, a leaked key alert from secret scanning, a researcher report to `security@hermi.world`, or a user report of seeing another person's data.
 
 **Contain (first hour).** The incident lead is the founder.
 1. Open an incident log (private doc): time, who, what is known. Everything done is written down with timestamps.

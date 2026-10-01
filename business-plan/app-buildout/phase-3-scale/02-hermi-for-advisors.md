@@ -1,4 +1,4 @@
-# Pack 02: Wayfold for Advisors
+# Pack 02: Hermi for Advisors
 
 Part of [Phase 3: scale](README.md). Tickets P3-015 to P3-034. Written 2026-09-30.
 
@@ -11,7 +11,7 @@ Part of [Phase 3: scale](README.md). Tickets P3-015 to P3-034. Written 2026-09-3
 
 ## 1. Goal and revenue case
 
-**Goal.** A web product for independent travel advisors: a workspace per client trip, presentations under the advisor's own brand, priced proposals a client can accept, a commission tracker, and Wayfold's fare and research tools with source links. Sold by the seat through Stripe on the web, not the App Store. Wayfold holds no host-agency credentials, books nothing for the advisor, and takes no share of the advisor's commissions.
+**Goal.** A web product for independent travel advisors: a workspace per client trip, presentations under the advisor's own brand, priced proposals a client can accept, a commission tracker, and Hermi's fare and research tools with source links. Sold by the seat through Stripe on the web, not the App Store. Hermi holds no host-agency credentials, books nothing for the advisor, and takes no share of the advisor's commissions.
 
 **Why it is the largest Phase 3 line.** Consumer subscriptions top out near $149k in base year 5; advisors earn more per person and are a business customer who pays on the web, so Apple's 15% does not apply (09 section 3.4).
 
@@ -46,7 +46,7 @@ Revenue = seats x $314.28. Base: Y3 $18.9k, Y4 $62.9k, Y5 $141.4k (450 seats is 
 | D3 | Client trips are real trips | A client trip is an ordinary `trips` row owned by the advisor user; the client joins as `editor` or `viewer` through `trip_members` (03 section 5.19). No separate data store, so all Phase 1 features work. |
 | D4 | Seat gives pro-level limits on client trips only | As in 03 section 7.1 (`advisor` CTE): an active or past-due seat raises limits on the org's client trips. The advisor's own personal trips stay on whatever tier they hold. Clients need no paid plan. |
 | D5 | Private advisor notes are not trip data | They live in `advisor_notes`, visible to org seats only, so a client who is a trip member can never read them. |
-| D6 | Wayfold takes no commission | The tracker records what the advisor says they earn. Wayfold never pays, collects or advises on commission. |
+| D6 | Hermi takes no commission | The tracker records what the advisor says they earn. Hermi never pays, collects or advises on commission. |
 | D7 | Read-only, never deleted | After failed payment and 14 days of Stripe retries, seats become `read_only`: view and export work, new clients and edits stop. Data is never deleted and is exportable at all times. |
 | D8 | Card required | No card-free trial (07 section 11.4). A design-partner pilot uses comped seats instead (`entitlements.source = 'comp'` is not used; the seat is created with a 100% coupon on the Stripe subscription so the billing path is tested). |
 
@@ -54,7 +54,7 @@ Revenue = seats x $314.28. Base: Y3 $18.9k, Y4 $62.9k, Y5 $141.4k (450 seats is 
 
 **A-1. Create an organization and pay.**
 As an advisor, I want to start my agency workspace in minutes, so that I can work today.
-- From `wayfold.app/advisors` (web only) sign in, name the organization, optionally enter the host agency name and its IATAN or CLIA number, choose monthly or annual, enter business details (VAT id where relevant) and pay through Stripe Checkout.
+- From `hermi.world/advisors` (web only) sign in, name the organization, optionally enter the host agency name and its IATAN or CLIA number, choose monthly or annual, enter business details (VAT id where relevant) and pay through Stripe Checkout.
 - On success `advisor_orgs`, an `admin` seat for the owner, and the subscription exist; the workspace opens. Failure to pay leaves nothing active.
 - Stripe Tax computes tax; the invoice shows the org name and VAT id.
 
@@ -73,20 +73,20 @@ As an advisor, I want a home for each client, so that nothing gets lost.
 **A-4. Branded presentation.**
 As an advisor, I want my logo and colors on what the client sees, so that I look professional.
 - Org brand: logo, two colors checked for contrast, contact line, optional tagline. Applied to presentation mode, the share page, the PDF and proposals.
-- The "Made with Wayfold" footer is hidden (seat limit `hide_presentation_footer`); a small "Planned with Wayfold" line is allowed only if the org leaves it on.
+- The "Made with Hermi" footer is hidden (seat limit `hide_presentation_footer`); a small "Planned with Hermi" line is allowed only if the org leaves it on.
 - Partner-link disclosure wording never changes and still prints wherever links appear.
 
 **A-5. Proposals.**
 As an advisor, I want to send a priced set of options, so that the client can choose and approve.
 - A proposal belongs to a client and trip, has a title, an intro, up to 4 options (each a named package with a price, inclusions, terms and optional linked itinerary days or stays), a validity date and the advisor's commission disclosure text when the org chooses to show it.
-- A share link with the org's branding lets the client view, pick an option and press Accept or Decline with an optional note. No payment is taken; it records the client's decision and emails the advisor. The advisor, not Wayfold, contracts with the client.
+- A share link with the org's branding lets the client view, pick an option and press Accept or Decline with an optional note. No payment is taken; it records the client's decision and emails the advisor. The advisor, not Hermi, contracts with the client.
 - Statuses: draft, sent, accepted, declined, expired. Editing a sent proposal creates a new version; the client sees the latest and the history is kept.
 
 **A-6. Commission tracking.**
 As an advisor, I want to know what I am owed and what arrived, so that I can run the business.
 - A booking line per client trip: supplier, confirmation number, booked value, expected commission, status (quoted, booked, travelled, commissionable, paid, cancelled), paid date, received amount.
 - Totals per client, per month and per supplier; CSV export; expected versus received with days outstanding (commissions often arrive 30 to 90 days after travel).
-- Wayfold records only what is entered. No passport numbers or card numbers are stored; note fields warn when text looks like one (P3-032).
+- Hermi records only what is entered. No passport numbers or card numbers are stored; note fields warn when text looks like one (P3-032).
 
 **A-6b. Templates.**
 As an advisor, I want to reuse a trip skeleton, so that I am not retyping.
@@ -158,7 +158,7 @@ CREATE TABLE advisor_clients (
   id                          uuid PRIMARY KEY DEFAULT uuidv7(),
   advisor_org_id              uuid NOT NULL REFERENCES advisor_orgs (id) ON DELETE CASCADE,
   advisor_user_id             uuid REFERENCES users (id) ON DELETE SET NULL,      -- the advisor who owns the relationship
-  client_user_id              uuid REFERENCES users (id) ON DELETE SET NULL,      -- set when the client has a Wayfold account
+  client_user_id              uuid REFERENCES users (id) ON DELETE SET NULL,      -- set when the client has a Hermi account
   client_name                 text NOT NULL CHECK (char_length(client_name) BETWEEN 1 AND 120),
   client_email                citext,
   trip_id                     uuid REFERENCES trips (id) ON DELETE SET NULL,
@@ -195,7 +195,7 @@ ALTER TABLE store_transactions ADD CONSTRAINT ck_store_transactions_kind
 
 -- Seat plan: pro-level limits on the org's client trips only, 150 credits a month, $3.40 monthly and $0.40 daily ceilings (defaults the admin can change).
 INSERT INTO plans (code, kind, name, rank, monthly_credits, credits_granted, credits_valid_days, duration_days, feature_flag_key, is_active, sort_order, limits) VALUES
-('advisor_seat', 'advisor_seat', 'Wayfold for Advisors seat', 35, 150, 0, NULL, NULL, 'advisor_workspaces', false, 70,
+('advisor_seat', 'advisor_seat', 'Hermi for Advisors seat', 35, 150, 0, NULL, NULL, 'advisor_workspaces', false, 70,
  '{"active_trips":50,"active_trips_bonus":0,"routes_per_trip":8,"live_routes":6,"live_window_days":120,"price_alerts":6,"live_alerts":true,
    "collaborators":12,"travelers_per_trip":12,"can_invite":true,"saved_lodging_per_trip":100,"lodging_compare":4,
    "places_searches_per_day":200,"polls":true,"cost_splitting":true,"room_block_request":false,"group_payments":false,
@@ -209,7 +209,7 @@ INSERT INTO store_products (product_id, store, plan_code, period, price_minor, c
 ON CONFLICT (product_id) DO NOTHING;
 
 INSERT INTO feature_flags (key, description, enabled, rollout_pct, rules, variants) VALUES
-('advisor_workspaces', 'Wayfold for Advisors', false, 100, '{}', '{}')
+('advisor_workspaces', 'Hermi for Advisors', false, 100, '{}', '{}')
 ON CONFLICT (key) DO NOTHING;
 ```
 
@@ -387,8 +387,8 @@ CREATE POLICY advisor_clients_write ON advisor_clients FOR ALL USING (advisor_or
   WITH CHECK (advisor_org_id IN (SELECT my_writable_advisor_orgs()));
 -- The same select and write pair for advisor_notes, advisor_proposals, advisor_bookings and advisor_templates (generate in a loop like 03 section 6.4).
 -- advisor_subscriptions and billing columns are written by the billing service (worker role); the app role only reads its own org's rows.
-REVOKE INSERT, UPDATE, DELETE ON advisor_orgs, advisor_seats, advisor_subscriptions FROM wayfold_app;
-GRANT UPDATE (name, brand, host_agency_name, host_agency_id, billing_email, vat_id) ON advisor_orgs TO wayfold_app;   -- org admins only, enforced in the service layer
+REVOKE INSERT, UPDATE, DELETE ON advisor_orgs, advisor_seats, advisor_subscriptions FROM hermi_app;
+GRANT UPDATE (name, brand, host_agency_name, host_agency_id, billing_email, vat_id) ON advisor_orgs TO hermi_app;   -- org admins only, enforced in the service layer
 ```
 
 Brand shape in `advisor_orgs.brand` (jsonb): `{"logo_key": "r2/key", "primary": "#RRGGBB", "secondary": "#RRGGBB", "contact_line": "...", "tagline": "...", "show_powered_by": true}`; colors must satisfy `hex_color` and a contrast check in the service layer (AA on the paper background).
@@ -455,11 +455,11 @@ A separate web surface under `/advisors` (React route tree, same design tokens a
 
 **Create trip for client.** Sheet: name, destination, dates, template (optional), client's role (editor or viewer), invite by email or link. Result opens the trip with the org brand active for presentation.
 
-**Branded presentation and share page.** Same slides as Phase 1 presentation mode with the org logo, colors and contact line; no "Made with Wayfold" footer by default; "Book the plan" slide off by default for advisor trips (the advisor usually books). PDF export uses the brand. Disclosure sentences stay wherever partner links appear.
+**Branded presentation and share page.** Same slides as Phase 1 presentation mode with the org logo, colors and contact line; no "Made with Hermi" footer by default; "Book the plan" slide off by default for advisor trips (the advisor usually books). PDF export uses the brand. Disclosure sentences stay wherever partner links appear.
 
-**Proposal builder.** Steps: client and trip, options (up to 4 cards with price, inclusions, terms, linked days and stays), preview as the client sees it, send. The preview shows the exact public page. Copy: "You send this. You are the seller, not Wayfold." (Advisor-facing; plain statement of roles.) Sent state shows opened, accepted or declined with timestamps.
+**Proposal builder.** Steps: client and trip, options (up to 4 cards with price, inclusions, terms, linked days and stays), preview as the client sees it, send. The preview shows the exact public page. Copy: "You send this. You are the seller, not Hermi." (Advisor-facing; plain statement of roles.) Sent state shows opened, accepted or declined with timestamps.
 
-**Public proposal page.** Branded header, intro, options as cards, validity date, Accept and Decline with an optional note, advisor contact line, commission note only if enabled. No Wayfold marketing beyond a small footer the org can keep or remove. Works without sign-in.
+**Public proposal page.** Branded header, intro, options as cards, validity date, Accept and Decline with an optional note, advisor contact line, commission note only if enabled. No Hermi marketing beyond a small footer the org can keep or remove. Works without sign-in.
 
 **Commissions.** Table of bookings with status chips, filters (client, supplier, month, status), totals (expected, received, outstanding and oldest outstanding days), add and edit sheet, CSV export. Empty: "Track what you book and what you are owed."
 
@@ -494,15 +494,15 @@ Extends [08](../phase-1-launch/08-admin-control-center.md) (source ticket WF-108
 
 ## 9. Legal and compliance
 
-1. **Role.** Wayfold is a software vendor, not a seller of travel. Terms say so: advisors are responsible to their clients for bookings, advice, licences, registrations and their own disclosures. Counsel confirms no seller-of-travel registration is triggered by providing a tool.
-2. **Client personal data.** The advisor is the controller of client data entered into the workspace and Wayfold is the processor. Publish a data-processing addendum (accepted at org creation, `advisor_orgs.data_processing_accepted_at`), list sub-processors, and support deletion and export on request. The client is also a Wayfold user when they join a trip; the client can export and leave.
+1. **Role.** Hermi is a software vendor, not a seller of travel. Terms say so: advisors are responsible to their clients for bookings, advice, licences, registrations and their own disclosures. Counsel confirms no seller-of-travel registration is triggered by providing a tool.
+2. **Client personal data.** The advisor is the controller of client data entered into the workspace and Hermi is the processor. Publish a data-processing addendum (accepted at org creation, `advisor_orgs.data_processing_accepted_at`), list sub-processors, and support deletion and export on request. The client is also a Hermi user when they join a trip; the client can export and leave.
 3. **Sensitive data.** Never store passport numbers, card numbers or government ids. Inputs that look like a passport or card number trigger a warning and are masked in logs; the terms forbid storing them. Dates of birth and names appear only as the trip's people fields already do.
-4. **Commission disclosure.** Advisors disclose their commissions to clients. The tool lets them add a commission note to a proposal and never hides partner-link disclosure. Wayfold records commission but does not advise on it.
+4. **Commission disclosure.** Advisors disclose their commissions to clients. The tool lets them add a commission note to a proposal and never hides partner-link disclosure. Hermi records commission but does not advise on it.
 5. **Host-agency rules.** Some host agencies restrict outside software or data sharing; the terms put that responsibility on the advisor. Do not name or imply any host agency partnership unless a written agreement exists.
 6. **Tax.** Sales tax on SaaS varies by state; use Stripe Tax and verify registration thresholds with an accountant.
 7. **Apple.** No sale or purchase link in the iOS app (Guideline 3.1.1); advisors sign in on the web. Re-read the guideline on each submission.
 8. **Auto-renew.** Provide reminder and one-click cancel per state rules; state the renewal terms at checkout.
-9. **Advertising law.** Branded proposals sent by an advisor are the advisor's advertising; Wayfold's own marketing of the product follows the honest-comparison rules (competitor prices are "reported, verify").
+9. **Advertising law.** Branded proposals sent by an advisor are the advisor's advertising; Hermi's own marketing of the product follows the honest-comparison rules (competitor prices are "reported, verify").
 10. **Security.** Org isolation is the main risk (tenancy tests in section 11, external review before public launch); proposal share tokens are random, hashed, expiring and rate limited; all uploads are type and size checked.
 
 ## 10. Analytics

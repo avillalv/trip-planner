@@ -11,7 +11,7 @@ Part of [Phase 3: scale](README.md). Tickets P3-001 to P3-014. Written 2026-09-3
 
 ## 1. Goal and revenue case
 
-**Goal.** Let the organizer of a group trip collect each traveler's share of a real-world cost (a villa deposit, a tour, a dinner) by card, without Wayfold ever being the place the money sits, and sell an events workspace (up to 40 travelers) for offsites, destination weddings and similar. Both extend the group features that already drive Group Trip Pass sales. Payments are a growth driver first and a small margin second.
+**Goal.** Let the organizer of a group trip collect each traveler's share of a real-world cost (a villa deposit, a tour, a dinner) by card, without Hermi ever being the place the money sits, and sell an events workspace (up to 40 travelers) for offsites, destination weddings and similar. Both extend the group features that already drive Group Trip Pass sales. Payments are a growth driver first and a small margin second.
 
 The two layers come from [09 section 3.2](../context/business-plan/09-revenue-expansion.md) (layers 3 and 4):
 
@@ -37,18 +37,18 @@ Worked: year 5 is 500 x $76.60 + 150,000 x $0.12 = $38.3k + $18.0k = $56.3k. Amb
 **Margins and costs.**
 
 - Events workspace: Group Trip Pass class costs, about $1.30 of AI and infrastructure typical, $3.75 worst case (09 section 2.3). Margin about 92% typical on $76.60 net.
-- Payments: Wayfold's fee is 0% at launch (07 section 10.2, default `fee_bps` 0 in the `group_payments` flag) and 1.5% once the lane is measured. The real cost is support for disputes and refunds, not infrastructure. Stripe Connect charges platforms per connected account and per payout (reported, verify on Stripe's pricing page); model them as cost per collecting organizer, not per payment.
+- Payments: Hermi's fee is 0% at launch (07 section 10.2, default `fee_bps` 0 in the `group_payments` flag) and 1.5% once the lane is measured. The real cost is support for disputes and refunds, not infrastructure. Stripe Connect charges platforms per connected account and per payout (reported, verify on Stripe's pricing page); model them as cost per collecting organizer, not per payment.
 - The fee is never taken on a digital purchase and never hidden: the payer sees every line before paying.
 
-**What would break the case.** Collection is distribution-bound (09 section 6.5: "event volume is distribution-bound") and depends on the legal review in P3-001. If counsel says Wayfold needs a money transmitter licence or a state registration, the lane stays as "Mark as paid" and only the events workspace ships.
+**What would break the case.** Collection is distribution-bound (09 section 6.5: "event volume is distribution-bound") and depends on the legal review in P3-001. If counsel says Hermi needs a money transmitter licence or a state registration, the lane stays as "Mark as paid" and only the events workspace ships.
 
 ## 2. Design decisions
 
 | # | Decision | Default and reason |
 |---|---|---|
-| D1 | Charge type | Destination charges, as the spec says: Wayfold creates the charge on the platform account with `transfer_data.destination` set to the organizer's Express account and `on_behalf_of` set to the same account. **Verify with Stripe and counsel before building.** Under Stripe's documented model the platform, not the connected account, is responsible for refunds and chargebacks on destination charges, and funds pass through the platform balance before transfer. 07 section 10.2 says "Wayfold never holds traveler money" and "disputes are handled by the organizer as the merchant". Those two sentences are not both true for destination charges. Direct charges (created on the connected account, which is then the merchant) match the 07 wording. P3-001 decides; the code path is isolated in `providers/stripe.py` so switching is one function. |
+| D1 | Charge type | Destination charges, as the spec says: Hermi creates the charge on the platform account with `transfer_data.destination` set to the organizer's Express account and `on_behalf_of` set to the same account. **Verify with Stripe and counsel before building.** Under Stripe's documented model the platform, not the connected account, is responsible for refunds and chargebacks on destination charges, and funds pass through the platform balance before transfer. 07 section 10.2 says "Hermi never holds traveler money" and "disputes are handled by the organizer as the merchant". Those two sentences are not both true for destination charges. Direct charges (created on the connected account, which is then the merchant) match the 07 wording. P3-001 decides; the code path is isolated in `providers/stripe.py` so switching is one function. |
 | D2 | Who may collect | A trip with `group_trip_pass` or `event_workspace`, or whose owner is `pro` (limit key `group_payments`). Everyone else sees the `collect_payments` paywall. Never Apple In-App Purchase, never for digital features. |
-| D3 | Fee modes | `payer_pays` (default: processing fee and any Wayfold fee shown as lines above the share) or `organizer_covers`. Stored in `payment_collections.fee_mode`. |
+| D3 | Fee modes | `payer_pays` (default: processing fee and any Hermi fee shown as lines above the share) or `organizer_covers`. Stored in `payment_collections.fee_mode`. |
 | D4 | Currency | The trip currency. Launch with currencies the organizer's connected account can settle in (start with USD, EUR, GBP). Others fall back to "Mark as paid" (`422 unsupported_currency`). |
 | D5 | Regions | Collection is offered only where Stripe Connect Express is available to the organizer. Otherwise "Mark as paid" only. |
 | D6 | Caps | Per payment and per collection caps live in `feature_flags.rules` (`max_payment_minor`, `max_collection_minor`), default $2,500 and $25,000, to keep early fraud and dispute exposure small. |
@@ -58,7 +58,7 @@ Worked: year 5 is 500 x $76.60 + 150,000 x $0.12 = $38.3k + $18.0k = $56.3k. Amb
 
 **P1-1. Organizer connects a payout account.**
 As an organizer, I want to set up where the money goes once, so that travelers can pay by card.
-- Only the trip owner (or a named organizer who is an editor) can start onboarding; `POST /me/stripe-connect/onboarding` returns a Stripe-hosted onboarding link. Wayfold stores only `users.stripe_connect_account_id` and `stripe_connect_ready` (from `account.updated`), never bank details.
+- Only the trip owner (or a named organizer who is an editor) can start onboarding; `POST /me/stripe-connect/onboarding` returns a Stripe-hosted onboarding link. Hermi stores only `users.stripe_connect_account_id` and `stripe_connect_ready` (from `account.updated`), never bank details.
 - If onboarding is incomplete the collection screen says what Stripe still needs and offers "Mark as paid" instead.
 - Available only where allowed (D5); otherwise the screen says so plainly.
 
@@ -66,7 +66,7 @@ As an organizer, I want to set up where the money goes once, so that travelers c
 As an organizer, I want to ask everyone for their share of the villa deposit, so that I do not chase people.
 - Fields: title (max 200), total, split method (`equal`, `exact`, `percent`, `shares`), due date, fee mode. The split uses the same minor-unit rounding as expenses (leftover cents assigned by traveler order, so shares sum to the total).
 - Creating the collection inserts one `payment_collections` row and one `settlements` row per payer (status `pending`, `method = 'stripe'`, `collection_id` set). The organizer's own share is not a settlement.
-- Shown before sending: the fee line per traveler and the sentence "Payments are handled by Stripe. Wayfold does not hold your money." (confirm against the D1 outcome).
+- Shown before sending: the fee line per traveler and the sentence "Payments are handled by Stripe. Hermi does not hold your money." (confirm against the D1 outcome).
 - Blocked when the trip lacks the capability (`403 entitlement_required`, reason `group_payments`, with the paywall body) or the flag or kill switch is off (`503 feature_disabled`).
 
 **P1-3. Traveler pays.**
@@ -84,7 +84,7 @@ As an organizer, I want to see who has paid and remind the rest, so that the dep
 
 **P1-5. Refund.**
 As an organizer, I want to refund a traveler who cannot come, so that I am fair.
-- Full or partial refund through the app. The refund reopens that balance. Wayfold's fee is refunded with it. Processing fees are not returned by Stripe (verify), and the refund screen says so.
+- Full or partial refund through the app. The refund reopens that balance. Hermi's fee is refunded with it. Processing fees are not returned by Stripe (verify), and the refund screen says so.
 - Refund is refused if the collection is in dispute for that payment.
 
 **P1-6. Dispute.**
@@ -170,7 +170,7 @@ ALTER TABLE settlements
   ADD COLUMN stripe_checkout_session_id text,
   ADD COLUMN stripe_charge_id           text,
   ADD COLUMN charged_minor              bigint CHECK (charged_minor IS NULL OR charged_minor >= amount_minor),  -- what the payer was charged: share plus fee lines
-  ADD COLUMN wayfold_fee_minor          bigint NOT NULL DEFAULT 0 CHECK (wayfold_fee_minor >= 0),
+  ADD COLUMN hermi_fee_minor            bigint NOT NULL DEFAULT 0 CHECK (hermi_fee_minor >= 0),
   ADD COLUMN stripe_fee_minor           bigint CHECK (stripe_fee_minor IS NULL OR stripe_fee_minor >= 0),       -- actual, from the balance transaction
   ADD COLUMN refunded_minor             bigint NOT NULL DEFAULT 0 CHECK (refunded_minor >= 0),
   ADD COLUMN due_on                     date,
@@ -204,14 +204,14 @@ CREATE INDEX ix_payment_disputes_open ON payment_disputes (evidence_due_by) WHER
 CREATE INDEX ix_payment_disputes_trip ON payment_disputes (trip_id);
 SELECT add_updated_at_trigger('payment_disputes');
 -- Admin only: the API exposes dispute state through settlements.status.
-REVOKE ALL ON payment_disputes FROM wayfold_app;
+REVOKE ALL ON payment_disputes FROM hermi_app;
 
 -- Payments are a money table: the API may not write them (03 section 6.1 pattern).
-REVOKE INSERT, UPDATE, DELETE ON payment_collections, settlements FROM wayfold_app;
-GRANT INSERT ON payment_collections TO wayfold_app;
-GRANT UPDATE (status, closed_at, due_on, title) ON payment_collections TO wayfold_app;           -- organizer edits; the service layer narrows further
-GRANT INSERT ON settlements TO wayfold_app;                                                      -- manual and cash records; Stripe rows are written by the worker role
-GRANT UPDATE (status, note, settled_at, last_reminded_at) ON settlements TO wayfold_app;          -- confirm a manual payment; RLS limits rows to the trip
+REVOKE INSERT, UPDATE, DELETE ON payment_collections, settlements FROM hermi_app;
+GRANT INSERT ON payment_collections TO hermi_app;
+GRANT UPDATE (status, closed_at, due_on, title) ON payment_collections TO hermi_app;             -- organizer edits; the service layer narrows further
+GRANT INSERT ON settlements TO hermi_app;                                                        -- manual and cash records; Stripe rows are written by the worker role
+GRANT UPDATE (status, note, settled_at, last_reminded_at) ON settlements TO hermi_app;           -- confirm a manual payment; RLS limits rows to the trip
 ```
 
 Events workspace seed (a pass, so the existing resolver in 03 section 7.1 needs no change beyond the upgrade check):
@@ -257,7 +257,7 @@ Base `/v1`. Conventions, errors and idempotency are in [04 section 1](../phase-1
 | `GET /me/stripe-connect` | user | flag | to `{ ready, requirements_due: string[], country }` | Reads the cached account state; `ready` mirrors `stripe_connect_ready`. |
 | `GET /trips/{trip_id}/collections` | viewer | none | to `Collection[]` | Progress per collection. |
 | `POST /trips/{trip_id}/collections` | owner or named organizer | `group_payments` | `CollectionIn` with `Idempotency-Key` to 201 `Collection` | Checks Connect ready, currency, caps (D6); inserts the collection and one `pending` settlement per payer; returns the fee preview. `403 entitlement_required` (reason `group_payments`) with the `collect_payments` paywall. |
-| `POST /collections/{collection_id}/quote` | organizer | none | `{ person_id }` to `FeeQuote` | The exact lines a payer will see (share, Wayfold fee, processing fee, total). Pure function, no Stripe call. |
+| `POST /collections/{collection_id}/quote` | organizer | none | `{ person_id }` to `FeeQuote` | The exact lines a payer will see (share, Hermi fee, processing fee, total). Pure function, no Stripe call. |
 | `POST /collections/{collection_id}/close` | organizer | status `open` | to `Collection` | Sets `closed`; open balances remain tracked. |
 | `POST /collections/{collection_id}/remind` | organizer | 1 per person per 48 hours | `{ person_ids? }` to 202 | Push and email through the notification service. |
 | `POST /settlements/{settlement_id}/checkout` | payer (member) | status `pending` or `failed`, method `stripe` | `Idempotency-Key` to `{ checkout_url, expires_at }` | Creates the Stripe Checkout session (idempotency key `settlement:{id}:{attempt}`), stores `stripe_checkout_session_id` and `charged_minor`. |
@@ -278,10 +278,10 @@ type Collection = {
   progress: { paid: Money; waiting: Money; failed: Money; refunded: Money }
   payers: { person_id: Uuid; settlement_id: Uuid; share: Money; status: Settlement["status"]; last_reminded_at: string | null }[]
 }
-type FeeQuote = { share: Money; wayfold_fee: Money; processing_fee: Money; total: Money; fee_mode: string; note: string }   // lines add up to total
+type FeeQuote = { share: Money; hermi_fee: Money; processing_fee: Money; total: Money; fee_mode: string; note: string }   // lines add up to total
 ```
 
-Webhooks (extend `POST /webhooks/stripe`, [04 section 6](../phase-1-launch/04-api-spec.md)): `checkout.session.completed`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`, `account.updated`, `payout.paid`, `payout.failed`. Handlers are order independent, write `webhook_events` first, and take amounts from our own `settlements` row, never from the payload alone. The fee for one payment is computed by one function, `quote_collection_fee()`, and the payer total solves `total - (pct x total + fixed) = share + wayfold_fee`, rounded up to the minor unit. Example at 2.9% plus $0.30 (verify the live rate) and a 1.5% Wayfold fee on a $250.00 share: Wayfold fee $3.75, total $261.64, processing fee $7.89, organizer receives $250.00.
+Webhooks (extend `POST /webhooks/stripe`, [04 section 6](../phase-1-launch/04-api-spec.md)): `checkout.session.completed`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`, `account.updated`, `payout.paid`, `payout.failed`. Handlers are order independent, write `webhook_events` first, and take amounts from our own `settlements` row, never from the payload alone. The fee for one payment is computed by one function, `quote_collection_fee()`, and the payer total solves `total - (pct x total + fixed) = share + hermi_fee`, rounded up to the minor unit. Example at 2.9% plus $0.30 (verify the live rate) and a 1.5% Hermi fee on a $250.00 share: Hermi fee $3.75, total $261.64, processing fee $7.89, organizer receives $250.00.
 
 ## 6. UI screens
 
@@ -292,7 +292,7 @@ Follows [05](../phase-1-launch/05-ui-ux-spec.md): sentence case, money in mono, 
 - Layout: "Collect payments" button in Settle up; a sheet with title, total, split, due date and fee mode; a preview row per person showing the share and fee lines; a confirmation with the Stripe sentence.
 - Payer view: a card per open request with "Pay $261.64" and the fee breakdown; status chips (Waiting, Paid, Failed, Refunded, In dispute).
 - States: loading skeletons; empty "No payment requests yet"; Connect not ready "Finish setup with Stripe to collect by card" with the list of what is missing and "Mark as paid instead"; region unsupported "Card payments are not available where you are yet. You can still mark payments as paid."; error "We could not start this payment. You were not charged."; offline: read only with "Waiting to sync".
-- Copy rules: always "Payments are handled by Stripe. Wayfold does not hold your money." (adjust to the D1 outcome). Never urgency ("pay now or lose your spot") and never a fee shown only after the pay tap.
+- Copy rules: always "Payments are handled by Stripe. Hermi does not hold your money." (adjust to the D1 outcome). Never urgency ("pay now or lose your spot") and never a fee shown only after the pay tap.
 - Accessibility: amounts read with currency; fee lines are a description list; status is text.
 
 **Payout setup.** Stripe-hosted onboarding opens in the in-app browser with visible chrome; returning shows "Payout account ready" or the open requirements.
@@ -309,8 +309,8 @@ Events: `payout_setup_started`, `payout_setup_completed`, `payment_collection_cr
 
 ## 7. Billing
 
-- **Stripe Connect Express.** Wayfold is the platform; each organizer is an Express account created on first use. Stripe-hosted onboarding collects identity and bank details. Keys: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` (already in 02 section 7.1); add `STRIPE_CONNECT_CLIENT_ID` if OAuth is used, and a separate webhook endpoint secret for Connect events.
-- **Fees.** Wayfold fee starts at 0 (07). The 1.5% in the revenue case turns on by editing `feature_flags.rules.fee_bps` to 150; the value is copied to each new `payment_collections.application_fee_bps` so an old collection never changes price. The fee is shown before payment and is never a percentage of a digital purchase.
+- **Stripe Connect Express.** Hermi is the platform; each organizer is an Express account created on first use. Stripe-hosted onboarding collects identity and bank details. Keys: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` (already in 02 section 7.1); add `STRIPE_CONNECT_CLIENT_ID` if OAuth is used, and a separate webhook endpoint secret for Connect events.
+- **Fees.** Hermi fee starts at 0 (07). The 1.5% in the revenue case turns on by editing `feature_flags.rules.fee_bps` to 150; the value is copied to each new `payment_collections.application_fee_bps` so an old collection never changes price. The fee is shown before payment and is never a percentage of a digital purchase.
 - **Events workspace.** Stripe Checkout, one-time price `event_workspace_once`, Stripe Tax for sales tax and VAT (verify thresholds), receipt by Stripe email. The webhook writes `store_transactions` (`store = 'stripe'`, `kind = 'pass'`) and binds the `trip_passes` row, using the same idempotent pattern as RevenueCat passes.
 - **Platform costs and liability.** Budget for Stripe Connect account and payout fees (verify), dispute fees, and loss on disputes under D1. Keep a platform reserve in the plan (amount decided with counsel).
 - **Refunds.** Payments: organizer initiated, see P1-5. Events workspace: finance refund on the web within 14 days if unused (owner above $100, 08 section 3).
@@ -321,22 +321,22 @@ Extends [08 section 6.9 (full spec)](../reference-full-spec/08-admin-control-cen
 
 - **Screen: Group payments.** Per trip: collections, settlements with live Stripe state, payout status, fees, open disputes (reason, evidence due date, evidence status).
 - **Actions:** open in Stripe (deep link), refund (finance up to $100, owner above, typed confirmation), attach evidence notes (finance), mark a settlement settled outside the app (reason), resend a payment request, freeze a collection (engineer or owner, reason).
-- **Guardrails:** a scan blocks any settlement tagged as paying for a digital Wayfold feature; dispute due dates alert 3 days ahead; amounts above $500 need the owner; the console never shows card or bank details, only Stripe ids and last four where Stripe returns them.
+- **Guardrails:** a scan blocks any settlement tagged as paying for a digital Hermi feature; dispute due dates alert 3 days ahead; amounts above $500 need the owner; the console never shows card or bank details, only Stripe ids and last four where Stripe returns them.
 - **Events screen:** workspaces sold, by trip and owner, with refund action (finance).
 - **Kill switches:** `provider.stripe` (existing) and a new `group_payments.collect` switch that disables new collections while leaving reads and manual marking.
 - **Alerts:** dispute due within 3 days (existing), collection failure rate above 10% in an hour, reconcile mismatch above zero (page), Stripe webhook backlog older than 10 minutes (page).
-- **Finance reports:** add collected volume, Wayfold fee revenue net of Stripe cost, refunds, disputes won and lost, events sold.
+- **Finance reports:** add collected volume, Hermi fee revenue net of Stripe cost, refunds, disputes won and lost, events sold.
 
 ## 9. Legal and compliance
 
 This pack is the most legally exposed lane in Phase 3. Nothing is built until P3-001 returns a written memo.
 
-1. **Money transmission.** Counsel confirms whether Connect with destination charges (or direct charges) keeps Wayfold outside money transmitter licensing in every state where users live, relying on Stripe as the licensed party and the agent-of-the-payee exemption where it applies. The answer may depend on D1.
-2. **Terms.** Organizer terms (the organizer is the payee and responsible to travelers for what the money is for), payer terms, refund rules, a statement that Wayfold does not guarantee any trip, and Stripe's Connected Account Agreement acceptance.
-3. **Refunds, chargebacks, disputes.** Who pays dispute fees and lost disputes, how Wayfold recovers from an organizer with a negative balance, and how long refunds are allowed.
-4. **Tax.** Stripe issues tax forms for Express accounts where required (verify); counsel and an accountant confirm Wayfold's own reporting and whether the events workspace needs sales tax collection in more states.
-5. **Sanctions and fraud.** Stripe screens connected accounts; add Wayfold velocity caps (D6), a block on collections from suspended users, and a review queue for first collections above a threshold.
-6. **Stripe platform review.** Stripe must approve the use case; describe it accurately (group trip cost sharing) and do not describe Wayfold as a marketplace that sells trips.
+1. **Money transmission.** Counsel confirms whether Connect with destination charges (or direct charges) keeps Hermi outside money transmitter licensing in every state where users live, relying on Stripe as the licensed party and the agent-of-the-payee exemption where it applies. The answer may depend on D1.
+2. **Terms.** Organizer terms (the organizer is the payee and responsible to travelers for what the money is for), payer terms, refund rules, a statement that Hermi does not guarantee any trip, and Stripe's Connected Account Agreement acceptance.
+3. **Refunds, chargebacks, disputes.** Who pays dispute fees and lost disputes, how Hermi recovers from an organizer with a negative balance, and how long refunds are allowed.
+4. **Tax.** Stripe issues tax forms for Express accounts where required (verify); counsel and an accountant confirm Hermi's own reporting and whether the events workspace needs sales tax collection in more states.
+5. **Sanctions and fraud.** Stripe screens connected accounts; add Hermi velocity caps (D6), a block on collections from suspended users, and a review queue for first collections above a threshold.
+6. **Stripe platform review.** Stripe must approve the use case; describe it accurately (group trip cost sharing) and do not describe Hermi as a marketplace that sells trips.
 7. **Apple.** Real-world trip costs are outside In-App Purchase (3.1.3(e) as quoted in 07 section 10.3; re-read on the submission day). The events workspace is a digital feature: web only, no price or purchase link in the iOS app, reviewer notes explain it. If Apple's link-out rules change ([09 risk 7](../context/business-plan/09-revenue-expansion.md)), revisit.
 8. **Privacy.** We store Stripe ids, amounts and names from the trip's people, never card data. Payer emails for people without accounts are kept only until the settlement is final, then nulled. Add Stripe to the processor list already in the privacy policy.
 9. **Consumer law.** Show price, fees and refund terms before payment; keep the sentence "Payments are handled by Stripe" on every payment page; no dark patterns.
@@ -351,7 +351,7 @@ Events in section 6 go to PostHog (no ad SDKs). First-party revenue reporting ad
 - Integration with Stripe fakes: create collection, checkout, `payment_intent.succeeded`, refund, dispute opened and closed both ways, `account.updated`, payout failed. Every webhook handler is idempotent (replay each event twice) and order independent (shuffle).
 - Entitlement: a trip without `group_payments` is refused with the paywall body; flag off; kill switch on; region unsupported; currency unsupported; caps enforced.
 - Tenancy: a member of another trip cannot read or pay a collection (cross-tenant leak test includes both tables); pay-link tokens work once per settlement and expire.
-- Policy: a settlement whose description names a digital Wayfold feature is blocked; the iOS client cannot reach `/event-workspace/checkout`.
+- Policy: a settlement whose description names a digital Hermi feature is blocked; the iOS client cannot reach `/event-workspace/checkout`.
 - Reconcile job: seeded mismatch raises the alert.
 - E2E (Playwright, Stripe test mode): organizer onboarding stub, collection, two payers pay, one refund.
 
@@ -379,7 +379,7 @@ Events in section 6 go to PostHog (no ad SDKs). First-party revenue reporting ad
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | Counsel says a licence or registration is needed | Medium | High | Gate in P3-001; fall back to "Mark as paid" and ship only the events workspace |
-| D1 mismatch: destination charges leave disputes and refunds with Wayfold | Medium | High | Decide in P3-001; caps (D6); reserve; direct charges as the alternative |
+| D1 mismatch: destination charges leave disputes and refunds with Hermi | Medium | High | Decide in P3-001; caps (D6); reserve; direct charges as the alternative |
 | Disputes and refunds overwhelm a solo founder | Medium | Medium | Caps, organizer-first dispute handling, support contractor, macros |
 | Fraud: a fake organizer collects and vanishes | Low | High | Stripe onboarding checks, first-collection review, velocity caps, freeze action |
 | Stripe rejects the use case | Low | High | Describe accurately, apply early in P3-002, keep manual fallback |

@@ -14,13 +14,13 @@ and the business case in [09 revenue expansion](../context/business-plan/09-reve
 | Needs from Phase 1 | Stays shortlist, trips, consents, Resend, R2, admin console with roles, support inbox, feature flags, notifications |
 | Soft link | Pack 02 (room-block requests flow into the same queue) |
 | Tickets | P2-065 to P2-074 |
-| Tier and products | All tiers. Free for the user, no credits. Wayfold earns the host agency commission |
+| Tier and products | All tiers. Free for the user, no credits. Hermi earns the host agency commission |
 
 ## 1. Goal and why now
 
 **Goal.** An optional, quiet "Have a human book this" action on a shortlisted stay, a cruise idea or a
 complex trip. A licensed advisor under a host travel agency books it; the user may get perks (breakfast,
-a property credit, an upgrade where available); the price to the user is not higher; Wayfold earns a
+a property credit, an upgrade where available); the price to the user is not higher; Hermi earns a
 share of the agency commission. It is always optional, always disclosed and never pushed.
 
 **Why now.**
@@ -50,7 +50,7 @@ share of the agency commission. It is always optional, always disclosed and neve
     with 3 or more destinations opens a short form (`concierge_requests`): what to book, dates,
     budget, preferences, contact preference.
   - The screen explains: a licensed advisor under a host travel agency fulfills it, you may get
-    perks such as breakfast or credits, Wayfold earns commission from the supplier, price to you
+    perks such as breakfast or credits, Hermi earns commission from the supplier, price to you
     is not higher.
   - It is never pushed, never pop-up, and appears at most once per screen view.
   - Status timeline: submitted, assigned, quoted, booked, declined; replies arrive by email and
@@ -69,13 +69,13 @@ share of the agency commission. It is always optional, always disclosed and neve
 - The consent screen must be accepted before submit. It lists exactly what goes to the advisor and the
   agency: name, email, phone (if given), the request details, the trip's dates and destination, and
   traveler names and dates of birth only at the time of booking and only when the advisor asks for them
-  inside the request thread. It says: "Wayfold is paid a commission by the travel agency that books
+  inside the request thread. It says: "Hermi is paid a commission by the travel agency that books
   this. The price to you is the same as booking direct." Passport numbers are never collected in the app.
 - Users can withdraw consent, which closes the request and deletes the advisor-side copy within 30 days
   (except records the agency must keep by law).
 - The advisor sends quotes and proposals by email outside the app at launch; proposals are attached to
   the request as files. Booking happens on the agency's and supplier's systems; the client pays the
-  supplier or agency directly. Wayfold never takes payment for the booking and never stores card data.
+  supplier or agency directly. Hermi never takes payment for the booking and never stores card data.
 - Recommendations include options the client asked for and are never ranked by commission; the advisor
   records conflicts.
 
@@ -88,7 +88,7 @@ share of the agency commission. It is always optional, always disclosed and neve
 | CON-3 | As a user, I talk to a person, not AI. | A request thread (messages and proposal attachments) in the app and by email; the screen says "A person replies, not AI." The thread is never read by any AI feature. |
 | CON-4 | As a user, I can cancel or withdraw any time. | Cancel before booked; withdrawing `concierge_sharing` consent closes the request and starts the 30 day advisor-copy deletion. |
 | CON-5 | As the founder, I can stop intake when I am at capacity. | Setting `setting_concierge_open` off hides the entry cards and shows "Concierge is not taking new requests right now" on the form; requests in progress continue. A weekly cap alert warns at 80 percent of the solo capacity (about 6 bookings a week). |
-| CON-6 | As the founder, I record commission and perks correctly. | Finance role records expected and received commission by agency reference, imports the monthly agency statement (CSV) and matches it; cancelled bookings with nothing received count as lost; perks are recorded; a Wayfold reward of 40 credits on a completed booking is granted as an `adjustment` grant (default, configurable). |
+| CON-6 | As the founder, I record commission and perks correctly. | Finance role records expected and received commission by agency reference, imports the monthly agency statement (CSV) and matches it; cancelled bookings with nothing received count as lost; perks are recorded; a Hermi reward of 40 credits on a completed booking is granted as an `adjustment` grant (default, configurable). |
 | CON-7 | As a user, I get updates I asked for. | In-app message and optional push on status changes (no marketing), an email for each advisor message; SLA alerts internally: first reply within 1 business day; a `quoted` request older than 7 days with no reply triggers a follow-up task. |
 
 ## 3. Database additions
@@ -97,7 +97,7 @@ Migration `0023_concierge`. Phase 1 has no concierge objects ([Phase 1 03 sectio
 lists `concierge_requests`, the `concierge_status` type, the `concierge_sharing` consent kind and the `concierge`
 support category as dropped; its section 14 lists what this pack adds). Reused from
 [03 section 5.16](../reference-full-spec/03-database-schema.md) with these changes: there is no `advisor_org_id` column (the
-[Phase 3 advisors pack](../phase-3-scale/02-wayfold-for-advisors.md) adds it with its foreign key), a
+[Phase 3 advisors pack](../phase-3-scale/02-hermi-for-advisors.md) adds it with its foreign key), a
 `consumer_region` column supports the seller-of-travel gate, and two small tables carry the thread and
 commission lines.
 
@@ -238,7 +238,7 @@ From [04 section 5.18](../reference-full-spec/04-api-spec.md), verbatim:
 type ConciergeIn = {
   kind: "stay" | "cruise" | "complex_trip" | "other"
   lodging_id?: Uuid; budget?: Money; notes: string; preferred_contact: "email" | "in_app"   // budget becomes budget_max_minor; notes becomes brief (with lodging_id and preferred_contact appended)
-  disclosure_accepted: true                    // "A human advisor may book this and Wayfold earns a commission from the agency."
+  disclosure_accepted: true                    // "A human advisor may book this and Hermi earns a commission from the agency."
 }
 type ConciergeRequest = Omit<ConciergeIn, "disclosure_accepted"> & {
   id: Uuid; trip_id: Uuid; status: "submitted" | "triaged" | "assigned" | "quoted" | "booked" | "completed" | "cancelled" | "declined"
@@ -320,15 +320,15 @@ the lane (reported, verify every split):
 | Hotel commission to the agency | About 8 to 15 percent, average 12 percent reported for Fora Reserve |
 | Cruise commission | 10 to 16 percent, river cruises 15 to 20 percent |
 | Host split | Fora 70/30 to start, 80/20 at $300,000 of annual sales, 90/10 at $2M, $299 a year or $99 a quarter; Outside Agents 80 to 90 percent, about $199 to start and $26 to $46 a month; KHM 80 percent, 90 percent after $5,000 paid commission |
-| Model average | $90 per completed booking to Wayfold; $600 stay at 10 percent and a 70 percent split is $42 |
+| Model average | $90 per completed booking to Hermi; $600 stay at 10 percent and a 70 percent split is $42 |
 | Timing | Commission arrives 30 to 90 days after travel; cancelled stays pay nothing; revenue is recognized when received |
 | Fixed costs | About $1.4k to $2.2k a year: host fee about $400, E&O insurance $400 to $1,200 for $1M per claim, seller-of-travel registrations about $640 a year for California, Florida, Washington and Hawaii (reported) |
 
-- The user pays nothing extra and Wayfold never takes payment for the booking. Apple: a physical travel
+- The user pays nothing extra and Hermi never takes payment for the booking. Apple: a physical travel
   service consumed outside the app, outside In-App Purchase under Guideline 3.1.3(e), never unlocks app
   features, described in the review notes. Google Play (pack 09): check the equivalent policy before
   enabling the lane on Android.
-- Perks are recorded in `perks`. A Wayfold reward of 40 credits on a completed booking is an
+- Perks are recorded in `perks`. A Hermi reward of 40 credits on a completed booking is an
   `adjustment` grant (default, configurable in `setting_concierge_host`). The reward is paid after the
   commission is confirmed, never at request time, and is not advertised as a reason to book.
 - Recommendations are never ranked by commission and the advisor records conflicts.
@@ -369,7 +369,7 @@ From [08 section 6.8](../reference-full-spec/08-admin-control-center.md), verbat
   `advisor_orgs.commission_split_bps` after Phase 3), attach perks, decline with reason, convert into a
   support ticket.
 - **Guardrails:** first reply due within 1 business day (overdue shows red); a request is created only by
-  a user's explicit tap, never automatically; the requester sees the disclosure ("Wayfold earns a
+  a user's explicit tap, never automatically; the requester sees the disclosure ("Hermi earns a
   commission from the travel agency on bookings made this way"); commission fields are finance and owner
   writable only; the console never stores payment card data; a declined request says why to the user
   through a macro.
@@ -454,7 +454,7 @@ ask rate per trip is the headline metric (assumption: 2 percent opt in, 50 perce
 - Description: create (with consent and region check), list, patch, thread, consent withdrawal, duplicate
   merge, Resend emails to the advisor desk, idempotency.
 - Accept: no request without an explicit tap and consent; disclosure returned with every response.
-- Touches: `apps/api/wayfold/modules/concierge/`.
+- Touches: `apps/api/hermi/modules/concierge/`.
 
 #### P2-068 Request form, consent sheet and entry cards [L, needs P2-067]
 - Description: entry cards on stays, cruise ideas and complex trips, the sheet, consent, confirmation,
@@ -471,7 +471,7 @@ ask rate per trip is the headline metric (assumption: 2 percent opt in, 50 perce
 - Description: queue screen, assignment, statuses, notes, macros, SLA timers, room-block conversion,
   permissions, audit.
 - Accept: commission fields writable by finance and owner only; first reply due timers visible.
-- Touches: `apps/api/wayfold/modules/admin/concierge.py`, `apps/web/src/routes/admin/concierge/`.
+- Touches: `apps/api/hermi/modules/admin/concierge.py`, `apps/web/src/routes/admin/concierge/`.
 
 #### P2-071 Commission tracking and import [M, needs P2-070]
 - Description: expected and received commission, CSV statement import and matching, lost commission,
@@ -498,7 +498,7 @@ ask rate per trip is the headline metric (assumption: 2 percent opt in, 50 perce
 
 | Risk | Mitigation |
 |---|---|
-| Seller-of-travel regulation (California, Florida, Hawaii, Washington, Iowa and others) | Region-gated flag, registration line shown, counsel sign-off before any request, Wayfold never takes booking payment or calls itself a travel seller |
+| Seller-of-travel regulation (California, Florida, Hawaii, Washington, Iowa and others) | Region-gated flag, registration line shown, counsel sign-off before any request, Hermi never takes booking payment or calls itself a travel seller |
 | Host agency terms forbid app-routed leads | Written confirmation first (P2-065); switch hosts (Fora, Outside Agents, KHM) if needed |
 | Founder time and burnout (about 300 bookings a year solo) | Intake switch, weekly cap, say no beyond capacity, hire advisors later at a 50 percent split |
 | Commission arrives late or not at all (30 to 90 days after travel, cancellations pay nothing) | Recognize when received, track expected versus received versus lost, reward credits only after commission |

@@ -13,7 +13,7 @@ roadmap tickets WF-078 and WF-105 in [09](../reference-full-spec/09-build-roadma
 | Needs from Phase 1 | Agent runs (`fare_hunt`, `deep_research`), credits and ceilings, scheduler with `scan_due_routines`, shared research cache, price checks, feature flags, admin flags screen, RevenueCat, notifications |
 | Gate | Mean agent cost of $0.60 or less per run over 200 runs, or over 15 percent of Plus payers buying agent-run credits ([09 section 1](../reference-full-spec/09-build-roadmap.md), [08 section 6.6](../reference-full-spec/08-admin-control-center.md)) |
 | Tickets | P2-055 to P2-064 |
-| Tier and products | `pro`, `wayfold_pro_monthly` ($11.99), `wayfold_pro_annual` ($99) |
+| Tier and products | `pro`, `hermi_pro_monthly` ($11.99), `hermi_pro_annual` ($99) |
 
 ## 1. Goal and why now
 
@@ -151,8 +151,8 @@ INSERT INTO plans (code, kind, name, rank, monthly_credits, credits_granted, cre
 ON CONFLICT (code) DO NOTHING;
 
 INSERT INTO store_products (product_id, store, plan_code, period, price_minor, currency, trial_days, is_active) VALUES
-('wayfold_pro_monthly', 'apple', 'pro', 'month', 1199, 'USD', 0, false),     -- set is_active = true at the launch step
-('wayfold_pro_annual',  'apple', 'pro', 'year',  9900, 'USD', 0, false)
+('hermi_pro_monthly',   'apple', 'pro', 'month', 1199, 'USD', 0, false),     -- set is_active = true at the launch step
+('hermi_pro_annual',    'apple', 'pro', 'year',  9900, 'USD', 0, false)
 ON CONFLICT (product_id) DO NOTHING;
 
 INSERT INTO feature_flags (key, description, enabled, rollout_pct, rules, variants) VALUES
@@ -257,7 +257,7 @@ with reason `routines` (the paywall trigger `routine`).
   the days left ([06 section 6.5](../reference-full-spec/06-ai-agents-spec.md)); the app says which routines will run less
   often.
 - After a finished run: if results changed, enqueue one digest (throttled by `last_digest_at` to one per
-  routine per day); a run that saved nothing and failed for Wayfold's reasons refunds its credits.
+  routine per day); a run that saved nothing and failed for Hermi's reasons refunds its credits.
 - Pause rules: balance under 40 (8 when a cache hit is likely) sets `no_credits`; no $0.80 monthly
   headroom sets `ceiling`; trip end date in the past sets `trip_past`; owner entitlement without
   `scheduled_routines` sets `owner_lapsed`.
@@ -298,11 +298,11 @@ as the free path. Copy never says "unlimited AI" or "unlimited live tracking".
 
 | Product ID | Type | Price (US) | Duration | Group and level | Trial | Entitlement |
 |---|---|---|---|---|---|---|
-| `wayfold_pro_monthly` | Auto-renewing subscription | $11.99 | 1 month | `wayfold_membership`, level 1 | none | `pro` |
-| `wayfold_pro_annual` | Auto-renewing subscription | $99.00 | 1 year | `wayfold_membership`, level 1 | none | `pro` |
+| `hermi_pro_monthly` | Auto-renewing subscription | $11.99 | 1 month | `hermi_membership`, level 1 | none | `pro` |
+| `hermi_pro_annual` | Auto-renewing subscription | $99.00 | 1 year | `hermi_membership`, level 1 | none | `pro` |
 
 - Products are created in App Store Connect and RevenueCat in month 10 but stay inactive until the gate
-  is met and the flag is turned on; they join the `wayfold_membership` group at level 1 (above Family 2
+  is met and the flag is turned on; they join the `hermi_membership` group at level 1 (above Family 2
   and Plus 3). Submit with an app version; complete metadata and review screenshot.
 - Upgrades (Plus or Family to Pro) apply immediately with the difference grant (Plus 60 to Pro 240
   grants 180); downgrades apply at renewal (07 sections 7.3 and 7.4); lapse pauses routines
@@ -421,13 +421,13 @@ Existing events used: `paywall_viewed {placement: routine}`, `purchase_started {
 - Description: CRUD, run now, preview cost, resume, sample endpoint; cron validation with the 12 hour
   gap; per trip limit; entitlement errors.
 - Accept: matrix in section 10 passes.
-- Touches: `apps/api/wayfold/modules/ai/routines.py`.
+- Touches: `apps/api/hermi/modules/ai/routines.py`.
 
 #### P2-057 Scheduler activation and pause rules [L, needs P2-056, Phase 1 scheduler]
 - Description: agent kinds enabled behind `scheduled_agent_routines`, budget reservation, pause reasons
   and auto resume, kill switch handling, catch up.
 - Accept: scheduler tests pass; 5,000 synthetic routines load target met.
-- Touches: `apps/worker/wayfold_worker/scheduler.py`, `jobs/scan_due_routines.py`.
+- Touches: `apps/worker/hermi_worker/scheduler.py`, `jobs/scan_due_routines.py`.
 
 #### P2-058 Scan lane (Batch) [L, needs P2-057]
 - Description: `routine_scan` with structured output, validators and provenance, `collect_batch_results`

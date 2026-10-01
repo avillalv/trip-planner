@@ -10,7 +10,7 @@ Part of [Phase 2: growth](README.md). Written 2026-09-30. Source definitions are
 | Flag | None. The `family` plan is sellable when `plans.is_active` is true (the same rule as the full roadmap, WF-077). |
 | Needs from Phase 1 | Entitlements resolver, RevenueCat webhook and purchases, credit ledger with `reserve_credits`, paywall engine, invites, admin users screen |
 | Tickets | P2-001 to P2-010 |
-| Tier and products | `family`, `wayfold_family_monthly` ($8.99), `wayfold_family_annual` ($59.99) |
+| Tier and products | `family`, `hermi_family_monthly` ($8.99), `hermi_family_annual` ($59.99) |
 
 ## 1. Goal and why now
 
@@ -56,7 +56,7 @@ links for grandparents.
 | ID | Story | Acceptance |
 |---|---|---|
 | FAM-1 | As a Family payer, I set up my household right after buying, so my people can join. | After a `family` purchase the app opens "Set up your household" (name defaults to "Family"). A household is created once per Family subscription and `subscriptions.household_id` is set. Skipping leaves an "Invite your household" card on Account until done. |
-| FAM-2 | As a payer, I invite members by email or by link. | Link `https://wayfold.app/h/<token>`, 7 day expiry, single use; email sent through Resend when an address is given. Seats count invited plus active members (6 including the owner); the seventh invite is refused with `403 limit_reached`. |
+| FAM-2 | As a payer, I invite members by email or by link. | Link `https://hermi.world/h/<token>`, 7 day expiry, single use; email sent through Resend when an address is given. Seats count invited plus active members (6 including the owner); the seventh invite is refused with `403 limit_reached`. |
 | FAM-3 | As an invitee, I see what joining changes before I accept. | The accept screen says what they get (Plus capabilities on their own trips, 5 live routes, the shared 150 credits) and what stays theirs (their trips, their purchased credits). A user with their own paid subscription is told it keeps running and stays separate; they keep the higher tier (best of) and their own allowance and also draw from the pool. |
 | FAM-4 | As a member, I can leave any time. | Benefits end immediately; the member's own purchased credits and own trips stay with them; trips they owned keep their data and revert to their personal tier capabilities; pooled credits already spent stay spent. |
 | FAM-5 | As a payer, I can remove a member and see who spends the pool. | Removal ends benefits immediately and a removed member can be re-invited. Household settings shows per member spend this month ("Spent by Ana: 12"). The pool can be exhausted by one member; there is no per member quota. |
@@ -266,8 +266,8 @@ INSERT INTO plans (code, kind, name, rank, monthly_credits, credits_granted, cre
 ON CONFLICT (code) DO NOTHING;
 
 INSERT INTO store_products (product_id, store, plan_code, period, price_minor, currency, trial_days, is_active) VALUES
-('wayfold_family_monthly', 'apple', 'family', 'month',  899, 'USD', 0, true),
-('wayfold_family_annual',  'apple', 'family', 'year',  5999, 'USD', 0, true)      -- no trial: only wayfold_plus_annual has one
+('hermi_family_monthly',   'apple', 'family', 'month',  899, 'USD', 0, true),
+('hermi_family_annual',    'apple', 'family', 'year',  5999, 'USD', 0, true)      -- no trial: only hermi_plus_annual has one
 ON CONFLICT (product_id) DO NOTHING;
 
 -- Phase 1 seeds serpapi_live_fares for plus and trip_pass only; Family gets live tracking too.
@@ -315,7 +315,7 @@ membership; the household only shares entitlements and the credit pool.
 | `GET /households/current` | user | none | none to `Household \| null` | Household the caller belongs to, with members and pooled credit balance. |
 | `POST /households` | user with tier `family` | Family | `{ name: string }` to 201 `Household` | Creates `households` and an `owner` `household_members` row. One household per Family subscription. |
 | `PATCH /households/{id}` | household owner | none | `{ name? }` to `Household` | Rename. |
-| `POST /households/{id}/invites` | household owner | seats left under 6 | `{ email?: string }` to 201 `HouseholdInvite` | Universal link `https://wayfold.app/h/<token>`, 7 day expiry, single use. Email sent through Resend when `email` is set. |
+| `POST /households/{id}/invites` | household owner | seats left under 6 | `{ email?: string }` to 201 `HouseholdInvite` | Universal link `https://hermi.world/h/<token>`, 7 day expiry, single use. Email sent through Resend when `email` is set. |
 | `POST /household-invites/{token}/accept` | user | none | none to `Household` | Joins; entitlements recomputed (member gets Family tier, draws from the pool). Fails with `410 invite_expired`, `403 limit_reached` (6 seats), `409 already_member`. A user with their own paid sub is told their sub keeps running and stays separate. |
 | `DELETE /households/{id}/members/{user_id}` | household owner, or the member themself | none | 204 | Removes member; their entitlements recomputed at once. The owner cannot be removed while others remain. |
 | `DELETE /households/{id}` | household owner | none | 204 | Dissolves; members fall back to their own tier. |
@@ -389,12 +389,12 @@ only) runs after launch.
 
 | Product ID | Type | Price (US) | Duration | Group and level | Trial | Entitlement |
 |---|---|---|---|---|---|---|
-| `wayfold_family_monthly` | Auto-renewing subscription | $8.99 | 1 month | `wayfold_membership`, level 2 | none | `family` |
-| `wayfold_family_annual` | Auto-renewing subscription | $59.99 | 1 year | `wayfold_membership`, level 2 | none | `family` |
+| `hermi_family_monthly` | Auto-renewing subscription | $8.99 | 1 month | `hermi_membership`, level 2 | none | `family` |
+| `hermi_family_annual` | Auto-renewing subscription | $59.99 | 1 year | `hermi_membership`, level 2 | none | `family` |
 
-- Add both to the existing `wayfold_membership` group (levels, highest first: Pro 1, Family 2, Plus 3).
+- Add both to the existing `hermi_membership` group (levels, highest first: Pro 1, Family 2, Plus 3).
   Apple Family Sharing is off on every product. Family, Family Sharing and household are different
-  things: one Apple ID pays; members are invited inside Wayfold.
+  things: one Apple ID pays; members are invited inside Hermi.
 - Every new product needs localized names and descriptions, a paywall review screenshot and the
   subscription terms text, and must be submitted with an app version for its first review.
 - RevenueCat: add both products to the `default` offering as a package; entitlement `family`.
@@ -402,7 +402,7 @@ only) runs after launch.
   ceiling $3.40 a month, daily $0.40. Spend order stays: monthly or household allowance, promo, trip
   pass, adjustment, purchased.
 - Upgrades (Plus to Family or Pro, Family to Pro): Apple applies immediately and refunds unused time
-  pro rata; Wayfold switches the tier now, recomputes household capabilities, grants the difference.
+  pro rata; Hermi switches the tier now, recomputes household capabilities, grants the difference.
   Downgrades (Family to Plus) apply at renewal and dissolve the household at the boundary.
 - Refunds: subscription status `refunded`, revoke now, claw back the unspent allowance of that period
   (the household pool for that period), as in 07 section 7.6.
@@ -479,7 +479,7 @@ Phase 1 capabilities or earlier Phase 2 tickets.
   widened `credit_grants` and `subscriptions` policies, `household_usage()` and seed rows above.
 - Accept: empty to head and previous revision to head both pass; cross-tenant suite includes
   households; seventh member raises `household_full`.
-- Touches: `apps/api/wayfold/migrations/versions/`, `apps/api/wayfold/modules/billing/models.py`.
+- Touches: `apps/api/hermi/migrations/versions/`, `apps/api/hermi/modules/billing/models.py`.
 - Tests: migration, RLS and trigger tests.
 
 #### P2-002 Household API [M, needs P2-001]
@@ -487,7 +487,7 @@ Phase 1 capabilities or earlier Phase 2 tickets.
   email (plain text too) with the inviter's display name.
 - Accept: one household per Family subscription; owner cannot be removed while others remain; tokens
   are 128 bit, stored hashed, expire in 7 days.
-- Touches: `apps/api/wayfold/modules/billing/family.py`.
+- Touches: `apps/api/hermi/modules/billing/family.py`.
 - Tests: endpoint tests per role; token expiry and single use.
 
 #### P2-003 Entitlement resolver household branch [M, needs P2-001]
@@ -495,7 +495,7 @@ Phase 1 capabilities or earlier Phase 2 tickets.
   active Family subscription; best-of with own subscription; nightly sweep and event recompute.
 - Accept: member limits show `live_routes` 5 and `collaborators` 6; owner lapse dissolves access at
   period end; `GET /me/entitlements` reports `source: "household"`.
-- Touches: `apps/api/wayfold/modules/billing/entitlements.py`.
+- Touches: `apps/api/hermi/modules/billing/entitlements.py`.
 - Tests: resolver table tests across owner and member states.
 
 #### P2-004 Pooled credits and monthly grant [M, needs P2-001, Phase 1 ledger]
@@ -505,7 +505,7 @@ Phase 1 capabilities or earlier Phase 2 tickets.
   query); `credit_balances` and `GET /me/credits` report the pool.
 - Accept: pool spend is charged to the acting member in `credit_ledger`; grants are idempotent on
   (`household_id`, `kind`, `period_key`).
-- Touches: `apps/api/wayfold/modules/billing/credits.py`, worker `grant_monthly_credits`.
+- Touches: `apps/api/hermi/modules/billing/credits.py`, worker `grant_monthly_credits`.
 - Tests: concurrency test, idempotent grant, refund to same pool.
 
 #### P2-005 Family purchase lifecycle [L, needs P2-003, P2-004, Phase 1 RevenueCat webhook]
@@ -513,7 +513,7 @@ Phase 1 capabilities or earlier Phase 2 tickets.
   difference grant, downgrade at renewal and dissolve, refund clawback, grace and retry behavior,
   owner notices (14 days before dissolve, grace emails).
 - Accept: every scenario in section 10 passes against recorded RevenueCat fixtures.
-- Touches: `apps/api/wayfold/modules/billing/webhooks.py`, `family.py`.
+- Touches: `apps/api/hermi/modules/billing/webhooks.py`, `family.py`.
 - Tests: fixture replay, idempotency.
 
 #### P2-006 Churn guard and abuse controls [S, needs P2-002]

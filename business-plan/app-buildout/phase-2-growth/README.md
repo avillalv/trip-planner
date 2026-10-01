@@ -1,6 +1,6 @@
 # Phase 2: growth (months 7 to 12)
 
-Part of the [Wayfold build specification](../README.md). Written 2026-09-30. Phase 2 starts only after
+Part of the [Hermi build specification](../README.md). Written 2026-09-30. Phase 2 starts only after
 [Phase 1](../phase-1-launch/README.md) is live and meets the entry criteria below. Its scope is taken
 from the "Not in Phase 1" table of the Phase 1 README (scope is final there) and its content is extracted
 from the full specifications ([01](../reference-full-spec/01-product-spec.md) to [10](../reference-full-spec/10-quality-security-launch.md)).
@@ -36,12 +36,12 @@ verify" where they come from those files or from search results.
 
 | # | Pack | File | Build month | Tickets | Money | Products |
 |---|---|---|---|---|---|---|
-| 01 | Family plan and households | [01-family-plan.md](01-family-plan.md) | 7 | P2-001 to P2-010 | Subscription | `wayfold_family_monthly` $8.99, `wayfold_family_annual` $59.99 |
-| 02 | Group Trip Pass, polls, manual cost splitting, room-block request | [02-group-trip-pass-and-group-tools.md](02-group-trip-pass-and-group-tools.md) | 7 to 8 | P2-011 to P2-024 | Pass | `wayfold_group_trip_pass` $19.99 |
+| 01 | Family plan and households | [01-family-plan.md](01-family-plan.md) | 7 | P2-001 to P2-010 | Subscription | `hermi_family_monthly` $8.99, `hermi_family_annual` $59.99 |
+| 02 | Group Trip Pass, polls, manual cost splitting, room-block request | [02-group-trip-pass-and-group-tools.md](02-group-trip-pass-and-group-tools.md) | 7 to 8 | P2-011 to P2-024 | Pass | `hermi_group_trip_pass` $19.99 |
 | 03 | Comments | [03-comments.md](03-comments.md) | 8 | P2-025 to P2-031 | None (retention) | none |
-| 04 | Email-forward import (plans@wayfold.app) | [04-email-forward-import.md](04-email-forward-import.md) | 9 | P2-032 to P2-042 | Switching (credits at the margin) | none |
+| 04 | Email-forward import (plans@hermi.world) | [04-email-forward-import.md](04-email-forward-import.md) | 9 | P2-032 to P2-042 | Switching (credits at the margin) | none |
 | 05 | Flight status alerts | [05-flight-status-alerts.md](05-flight-status-alerts.md) | 9 to 10 (bake-off from month 7) | P2-043 to P2-054 | Retention, tier coverage | none |
-| 06 | Pro and scheduled agents | [06-pro-and-scheduled-agents.md](06-pro-and-scheduled-agents.md) | 11 (sold in 12 only if the gate is met) | P2-055 to P2-064 | Subscription | `wayfold_pro_monthly` $11.99, `wayfold_pro_annual` $99.00 |
+| 06 | Pro and scheduled agents | [06-pro-and-scheduled-agents.md](06-pro-and-scheduled-agents.md) | 11 (sold in 12 only if the gate is met) | P2-055 to P2-064 | Subscription | `hermi_pro_monthly` $11.99, `hermi_pro_annual` $99.00 |
 | 07 | Concierge lane | [07-concierge-lane.md](07-concierge-lane.md) | 11 (legal from month 7) | P2-065 to P2-074 | Agency commission | none |
 | 08 | Direct affiliate programs | [08-direct-affiliate-programs.md](08-direct-affiliate-programs.md) | applications month 7, adapters 9 to 10 | P2-075 to P2-083 | Affiliate commission | none |
 | 09 | Native Android (and web billing) | [09-native-android.md](09-native-android.md) | 10 to 12 | P2-084 to P2-094, P2-105 | Same ladder on Google Play; web billing through RevenueCat Web Billing | Play equivalents of every Phase 2 product (`_gp` ids), `web_` price keys |
@@ -127,7 +127,7 @@ Phase 1 live (entry gate)
    committed; if any model or migration changed, the migration follows
    `.claude/rules/database-migrations.md` (expand and contract, one head, tested from empty and from the
    previous revision); new environment variables are documented in `.env.example` and no secrets are in
-   the repo; UI copy follows the copy rules (sentence case, plain verbs, no em dashes) and the passport
+   the repo; UI copy follows the copy rules (sentence case, plain verbs, no em dashes) and the Hermi
    design tokens; the work respects the non-negotiable rules.
 2. **Sizes.** S is about 2 hours, M half a day, L a day (never larger; split instead). The 112 tickets
    total roughly 480 hours of build at those sizes; with support, launch work and bug fixing plan on
@@ -182,7 +182,7 @@ Phase 1 live (entry gate)
    disruption.
 8. **App Store products.** New products are created in App Store Connect and RevenueCat with localized
    metadata and a paywall review screenshot, and are submitted with an app version for their first
-   review. Product ids are in the packs; the subscription group `wayfold_membership` holds Pro (level 1),
+   review. Product ids are in the packs; the subscription group `hermi_membership` holds Pro (level 1),
    Family (level 2) and Plus (level 3). Apple Family Sharing stays off. Google Play ids carry a `_gp`
    suffix (pack 09).
 9. **Tests.** Each pack lists its tests. Always: tenant isolation for every new table, idempotent
@@ -266,7 +266,7 @@ Phase 2 is done when all of these are true at the end of month 12:
 | Revenue | Annualized affiliate income per monthly user measured and at or above the kill-rule floor of $0.20 (or a written plan if not); at least 2 of the 5 direct programs approved and converting, or documented reasons; Family pooled spend not near its ceiling for more than 25 percent of households; first 10 concierge bookings completed with founder hours per booking recorded; flight status spend within its monthly budget |
 | Engagement | Flight status and email import adoption reported (users with a tracked leg or a forwarded booking, and their D30); Year in travel share rate recorded |
 | Kill-rule checkpoint | The formal decision is at month 9 after launch (project month 15); Phase 2 produces the trend report for it: paying share, annualized affiliate income per monthly user, cost per active user |
-| Phase 3 readiness | Data for each Phase 3 decision exists: Group Trip Pass sales and expense usage (Stripe group payments), concierge ask and completion rates (Wayfold for Advisors), memories usage (printed trip books), lodging click-to-booking and stay comparison reach (LiteAPI), partner guide demand |
+| Phase 3 readiness | Data for each Phase 3 decision exists: Group Trip Pass sales and expense usage (Stripe group payments), concierge ask and completion rates (Hermi for Advisors), memories usage (printed trip books), lodging click-to-booking and stay comparison reach (LiteAPI), partner guide demand |
 
 ## 8. Risks across Phase 2
 
@@ -493,7 +493,7 @@ tell me if you would rather move any of them out of Phase 2. Sizes and order of 
 
 Not built in Phase 2 (named in the win plan as Phase 2 candidates, to be decided with data at the month 9
 review): the "what is still open" list, screenshot and link import, offline map tiles, Live Activities and
-widgets, a Wayfold MCP server, documents attached to items, and an "export to ChatGPT" prompt.
+widgets, a Hermi MCP server, documents attached to items, and an "export to ChatGPT" prompt.
 
 ## 10. Sources and notes
 

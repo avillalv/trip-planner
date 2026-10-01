@@ -6,12 +6,12 @@ Part of [Phase 3: scale](README.md). Tickets P3-071 to P3-081. Written 2026-09-3
 |---|---|
 | Feature flags | `white_label` and `partner_api` (created by this pack, off). Both need `advisor_workspaces` on. |
 | Needs | A lawyer (master agreement, data-processing addendum, child-data rules before any school operator). An onboarding and support person: support per account is the real cost. A contractor engineer is sensible for custom domains. No funding. |
-| Builds on | **Pack 02 must be stable first** ([02-wayfold-for-advisors.md](02-wayfold-for-advisors.md)): this is the same code packaged for accounts rather than seats (09 section 3.7). Phase 1: presentation mode, share links, Resend, Cloudflare, Stripe webhook endpoint. |
+| Builds on | **Pack 02 must be stable first** ([02-hermi-for-advisors.md](02-hermi-for-advisors.md)): this is the same code packaged for accounts rather than seats (09 section 3.7). Phase 1: presentation mode, share links, Resend, Cloudflare, Stripe webhook endpoint. |
 | Source names | Phase 1 files call this "year 3 and later". Spec of record: [07 section 11.5 (full spec)](../reference-full-spec/07-monetization-spec.md), which specifies only a direction ("a separate tenancy, API keys, annual contracts invoiced by Stripe"). This pack is the detailed contract. |
 
 ## 1. Goal and revenue case
 
-**Goal.** License the planner, presentation mode and group workspace to agencies and tour operators with their branding and their domain, and give them an API for the parts they want inside their own systems. A white-label account is a Wayfold for Advisors organization with an account-level contract instead of per-seat billing.
+**Goal.** License the planner, presentation mode and group workspace to agencies and tour operators with their branding and their domain, and give them an API for the parts they want inside their own systems. A white-label account is a Hermi for Advisors organization with an account-level contract instead of per-seat billing.
 
 **Price.** $500 a month per account ($6,000 a year); the ambitious case uses the same price (09 section 3.7). Assumptions to set in the contract template (P3-071): up to 10 staff seats included, extra seats at the advisor seat price ($29 a month), one custom domain, API included with rate limits. A paid API is the same packaging and adds nothing to the revenue totals.
 
@@ -31,15 +31,15 @@ Worked: base year 5 is 6 x $6,000 = $36.0k. One account equals about 19 advisor 
 
 **What would break the case.** Few buyers (base case needs 6 accounts in year 5), long sales cycles, custom feature requests that turn a license into a consulting business, and a multi-tenant security incident.
 
-**Entry gate (assumptions to tune).** Wayfold for Advisors live at least 6 months with at least 40 paid seats and no severity-1 tenancy incident, and at least 3 qualified inbound requests with a stated budget of $6,000 a year or more.
+**Entry gate (assumptions to tune).** Hermi for Advisors live at least 6 months with at least 40 paid seats and no severity-1 tenancy incident, and at least 3 qualified inbound requests with a stated budget of $6,000 a year or more.
 
 ## 2. Design decisions
 
 | # | Decision | Default and reason |
 |---|---|---|
 | D1 | Same tenancy as advisors | A white-label account is an `advisor_orgs` row with `kind = 'white_label'`. Same RLS, seats, clients, proposals and commission tracker; different billing (account contract) and brand reach. No second data model. |
-| D2 | Version 1 scope of branding | Branded client-facing surfaces on the customer's domain: share pages, presentation, proposals, client portal by emailed link, and branded emails. Staff sign in at Wayfold's advisor domain as in pack 02. Full sign-in on the customer's domain (auth redirect allow-lists, cookie scope) is deferred until a signed customer needs it, because it multiplies identity risk. |
-| D3 | Disclosure cannot be branded away | Required disclosures stay: partner-link commission sentence, AI-source labels, privacy and terms links. The "Made with Wayfold" footer can be removed. |
+| D2 | Version 1 scope of branding | Branded client-facing surfaces on the customer's domain: share pages, presentation, proposals, client portal by emailed link, and branded emails. Staff sign in at Hermi's advisor domain as in pack 02. Full sign-in on the customer's domain (auth redirect allow-lists, cookie scope) is deferred until a signed customer needs it, because it multiplies identity risk. |
+| D3 | Disclosure cannot be branded away | Required disclosures stay: partner-link commission sentence, AI-source labels, privacy and terms links. The "Made with Hermi" footer can be removed. |
 | D4 | Partner links default off | On white-label surfaces affiliate links are off unless the contract turns them on; if on, commissions follow the contract and the disclosure sentence stays. Decide the default in P3-071. |
 | D5 | API acts as an org principal | Each API client belongs to one org and acts as an org admin seat (`acts_as_user_id`) with scopes; its keys inherit the same row-level security as that seat. A client is suspended when its admin seat ends. |
 | D6 | No school operators until cleared | Child data (COPPA, FERPA) is a gate (P3-080); no account type for schools before counsel signs off. |
@@ -53,14 +53,14 @@ As an agency owner, I want my brand and domain set up with help, so that clients
 - A preview page shows a sample trip, proposal and share page in the brand before anything is public.
 
 **W-2. Custom domain.**
-As an agency owner, I want `trips.myagency.com` to show my client pages, so that Wayfold is invisible.
+As an agency owner, I want `trips.myagency.com` to show my client pages, so that Hermi is invisible.
 - I enter the hostname; the app shows the exact DNS records to add (CNAME and a verification TXT); status moves pending, verifying, active; TLS is issued automatically; failures show the reason and the fix.
 - Only that org's public pages are served on the hostname; staff screens are not. The hostname can be removed at any time and stops serving at once.
 
 **W-3. Branded client experience.**
 As a client of the agency, I want a clean branded page, so that I trust it.
-- Share pages, presentation mode, proposals and the client portal render with the org's logo, colors, fonts and contact line, on the org's domain, without Wayfold branding except required disclosures and legal links.
-- Emails (invites, proposal sent, reminders) come from the agency's sender name and a verified sending domain when configured, else from Wayfold with the agency name.
+- Share pages, presentation mode, proposals and the client portal render with the org's logo, colors, fonts and contact line, on the org's domain, without Hermi branding except required disclosures and legal links.
+- Emails (invites, proposal sent, reminders) come from the agency's sender name and a verified sending domain when configured, else from Hermi with the agency name.
 
 **W-4. API keys.**
 As a developer at the agency, I want keys with limited scopes, so that my system can read and write trips safely.
@@ -143,7 +143,7 @@ ALTER TABLE advisor_orgs
   ADD COLUMN seats_included smallint,                                   -- white_label: seats covered by the account fee
   ADD CONSTRAINT ck_advisor_orgs_kind CHECK (kind IN ('advisor', 'white_label'));
 -- brand (existing jsonb) gains: {"logo_key", "favicon_key", "primary", "secondary", "font": "<allow-list key>", "contact_line",
---   "legal_terms_url", "legal_privacy_url", "email_from_name", "reply_to", "hide_wayfold_footer": true, "partner_links": false}
+--   "legal_terms_url", "legal_privacy_url", "email_from_name", "reply_to", "hide_hermi_footer": true, "partner_links": false}
 
 CREATE TABLE white_label_contracts (
   id                    uuid PRIMARY KEY DEFAULT uuidv7(),
@@ -174,7 +174,7 @@ CREATE TABLE white_label_contracts (
 CREATE INDEX ix_white_label_contracts_org ON white_label_contracts (advisor_org_id, status);
 CREATE INDEX ix_white_label_contracts_renewal ON white_label_contracts (ends_on) WHERE status = 'active';
 SELECT add_updated_at_trigger('white_label_contracts');
-REVOKE ALL ON white_label_contracts FROM wayfold_app;                           -- admin and billing only
+REVOKE ALL ON white_label_contracts FROM hermi_app;                           -- admin and billing only
 
 CREATE TABLE org_domains (
   id                     uuid PRIMARY KEY DEFAULT uuidv7(),
@@ -218,7 +218,7 @@ CREATE TABLE api_clients (
 );
 CREATE INDEX ix_api_clients_org ON api_clients (advisor_org_id) WHERE status = 'active';
 SELECT add_updated_at_trigger('api_clients');
-REVOKE ALL ON api_clients FROM wayfold_app;
+REVOKE ALL ON api_clients FROM hermi_app;
 
 CREATE TABLE api_keys (
   id              uuid PRIMARY KEY DEFAULT uuidv7(),
@@ -233,7 +233,7 @@ CREATE TABLE api_keys (
   CONSTRAINT uq_api_keys_prefix UNIQUE (prefix)
 );
 CREATE INDEX ix_api_keys_client ON api_keys (api_client_id) WHERE revoked_at IS NULL;
-REVOKE ALL ON api_keys FROM wayfold_app;                                          -- the API process looks keys up through the function below only
+REVOKE ALL ON api_keys FROM hermi_app;                                          -- the API process looks keys up through the function below only
 CREATE FUNCTION api_key_lookup(p_prefix text)
 RETURNS TABLE (key_id uuid, api_client_id uuid, advisor_org_id uuid, acts_as_user_id uuid, key_hash bytea, scopes text[], rate_limit_per_min integer)
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
@@ -244,7 +244,7 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
    WHERE k.prefix = p_prefix AND k.revoked_at IS NULL AND (k.expires_at IS NULL OR k.expires_at > now())
 $$;
 REVOKE ALL ON FUNCTION api_key_lookup(text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION api_key_lookup(text) TO wayfold_app;
+GRANT EXECUTE ON FUNCTION api_key_lookup(text) TO hermi_app;
 
 -- Request rate limits reuse the Phase 1 Postgres-backed rate_limit_counters with one bucket per key ('api:<key id>').
 -- This table is reporting only (usage charts, billing conversations).
@@ -256,12 +256,12 @@ CREATE TABLE api_usage_daily (
   rate_limited   integer NOT NULL DEFAULT 0,
   PRIMARY KEY (api_client_id, day)
 );
-REVOKE ALL ON api_usage_daily FROM wayfold_app;
+REVOKE ALL ON api_usage_daily FROM hermi_app;
 
 -- Row policies for the org-facing reads (org admins list their own domains through the API; key listings and usage are served by the billing service under the org-admin check):
 ALTER TABLE org_domains ENABLE ROW LEVEL SECURITY;
 CREATE POLICY org_domains_select ON org_domains FOR SELECT USING (advisor_org_id IN (SELECT my_advisor_orgs()));
-REVOKE INSERT, UPDATE, DELETE ON org_domains FROM wayfold_app;                    -- writes go through the domain service (Cloudflare and DNS checks)
+REVOKE INSERT, UPDATE, DELETE ON org_domains FROM hermi_app;                    -- writes go through the domain service (Cloudflare and DNS checks)
 
 -- Host lookup for public pages: one function, no table access for the public role.
 CREATE FUNCTION org_for_hostname(p_host citext) RETURNS TABLE (advisor_org_id uuid, brand jsonb, partner_links boolean)
@@ -274,7 +274,7 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
    LIMIT 1
 $$;
 REVOKE ALL ON FUNCTION org_for_hostname(citext) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION org_for_hostname(citext) TO wayfold_app;
+GRANT EXECUTE ON FUNCTION org_for_hostname(citext) TO hermi_app;
 
 INSERT INTO feature_flags (key, description, enabled, rollout_pct, rules, variants) VALUES
 ('white_label', 'White-label accounts: branded client pages, custom domains', false, 100, '{}', '{}'),
@@ -286,7 +286,7 @@ INSERT INTO kill_switches (key, description) VALUES
 ON CONFLICT (key) DO NOTHING;
 ```
 
-The API key format is `wf_live_<prefix>_<secret>` (prefix 8 characters, secret 32 random bytes, URL-safe). Lookup is by prefix, then constant-time compare of the hash; the key is never logged (logs carry only the prefix). Client-facing data served on a custom domain comes only from the existing share, proposal and presentation reads plus the `brand` and the contract's `partner_links` flag. Retention: `api_usage_daily` 25 months; `org_domains` with the org; contracts 7 years.
+The API key format is `hm_live_<prefix>_<secret>` (prefix 8 characters, secret 32 random bytes, URL-safe). Lookup is by prefix, then constant-time compare of the hash; the key is never logged (logs carry only the prefix). Client-facing data served on a custom domain comes only from the existing share, proposal and presentation reads plus the `brand` and the contract's `partner_links` flag. Retention: `api_usage_daily` 25 months; `org_domains` with the org; contracts 7 years.
 
 ## 5. API additions
 
@@ -307,7 +307,7 @@ Two surfaces, both behind their flags and kill switches.
 | `GET /advisor-orgs/{org_id}/api-usage` | org admin | none | `?days=` to `{ day, requests, errors, rate_limited }[]` | |
 | `GET /advisor-orgs/{org_id}/contract` | org admin | none | to `{ plan, fee, seats_included, domains_included, ends_on, auto_renew, status }` | Read only; changes go through the admin console. |
 
-**Partner API.** Base `/v1/partner`, `Authorization: Bearer wf_live_...`, JSON, problem+json errors, `Idempotency-Key` on writes, cursor pagination, headers `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `Retry-After` (same conventions as [04 section 1](../phase-1-launch/04-api-spec.md)). The key acts as its admin seat (D5), so all limits, validation and row-level security apply. Every call writes `audit_log` with the key prefix as actor.
+**Partner API.** Base `/v1/partner`, `Authorization: Bearer hm_live_...`, JSON, problem+json errors, `Idempotency-Key` on writes, cursor pagination, headers `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `Retry-After` (same conventions as [04 section 1](../phase-1-launch/04-api-spec.md)). The key acts as its admin seat (D5), so all limits, validation and row-level security apply. Every call writes `audit_log` with the key prefix as actor.
 
 | Endpoint | Scope | Notes |
 |---|---|---|
@@ -325,7 +325,7 @@ Errors: `401 unauthenticated` (bad or revoked key), `403 insufficient_scope`, `4
 ```ts
 type BrandIn = { logo_key?: string; favicon_key?: string; primary: string; secondary: string; font: "system" | "serif" | "humanist" | "geometric"
   contact_line?: string; legal_terms_url?: string; legal_privacy_url?: string; email_from_name?: string; reply_to?: string
-  hide_wayfold_footer?: boolean }
+  hide_hermi_footer?: boolean }
 type OrgDomain = { id: Uuid; hostname: string; purpose: "web" | "email"; status: "pending" | "verifying" | "active" | "failed" | "removed"
   dns_records: { type: "CNAME" | "TXT" | "MX"; name: string; value: string }[]; ssl_status: string | null; last_error: string | null }
 type ApiClient = { id: Uuid; name: string; scopes: string[]; rate_limit_per_min: number; status: "active" | "suspended" | "revoked"; keys: ApiKey[] }
@@ -336,7 +336,7 @@ Request pipeline for a custom hostname: Cloudflare terminates TLS for the hostna
 
 ## 6. UI screens
 
-**Brand settings (org admin, web).** Logo and favicon upload, two colors with live contrast checks, font choice from four options, contact line, terms and privacy links, email sender name and reply-to, toggles for the Wayfold footer and partner links (the latter locked by the contract), a live preview of a share page, presentation slide and proposal. Empty: a sample trip is used for preview.
+**Brand settings (org admin, web).** Logo and favicon upload, two colors with live contrast checks, font choice from four options, contact line, terms and privacy links, email sender name and reply-to, toggles for the Hermi footer and partner links (the latter locked by the contract), a live preview of a share page, presentation slide and proposal. Empty: a sample trip is used for preview.
 
 **Domains.** List with status chips, an add form, a records table with copy buttons ("Add these two records at your DNS provider"), a "Check now" action and the last error in plain words ("The CNAME points somewhere else. It should point to {target}."). Domain removal has a typed confirmation.
 
@@ -344,7 +344,7 @@ Request pipeline for a custom hostname: Cloudflare terminates TLS for the hostna
 
 **Contract and billing.** Plan, term, seats used of included, domains used of included, renewal date, invoices link, and "Contact us to change your plan".
 
-**Client-facing pages on the custom domain.** The consumer share page, presentation and proposal, re-skinned: org logo in the header, brand colors and fonts from tokens, contact line, required disclosures (partner-link sentence when enabled, AI-source labels), links to the org's legal pages, and no Wayfold footer when hidden. Errors and expired links show a branded, plain-language message. Accessibility: the contrast check is enforced at save, focus states and skip links are kept, and font choices are limited to tested stacks.
+**Client-facing pages on the custom domain.** The consumer share page, presentation and proposal, re-skinned: org logo in the header, brand colors and fonts from tokens, contact line, required disclosures (partner-link sentence when enabled, AI-source labels), links to the org's legal pages, and no Hermi footer when hidden. Errors and expired links show a branded, plain-language message. Accessibility: the contrast check is enforced at save, focus states and skip links are kept, and font choices are limited to tested stacks.
 
 **Public API docs.** A static documentation site (generated from the OpenAPI document) with authentication, errors, pagination, idempotency, examples in curl and Python, and the terms of use.
 
@@ -375,9 +375,9 @@ New admin screen "White-label accounts" (Money group); extends [08](../phase-1-l
 
 ## 9. Legal and compliance
 
-1. **Master agreement and DPA.** Wayfold is a processor for the operator's client data; the operator is the controller. The contract covers processing instructions, sub-processors (the current list), security measures, breach notice times, deletion and return of data, audit rights limited to reasonable requests, liability caps, and termination. Counsel drafts the templates once (P3-071).
+1. **Master agreement and DPA.** Hermi is a processor for the operator's client data; the operator is the controller. The contract covers processing instructions, sub-processors (the current list), security measures, breach notice times, deletion and return of data, audit rights limited to reasonable requests, liability caps, and termination. Counsel drafts the templates once (P3-071).
 2. **Service levels.** Availability target and support response times stated by plan, no service credits, maintenance windows; nothing promised that Render and Cloudflare do not support (D7).
-3. **Acceptable use and branding.** The operator owns its brand; Wayfold may refuse domains that impersonate other organizations; blocked hostnames include anything containing other travel brands or Wayfold lookalikes; impersonation and phishing complaints disable a domain at once (kill switch). Wayfold's name may be removed from client pages but legal notices, disclosures and the privacy and terms links remain.
+3. **Acceptable use and branding.** The operator owns its brand; Hermi may refuse domains that impersonate other organizations; blocked hostnames include anything containing other travel brands or Hermi lookalikes; impersonation and phishing complaints disable a domain at once (kill switch). Hermi's name may be removed from client pages but legal notices, disclosures and the privacy and terms links remain.
 4. **Disclosure.** Partner-link commission sentence, "Ad" labels where applicable, and AI-source labels are not removable (D3); FTC, UK and EU rules in [08-affiliate-revenue.md section 7.4](../context/business-plan/08-affiliate-revenue.md).
 5. **Child data (school operators).** COPPA (under 13) and FERPA (education records) apply to school trips. The design before any school operator: adult accounts only (teachers and parents), no accounts for children, minimal student data (first names and initials, no photos by default), no AI on student data, contract terms for school officials, and parental consent handled by the school. The gate ticket P3-080 must finish with counsel's written approval; until then the contract template prohibits school use.
 6. **Data residency and transfers.** Operators outside the US: standard contractual clauses and a statement of where data is processed.

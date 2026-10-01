@@ -18,7 +18,7 @@ submission.
 
 ## 1. Goal and why now
 
-**Goal.** Ship the same Wayfold as a native Android app (a Capacitor shell with the web app bundled, not
+**Goal.** Ship the same Hermi as a native Android app (a Capacitor shell with the web app bundled, not
 a remote URL) on Google Play: sign-in, trips, offline reading, push, deep links, purchases through Google
 Play Billing via RevenueCat, and the same server rules and entitlements as iOS.
 
@@ -29,7 +29,7 @@ Play Billing via RevenueCat, and the same server rules and entitlements as iOS.
   iPhone).
 - Competitive reasons. TripIt and Wanderlog both ship Android apps (reported, verify), so an iOS-only
   planner loses any group that contains an Android user, and Android share is higher outside the US, where
-  Wayfold's UK and EU storefront rules and eSIM and flight categories matter.
+  Hermi's UK and EU storefront rules and eSIM and flight categories matter.
 - The bundled web app and server-side rules mean Android is mostly packaging, billing and push: the
   roadmap sizes it as one large ticket (WF-111), and everything it depends on exists after Phase 1. It is
   scheduled last because the risk register says to cut Android, widgets and growth work before cutting
@@ -39,8 +39,8 @@ Play Billing via RevenueCat, and the same server rules and entitlements as iOS.
 
 | ID | Story | Acceptance |
 |---|---|---|
-| AND-1 | As an Android user, I install Wayfold from Google Play and sign in. | Sign in with Google (native, through the credential manager) and email code work natively; an account created with Sign in with Apple on iOS can sign in on Android through the Apple web OAuth flow in a Custom Tab; guest mode works and is claimed on sign-up as on iOS. |
-| AND-2 | As an Android user, I open invite, trip and share links in the app. | App Links (`https://wayfold.app/invite/:token`, `/trips/:id`, `/s/:shareId`, `/h/:token` for households) open the app when installed and verified, the web app otherwise, and the Play Store page with an "enter code" fallback when not installed. Cold start from a link is tested. |
+| AND-1 | As an Android user, I install Hermi from Google Play and sign in. | Sign in with Google (native, through the credential manager) and email code work natively; an account created with Sign in with Apple on iOS can sign in on Android through the Apple web OAuth flow in a Custom Tab; guest mode works and is claimed on sign-up as on iOS. |
+| AND-2 | As an Android user, I open invite, trip and share links in the app. | App Links (`https://hermi.world/invite/:token`, `/trips/:id`, `/s/:shareId`, `/h/:token` for households) open the app when installed and verified, the web app otherwise, and the Play Store page with an "enter code" fallback when not installed. Cold start from a link is tested. |
 | AND-3 | As an Android user, I buy what iOS users can buy. | Plus (monthly and annual with a 7-day trial on annual), Family, Trip Pass and Group Trip Pass (one-time products bound to a trip by our server), and credit packs; Pro appears only after it launches. Restore purchases is present. Entitlements are server-side from RevenueCat, exactly as on iOS. |
 | AND-4 | As an Android user, I get push notifications that respect my settings. | Firebase Cloud Messaging with notification channels (price alerts, flight alerts, trip changes, reminders, group and comments, concierge); the Android 13 and later notification permission is requested in context after the first invite or alert, with the same reason screen as iOS; no promotional push. |
 | AND-5 | As an Android user, I can read my trips offline and my edits sync. | Same offline behavior as iOS: itinerary, stays, checklist, notes and map tiles cached; edits queue; conflict sheet on 409. |
@@ -90,17 +90,17 @@ launch, as on iOS).
 
 ```sql
 INSERT INTO store_products (product_id, store, plan_code, period, price_minor, currency, trial_days, is_active) VALUES
-('wayfold_plus_gp:monthly',    'google', 'plus',            'month',  599, 'USD', 0, true),
-('wayfold_plus_gp:annual',     'google', 'plus',            'year',  3999, 'USD', 7, true),     -- 7-day free trial offer on the annual base plan only
-('wayfold_family_gp:monthly',  'google', 'family',          'month',  899, 'USD', 0, true),
-('wayfold_family_gp:annual',   'google', 'family',          'year',  5999, 'USD', 0, true),
-('wayfold_pro_gp:monthly',     'google', 'pro',             'month', 1199, 'USD', 0, false),    -- active with tier_pro, like iOS
-('wayfold_pro_gp:annual',      'google', 'pro',             'year',  9900, 'USD', 0, false),
-('wayfold_trip_pass_gp',       'google', 'trip_pass',       'once',   999, 'USD', 0, true),     -- one-time product; 90 days counted from binding by our server
-('wayfold_group_trip_pass_gp', 'google', 'group_trip_pass', 'once',  1999, 'USD', 0, true),
-('wayfold_credits_50_gp',      'google', 'credits_50',      'once',   299, 'USD', 0, true),     -- consumable
-('wayfold_credits_150_gp',     'google', 'credits_150',     'once',   699, 'USD', 0, true),
-('wayfold_credits_400_gp',     'google', 'credits_400',     'once',  1499, 'USD', 0, true)
+('hermi_plus_gp:monthly',      'google', 'plus',            'month',  599, 'USD', 0, true),
+('hermi_plus_gp:annual',       'google', 'plus',            'year',  3999, 'USD', 7, true),     -- 7-day free trial offer on the annual base plan only
+('hermi_family_gp:monthly',    'google', 'family',          'month',  899, 'USD', 0, true),
+('hermi_family_gp:annual',     'google', 'family',          'year',  5999, 'USD', 0, true),
+('hermi_pro_gp:monthly',       'google', 'pro',             'month', 1199, 'USD', 0, false),    -- active with tier_pro, like iOS
+('hermi_pro_gp:annual',        'google', 'pro',             'year',  9900, 'USD', 0, false),
+('hermi_trip_pass_gp',         'google', 'trip_pass',       'once',   999, 'USD', 0, true),     -- one-time product; 90 days counted from binding by our server
+('hermi_group_trip_pass_gp',   'google', 'group_trip_pass', 'once',  1999, 'USD', 0, true),
+('hermi_credits_50_gp',        'google', 'credits_50',      'once',   299, 'USD', 0, true),     -- consumable
+('hermi_credits_150_gp',       'google', 'credits_150',     'once',   699, 'USD', 0, true),
+('hermi_credits_400_gp',       'google', 'credits_400',     'once',  1499, 'USD', 0, true)
 ON CONFLICT (product_id) DO NOTHING;
 ```
 
@@ -133,12 +133,12 @@ Store differences the billing code must handle (RevenueCat carries most of it):
 
 | Topic | Apple | Google Play |
 |---|---|---|
-| Subscription model | Group `wayfold_membership`, one membership at a time, levels Pro 1, Family 2, Plus 3 | Subscriptions with base plans; no group, so the server enforces one active membership per store account and best-of across stores |
-| Trip Pass and Group Trip Pass | Non-renewing subscription, restorable | One-time product configured as consumable (so it can be bought again for another trip); not restorable from the store once consumed, so Wayfold's server list (`GET /me/passes`) is the source of truth for unapplied and active passes |
+| Subscription model | Group `hermi_membership`, one membership at a time, levels Pro 1, Family 2, Plus 3 | Subscriptions with base plans; no group, so the server enforces one active membership per store account and best-of across stores |
+| Trip Pass and Group Trip Pass | Non-renewing subscription, restorable | One-time product configured as consumable (so it can be bought again for another trip); not restorable from the store once consumed, so Hermi's server list (`GET /me/passes`) is the source of truth for unapplied and active passes |
 | Trial | Introductory offer on annual Plus only | Free trial offer on the annual Plus base plan only (new customers) |
 | Grace and retry | Billing grace period 16 days, retry up to 60 days | Grace period and account hold (set the grace period to match 16 days where allowed; account hold maps to `billing_retry`; verify current limits); subscription pause is not offered |
 | Refunds | Apple, reportaproblem.apple.com | Google Play refunds and voided purchases, delivered through RevenueCat as cancellations with a reason; same clawback rules |
-| Family | Family Sharing off | Play family library off for subscriptions; households are invited inside Wayfold |
+| Family | Family Sharing off | Play family library off for subscriptions; households are invited inside Hermi |
 | Manage subscription | Apple subscriptions page | Play subscriptions deep link for the package and subscription id |
 
 Webhook mapping: the RevenueCat handler already upserts `subscriptions` and `store_transactions` with
@@ -162,7 +162,7 @@ No new product routes. Changes to existing contracts:
 - Universal link files: serve `/.well-known/assetlinks.json` (Digital Asset Links, JSON, no redirect) with
   the app's package name and the Play App Signing and upload certificate SHA-256 fingerprints, next to the
   existing `apple-app-site-association`.
-- Public deletion page: `GET https://wayfold.app/delete-account` (a web page, no app required) explains the
+- Public deletion page: `GET https://hermi.world/delete-account` (a web page, no app required) explains the
   steps and lets a signed-in user request deletion through the same `POST /me/delete` flow with
   re-authentication; its URL is entered in Play Console. The in-app path remains.
 - Device trust: the Android equivalent of App Attest is the Play Integrity API; the server verifies the
@@ -183,9 +183,10 @@ No new screens. Platform specifics:
 
 - **Shell**: `apps/android/` (sibling of `apps/ios/`), Capacitor Android with the built web app bundled in
   the APK and AAB (no `server.url`), the same `apps/web/src/lib/native/` bridge (`purchases`, `push`,
-  `share`, `browser`, `filesystem`, `haptics`, `status-bar`), adaptive icon and monochrome icon from the
-  brand logo (the open passport with a route folded across it), splash, status and navigation bar colors
-  from tokens, dark mode.
+  `share`, `browser`, `filesystem`, `haptics`, `status-bar`), splash, status and navigation bar colors from
+  the Hermi tokens, and dark mode. The adaptive icon is built from the Hermi mark: the H routes and plane
+  as the foreground on a sky (`#2AA5FF`) background, plus a monochrome H silhouette for the monochrome
+  icon.
 - **Navigation**: the bottom tab bar follows the same information architecture; the system back button
   closes sheets first, then pops routes; predictive back animations enabled where supported.
 - **Permissions**: notification permission is requested in context (after the first invite or price
@@ -213,12 +214,12 @@ Google Play products (created in Play Console; ids listed in section 3):
 
 | Play product (id) | Type | Price (US) | Duration | Trial | Entitlement |
 |---|---|---|---|---|---|
-| `wayfold_plus_gp`, base plans `monthly`, `annual` | Subscription | $5.99 a month, $39.99 a year | 1 month, 1 year | 7 days on `annual` only | `plus` |
-| `wayfold_family_gp`, base plans `monthly`, `annual` | Subscription | $8.99 a month, $59.99 a year | 1 month, 1 year | none | `family` |
-| `wayfold_pro_gp`, base plans `monthly`, `annual` | Subscription (hidden until `tier_pro`) | $11.99 a month, $99.00 a year | 1 month, 1 year | none | `pro` |
-| `wayfold_trip_pass_gp` | One-time product, consumable | $9.99 | one trip, 90 days from binding | none | `trip_pass` |
-| `wayfold_group_trip_pass_gp` | One-time product, consumable | $19.99 | one trip, 90 days from binding | none | `group_trip_pass` |
-| `wayfold_credits_50_gp`, `wayfold_credits_150_gp`, `wayfold_credits_400_gp` | One-time, consumable | $2.99, $6.99, $14.99 | credits valid 12 months | none | purchased credits |
+| `hermi_plus_gp`, base plans `monthly`, `annual` | Subscription | $5.99 a month, $39.99 a year | 1 month, 1 year | 7 days on `annual` only | `plus` |
+| `hermi_family_gp`, base plans `monthly`, `annual` | Subscription | $8.99 a month, $59.99 a year | 1 month, 1 year | none | `family` |
+| `hermi_pro_gp`, base plans `monthly`, `annual` | Subscription (hidden until `tier_pro`) | $11.99 a month, $99.00 a year | 1 month, 1 year | none | `pro` |
+| `hermi_trip_pass_gp` | One-time product, consumable | $9.99 | one trip, 90 days from binding | none | `trip_pass` |
+| `hermi_group_trip_pass_gp` | One-time product, consumable | $19.99 | one trip, 90 days from binding | none | `group_trip_pass` |
+| `hermi_credits_50_gp`, `hermi_credits_150_gp`, `hermi_credits_400_gp` | One-time, consumable | $2.99, $6.99, $14.99 | credits valid 12 months | none | purchased credits |
 
 - Prices are the same as iOS. Google's service fee and Apple's fee differ (reported: 15 percent on the
   first $1M of annual revenue in a small business program and on subscriptions after the first year;
@@ -227,7 +228,7 @@ Google Play products (created in Play Console; ids listed in section 3):
 - RevenueCat: add the Google app, import products, create packages in the same offerings with the same
   entitlements; configure the passes and packs as consumable in RevenueCat and in Play Console; one
   `app_user_id` (our user UUID) across stores.
-- Rules that are unchanged: Wayfold web payments are never used for consumer digital features; group
+- Rules that are unchanged: Hermi web payments are never used for consumer digital features; group
   payments (Phase 3) and concierge are real-world services outside Play Billing (verify the Play payments
   policy text on the day of submission and keep the review notes explicit that nothing digital is unlocked
   by them).
@@ -309,8 +310,9 @@ iOS ([README](README.md) section 7).
 
 #### P2-085 Capacitor Android project and build pipeline [M, needs Phase 1 iOS shell]
 - Description: `apps/android/`, bundled assets, plugin set, target API 36 (the requirement for new apps
-  and updates from 31 August 2026, reported, verify), edge-to-edge and insets, adaptive icons, splash,
-  signing with upload key in CI secrets, AAB build, internal testing upload from CI, R8 rules, Sentry.
+  and updates from 31 August 2026, reported, verify), edge-to-edge and insets, adaptive icons from the
+  Hermi mark, splash, signing with upload key in CI secrets, AAB build, internal testing upload from CI,
+  R8 rules, Sentry.
 - Accept: a merge to `main` produces a signed AAB in the internal track; the app boots offline with
   bundled assets.
 
@@ -325,7 +327,7 @@ iOS ([README](README.md) section 7).
   clawback, reconcile for Google subscribers, best-of across stores with idempotent credit grants,
   two-store notice, store-specific manage links.
 - Accept: webhook fixtures for every Google event pass; no double grants.
-- Touches: `apps/api/wayfold/modules/billing/`.
+- Touches: `apps/api/hermi/modules/billing/`.
 
 #### P2-088 Push with FCM [M, needs P2-085]
 - Description: push provider abstraction, FCM HTTP v1 sender, device registration, channels, collapse
@@ -376,7 +378,7 @@ iOS ([README](README.md) section 7).
 - Accept: web purchases unlock within seconds and appear in `subscriptions`, `store_transactions`,
   `trip_passes` and `credit_grants` exactly like app purchases; no web purchase link exists in any native
   build (test scans the bundles); two-store and web-plus-app notice works; sandbox matrix adapted.
-- Touches: `apps/web/src/routes/paywall/`, `apps/api/wayfold/modules/billing/`.
+- Touches: `apps/web/src/routes/paywall/`, `apps/api/hermi/modules/billing/`.
 - Tests: sandbox purchase matrix on web, bundle scan for purchase URLs, idempotent grants across stores.
 
 ## 12. Risks

@@ -1,14 +1,14 @@
 # 05. UI and UX specification
 
-Part of the [Wayfold build specification](../README.md). The shared decisions in the README are final and override anything here. Brand files are in [brand/](../brand/BRAND.md). API names are in [04-api-spec.md](04-api-spec.md), tables in [03-database-schema.md](03-database-schema.md), pricing and entitlement logic in [07-monetization-spec.md](07-monetization-spec.md), AI behavior in [06-ai-agents-spec.md](06-ai-agents-spec.md).
+Part of the [Hermi build specification](../README.md). The shared decisions in the README are final and override anything here. Brand files are in [brand/](../brand/BRAND.md). API names are in [04-api-spec.md](04-api-spec.md), tables in [03-database-schema.md](03-database-schema.md), pricing and entitlement logic in [07-monetization-spec.md](07-monetization-spec.md), AI behavior in [06-ai-agents-spec.md](06-ai-agents-spec.md).
 
-Written 2026-09-30. This file is the source of truth for how Wayfold looks, moves and reads. It starts from the design system that already exists in the Trip Planner repository (`frontend/src/index.css`, `frontend/src/components/ui/`, `frontend/src/components/brand/`) and keeps every token name, so the existing passport theme carries over with no rename. Where this file adds something new (for example `--tp-edge`), it says so.
+Written 2026-09-30. This file is the source of truth for how Hermi looks, moves and reads. It starts from the design system that already exists in the Trip Planner repository (`frontend/src/index.css`, `frontend/src/components/ui/`, `frontend/src/components/brand/`) and keeps its token plumbing and neutral token names, but replaces the old passport palette, type and motifs with the Hermi design language: two routes, one trip. Where this file adds or renames a token (for example `--tp-sky`), it says so.
 
 Contents: 1 Design principles, 2 Design tokens, 3 Logo usage, 4 Component library, 5 Navigation and information architecture, 6 Screens, 7 Microcopy rules, 8 Paywall design rules, 9 Accessibility, 10 Responsive breakpoints, 11 Haptics, 12 Dark mode, 13 Analytics conventions.
 
 ## 1. Design principles
 
-1. **A passport page per trip.** Security-paper ground, navy ink, one burgundy accent, guilloche linework as the signature. Every trip has its own seeded guilloche pattern, so a trip feels like a document you own.
+1. **Two routes, one trip.** A pale sky ground, deep ink, sky blue as the brand, and the people on the trip drawn as colored dotted routes that meet at a plane. Every trip has its own seeded route pattern in its travelers' colors, so a trip feels like a journey you share.
 2. **Value before asking.** No account wall, no paywall, no permission prompt before the person has built something. Ask for sign-in when there is something to save, and for a purchase only at a limit they actually hit.
 3. **The free path is always visible.** Every paywall, credit prompt and partner card shows the no-cost route beside the paid one, in the same visual weight class ("Not now" is a real button, not a gray X).
 4. **Show the source.** Anything an agent found shows the page it came from, the date it was seen and what it was based on. Prices say "at last check". Nothing is presented as the lowest or best price.
@@ -21,45 +21,46 @@ Contents: 1 Design principles, 2 Design tokens, 3 Logo usage, 4 Component librar
 
 ## 2. Design tokens
 
-All tokens are CSS custom properties defined in `packages/tokens` (CSS and TS, ported from the Trip Planner's `frontend/src/index.css`) and imported by `apps/web`, exposed to Tailwind 4 through `@theme inline`. Components use the semantic names (`--background`, `--card`, `--primary`) and the passport names (`--tp-*`). Never hard-code a hex value in a component.
+All tokens are CSS custom properties defined in `packages/tokens` (CSS and TS) and imported by `apps/web`, exposed to Tailwind 4 through `@theme inline`. The token plumbing and the neutral names (`--tp-paper`, `--tp-ink`, `--tp-brand` and the rest) are ported from the Trip Planner's `frontend/src/index.css`; the values are not. Every value below replaces the old passport palette, and where a token is new or renamed this file says so. Components use the semantic names (`--background`, `--card`, `--primary`) and the Hermi names (`--tp-*`). Never hard-code a hex value in a component.
 
 ### 2.1 Color: surfaces and ink
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `--tp-paper` (`--background`) | `#edf1f5` | `#0d1527` | Page ground, the "security paper" |
-| `--tp-sheet` (`--card`, `--popover`) | `#fafbfd` | `#141e35` | Cards, sheets, inputs, popovers |
-| `--tp-sunken` (`--secondary`, `--muted`, `--accent`) | `#e3e8ef` | `#1b2641` | Wells, chips, hover fill, skeleton base |
-| `--tp-ink` (`--foreground`) | `#15203a` | `#e5ebf4` | Primary text, icons |
-| `--tp-ink-soft` (`--muted-foreground`) | `#55607a` | `#9ba7be` | Secondary text, captions |
-| `--tp-rule` (`--border`, `--input`) | `#d3dae4` | `#26324d` | Decorative dividers and card borders only |
-| `--tp-edge` (new) | `#6f7a91` | `#66728c` | Borders of interactive controls (inputs, checkboxes, segmented controls). Needed because `--tp-rule` is only 1.24 to 1 against paper, which fails the 3 to 1 non-text contrast rule |
-| `--tp-brand` (`--primary`, `--ring`) | `#8c1d40` | `#e8678c` | Primary buttons, links, focus ring, active tab, the logo route |
-| `--tp-brand-ink` (`--primary-foreground`) | `#ffffff` | `#1a0610` | Text on brand fills |
-| `--tp-brand-soft` | `#f4e4ea` | `#3a1b2b` | Selected row, your own vote, soft emphasis |
+| `--tp-paper` (`--background`) | `#F2FAFF` | `#0B1A2A` | Page ground, a pale sky |
+| `--tp-sheet` (`--card`, `--popover`) | `#FFFFFF` | `#12263A` | Cards, sheets, inputs, popovers |
+| `--tp-sunken` (`--secondary`, `--muted`, `--accent`) | `#E3F1FC` | `#1A3149` | Wells, chips, hover fill, skeleton base |
+| `--tp-ink` (`--foreground`) | `#17324A` | `#E6F2FF` | Primary text, icons |
+| `--tp-ink-soft` (`--muted-foreground`) | `#4A6580` | `#9DB5CC` | Secondary text, captions |
+| `--tp-rule` (`--border`, `--input`) | `#D3E4F2` | `#27405A` | Decorative dividers and card borders only |
+| `--tp-edge` (new) | `#6A86A0` | `#6C88A3` | Borders of interactive controls (inputs, checkboxes, segmented controls). Needed because `--tp-rule` is only about 1.3 to 1 against a card, which fails the 3 to 1 non-text contrast rule |
+| `--tp-brand` (`--primary`, `--ring`) | `#0B6BC0` | `#6CC4FF` | Primary buttons, links, focus ring, active tab. This is the text-safe sky; the logo's own sky `#2AA5FF` is `--tp-sky` |
+| `--tp-brand-ink` (`--primary-foreground`) | `#FFFFFF` | `#0B1A2A` | Text on brand fills |
+| `--tp-brand-soft` | `#DCEFFF` | `#123A5C` | Selected row, your own vote, soft emphasis |
 | `--tp-success` | `#1d7a52` | `#4cc38a` | Done, price fell, booked |
-| `--tp-warning` | `#a86a12` | `#e0a44a` | Caution, price rose, limit near. Light value is 4.28 to 1 on a card, so use it for icons, bars and text of 18 px bold or larger; small text uses `--tp-warning-ink` |
-| `--tp-warning-ink` (new) | `#8a5a10` | `#e0a44a` | Small warning text (5.71 to 1 on a card in light) |
+| `--tp-warning` | `#a86a12` | `#e0a44a` | Caution, price rose, limit near. Light value is 4.43 to 1 on a card, so use it for icons, bars and text of 18 px bold or larger; small text uses `--tp-warning-ink` |
+| `--tp-warning-ink` (new) | `#8a5a10` | `#e0a44a` | Small warning text (5.91 to 1 on a card in light) |
 | `--tp-danger` (`--destructive`) | `#b42318` | `#f07167` | Errors, destructive actions, price rose when the user is buying |
 
-### 2.2 Color: guilloche, cover and data
+### 2.2 Color: sky, routes, travelers and data
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `--tp-teal` / `--tp-line-a` | `#1f7f86` | `#3fb5bc` | Guilloche ink A |
-| `--tp-violet` / `--tp-line-b` | `#5b47b0` | `#9a86f0` | Guilloche ink B |
-| `--tp-rose` / `--tp-line-c` | `#c24472` | `#f07aa2` | Guilloche ink C |
-| `--tp-cover` (`--sidebar`) | `#16213d` | `#0a1121` | Web sidebar, "passport cover" surfaces (always dark) |
-| `--tp-cover-ink` | `#dde4ef` | `#dde4ef` | Text on cover |
-| `--tp-cover-soft` | `#9aa6be` | `#8f9bb3` | Secondary text on cover |
-| `--tp-cover-raised` | `#22304f` | `#18233d` | Hover and active row on cover |
-| `--tp-cover-rule` | `#2a3754` | `#1d2842` | Dividers on cover |
-| `--tp-cover-mark` | `#e8678c` | `#e8678c` | Active marker on cover |
+| `--tp-sky` (`--sidebar`; renamed from `--tp-cover`) | `#2AA5FF` | `#0E3F66` | The logo tile and the brand surfaces: splash, web sidebar, paywall header, trip header band. A fill, never a text color (white on it is 2.65 to 1) |
+| `--tp-sky-ink` | `#17324A` | `#E6F2FF` | Text and icons on sky |
+| `--tp-sky-soft` | `#17324A` | `#B9D3EA` | Secondary text on sky. In light it equals `--tp-sky-ink`, because nothing lighter passes 4.5 to 1 on sky; use size and weight for hierarchy there |
+| `--tp-sky-raised` | `#E8F5FF` | `#155487` | Hover and active row on sky (the active row is a pill) |
+| `--tp-sky-rule` | `#1B8EE6` | `#1A5A8C` | Dividers on sky |
+| `--tp-cream` (new) | `#FFF8EC` | `#FFF8EC` | The plane, small highlights on sky |
+| `--tp-route-a` (new, replaces `--tp-teal` and `--tp-line-a`) | `#FF5E7E` | `#FF7A93` | Route pink: traveler 1 and the left route of the logo. A decorative fill |
+| `--tp-route-a-ink` (new) | `#C4264D` | `#FF8FA5` | Pink when it is text or the only carrier of meaning |
+| `--tp-route-b` (new, replaces `--tp-violet` and `--tp-line-b`) | `#FFCB2E` | `#FFD45C` | Route yellow: traveler 2 and the right route of the logo. A decorative fill |
+| `--tp-route-b-ink` (new) | `#8A5A00` | `#FFD45C` | Yellow when it is text or the only carrier of meaning |
+| `--tp-traveler-1` to `--tp-traveler-8` (new) | `#FF5E7E`, `#FFCB2E`, `#2BBFAD`, `#6A45F2`, `#FF8A3D`, `#3DBE6B`, `#0B6BC0`, `#B92E86` | same | One color per person on a trip, in the order they joined: avatar fill, their route on the map and the timeline, their "added by" highlight. Initials on each use `--tp-traveler-ink-1` to `-8`: `#10283D`, `#17324A`, `#17324A`, `#FFFFFF`, `#17324A`, `#17324A`, `#FFFFFF`, `#FFFFFF` (all at least 5.1 to 1) |
 | `--viz-live` | `#00909a` | `#0f9aa2` | Chart series: live fare (Google Flights) |
 | `--viz-cached` | `#a86a12` | `#c2851f` | Chart series: cached fare (Aviasales) |
 | `--viz-agent` | `#5b47b0` | `#8a76e4` | Chart series: agent-found fare |
 | `--viz-google` | `#c24472` | `#d9598a` | Chart series: Google price history |
-| `--viz-band` | `rgb(21 32 58 / 7%)` | `rgb(229 235 244 / 8%)` | Typical-price band |
 | `--heat-1` to `--heat-5` | `#ceeff1`, `#93d9dc`, `#4fbec4`, `#009da3`, `#007980` | `#083a3d`, `#00565a`, `#007378`, `#00a0a6`, `#5ac8cd` | Date-grid price steps, one hue; the most prominent step is the cheapest. Text on each step uses `--heat-ink-1` to `--heat-ink-5` |
 | `--cat-culture` | `#5b47b0` | `#a07fe0` | Plan blocks and pins: sights, museums |
 | `--cat-food` | `#e0621e` | `#d95926` | Food, nightlife |
@@ -67,7 +68,7 @@ All tokens are CSS custom properties defined in `packages/tokens` (CSS and TS, p
 | `--cat-shopping` | `#2f86d8` | `#2869cc` | Shopping |
 | `--cat-neutral` | `#55607a` | `#9ba7be` | Getting around, other |
 
-Rules: chart series follow the price source, never its rank, so a partner's color can never signal "best". Activity groups are validated for color-blind separation; an icon and a text label always accompany the color.
+Rules: chart series follow the price source, never its rank, so a partner's color can never signal "best". Activity groups are validated for color-blind separation; an icon and a text label always accompany the color. Traveler colors identify people, never status or price: a person's color always comes with their name or initials, and the old `--tp-rose` is gone.
 
 The `--cat-*` tokens are color groups over the eight `itinerary_items.category` values of 03 (`item_category`): `--cat-culture` is `sights` and `museum`, `--cat-food` is `food` and `nightlife`, `--cat-outdoors` is `nature`, `--cat-shopping` is `shopping`, and `--cat-neutral` is `travel` (getting around) and `other`. Every item has exactly one category; the UI labels are Sights, Museums, Food, Outdoors, Nightlife, Shopping, Getting around and Other.
 
@@ -75,33 +76,38 @@ The `--cat-*` tokens are color groups over the eight `itinerary_items.category` 
 
 | Pair | Light | Dark |
 |---|---|---|
-| Ink on paper | 14.24 | 15.19 |
-| Ink on card | 15.61 | 13.83 |
-| Soft ink on paper | 5.54 | 7.51 |
-| Soft ink on card | 6.07 | 6.84 |
-| Brand on card (links, text buttons) | 8.58 | 5.33 |
-| Brand ink on brand (primary button label) | 8.88 | 6.26 |
-| Success on card | 5.12 | 7.48 |
-| Warning on card | 4.28 (large text only) | 7.56 |
-| Danger on card | 6.35 | 5.73 |
-| Cover ink on cover | 12.45 | not applicable (cover is the same dark) |
-| Cover soft on cover | 6.50 | not applicable |
-| `--tp-edge` on card (control borders) | 4.17 | 3.43 |
-| `--tp-edge` on paper | 3.80 | not measured, higher than on card |
+| Ink on paper | 12.50 | 15.48 |
+| Ink on card | 13.19 | 13.57 |
+| Soft ink on paper | 5.74 | 8.29 |
+| Soft ink on card | 6.06 | 7.27 |
+| Brand on card (links, text buttons) | 5.41 | 8.05 |
+| Brand ink on brand (primary button label) | 5.41 | 9.18 |
+| Success on card | 5.31 | 6.95 |
+| Warning on card | 4.43 (large text only) | 7.02 |
+| Warning ink on card | 5.91 | 7.02 |
+| Danger on card | 6.57 | 5.32 |
+| Sky ink on sky | 4.98 | 9.63 |
+| Sky soft on sky | 4.98 | 7.06 |
+| Sky ink on sky raised (active row) | 11.90 | 6.99 |
+| Route A ink on card | 5.63 | 7.13 |
+| Route B ink on card | 5.93 | 10.87 |
+| Traveler initials on traveler fills (lowest of the eight) | 5.14 | 5.14 |
+| `--tp-edge` on card (control borders) | 3.80 | 4.17 |
+| `--tp-edge` on paper | 3.60 | 4.76 |
 
-Every new color pair added later must be checked with the same formula and recorded here. Body text needs 4.5 to 1, large text and control boundaries 3 to 1.
+Every new color pair added later must be checked with the same formula and recorded here. Body text needs 4.5 to 1, large text and control boundaries 3 to 1. The logo's sky `#2AA5FF`, `--tp-route-a` and `--tp-route-b` are decorative fills and never carry text in a color of their own.
 
 ### 2.4 Typography
 
-Three bundled families (`@fontsource-variable`, subset to Latin): **Archivo** (display, set wide with `font-stretch`), **Atkinson Hyperlegible Next** (body), **Atkinson Hyperlegible Mono** (numbers and data). Archivo is used only for names, codes and page titles. Everything else is Atkinson Hyperlegible Next.
+Three bundled families (`@fontsource-variable`, subset to Latin): **Fredoka** (display: rounded and friendly, used only for names, codes and page titles), **Atkinson Hyperlegible Next** (body and labels), **Atkinson Hyperlegible Mono** (numbers and data). Everything that is not a name, a code or a title is Atkinson Hyperlegible Next.
 
 | Role (Tailwind utility) | Family and axes | Size and line height | Use |
 |---|---|---|---|
-| `type-display` | Archivo, stretch 125%, weight 800, tracking -0.02em | 40 to 56 px, line 0.95 | Splash, empty hero, paywall headline |
-| `type-title` | Archivo, stretch 118%, weight 700, tracking -0.015em | 30 px, line 1.1 | Screen title |
-| `type-heading` | Archivo, stretch 110%, weight 650, tracking -0.01em | 20 px, line 1.2 | Section and card heading |
-| `type-code` | Archivo, stretch 125%, weight 800, tracking 0.04em, uppercase | 24 to 32 px | Airport codes like a bag tag (LIS, JFK) |
-| `type-label` | Archivo, stretch 112%, weight 600, tracking 0.12em, uppercase | 11 px | Eyebrows, chip labels, table heads |
+| `type-display` | Fredoka, weight 700, tracking -0.01em | 40 to 56 px, line 1.0 | Splash, empty hero, paywall headline |
+| `type-title` | Fredoka, weight 600, tracking -0.005em | 30 px, line 1.1 | Screen title |
+| `type-heading` | Fredoka, weight 600 | 20 px, line 1.2 | Section and card heading |
+| `type-code` | Fredoka, weight 700, tracking 0.06em, uppercase | 24 to 32 px | Airport codes like a bag tag (LIS, JFK) |
+| `type-label` | Atkinson Hyperlegible Next, weight 700, tracking 0.08em, uppercase | 11 px | Eyebrows, chip labels, table heads |
 | Body large | Atkinson Hyperlegible Next 400 | 17 px, line 1.5 | Lead paragraphs, onboarding |
 | Body (default) | Atkinson Hyperlegible Next 400 | 15 px (`0.9375rem`), line 1.55 | Default text |
 | Body strong | Atkinson Hyperlegible Next 600 | 15 px | Row titles |
@@ -117,18 +123,18 @@ Rules: sentence case everywhere except `type-label` and `type-code`, which are u
 
 ### 2.6 Radii
 
-`--radius` is `0.625rem` (10 px). Derived: `sm` 6 px, `md` 8 px, `lg` 10 px, `xl` 14 px, `2xl` 18 px, `3xl` 22 px, `4xl` 26 px. Buttons and inputs `lg` (10 px). Cards `xl` (14 px). Bottom sheets `2xl` on the top corners (18 px). Chips and avatars full round. The app icon keeps its own 22% corner.
+`--radius` is `0.75rem` (12 px). Derived: `sm` 8 px, `md` 10 px, `lg` 12 px, `xl` 16 px, `2xl` 20 px, `3xl` 24 px, `4xl` 28 px. Buttons are pills (full round). Inputs `lg` (12 px). Cards `xl` (16 px). Bottom sheets `2xl` on the top corners (20 px). Chips and avatars full round. The app icon keeps its own 22% corner.
 
 ### 2.7 Elevation
 
-Paper design is flat: hierarchy comes from ground color, hairline rules and guilloche, not shadow.
+Hermi is flat: hierarchy comes from ground color, hairline rules and the sky band, not shadow.
 
 | Level | Use | Light | Dark |
 |---|---|---|---|
 | 0 | Page ground | none | none |
 | 1 | Cards, inputs | 1 px `--tp-rule` border, no shadow | same |
-| 2 | Popovers, menus, toasts | border plus `0 4px 16px rgb(21 32 58 / 12%)` | border plus `0 4px 16px rgb(0 0 0 / 40%)` |
-| 3 | Bottom sheets, dialogs | `0 -8px 32px rgb(21 32 58 / 18%)`, scrim `rgb(21 32 58 / 45%)` | lighter surface (`--tp-sunken` top edge 1 px), scrim `rgb(0 0 0 / 60%)` |
+| 2 | Popovers, menus, toasts | border plus `0 4px 16px rgb(23 50 74 / 12%)` | border plus `0 4px 16px rgb(0 0 0 / 40%)` |
+| 3 | Bottom sheets, dialogs | `0 -8px 32px rgb(23 50 74 / 18%)`, scrim `rgb(23 50 74 / 45%)` | lighter surface (`--tp-sunken` top edge 1 px), scrim `rgb(0 0 0 / 60%)` |
 
 ### 2.8 Motion
 
@@ -137,48 +143,48 @@ Paper design is flat: hierarchy comes from ground color, hairline rules and guil
 | `--motion-fast` | 120 ms | Press, hover, pin scale, toggle |
 | `--motion-base` | 200 ms | Fades, chip state, tab underline |
 | `--motion-slow` | 320 ms | Sheets, page transitions |
-| `--ease-out` | `cubic-bezier(0.22, 0.61, 0.36, 1)` | Default (same curve as the guilloche draw-on) |
+| `--ease-out` | `cubic-bezier(0.22, 0.61, 0.36, 1)` | Default (same curve as the route draw-on) |
 | `--ease-in-out` | `cubic-bezier(0.4, 0, 0.2, 1)` | Reorder, layout shifts |
-| `--ease-stamp` | `cubic-bezier(0.2, 0.9, 0.3, 1.2)` | Stamp press only (existing `stamp-press`, 280 ms) |
+| `--ease-touchdown` (renamed from `--ease-stamp`) | `cubic-bezier(0.2, 0.9, 0.3, 1.2)` | Touchdown only (`touchdown`, 280 ms) |
 
-Signature motions, all already in `index.css`: **stamp press** (a run's outcome stamp scales from 1.3 to 1 and fades in), **guilloche draw-on** (1.8 s, 45 ms stagger per path, on the splash, a new trip and a finished run), **nav progress bar** (a 1.1 s sweep that starts after 150 ms so quick loads never flash it). Everything else is a short fade or a slide. Reduced motion: stamp and draw-on render at their final state, sheets fade instead of sliding, the progress bar becomes a static 60% bar, no parallax, no auto-advancing carousels.
+Signature motions: **touchdown** (a run's outcome ticket stub settles from 1.15 to 1 and fades in, like a plane landing), **route draw-on** (a route's dots appear in order with a 45 ms stagger and the plane glides to the end, at most 1.8 s, on the splash, a new trip and a finished run) and the **nav progress bar** (a 1.1 s sweep that starts after 150 ms so quick loads never flash it). Touchdown and route draw-on are new; they replace the old repo's stamp press and guilloche draw-on with the same timings. Everything else is a short fade or a slide. Reduced motion: touchdown and draw-on render at their final state, sheets fade instead of sliding, the progress bar becomes a static 60% bar, no parallax, no auto-advancing carousels.
 
-### 2.9 Guilloche usage rules
+### 2.9 Route pattern usage rules
 
-The guilloche (`components/brand/guilloche.tsx`, deterministic from a seed) is the signature, so it is used sparingly and never under text that needs to be read.
+The route pattern (`components/brand/route-pattern.tsx`, new, replacing `guilloche.tsx`; deterministic from a seed) is the signature: two or three dotted routes that start at their own origin dots, curve across the space and meet at a plane, echoing the logo. It is used sparingly and never under text that needs to be read.
 
-1. **Seed** is the trip's UUID, so a trip keeps its pattern on every device. Non-trip uses seed from a fixed string ("wayfold-splash", "wayfold-paywall").
-2. **Where it appears:** splash and onboarding hero (rosette, animated once), trip card band (band, 12% opacity behind the destination), trip overview header (band), paywall header (rosette, static), present-mode title and closing slides, empty states (rosette, static), export PDF cover, share-link page.
+1. **Seed** is the trip's UUID, so a trip keeps its pattern on every device. Non-trip uses seed from a fixed string ("hermi-splash", "hermi-paywall"). On a trip, the routes take the colors of its first travelers.
+2. **Where it appears:** splash and onboarding hero (full pattern, animated once), trip card band (behind the destination), trip overview header (band), paywall header (static), present-mode title and closing slides, empty states (two routes only, static, 12% opacity), export PDF cover, share-link page.
 3. **Where it never appears:** behind body text, inside inputs, on lists of more than three rows, on partner cards, on error states, in the tab bar.
-4. **Ink:** teal, violet and rose in a gradient (`--tp-line-a/b/c`). On always-dark surfaces use the `.on-cover` class, which switches to the bright set.
-5. **Weight:** stroke 0.75 to 1.5 px at display size; opacity 10 to 18% when it is a background, 100% only for the hero rosette.
+4. **Color:** `--tp-route-a` and `--tp-route-b` (later travelers in their traveler colors); the plane in `--tp-cream` on sky and in `--tp-ink` on paper. On sky surfaces use the `.on-sky` class, which draws at full color; on paper and sheet the pattern sits at 35 to 50% opacity.
+5. **Dots:** round, never dashes; 6 to 10 px across at display size with a gap of 1.2 times the dot; at most 80 dots per pattern; each route's start dot is 1.5 times larger, as in the logo.
 6. **Decorative:** `aria-hidden="true"`, `focusable="false"`, no title. Never the only carrier of meaning.
-7. **Animation:** draw-on plays once per session per surface and never on scroll. Skipped under reduced motion.
-8. **Performance:** paths are memoized per seed; at most two animated guilloches on screen; static SVG on devices that report low power mode.
+7. **Animation:** route draw-on plays once per session per surface and never on scroll. Skipped under reduced motion.
+8. **Performance:** dot positions are memoized per seed; at most two animated patterns on screen; static SVG on devices that report low power mode.
 
 ## 3. Logo usage
 
-Files live in `brand/` (see [brand/BRAND.md](../brand/BRAND.md)): `wayfold-logo.svg` (mark plus wordmark on light), `wayfold-logo-dark.svg`, `wayfold-mark.svg` (the app-icon tile), `wayfold-wordmark.svg`, `wayfold-app-icon.svg` and `wayfold-app-icon-1024.png`.
+Files live in `../brand/` (see [../brand/BRAND.md](../brand/BRAND.md)): `hermi-logo.svg` (mark plus wordmark on light), `hermi-logo-dark.svg`, `hermi-mark.svg` (the app-icon tile), `hermi-wordmark.svg`, `hermi-app-icon.svg` and `hermi-app-icon-1024.png`.
 
-The mark is an open passport on a navy rounded tile (`#15203a`). A burgundy route (`#8c1d40`) zigzags across the two pages and folds at the spine into the letter W, with a hollow start circle and a filled destination circle. The wordmark is "Wayfold" in Archivo, wide, navy on light and `#dde4ef` on dark.
+The mark is an H on a sky rounded tile (`#2AA5FF`). Its two posts are dotted routes, pink (`#FF5E7E`) on the left and yellow (`#FFCB2E`) on the right, each with a larger start dot at its foot, and its crossbar is a cream (`#FFF8EC`) plane flying right: two travelers, one trip. The wordmark is "Hermi" in Fredoka SemiBold, ink `#17324A` on light and `#E6F2FF` on dark.
 
 | Context | Use |
 |---|---|
 | Splash, sign-in, paywall header | Full lockup (mark plus wordmark), centered, mark 72 px |
-| Web sidebar (always dark) | Dark lockup, mark 32 px, wordmark 17 px |
+| Web sidebar (sky) | Mark 32 px and wordmark 17 px in `--tp-sky-ink`; the tile merges into the sky, and the dots and plane carry the mark |
 | Web top bar on light | Light lockup, mark 28 px |
 | Navigation bar on iOS | No logo; the screen title is used. Trips home may show the 28 px mark (no wordmark) left of the large title |
-| Favicon, app icon | `wayfold-mark.svg` and the 1024 px PNG, no transparency, no extra rounding (iOS masks it) |
-| Email, PDF cover, share page | Full lockup above a guilloche band |
-| Loading | Mark with the route stroke drawing on (same draw-on rule as guilloche; static under reduced motion) |
+| Favicon, app icon | `hermi-mark.svg` (also the 16 and 32 px favicon) and the 1024 px PNG, no transparency, no extra rounding (iOS masks it) |
+| Email, PDF cover, share page | Full lockup above a sky band with the route pattern |
+| Loading | Mark with its route dots appearing from the start dots up and the plane sliding in (route draw-on rule; static under reduced motion) |
 
 Rules:
-1. Clear space on every side equals the height of the destination circle (about 6% of the mark width, minimum 8 px).
-2. Minimum sizes: mark 16 px, lockup 96 px wide. Below 24 px use the mark only.
-3. Never recolor the route, rotate, stretch, outline, add shadows, place on busy photography or on a color that puts the navy tile under 3 to 1 against the ground. On navy grounds use the dark lockup (the tile becomes `--tp-cover-raised`, as shown in the preview).
+1. Clear space on every side equals the diameter of a start dot (about 14% of the mark width, minimum 8 px).
+2. Minimum sizes: mark 24 px in the UI (the 16 and 32 px favicons use the same file, where the dots merge into a pink and a yellow post), lockup 96 px wide. Below 24 px use the mark only.
+3. Never recolor or swap the routes (pink left, yellow right), rotate (the plane points right), stretch, outline, add shadows, or place the mark on busy photography without its tile. On dark grounds use the dark lockup; the tile stays sky.
 4. Never use the logo as a button or a bullet. The wordmark is not set in the UI font; always use the file.
-5. The app has one name in the UI, "Wayfold", in sentence-case copy. No "Wayfold AI" or "Wayfold Pro" as a product name except "Wayfold Plus" and the plan names in the price table.
-6. The existing in-repo rosette `BrandMark` and "Trip Planner" text in `logo.tsx` are replaced by the Wayfold mark and wordmark. The rosette pattern stays as guilloche art.
+5. The app has one name in the UI, "Hermi", in sentence-case copy. No "Hermi AI" or "Hermi Pro" as a product name except "Hermi Plus" and the plan names in the price table.
+6. The existing in-repo rosette `BrandMark` and "Trip Planner" text in `logo.tsx` are replaced by the Hermi mark and wordmark, and `guilloche.tsx` is replaced by `route-pattern.tsx` (section 2.9).
 
 ## 4. Component library
 
@@ -222,7 +228,7 @@ Text input, textarea, select (Radix), combobox (existing `components/common/comb
 
 ### 4.4 Trip card
 
-Shown on Trips home. A card with a guilloche band (seeded by trip id) across the top 72 px at 14% opacity, the destination name in `type-heading`, dates in `type-data` ("12 to 19 Mar"), travelers as stacked avatars, a status chip (Planning, Booked, Happening now, Past), and a footer row of quiet facts: cheapest fare with age ("from $412, 3 h ago"), next item ("Day 1: Alfama walk"), and open votes count. Variants: upcoming, in progress (brand-soft wash, "Day 3 of 7"), past (muted, "Archived on 4 Apr"), shared with me (owner avatar and role chip), locked by limit (read-only chip "Limited", never hidden). States: loading skeleton (band, two lines, three chips), offline (shows a "Saved offline" cloud-check icon), pressed, focus. Swipe left reveals Archive; long press opens the context menu (Open, Share, Archive, Delete).
+Shown on Trips home. A card with a route pattern band (seeded by trip id) across the top 72 px at 14% opacity, the destination name in `type-heading`, dates in `type-data` ("12 to 19 Mar"), travelers as stacked avatars, a status chip (Planning, Booked, Happening now, Past), and a footer row of quiet facts: cheapest fare with age ("from $412, 3 h ago"), next item ("Day 1: Alfama walk"), and open votes count. Variants: upcoming, in progress (brand-soft wash, "Day 3 of 7"), past (muted, "Archived on 4 Apr"), shared with me (owner avatar and role chip), locked by limit (read-only chip "Limited", never hidden). States: loading skeleton (band, two lines, three chips), offline (shows a "Saved offline" cloud-check icon), pressed, focus. Swipe left reveals Archive; long press opens the context menu (Open, Share, Archive, Delete).
 
 ### 4.5 Fare chip
 
@@ -238,7 +244,7 @@ Two modes on the Plan section. **Month and range** (`react-day-picker` style gri
 
 ### 4.8 Day card
 
-One per day in the Plan list. Header: "Day 3", date in mono, a one-line theme the person wrote or accepted ("Sintra by train"), total walking or transit time if known. Body: ordered items with time, icon in the group color, title, optional place photo, and an "added by" avatar when someone else added it. Footer: "Add" and "Draft this day (1 credit)". Variants: collapsed (first two items plus "3 more"), expanded, drop-target (dashed `--tp-edge` border while dragging), today (brand-soft header), empty. Items are ordered by start time, then by `sort_order` (a number on each item, `itinerary_items.sort_order`; untimed items keep the order the person sets). Reorder by drag handle on web, "Move up" and "Move down" actions plus drag on touch (for VoiceOver, custom actions); each reorder or move writes `sort_order` through `POST /trips/{id}/days/{day}/reorder` or `POST /items/{id}/move`. Booked items show a small check stamp; unbooked bookable items show the "Tickets" partner link only on explicit expand (see 4.13).
+One per day in the Plan list. Header: "Day 3", date in mono, a one-line theme the person wrote or accepted ("Sintra by train"), total walking or transit time if known. Body: ordered items with time, icon in the group color, title, optional place photo, and an "added by" avatar when someone else added it. Footer: "Add" and "Draft this day (1 credit)". Variants: collapsed (first two items plus "3 more"), expanded, drop-target (dashed `--tp-edge` border while dragging), today (brand-soft header), empty. Items are ordered by start time, then by `sort_order` (a number on each item, `itinerary_items.sort_order`; untimed items keep the order the person sets). Reorder by drag handle on web, "Move up" and "Move down" actions plus drag on touch (for VoiceOver, custom actions); each reorder or move writes `sort_order` through `POST /trips/{id}/days/{day}/reorder` or `POST /items/{id}/move`. Booked items show a small check ticket stub; unbooked bookable items show the "Tickets" partner link only on explicit expand (see 4.13).
 
 ### 4.9 Place card
 
@@ -246,7 +252,7 @@ Used in search, saved places, ideas and Discover. Photo 16:10 (or category icon 
 
 ### 4.10 Lodging card with votes
 
-Photo strip (swipe, up to 6 photos, page dots), name, area, price per night and total for the trip in mono with currency, per-person price for the party, bedrooms, source chip ("Pasted link", "From Stay22 search", "Added by hand"), status chip (Shortlisted, Booked, Rejected), and the vote row. **Votes are hearts, nothing else:** one row of avatar chips, one per traveler who hearted the stay (there is no down vote and no "no" mark); the viewer's own state is a 44 pt heart toggle ("You love this" with `aria-pressed`) that sends `{ voted: true }` or `{ voted: false }` to `PUT /lodging/{id}/votes/me`. Counts read "3 of 4 like this" (hearts over travelers), names on tap. Variants: shortlist card, compare column (2 to 4 columns, horizontal scroll with a sticky label column), booked (stamp-press on the status), rejected (collapsed). Buttons: "Open" always opens the user's saved URL exactly as pasted; "Book via partner" is a separate labeled button only when a program is approved for that host and never for Airbnb (see 4.13). States: no price yet ("Add a price to compare"), price older than 7 days ("Price from 12 Sep, check the site"), locked "later" list on Free after 8 saved (read and export still work), conflict ("Sam also edited this").
+Photo strip (swipe, up to 6 photos, page dots), name, area, price per night and total for the trip in mono with currency, per-person price for the party, bedrooms, source chip ("Pasted link", "From Stay22 search", "Added by hand"), status chip (Shortlisted, Booked, Rejected), and the vote row. **Votes are hearts, nothing else:** one row of avatar chips, one per traveler who hearted the stay (there is no down vote and no "no" mark); the viewer's own state is a 44 pt heart toggle ("You love this" with `aria-pressed`) that sends `{ voted: true }` or `{ voted: false }` to `PUT /lodging/{id}/votes/me`. Counts read "3 of 4 like this" (hearts over travelers), names on tap. Variants: shortlist card, compare column (2 to 4 columns, horizontal scroll with a sticky label column), booked (touchdown on the status), rejected (collapsed). Buttons: "Open" always opens the user's saved URL exactly as pasted; "Book via partner" is a separate labeled button only when a program is approved for that host and never for Airbnb (see 4.13). States: no price yet ("Add a price to compare"), price older than 7 days ("Price from 12 Sep, check the site"), locked "later" list on Free after 8 saved (read and export still work), conflict ("Sam also edited this").
 
 ### 4.11 Credit cost chip
 
@@ -285,7 +291,7 @@ Rules, applied to every instance:
 
 ### 4.14 Paywall sheet
 
-A bottom sheet on phones (full height is not used) and a centered 480 px dialog on web. Structure and rules are in section 8. Parts: a header with a static guilloche rosette and the benefit headline for the trigger, a two to three line list of what this gives on this trip, the offer list (up to three options, annual pre-selected where it is a subscription), the primary purchase button, the "Not now" button (equal size), a legal row (price, renewal, cancellation, Terms, Privacy), and "Restore purchases". States: loading prices (skeleton rows, buttons disabled, "Not now" enabled), store unavailable ("We cannot reach the App Store. Check your connection and try again. You can keep planning for free."), purchase pending ("Waiting for approval from your family organizer"), success (stamp-press "Plus is on", sheet closes, the blocked action resumes), cancelled (no error, sheet stays), error.
+A bottom sheet on phones (full height is not used) and a centered 480 px dialog on web. Structure and rules are in section 8. Parts: a header with the static route pattern and the benefit headline for the trigger, a two to three line list of what this gives on this trip, the offer list (up to three options, annual pre-selected where it is a subscription), the primary purchase button, the "Not now" button (equal size), a legal row (price, renewal, cancellation, Terms, Privacy), and "Restore purchases". States: loading prices (skeleton rows, buttons disabled, "Not now" enabled), store unavailable ("We cannot reach the App Store. Check your connection and try again. You can keep planning for free."), purchase pending ("Waiting for approval from your family organizer"), success (touchdown "Plus is on", sheet closes, the blocked action resumes), cancelled (no error, sheet stays), error.
 
 ### 4.15 Toast
 
@@ -293,7 +299,7 @@ A bottom sheet on phones (full height is not used) and a centered 480 px dialog 
 
 ### 4.16 Empty state
 
-A centered block: a static guilloche rosette at 12% behind a 48 px line icon, a `type-heading` line saying what lives here, one sentence saying what to do, and one primary button. Optional quiet secondary link. Never a blank screen, never an illustration of people. Copy pattern: "No stays yet" / "Paste a link or search to start a shortlist." / [Add a stay]. Variants per screen are in section 6.
+A centered block: a static route pattern (two routes at 12%) behind a 48 px line icon, a `type-heading` line saying what lives here, one sentence saying what to do, and one primary button. Optional quiet secondary link. Never a blank screen, never an illustration of people. Copy pattern: "No stays yet" / "Paste a link or search to start a shortlist." / [Add a stay]. Variants per screen are in section 6.
 
 ### 4.17 Error state
 
@@ -305,7 +311,7 @@ Inline block (in a card region) or full screen. Anatomy: danger icon, a plain st
 
 ### 4.19 Bottom sheet
 
-`vaul` on phones (Radix `Sheet` and `Dialog` on web). Detents: medium (50% height), large (92% height, leaves the status bar visible). Grabber 36 by 5 px, scrim `rgb(21 32 58 / 45%)`, swipe down or tap scrim to dismiss (disabled while a purchase or a spend confirmation is in progress). Content scrolls inside; the primary button is sticky at the bottom above the safe area. Focus moves to the sheet title on open and back to the trigger on close; `aria-modal`; the page behind is inert. Keyboard: the sheet lifts with the keyboard and the focused field stays visible. Web converts to a 480 px dialog, or a right-hand 420 px panel for add and edit forms.
+`vaul` on phones (Radix `Sheet` and `Dialog` on web). Detents: medium (50% height), large (92% height, leaves the status bar visible). Grabber 36 by 5 px, scrim `rgb(23 50 74 / 45%)`, swipe down or tap scrim to dismiss (disabled while a purchase or a spend confirmation is in progress). Content scrolls inside; the primary button is sticky at the bottom above the safe area. Focus moves to the sheet title on open and back to the trigger on close; `aria-modal`; the page behind is inert. Keyboard: the sheet lifts with the keyboard and the focused field stays visible. Web converts to a 480 px dialog, or a right-hand 420 px panel for add and edit forms.
 
 ### 4.20 Tab bar
 
@@ -315,23 +321,23 @@ iOS bottom tab bar, 49 pt plus the safe area, `--tp-sheet` at 94% with 20 px bac
 
 | Component | Notes |
 |---|---|
-| Avatar and avatar stack | 28 px default, initials on a color from a fixed 8 color set that passes 4.5 to 1 with its initials; stack overlaps 8 px and shows "+3" |
+| Avatar and avatar stack | 28 px default, initials on one of the traveler colors `--tp-traveler-1` to `-8` (section 2.2), each of which passes 4.5 to 1 with its initials; stack overlaps 8 px and shows "+3" |
 | Segmented control | 32 px visual, 44 pt target, iOS style on phones; used for view toggles (List, Map) |
 | Progress and run timeline | Steps with a dot, label, elapsed time in mono; current step pulses (static under reduced motion) |
-| Stamp | Outcome mark (Done, Stopped, Failed, Booked) that uses `stamp-press`; text plus icon, never color only |
+| Ticket stub | Outcome mark (Done, Stopped, Failed, Booked) shaped like a boarding-pass stub, with a notched left edge and a dashed perforation, that uses `touchdown`; text plus icon, never color only |
 | Evidence row | Favicon, page title, domain in mono, "seen 12 Sep", one-line quote, "Open source" link |
 | Map | MapLibre with the themed pins from `index.css` (`tp-map-pin`, numbered, group colored); attribution stays visible; "Open in Apple Maps" and "Open in Google Maps" actions |
 | Banner | Full-width strip under the header for state: offline, limited trip, pending deletion. One at a time, most urgent wins |
 | Stepper list | Checklist rows with a check, title, reason, three actions (see 6.20) |
 | Context menu and action sheet | iOS action sheet on phones, dropdown on web; destructive last, red text plus icon |
-| Pull to refresh | Custom passport-stamp spinner is not used; use the native-style spinner with "Updated just now" text |
+| Pull to refresh | A custom route-and-plane spinner is not used; use the native-style spinner with "Updated just now" text |
 
 ## 5. Navigation and information architecture
 
 ### 5.1 Sitemap
 
 ```
-Wayfold
+Hermi
 +-- Trips (tab 1, web: sidebar "Trips")
 |   +-- Trips home (upcoming, in progress, past, shared with me)
 |   +-- Create trip
@@ -359,14 +365,14 @@ Notes and evidence have no tab of their own. Notes live in Overview (trip notes)
 - Inside a trip the tab bar stays (Trips is active) and a **section strip** sits under the trip header: six scrollable text tabs with an underline, in this order: **Overview, Flights, Stays, Plan, Group, Present**. The strip is sticky, scrolls horizontally if the text size is large, and keeps the last visited section per trip. "Present" does not open a section page; it opens the full-screen deck.
 - Navigation bar: large title on root screens (Trips, Discover, Activity, Account), inline title inside a trip (destination name) with a back button labeled "Trips", and a trailing "..." menu (Share, Trip settings, Export).
 - Swipe from the left edge goes back (native). Modals are bottom sheets; full-screen modals only for create trip, present mode and onboarding.
-- Deep links: `https://wayfold.app/i/<token>` (invite), `/trips/<uuid>`, `/trips/<uuid>/fares/<route>`, `/s/<shareId>` (read-only). Cold start from a link lands on the target with Back going to Trips.
+- Deep links: `https://hermi.world/i/<token>` (invite), `/trips/<uuid>`, `/trips/<uuid>/fares/<route>`, `/s/<shareId>` (read-only). Cold start from a link lands on the target with Back going to Trips.
 - State restoration: last tab, last trip and section are restored on launch; a scroll position is restored per section.
 
 ### 5.3 Web layout
 
 | Width | Layout |
 |---|---|
-| 1200 px and up | Navy sidebar 248 px (`--tp-cover`, always dark): logo, trip switcher, **Trips, Discover, Activity, Account**, and under the current trip the six sections. Main content max 1120 px. Optional right rail 320 px (AI sheet, evidence, agent run) |
+| 1200 px and up | Sky sidebar 248 px (`--tp-sky`; deep sky in dark mode): logo, trip switcher, **Trips, Discover, Activity, Account**, and under the current trip the six sections. Main content max 1120 px. Optional right rail 320 px (AI sheet, evidence, agent run) |
 | 768 to 1199 px | Sidebar collapses to a 72 px icon rail with tooltips; right rail opens as an overlay panel |
 | Under 768 px | Sidebar is hidden; bottom tab bar and section strip as on iOS. Dialogs become bottom sheets |
 
@@ -404,12 +410,12 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 ### 6.1 Splash and onboarding
 
 **Purpose.** Show value in one screen and get the person planning in under a minute, with no account.
-**Layout.** Full screen, `--tp-paper` ground. Animated guilloche rosette (draw-on, once) behind the lockup in the upper half. Below: the positioning line in `type-display`, one supporting sentence, and two buttons.
+**Layout.** Full screen, `--tp-paper` ground. Animated route pattern (route draw-on, once) behind the lockup in the upper half. Below: the positioning line in `type-display`, one supporting sentence, and two buttons.
 
 ```
 +------------------------------+
-|        (guilloche rosette)   |
-|         [W mark] Wayfold     |
+|        (route pattern)       |
+|         [H mark] Hermi       |
 |                              |
 |  Plan together.              |
 |  Know the fare.              |
@@ -431,7 +437,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 **States.** Loading: the lockup shows instantly, buttons are always active (nothing to load). Offline: same screen, guest planning works offline. Error: not applicable. No permission prompts on this screen, no ATT prompt anywhere.
 **Copy.** Title "Plan together. Know the fare." Button "Plan a trip". Legal "By continuing you agree to the Terms and the Privacy policy."
 **Events.** `onboarding_started`, `onboarding_choice_made {choice: plan|sign_in|invite}`.
-**Accessibility.** The rosette is hidden from assistive tech; heading order is lockup, headline, body; buttons reachable in order; draw-on skipped under reduced motion.
+**Accessibility.** The route pattern is hidden from assistive tech; heading order is lockup, headline, body; buttons reachable in order; draw-on skipped under reduced motion.
 
 ### 6.2 Guest mode and save your trip
 
@@ -447,7 +453,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 ### 6.3 Sign in
 
 **Purpose.** Create or restore an account with Sign in with Apple, Google or an email code.
-**Layout.** Sheet or full screen: lockup, title "Sign in to Wayfold", three buttons stacked (Apple, Google, email), a legal line. Email path: one screen with an email field ("Email") and "Send code"; next screen six digit code field (one field, `autocomplete="one-time-code"`, numeric keyboard), "Resend code in 30 s", and a "Use a different email" link.
+**Layout.** Sheet or full screen: lockup, title "Sign in to Hermi", three buttons stacked (Apple, Google, email), a legal line. Email path: one screen with an email field ("Email") and "Send code"; next screen six digit code field (one field, `autocomplete="one-time-code"`, numeric keyboard), "Resend code in 30 s", and a "Use a different email" link.
 **Interactions.** Apple returns the identity token; "Hide My Email" relay is accepted and shown as the email. The code field auto-submits at six digits. Three wrong codes show a gentle warning; five invalidate the code. Passwords do not exist.
 **States.** Loading: button spinners. Error (wrong code): "That code is not right. Check the email we sent and try again." Expired: "That code expired. Send a new one." Rate limited: "Too many tries. Wait 10 minutes, then send a new code." Offline: "You are offline. Connect to sign in." Account pending deletion: "Your account is scheduled for deletion on 14 Nov. Restore it to keep your trips." with "Restore account".
 **Copy.** Email helper "We will send a six digit code. No password needed."
@@ -469,7 +475,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 **Layout.** Large title "Trips", trailing "+" button (also a primary "New trip" button when empty). Sections: **In progress**, **Upcoming**, **Shared with me**, **Past**. Trip cards (4.4) stacked on phones, a two-column grid from 768 px. A "Trip limit" line under the title on Free: "2 of 2 active trips".
 **Content.** Sorted by start date (upcoming ascending, past descending); the sort is fixed and not commission related. A banner appears for pending invites ("Sam invited you to Lisbon in March. View").
 **Interactions.** Tap opens the trip at the last section. Swipe left: Archive. Long press: Open, Share, Archive, Delete. Pull to refresh. "+" opens Create trip. Archived trips are under a "Past" section toggle, always readable and exportable.
-**States.** Loading: three trip card skeletons. Empty: rosette, "No trips yet", "Start with a place and a few dates. You can change everything later.", [New trip]. Error: "We could not load your trips. Pull down to try again." Offline: cached trips with "Saved offline" icons and a banner "You are offline. Showing your saved trips." No permission: not applicable. Limit reached: "+" opens the third trip paywall (6.27, trigger `third_trip`) with the free path "Archive a trip" first.
+**States.** Loading: three trip card skeletons. Empty: static route pattern, "No trips yet", "Start with a place and a few dates. You can change everything later.", [New trip]. Error: "We could not load your trips. Pull down to try again." Offline: cached trips with "Saved offline" icons and a banner "You are offline. Showing your saved trips." No permission: not applicable. Limit reached: "+" opens the third trip paywall (6.27, trigger `third_trip`) with the free path "Archive a trip" first.
 **Copy.** Limit line "You have 2 active trips. Archive one to make room, or upgrade."
 **Events.** `trips_home_viewed {trip_count_bucket, active_count}`, `trip_opened {source}`, `trip_archived`.
 **Accessibility.** Each card is one link with a combined label ("Lisbon, 12 to 19 March, 2 travelers, planning"); swipe actions have a custom-actions alternative; sections are headings.
@@ -495,7 +501,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 ```
 
 **Content.** Step 1 destination (Geoapify autocomplete, multi-destination allowed), Step 2 dates (range picker, or "I do not have dates yet", or "Flexible" with a window and trip length), Step 3 travelers (you, plus names and home airports for each; "Just me" allowed) and a trip name (prefilled "Lisbon, March"). Template chips on step 1: "Long weekend", "Week abroad", "Road trip", "Blank".
-**Interactions.** Create makes the trip, plays the guilloche draw-on once and opens Overview. Dates optional. Back keeps entries. A traveler can be typed or chosen from saved travelers.
+**Interactions.** Create makes the trip, plays the route draw-on once and opens Overview. Dates optional. Back keeps entries. A traveler can be typed or chosen from saved travelers.
 **States.** Loading: suggestions skeleton. Empty search: "Try a city, region or country." Error (lookup): "We could not search places right now. Type the name and continue, we will look it up later." Offline: free-text destination accepted, resolved later. Limit reached: Free with 2 active trips shows the third trip paywall on "Create". Guests: one trip limit (6.2).
 **Copy.** "Dates are optional. You can add them later."
 **Events.** `trip_create_started`, `trip_created {source, destination_count, has_dates}`.
@@ -510,7 +516,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 | < Trips     Lisbon       ... |
 | Overview Flights Stays Plan  |
 |--(underline)-----------------|
-| [guilloche band]             |
+| [route pattern band]         |
 |  LISBON     12 to 19 Mar     |
 |  (SM)(AK)(+1)  Planning      |
 |                              |
@@ -530,7 +536,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 +------------------------------+
 ```
 
-**Layout.** Header band with the trip's guilloche, destination in `type-title`, dates, travelers, status. Below: a "Next steps" card (up to three suggestions, derived from missing data: dates, flight, stay, first day), then summary cards for each section, then Before you go, cost so far (from chosen flight, booked stays and expenses), Notes and evidence, AI activity (runs and credits used on this trip).
+**Layout.** Header band with the trip's route pattern, destination in `type-title`, dates, travelers, status. Below: a "Next steps" card (up to three suggestions, derived from missing data: dates, flight, stay, first day), then summary cards for each section, then Before you go, cost so far (from chosen flight, booked stays and expenses), Notes and evidence, AI activity (runs and credits used on this trip).
 **Content.** A quiet "Places to stay in Lisbon" partner card appears only when dates exist, collapses after the first view, and follows 4.13 (one per screen view). Destination facts (local time, currency, a Wikipedia summary with attribution) are in a collapsed card.
 **Interactions.** Every summary card opens its section. "Invite" avatar button opens the invite flow (6.8). The "..." menu: Share, Trip settings, Export, Archive, Delete. Changes by others show a brand dot on the section and a "Sam updated Stays" line.
 **States.** Loading: skeleton header and five cards. Empty (no data yet): only "Next steps". Error: block-level retry per card. Offline: "Saved offline, updated 2 h ago" chip. No permission (viewer): Next steps hidden, summary cards read-only. Limit reached: a limited trip (Plus lapsed, pass expired) shows a banner "This trip is limited. Extra travelers are now viewers. Renew to restore editing." with the free actions visible (read, export).
@@ -541,9 +547,9 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 ### 6.8 Invite flow
 
 **Purpose.** Bring the other travelers into the trip; they join free.
-**Sender layout.** Group section, "Invite" button, or the Overview avatar plus. A sheet with: role (Editor or Viewer, default Editor), "Share link" (native share sheet, link `wayfold.app/i/...`), "Send by email" (email field, up to 20 pending), and the current members list with role chips and "Remove". A line under the role: "They join free. You share your trip's features with them on this trip."
+**Sender layout.** Group section, "Invite" button, or the Overview avatar plus. A sheet with: role (Editor or Viewer, default Editor), "Share link" (native share sheet, link `hermi.world/i/...`), "Send by email" (email field, up to 20 pending), and the current members list with role chips and "Remove". A line under the role: "They join free. You share your trip's features with them on this trip."
 **Free owner.** The Invite button is the `invite` paywall trigger (6.27): "Plan together. They join free." with Trip Pass first. The free path: "Share a read-only link" stays available (viewer link) per the tier rules. Family and Plus owners see no paywall.
-**Recipient flow.** The link opens the app (or the App Store with an "Enter code" fallback, or a web landing page on desktop). Landing: "Sam invited you to Lisbon, 12 to 19 March" with the guilloche band, member avatars, and "Join trip" (primary). No sign-in wall before seeing the trip title and dates. After sign-in a banner "You were added by Sam" and a one-time sheet "Which traveler are you?" listing travelers with a "None of these" option that adds a new one.
+**Recipient flow.** The link opens the app (or the App Store with an "Enter code" fallback, or a web landing page on desktop). Landing: "Sam invited you to Lisbon, 12 to 19 March" with the route pattern band, member avatars, and "Join trip" (primary). No sign-in wall before seeing the trip title and dates. After sign-in a banner "You were added by Sam" and a one-time sheet "Which traveler are you?" listing travelers with a "None of these" option that adds a new one.
 **Interactions.** Owner can change role, resend, revoke a pending invite, and remove a member (access ends immediately). Links expire in 7 days (owner can regenerate).
 **States.** Loading: member list skeleton. Error: "We could not create the link. Try again." Invite expired: "This invite expired. Ask Sam to send a new one." Invite used or revoked: "This invite is no longer valid." Already a member: opens the trip. Offline: "Connect to send an invite." No permission: editors can invite viewers only if the owner allows it; else the button is hidden and a line reads "Only Sam can invite people." Limit: 20 pending invites, "You have 20 pending invites. Cancel one to send another."
 **Events.** `invite_sheet_opened`, `invite_sent {channel, role}`, `invite_opened {platform_before_install}`, `invite_accepted {role, minutes_to_accept_bucket}`, `traveler_linked`.
@@ -611,7 +617,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 ```
 
 **Content.** The compare list shows two or three providers when a live or cached price exists for each, each row with provider name, price, the date and age of the price, and a button. The airline's own site row is always present and equal weight. Sort statement always shown; ties broken alphabetically, never by commission. If the booking page price differs, the copy says so after return ("The price on the partner site can be different. Check it before you pay.").
-**Interactions.** Book opens the partner link in the in-app Safari view through `/go/{click_id}`. After return: a sheet "Did you book it?" with "Yes, mark as booked", "Not yet", "I booked somewhere else". "Mark as booked" sets the chosen flight (which can set trip dates after confirmation), stamps the card and offers the soft next step "Plan your days" (no paywall, no partner card). "Explain this fare" (1 credit) gives a short Haiku answer with sources.
+**Interactions.** Book opens the partner link in the in-app Safari view through `/go/{click_id}`. After return: a sheet "Did you book it?" with "Yes, mark as booked", "Not yet", "I booked somewhere else". "Mark as booked" sets the chosen flight (which can set trip dates after confirmation), puts a Booked ticket stub on the card and offers the soft next step "Plan your days" (no paywall, no partner card). "Explain this fare" (1 credit) gives a short Haiku answer with sources.
 **States.** Loading: figure and chart skeletons. Empty providers: only the airline route: "We do not have a partner price for this fare. You can search on the airline's site." Error: "We could not load this fare. Try again." Offline: shows the saved fare; Book buttons are disabled with "Connect to the internet to book." Stale (over 24 h): a warning-ink line "This price is 2 days old. Check again (1 credit)." Limit: Explain with no credits opens `out_of_credits`.
 **Copy.** Disclosure as in 4.13. No "best", "deal", "hurry" words.
 **Events.** `fare_detail_viewed {age_hours_bucket}`, `partner_link_tapped {program, placement: flight}` (the click id is added server side), `fare_marked_booked`, `ai_action_started {action: explain}`.
@@ -623,7 +629,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 **Layout.** Section header with "Add a stay" and a List or Compare segmented control. The list is sorted by a visible control (Hearts, Price, Added, Rating; the API `sort` values `votes`, `price`, `created`, `rating`), default Hearts. Lodging cards (4.10). A sticky bottom bar appears when 2 to 4 are selected: "Compare (3)".
 **Add a stay sheet.** Four ways: Paste a link (Airbnb, Vrbo, Booking.com or any URL; the text below says "We never change your links and never load these pages."), Search (partner search results with the sort statement, "Save to shortlist" first and "View" second), Add by hand (name, link, price per night, notes), and "Paste a booking" for a stay you already booked (1 credit, see 6.13). On web, the bookmarklet card imports from a page the user has open.
 **Compare.** 2 to 4 columns (Free compares 2): price per night, total, per person, bedrooms, area, cancellation note, votes, notes. Differences are highlighted with a pattern and text, not color alone. Sticky first column on phones with horizontal scroll.
-**Voting.** A heart toggle per person (a `lodging_votes` row exists while the heart is on; 03 section 5.8). There is no down vote. Tap the count to see names. Owner and editors can mark a stay "Booked" (stamp) or "Rejected". A poll can be started from a stay pair ("Start a poll", see 6.21).
+**Voting.** A heart toggle per person (a `lodging_votes` row exists while the heart is on; 03 section 5.8). There is no down vote. Tap the count to see names. Owner and editors can mark a stay "Booked" (ticket stub) or "Rejected". A poll can be started from a stay pair ("Start a poll", see 6.21).
 **Partner surfaces.** A separate "Compare on other sites" link (labeled partner search) and, only for hosts with an approved program, a "Book via partner" button, all using 4.13 wording. Airbnb has plain links only. "Cheaper on <partner>" appears only with real dated price data.
 **States.** Loading: three card skeletons. Empty: "No stays yet", "Paste a link or search to start a shortlist.", [Add a stay]. Error: "We could not save this stay. Check the link and try again." Offline: list readable, adding allowed as a queued edit with a "Waiting to sync" chip. No permission: viewers can vote but not add or mark. Limit reached: saving the 9th stay on Free puts it in a locked "Later" list with `ninth_stay` paywall, free path "Keep in Later" and nothing is lost.
 **Copy.** Import helper "We never change your links." Vote summary "3 of 4 like this".
@@ -678,7 +684,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 
 **Content and flow.** Choosing an action asks for the minimum input (a question, or which day). A confirm step appears at 6 credits or more: "Research this question? Costs 8 credits. You have 27, so 19 left." with [Start research] and [Cancel]. A shared cache hit is stated before spend: "Someone already researched Lisbon in March this week. Use that for 1 credit?" with [Use it, 1 credit] and [Research fresh, 8 credits].
 **Drafts.** Output (including a packing list or a parsed booking) appears as a preview the person edits before anything is added; "Add to plan" is explicit. Drafts carry "Drafted by AI from your dates and places. Check hours and prices." and sources when a web search was used. AI output never contains partner links or partner names.
-**First use.** The AI consent screen (once per account): "Wayfold sends your destination, dates and what you type to Anthropic to answer. We do not send your name, email or other travelers' names, and it is not used to train models." [Allow] [Not now]. Revoking is in Account, Privacy.
+**First use.** The AI consent screen (once per account): "Hermi sends your destination, dates and what you type to Anthropic to answer. We do not send your name, email or other travelers' names, and it is not used to train models." [Allow] [Not now]. Revoking is in Account, Privacy.
 **Interactions.** Cancel works during a wait; a failed or empty action refunds automatically and says so ("No charge. That did not finish."). An agent run is stoppable and billed by turns used (minimum 8 credits) and the sheet says it before stopping.
 **States.** Loading: streaming text with a stop button. Empty: n/a. Error: "That did not work, and you were not charged. Try again." Rate limited (10 AI actions a minute): "Slow down a little. Try again in a few seconds." Offline: actions disabled, "AI needs a connection." No permission: viewers cannot run AI; the owner may turn AI off for the trip ("AI is off for this trip. Ask Sam to turn it on."). Limit: out of credits opens `out_of_credits_draft` or `out_of_credits_research` (6.27), monthly provider ceiling reached shows "AI is paused until 1 Nov. Saved data and cached fares still work."
 **Events.** `ai_sheet_opened`, `ai_action_started {action, feature, credits, from_cache}` (fired when the person confirms), `ai_action_completed {action, feature, outcome, duration_seconds_bucket}` (a refund is `outcome: refunded`), `ai_consent_shown`, `ai_consent_granted`, `ai_consent_declined`.
@@ -687,7 +693,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 ### 6.16 Agent run: live progress and evidence
 
 **Purpose.** Watch a deep run, trust what it found, and keep the good parts.
-**Layout.** Run screen pushed from the AI sheet. Header: goal ("Find the cheapest way to fly NYC to Lisbon, 10 to 20 March"), a stamp status (Running, Done, Stopped, Failed), elapsed time in mono, credits reserved ("40 credits, billed by use"), and a **Stop** button. Body: a **timeline** of steps (Searching, Reading a page, Checking a fare, Saving a finding) with time, and below it **Findings** grouped as Fares and Notes. Each finding is an **evidence row** (4.21): what was found, the source page title and domain, the date seen, a quote, "Open source".
+**Layout.** Run screen pushed from the AI sheet. Header: goal ("Find the cheapest way to fly NYC to Lisbon, 10 to 20 March"), a ticket stub status (Running, Done, Stopped, Failed), elapsed time in mono, credits reserved ("40 credits, billed by use"), and a **Stop** button. Body: a **timeline** of steps (Searching, Reading a page, Checking a fare, Saving a finding) with time, and below it **Findings** grouped as Fares and Notes. Each finding is an **evidence row** (4.21): what was found, the source page title and domain, the date seen, a quote, "Open source".
 
 ```
 +------------------------------+
@@ -710,17 +716,17 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 +------------------------------+
 ```
 
-**Content.** Only findings with a source page and a capture date are shown as findings; rejected items go to a collapsed "Not saved (2)" list with the reason ("No page link", "Page did not show that fare"). Fares are labeled "Seen on a page during this run. Prices can change." Final stamp presses in with `stamp-press` and a summary: "Done. 2 fares and 3 notes saved. 31 credits used."
+**Content.** Only findings with a source page and a capture date are shown as findings; rejected items go to a collapsed "Not saved (2)" list with the reason ("No page link", "Page did not show that fare"). Fares are labeled "Seen on a page during this run. Prices can change." The final ticket stub lands with `touchdown` and a summary: "Done. 2 fares and 3 notes saved. 31 credits used."
 **Interactions.** The run continues if the app is backgrounded; a push and an Activity item announce completion. "Save to trip" on a finding adds it to fares or notes with its evidence attached; "Dismiss" removes it from view. Stop asks "Stop this run? You will be billed 14 credits for the work done." with [Stop run] and [Keep running].
 **States.** Loading (queued): "In the queue. About 1 minute." with Cancel and no charge. Empty result: "Nothing saved. You were not charged." Error: "The run stopped because the price check service is down. You were not charged." Offline: progress is on the server and resumes when online, banner "You are offline. The run keeps going." No permission: only the starter can stop; others can read findings. Limit reached: one run at a time, "A run is already in progress for your account. Wait for it to finish or stop it."
 **Events.** `ai_action_started {action: agent_run, feature, credits, from_cache}`, `agent_finding_saved {kind}`, `ai_action_completed {action: agent_run, outcome}` (a run the person stops is `outcome: partial`).
-**Accessibility.** Timeline is an ordered list with the current step marked "current"; status changes are polite announcements ("Checking a fare"); the stamp carries text, not only color; evidence links say "Open source, theflightsite.com, opens in a browser".
+**Accessibility.** Timeline is an ordered list with the current step marked "current"; status changes are polite announcements ("Checking a fare"); the ticket stub carries text, not only color; evidence links say "Open source, theflightsite.com, opens in a browser".
 
 ### 6.17 Taster run
 
 **Purpose.** Let a Free person try one deep agent run, once, so they see the best feature before paying.
 **Layout.** An entry card on Flights or Overview for accounts whose taster is unused: "Try a deep run, free once", a two-line explainer, and a **Start free run** button with a chip "Free, one time". The confirm step reads the normal confirm copy with "Free taster" in place of the cost.
-**Content.** Same run screen as 6.16 with a "Taster" stamp. Runs with the same caps (20 turns, 10 searches, 10 fetches, $0.80 hard stop). At the end, a soft card "That was your free run. Runs cost 40 credits (8 when someone already researched it). Plus includes 60 credits a month." with "See plans" and "Done" (equal weight). It is a result-moment offer, not a paywall sheet, and it follows the one-per-session and 7-day mute rules.
+**Content.** Same run screen as 6.16 with a "Taster" ticket stub. Runs with the same caps (20 turns, 10 searches, 10 fetches, $0.80 hard stop). At the end, a soft card "That was your free run. Runs cost 40 credits (8 when someone already researched it). Plus includes 60 credits a month." with "See plans" and "Done" (equal weight). It is a result-moment offer, not a paywall sheet, and it follows the one-per-session and 7-day mute rules.
 **States.** Used: the entry card is replaced by the normal "Deep run, 40 credits" action. Offline: disabled. Error or empty result: the taster is not consumed ("That did not finish, so your free run is still available.").
 **Events.** `taster_offered`, `ai_action_started {action: agent_run, taster: true}`, `ai_action_completed {action: agent_run, taster: true, outcome}`, `taster_upsell_shown`.
 **Accessibility.** The one-time nature is stated in text, not only a badge.
@@ -737,11 +743,11 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 ### 6.19 Present mode
 
 **Purpose.** Walk the group through the plan on a phone, a TV or AirPlay, and print or share it.
-**Layout.** Outside the app shell, full screen, `deck-*` type utilities so text scales by container size. Slides: Title (destination, dates, travelers, guilloche), one per Destination, Flights per route, Stays shortlist, one per Day (map plus items), and Closing "Trip at a glance" (existing slide kinds). An optional last slide "Book the plan" lists partner links with the disclosure line, off by default for the owner to turn on. Chrome (hidden after 3 s of no input): close, slide counter, overview grid, share, print.
-**Interactions.** Phones in portrait: swipe up and down between slides in a story layout, tall slides scroll. Landscape and iPad: swipe or arrow keys, tap right or left third. Overview grid shows thumbnails. Screen stays awake (wake lock). Share creates a read-only link with redaction switches (hide addresses, prices, notes and traveler names, which show as "Traveler 1"; all hidden by default; the link expires after 90 days unless the owner picks another length up to a year). Print or PDF one slide per 16:9 page, links live, checklist without partner buttons. Free shares carry a small "Made with Wayfold" footer and the PDF a footer mark; paid tiers do not.
+**Layout.** Outside the app shell, full screen, `deck-*` type utilities so text scales by container size. Slides: Title (destination, dates, travelers, route pattern), one per Destination, Flights per route, Stays shortlist, one per Day (map plus items), and Closing "Trip at a glance" (existing slide kinds). An optional last slide "Book the plan" lists partner links with the disclosure line, off by default for the owner to turn on. Chrome (hidden after 3 s of no input): close, slide counter, overview grid, share, print.
+**Interactions.** Phones in portrait: swipe up and down between slides in a story layout, tall slides scroll. Landscape and iPad: swipe or arrow keys, tap right or left third. Overview grid shows thumbnails. Screen stays awake (wake lock). Share creates a read-only link with redaction switches (hide addresses, prices, notes and traveler names, which show as "Traveler 1"; all hidden by default; the link expires after 90 days unless the owner picks another length up to a year). Print or PDF one slide per 16:9 page, links live, checklist without partner buttons. Free shares carry a small "Made with Hermi" footer and the PDF a footer mark; paid tiers do not.
 **No partner content during playback.** No cards, no logos, no interstitials on any normal slide.
 **States.** Loading: title slide appears first, others stream in. Empty trip: "There is nothing to present yet. Add a day to your plan." Error: "We could not build the presentation. Try again." Offline: works from the offline copy, map slides use the static route plot. No permission: viewers can present. Limit: none (the footer is the only difference).
-**Copy.** Footer "Made with Wayfold".
+**Copy.** Footer "Made with Hermi".
 **Events.** `present_mode_started {slide_count_bucket}`, `share_link_created {redaction_level}` (sharing from present mode), `present_mode_printed`.
 **Accessibility.** Each slide has a heading and is navigable with arrow keys and VoiceOver swipe; auto-advance is never used; slide counter is announced ("Slide 3 of 9"); text stays at least 16 px.
 
@@ -764,7 +770,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 **People.** Traveler list with avatars, roles, home airports (visible to members only), "Invite" (6.8), "Which traveler are you?" link if unclaimed. Travelers without accounts are first names with a color.
 **Polls.** A poll card: question, options (stays, dates, restaurants, free text), votes as avatar chips, a deadline, and a result line ("Alfama loft leads, 3 of 5 voted"). Create from a stay or from "New poll". Vote is a single or multiple choice; change allowed until it closes; owner closes. A poll never implies a purchase.
 **Expenses.** List of expenses with payer, amount in mono (currency and converted trip currency), who shares it, and category; "Add expense": title, amount, paid by, split (equally, by share, by amount, or exclude people), date, receipt photo. Totals: "Trip total $3,480, $870 each." Offline add is queued.
-**Settle up.** A plain list of "who pays whom" reduced to the fewest transfers ("Ana pays Sam $120"), each row with "Mark as paid" (manual, available wherever cost splitting is). A payment carries the `settlements.status` as a text chip: Waiting for confirmation (`pending`, until the person paid confirms), Paid (`recorded`, or `succeeded` for a Stripe payment), Failed (`failed`), Refunded (`refunded`) and In dispute (`disputed`, Phase 4); only Paid rows reduce the balances. From Phase 4, "Collect payments" (Stripe, shown only on Group Trip Pass and Pro trips when the `group_payments` flag is on; real-world costs only, never for app features) starts a payment request with a clear fee line and opens a web checkout view; it is labeled "Payments are handled by Stripe. Wayfold does not hold your money." In app purchases are never used here.
+**Settle up.** A plain list of "who pays whom" reduced to the fewest transfers ("Ana pays Sam $120"), each row with "Mark as paid" (manual, available wherever cost splitting is). A payment carries the `settlements.status` as a text chip: Waiting for confirmation (`pending`, until the person paid confirms), Paid (`recorded`, or `succeeded` for a Stripe payment), Failed (`failed`), Refunded (`refunded`) and In dispute (`disputed`, Phase 4); only Paid rows reduce the balances. From Phase 4, "Collect payments" (Stripe, shown only on Group Trip Pass and Pro trips when the `group_payments` flag is on; real-world costs only, never for app features) starts a payment request with a clear fee line and opens a web checkout view; it is labeled "Payments are handled by Stripe. Hermi does not hold your money." In app purchases are never used here.
 **States.** Loading: skeleton rows. Empty polls: "No polls yet", "Ask the group to choose between two stays or a date.", [New poll]. Empty expenses: "No expenses yet", "Add what you pay for and we will work out who owes whom.", [Add expense]. Error: "We could not save this expense. Check the amount and try again." Offline: queued edits with "Waiting to sync". No permission: viewers can vote in polls and see expenses, not add. Limit: on a trip whose owner is on Free with no pass, Polls and Expenses show a locked preview and the `group_tools` paywall (Trip Pass or Plus; free path: view what others add, and a free read-only balance); the room-block request and more than 8 travelers show the `group_pass` paywall (Group Trip Pass); "Collect payments" on a trip without Group Trip Pass or Pro shows the `collect_payments` paywall (Phase 4); expense viewing stays free.
 **Copy.** "Split equally among 4 people, $27.50 each." "Mark as paid" confirmation "Marked as paid. Sam will see it." and, for the payee, "Ana says she paid you $120. Confirm?" (confirming moves the status from `pending` to `recorded`).
 **Events.** `poll_created {option_count, subject}`, `poll_voted {selection}`, `expense_added {split_type, member_count_bucket}`, `settle_up_viewed`, `settlement_started {method}` (a Stripe payment request from Phase 4 is `method: stripe`).
@@ -802,7 +808,7 @@ Every screen follows one template: **Purpose**, **Layout**, **Content**, **Inter
 
 **Purpose.** Manage profile, plan, privacy and devices.
 **Layout.** Large title "Account". Top: profile card (name, email, tier chip, credit balance). Groups: **Subscription and credits**, **Profile** (name, home airport, currency, traveler "Me"), **Notifications**, **Appearance** (Light, Dark, System), **Text size** (follows system Dynamic Type, with an in-app override), **Privacy** (AI consent, AI history, analytics choice), **How we earn money**, **Devices** (sign out everywhere), **Export my data**, **Delete account**, **Help and support**, **Terms and Privacy**, version.
-**How we earn money.** A static page: "Wayfold is paid for by subscriptions, trip passes, AI credits and commissions from partners when you book. We never show ads, sell your data, or rank anything by commission." Lists current partners, the disclosure sentence, the ranking rule, and the **Hide booking links** switch.
+**How we earn money.** A static page: "Hermi is paid for by subscriptions, trip passes, AI credits and commissions from partners when you book. We never show ads, sell your data, or rank anything by commission." Lists current partners, the disclosure sentence, the ranking rule, and the **Hide booking links** switch.
 **States.** Loading: skeleton rows. Error: retry. Offline: profile readable, purchases disabled ("Connect to buy or restore"). Guest: sign-in row replaces the profile card. Limit: n/a.
 **Events.** `account_viewed`, `setting_changed {key}`, `booking_links_hidden {value}`.
 **Accessibility.** Standard iOS list semantics; switch rows are single hit areas; destructive rows come last and are labeled.
@@ -929,7 +935,7 @@ Flow: list effects, choose what to do with trips others share (transfer to a mem
 2. **Plain verbs.** Save, Add, Invite, Book, Open, Undo, Remove. Not "Utilize", "Leverage", "Initiate", "Submit". Buttons say what happens ("Start research", not "Continue").
 3. **No em dashes or en dashes, anywhere.** Use a comma, a period or "to" for ranges ("12 to 19 Mar", "4 to 6 guests"). Hyphens only inside compound words and in technical strings. A lint rule in CI greps UI strings and docs for U+2013 and U+2014 and fails the build.
 4. **Short.** Buttons one to three words. Toasts one sentence. Helper text one sentence. Explain the reason, not the feature.
-5. **Second person, present tense, calm.** "You are offline", not "Connection lost!". No exclamation marks except in a success stamp the person earned (and even then sparingly), no emoji in product copy, no jokes in errors.
+5. **Second person, present tense, calm.** "You are offline", not "Connection lost!". No exclamation marks except in a success ticket stub the person earned (and even then sparingly), no emoji in product copy, no jokes in errors.
 6. **Names over pronouns for people:** "Sam added a stay". Dates as "12 Mar" in lists, "Friday 12 March" in headings, times in the person's 12 or 24 hour setting.
 7. **Numbers.** Always digits in UI ("3 stays"). Currency with the code when ambiguous ("$412" for the home currency, "EUR 380" for another). Counts agree with the noun ("1 credit", "8 credits").
 
@@ -996,14 +1002,14 @@ An error message has three parts, in order: what happened, why if known, and how
 11. **Legal row** under the buttons: price and period, renewal, cancellation, Terms, Privacy. 12 px minimum, never hidden.
 12. **Never next to affiliate content** and never on the same screen as a partner card. After an affiliate booking there is no paywall.
 13. **Confirm credit spends, do not paywall them.** Spending credits is a confirm sheet (6.15), not a paywall; it appears for 6 credits or more and always shows the balance after.
-14. **Resume the task.** After a purchase the sheet closes with a stamp, the blocked action resumes (the route is added, the invite sheet opens) and the plan or pass is bound to the trip when it applies ("Apply to Lisbon?" picker for a Trip Pass).
+14. **Resume the task.** After a purchase the sheet closes with a touchdown, the blocked action resumes (the route is added, the invite sheet opens) and the plan or pass is bound to the trip when it applies ("Apply to Lisbon?" picker for a Trip Pass).
 15. **Downgrades never take data.** Copy and behavior follow `limited_trip`. Archived trips stay readable and exportable forever on Free.
 16. **Measure without manipulating:** events `paywall_viewed {placement, offer_shown}` (the trigger id from 6.27 is the `placement`), `paywall_dismissed {placement}`, `purchase_started {product, period}` (choosing an option and tapping the purchase button are one event), `purchase_completed {product, period, is_trial}`, `purchase_failed {product, reason}` (a cancelled sheet is `reason: cancelled`), `restore_tapped {result}`.
 
 ```
 +------------------------------+
 |            ------            |
-|     (static rosette)         |
+|     (static route pattern)   |
 | Plan together. They join     |
 | free.                        |
 | Invite up to 6 people to     |
@@ -1029,7 +1035,7 @@ Target: **WCAG 2.2 level AA** on web and iOS, plus Apple's Human Interface acces
 
 ### 9.1 Contrast and color
 
-Body text 4.5 to 1, large text and UI boundaries 3 to 1 (measured table in 2.3). Color never carries meaning alone: fare trend uses an arrow and words, votes use an icon and a count, group colors use an icon and a label, status uses text. Focus indicators are at least 2 px, 3 to 1 against neighbors, and never covered by sticky bars (scroll padding under the tab bar and sticky header). Heat grid cells print their price.
+Body text 4.5 to 1, large text and UI boundaries 3 to 1 (measured table in 2.3). Color never carries meaning alone: fare trend uses an arrow and words, votes use an icon and a count, group colors use an icon and a label, traveler colors come with a name or initials, status uses text. Focus indicators are at least 2 px, 3 to 1 against neighbors, and never covered by sticky bars (scroll padding under the tab bar and sticky header). Heat grid cells print their price.
 
 ### 9.2 Structure, keyboard and focus
 
@@ -1037,7 +1043,7 @@ One `h1` per screen. Landmarks: header, nav, main. Section strips are `tablist`.
 
 ### 9.3 VoiceOver and Dynamic Type
 
-- Every icon button has an `aria-label` that names the action and object ("Remove Bairro Alto from Day 2"). Decorative guilloche and icons are hidden.
+- Every icon button has an `aria-label` that names the action and object ("Remove Bairro Alto from Day 2"). Decorative route patterns and icons are hidden.
 - Custom controls expose roles and states (`aria-pressed` for votes, `aria-expanded` for day cards, `aria-selected` for tabs, `aria-current="step"` in the run timeline).
 - Dynamic content uses live regions: toasts (`status` or `alert`), run progress (polite), credit balance changes (polite). Loading states expose `aria-busy`.
 - Rotor and headings: each day card is a heading; each list has an accessible count ("Stays, 4 items").
@@ -1047,7 +1053,7 @@ One `h1` per screen. Landmarks: header, nav, main. Section strips are `tablist`.
 
 ### 9.4 Reduced motion, bold text and other system settings
 
-`prefers-reduced-motion` and iOS Reduce Motion: no draw-on, no stamp scale, no parallax, no sliding sheets (fade instead), no shimmer, no pulsing. Information previously carried by motion (a new item highlight) is also carried by a static label ("New"). Bold Text raises body weight to 600. Increase Contrast swaps `--tp-rule` and `--tp-edge` to the ink color. Smart Invert and Differentiate Without Color are honored by the rules above. Voice Control: every control has a visible text label or a matching accessible name (WCAG 2.5.3). Captions and transcripts are required for any future video.
+`prefers-reduced-motion` and iOS Reduce Motion: no route draw-on, no touchdown scale, no parallax, no sliding sheets (fade instead), no shimmer, no pulsing. Information previously carried by motion (a new item highlight) is also carried by a static label ("New"). Bold Text raises body weight to 600. Increase Contrast swaps `--tp-rule` and `--tp-edge` to the ink color. Smart Invert and Differentiate Without Color are honored by the rules above. Voice Control: every control has a visible text label or a matching accessible name (WCAG 2.5.3). Captions and transcripts are required for any future video.
 
 ### 9.5 Testing
 
@@ -1076,7 +1082,7 @@ Through `@capacitor/haptics`, used sparingly and never the only feedback.
 | Drag pick up and drop on a day | Impact medium on drop |
 | Pull to refresh reaches threshold | Impact light |
 | Add item, save stay, mark done | Notification success |
-| Purchase success, run finished, trip marked booked | Notification success (paired with the stamp) |
+| Purchase success, run finished, trip marked booked | Notification success (paired with the touchdown) |
 | Error, blocked action, conflict | Notification error |
 | Limit reached, low credits warning | Notification warning |
 | Destructive confirm (delete) | Impact heavy, once |
@@ -1087,7 +1093,7 @@ Rules: off when the system or Low Power Mode disables them, and a Settings switc
 
 Dark mode follows the system by default with an Appearance setting (Light, Dark, System), applied through the `.dark` class on the root (as today in `theme.tsx`) and `color-scheme` so native controls match. Dark values are the tokens in 2.1 and 2.2 and are validated to the same contrast rules (table in 2.3).
 
-Rules: the ground is deep navy `#0d1527`, cards `#141e35`, not black; shadows give way to lighter surfaces and 1 px rules; brand shifts to the lighter rose `#e8678c` with dark ink text (`#1a0610`) on it; chart and heat ramps use the dark sets and invert direction so the most prominent step is still the cheapest; guilloche uses the bright inks and lower opacity (8 to 14%); images get a 4% dark overlay only when they sit under text; the logo uses the dark lockup; the web sidebar and cover surfaces are the same in both modes; the present deck follows the mode but print always forces light; the app icon is the same in both modes. Test every screen and every paywall in both modes, and with Increase Contrast.
+Rules: the ground is deep night `#0B1A2A`, cards `#12263A`, not black; shadows give way to lighter surfaces and 1 px rules; brand shifts to the light sky `#6CC4FF` with dark ink text (`#0B1A2A`) on it; sky surfaces (web sidebar, splash, paywall header, trip bands) become deep sky `#0E3F66`; route and traveler fills brighten (`--tp-route-a` `#FF7A93`, `--tp-route-b` `#FFD45C`) and the route pattern sits at 50 to 70% on paper and sheet; chart and heat ramps use the dark sets and invert direction so the most prominent step is still the cheapest; images get a 4% dark overlay only when they sit under text; the logo uses the dark lockup and its tile stays sky `#2AA5FF`; the present deck follows the mode but print always forces light; the app icon is the same in both modes. Test every screen and every paywall in both modes, and with Increase Contrast.
 
 ## 13. Analytics conventions
 

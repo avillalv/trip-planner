@@ -1,8 +1,8 @@
 # 02. Architecture (Phase 1)
 
-Part of the [Wayfold build specification](../README.md), [Phase 1: the launch app](README.md). Shared names, tiers and the table list come from the [README](../README.md) and win over anything here. Written 2026-09-30.
+Part of the [Hermi build specification](../README.md), [Phase 1: the launch app](README.md). Shared names, tiers and the table list come from the [README](../README.md) and win over anything here. Written 2026-09-30.
 
-This file says how Wayfold is put together for the launch app: the services, the repository, the backend modules, how a request and a job flow through the system, every configuration value, every third-party service, and what to keep from the existing Trip Planner code. The database DDL is in [03-database-schema.md](03-database-schema.md), routes in [04-api-spec.md](04-api-spec.md), AI behavior in [06-ai-agents-spec.md](06-ai-agents-spec.md), money in [07-monetization-spec.md](07-monetization-spec.md), the admin console in [08-admin-control-center.md](08-admin-control-center.md), and testing and security in [10-quality-security-launch.md](10-quality-security-launch.md).
+This file says how Hermi is put together for the launch app: the services, the repository, the backend modules, how a request and a job flow through the system, every configuration value, every third-party service, and what to keep from the existing Trip Planner code. The database DDL is in [03-database-schema.md](03-database-schema.md), routes in [04-api-spec.md](04-api-spec.md), AI behavior in [06-ai-agents-spec.md](06-ai-agents-spec.md), money in [07-monetization-spec.md](07-monetization-spec.md), the admin console in [08-admin-control-center.md](08-admin-control-center.md), and testing and security in [10-quality-security-launch.md](10-quality-security-launch.md).
 
 Modules, tables and services that belong to Phase 2 or 3 are not built in Phase 1. They appear only as "added in Phase 2 or 3" or "Later: Phase 2 or 3" pointers.
 
@@ -16,7 +16,7 @@ Modules, tables and services that belong to Phase 2 or 3 are not built in Phase 
 
 ## 1. System overview
 
-Wayfold is one Python codebase that runs as three process types (API, worker, scheduler) from one Docker image, one PostgreSQL 18 database, and two clients (a React web app and the same app bundled into an iOS shell with Capacitor). There is no Redis at launch, no microservices, and no second database. State lives in Postgres and in Cloudflare R2 object storage. Everything else is stateless.
+Hermi is one Python codebase that runs as three process types (API, worker, scheduler) from one Docker image, one PostgreSQL 18 database, and two clients (a React web app and the same app bundled into an iOS shell with Capacitor). There is no Redis at launch, no microservices, and no second database. State lives in Postgres and in Cloudflare R2 object storage. Everything else is stateless.
 
 ```mermaid
 flowchart LR
@@ -38,7 +38,7 @@ flowchart LR
     ADM --> CF
     CAL -->|"GET /calendar/{token}.ics"| CF
     CF --> PAGES
-    CF -->|"api.wayfold.app"| API
+    CF -->|"api.hermi.world"| API
 
     subgraph Render
         API["API service (FastAPI)"]
@@ -73,16 +73,16 @@ flowchart LR
 3. One code path per rule. Entitlement checks, credit charges, tenant checks and kill switches are each one function, called from routes and jobs alike.
 4. The client never decides anything about money, limits or permissions. It displays what `GET /me/entitlements` and `TripOut.capabilities` return.
 5. Postgres is the only system of record. Caches can be dropped without data loss.
-6. Hosted-only code. The personal Windows mode of the old Trip Planner is not carried into Wayfold (section 14).
+6. Hosted-only code. The personal Windows mode of the old Trip Planner is not carried into Hermi (section 14).
 
 ### 1.2 Processes
 
 | Process | Command | Scales by | Holds state |
 |---|---|---|---|
-| `api` | `wayfold api` (uvicorn, 2 workers per container) | Request rate and p95 latency | None |
-| `worker` | `wayfold worker --lanes api,ai,notify,batch` | Queue depth and oldest job age, per lane | None |
-| `scheduler` | `wayfold scheduler` | Always 1 active (advisory lock), 2 instances for failover | None |
-| `migrate` | `wayfold migrate` | One-off, pre-deploy | None |
+| `api` | `hermi api` (uvicorn, 2 workers per container) | Request rate and p95 latency | None |
+| `worker` | `hermi worker --lanes api,ai,notify,batch` | Queue depth and oldest job age, per lane | None |
+| `scheduler` | `hermi scheduler` | Always 1 active (advisory lock), 2 instances for failover | None |
+| `migrate` | `hermi migrate` | One-off, pre-deploy | None |
 | `admin` | Part of `api`, routes under `/admin`, separate auth | With `api` | None |
 
 At launch the scheduler runs inside one worker process (flag `SCHEDULER_ENABLED=true` on that service only). It becomes its own service when the worker is scaled past one instance.
@@ -92,16 +92,16 @@ At launch the scheduler runs inside one worker process (flag `SCHEDULER_ENABLED=
 One monorepo, one Git history. JS workspaces (npm) for the TypeScript packages, `uv` workspace for Python.
 
 ```
-wayfold/
+hermi/
   .github/                        GitHub reads workflows only from here
     workflows/                    ci.yml, e2e.yml, evals.yml, security.yml, deploy-staging.yml, deploy-prod.yml, ios.yml
     dependabot.yml                weekly grouped updates (not a workflow)
   apps/
     api/                          FastAPI service and all backend modules
       pyproject.toml
-      wayfold/
+      hermi/
         main.py                   app factory, router wiring, middleware
-        cli.py                    wayfold api | worker | scheduler | migrate | openapi
+        cli.py                    hermi api | worker | scheduler | migrate | openapi
         config.py                 pydantic-settings, the only place env vars are read
         db.py                     engine, session, RLS session variable
         deps.py                   CurrentUser, DbSession, require_trip, require_admin
@@ -120,7 +120,7 @@ wayfold/
         seed/                     airports, affiliate_programs, feature_flags defaults
       tests/
     worker/                       job definitions and the scheduler
-      wayfold_worker/
+      hermi_worker/
         app.py                    Procrastinate app, lanes, retry strategies
         jobs/                     one file per job (section 5.1)
         scheduler.py              leader election, next_run_at scanner
@@ -168,7 +168,7 @@ wayfold/
 
 Rules for the tree:
 
-- `apps/worker` imports from `apps/api` (`wayfold.modules.*`) and never the other way. Business rules live in the modules; the worker only schedules and runs them.
+- `apps/worker` imports from `apps/api` (`hermi.modules.*`) and never the other way. Business rules live in the modules; the worker only schedules and runs them.
 - `packages/shared` is the only place constants are duplicated between Python and TypeScript. A CI step (`npm run gen:shared`) generates `credits.ts`, `entitlements.ts` and `flags.ts` from Python enums, and fails on drift.
 - `apps/web` has no knowledge of Capacitor except in `src/lib/native/`, which is a thin adapter that returns no-ops on the web.
 - Root scripts: `npm run dev` (api, worker, web with reload), `npm test`, `npm run lint`, `npm run format`, `npm run gen:api` (OpenAPI to `apps/web/src/lib/api/schema.d.ts`, committed), `npm run test:e2e`, `npm run ios:sync`.
@@ -176,7 +176,7 @@ Rules for the tree:
 
 ## 3. Backend module boundaries
 
-Each module under `apps/api/wayfold/modules/<name>/` has the same five files: `router.py` (HTTP only), `service.py` (business rules, takes a session and a `Actor`), `repo.py` (queries), `schemas.py` (Pydantic in and out) and `models.py` (SQLAlchemy). A module may call another module's `service.py`, never its `repo.py` or `models.py`, except through the read-only `*_refs` helpers listed below. Import direction is enforced by `import-linter` in CI.
+Each module under `apps/api/hermi/modules/<name>/` has the same five files: `router.py` (HTTP only), `service.py` (business rules, takes a session and a `Actor`), `repo.py` (queries), `schemas.py` (Pydantic in and out) and `models.py` (SQLAlchemy). A module may call another module's `service.py`, never its `repo.py` or `models.py`, except through the read-only `*_refs` helpers listed below. Import direction is enforced by `import-linter` in CI.
 
 | Module | Owns (tables) | Responsibility | May call |
 |---|---|---|---|
@@ -199,14 +199,14 @@ Each module under `apps/api/wayfold/modules/<name>/` has the same five files: `r
 
 Later: Phase 2 or 3: the `concierge`, `groups` and `advisors` modules, and the households, polls, expenses, settlements, partner guides, print orders and advisor tables they own.
 
-Cross-cutting code (not modules): `security/` (owns `rate_limit_counters` and `idempotency_keys`), `deps.py`, `errors.py`, `logging.py`, `providers/`. The analytics helper `analytics.capture(event, props)` lives in `wayfold/analytics.py` and validates names against `packages/shared/src/events.ts`.
+Cross-cutting code (not modules): `security/` (owns `rate_limit_counters` and `idempotency_keys`), `deps.py`, `errors.py`, `logging.py`, `providers/`. The analytics helper `analytics.capture(event, props)` lives in `hermi/analytics.py` and validates names against `packages/shared/src/events.ts`.
 
 Boundary rules that tests enforce:
 
 - Only `credits.service` writes `credit_ledger` and `credit_grants`. Only `billing.service` writes `entitlements`, `subscriptions`, `trip_passes` and `store_transactions`. A grep-based test fails on any other writer.
 - Only `providers/*` import `httpx` or the Anthropic SDK. Modules call provider classes, which record a `provider_calls` row for every outbound call (provider, endpoint, cost units, latency, status, cached).
 - Only `affiliate.service` builds outbound partner URLs. Templates come from `affiliate_link_templates`. No other module concatenates a partner URL.
-- No module imports `worker`. Jobs are deferred through `jobs.enqueue(name, **args)` in `wayfold/jobs.py`, which is a thin wrapper over Procrastinate's `defer_async` that uses the caller's transaction.
+- No module imports `worker`. Jobs are deferred through `jobs.enqueue(name, **args)` in `hermi/jobs.py`, which is a thin wrapper over Procrastinate's `defer_async` that uses the caller's transaction.
 - Only `imports.service` writes `trip_imports`. It creates trips and items only by calling the owning module services, never their repositories.
 - Only `providers/feed_fetcher.py` and `providers/link_preview.py` fetch a URL that a user supplied, and both go through `security/ssrf.py` (section 5.4). No other code opens a connection to a user-supplied host.
 
@@ -216,8 +216,8 @@ Boundary rules that tests enforce:
 
 1. **Edge.** Cloudflare terminates TLS, applies WAF and per-IP rate rules, and forwards to Render. The origin accepts traffic only from Cloudflare (authenticated origin pulls). `TRUSTED_PROXY_CIDRS` makes `X-Forwarded-For` trustworthy.
 2. **Middleware order.** Request id (`X-Request-Id`, generated if absent) then access log start, CORS (explicit origins, including `capacitor://localhost`), body size limit (1 MB JSON, uploads go to R2 by signed URL), kill-switch check for maintenance mode, then the route.
-3. **Authentication.** Dependency `CurrentUser` reads `Authorization: Bearer <jwt>` (web also accepts the `wf_session` cookie set by `POST /auth/session`). It verifies the Supabase JWT: signature against the cached JWKS (selected by `kid`, refreshed on unknown `kid` at most once per minute), `iss` equals `SUPABASE_JWT_ISSUER`, `aud` equals `SUPABASE_JWT_AUDIENCE`, `exp` and `nbf` with 30 seconds of skew. It then maps `sub` through `auth_identities` to a `users` row, creating the user and the "Me" person on first sight in one transaction. A user whose status is not `active` gets 403 `account_inactive` (`suspended` or `deleted`), and `pending_deletion` gets 403 `account_pending_deletion` so the app can offer recovery (04 section 1.2).
-4. **Session variable.** `DbSession` opens a transaction and runs `SELECT set_config('app.user_id', :uuid, true)` (transaction-local). Row-level security policies on trip-owned tables read `current_setting('app.user_id')`. The API database role has no `BYPASSRLS`. Jobs that act for a user set the same variable; system jobs use a separate role `wayfold_worker` with `BYPASSRLS` (see [03-database-schema.md](03-database-schema.md) section 6.1).
+3. **Authentication.** Dependency `CurrentUser` reads `Authorization: Bearer <jwt>` (web also accepts the `hermi_session` cookie set by `POST /auth/session`). It verifies the Supabase JWT: signature against the cached JWKS (selected by `kid`, refreshed on unknown `kid` at most once per minute), `iss` equals `SUPABASE_JWT_ISSUER`, `aud` equals `SUPABASE_JWT_AUDIENCE`, `exp` and `nbf` with 30 seconds of skew. It then maps `sub` through `auth_identities` to a `users` row, creating the user and the "Me" person on first sight in one transaction. A user whose status is not `active` gets 403 `account_inactive` (`suspended` or `deleted`), and `pending_deletion` gets 403 `account_pending_deletion` so the app can offer recovery (04 section 1.2).
+4. **Session variable.** `DbSession` opens a transaction and runs `SELECT set_config('app.user_id', :uuid, true)` (transaction-local). Row-level security policies on trip-owned tables read `current_setting('app.user_id')`. The API database role has no `BYPASSRLS`. Jobs that act for a user set the same variable; system jobs use a separate role `hermi_worker` with `BYPASSRLS` (see [03-database-schema.md](03-database-schema.md) section 6.1).
 5. **Tenant check.** Every route with a `trip_id` depends on `require_trip(trip_id, min_role)`. It returns a `TripAccess(trip, member, role, capabilities)` object, or raises `NotFound` (404, never 403) when the user is not a member or the trip is in trash. `min_role` is one of `viewer`, `editor`, `owner`. Routes that take a child id (an itinerary item, a lodging option) resolve the child, join up to its trip and then call the same function. No route calls `session.get(Model, id)` on a tenant table. A CI test walks `app.routes` and fails if a path with an id parameter does not resolve through `require_trip` or is not on the public allowlist.
 6. **Entitlement and credit checks.** Routes that cost money call `entitlements.require(capability, trip)` first (402 with a `paywall` body naming the upsell, never a bare error), then `credits.reserve(user, action, trip)` for AI actions. Both are service calls, not decorators, so the order is visible in the code.
 7. **Handler and response.** The handler returns a Pydantic model. Mutations on editable rows use `If-Match` with the row version; a mismatch returns 409 with the latest row. Lists support `updated_since` and ETag for cheap polling.
@@ -248,8 +248,8 @@ RLS is the second lock, not the first. Policies exist on: `trips`, `trip_members
 | Concern | Web | iOS (Capacitor) |
 |---|---|---|
 | Token storage | HttpOnly Secure SameSite=Lax cookie via `POST /auth/session` | Supabase session in the Keychain through a secure-storage plugin; bearer header |
-| Origin | `https://app.wayfold.app` | `capacitor://localhost` |
-| CSRF | `X-Wayfold: 1` header plus `Origin` check, cookie requests only | Not applicable (bearer) |
+| Origin | `https://app.hermi.world` | `capacitor://localhost` |
+| CSRF | `X-Hermi: 1` header plus `Origin` check, cookie requests only | Not applicable (bearer) |
 | API base URL | `VITE_API_BASE_URL` | Same, compiled into the bundle |
 | Push | None at launch | APNs token registered at `POST /devices` |
 | Purchases | None in Phase 1. The paywall says "Upgrade in the iOS app" and links to the App Store; no web checkout, price list or purchase button | RevenueCat over StoreKit 2 |
@@ -324,7 +324,7 @@ Later: Phase 2 or 3: concierge digests, group settle reminders and scheduled age
 
 ### 5.2 Scheduler design
 
-The scheduler is a loop inside `wayfold_worker/scheduler.py`. It enqueues work; it never runs it.
+The scheduler is a loop inside `hermi_worker/scheduler.py`. It enqueues work; it never runs it.
 
 1. **Leader election.** On start it tries `pg_try_advisory_lock(0x57415946)` on a dedicated connection. The holder is the leader; others sleep 10 seconds and retry. If the leader's connection drops, the lock frees and a standby takes over within 10 seconds.
 2. **Routine scan.** Every 30 seconds the leader runs `SELECT id FROM routines WHERE enabled AND next_run_at <= now() ORDER BY next_run_at LIMIT 500 FOR UPDATE SKIP LOCKED`. For each row it checks the kill switch for the routine's kind, checks the account's budget (reserve in the same transaction), inserts a `runs` row (`trigger = 'schedule'`), defers the job, and advances `next_run_at` to the next cron slot after now (never stacking missed slots). An outage of a day fires one check, not many.
@@ -346,7 +346,7 @@ job starts -> set app.user_id (or system role) -> load run row -> check kill swi
 
 ### 5.4 Import pipeline and the SSRF guard
 
-Imports bring an existing plan into Wayfold from a calendar file, a calendar feed, pasted booking text, a Google Maps export or pasted places. The import screen has entries named for TripIt, Tripsy and Wanderlog that route to these same methods with instructions for each; the entry used is stored as `trip_imports.origin`. One rule governs all of them: an import only proposes. Nothing reaches a trip until the user reviews a preview and confirms. Routes, limits and response shapes are in [04-api-spec.md](04-api-spec.md) section 5.26, the table is `trip_imports` (03 section 5.9), and the AI feature is `booking_import` (06 section 5.3).
+Imports bring an existing plan into Hermi from a calendar file, a calendar feed, pasted booking text, a Google Maps export or pasted places. The import screen has entries named for TripIt, Tripsy and Wanderlog that route to these same methods with instructions for each; the entry used is stored as `trip_imports.origin`. One rule governs all of them: an import only proposes. Nothing reaches a trip until the user reviews a preview and confirms. Routes, limits and response shapes are in [04-api-spec.md](04-api-spec.md) section 5.26, the table is `trip_imports` (03 section 5.9), and the AI feature is `booking_import` (06 section 5.3).
 
 | Source | Entry (04) | Work | Parsing |
 |---|---|---|---|
@@ -367,11 +367,11 @@ Imports bring an existing plan into Wayfold from a calendar file, a calendar fee
 **SSRF guard.** `security/ssrf.py` is the only way to fetch a user-supplied address. Its callers are `providers/feed_fetcher.py` and `providers/link_preview.py`. Rules, in order:
 
 1. Scheme `https` only (`webcal://` is rewritten), port 443 only, no userinfo, the host is a DNS name and not an IP literal, at most 2,048 characters.
-2. Refuse the hosts of Airbnb, Vrbo and Booking.com (the `BLOCKED_HOSTS` constant, 06 section 2.4) and Wayfold's own hosts. Product rule 3: the user can download the file and upload it instead (`blocked_source`).
+2. Refuse the hosts of Airbnb, Vrbo and Booking.com (the `BLOCKED_HOSTS` constant, 06 section 2.4) and Hermi's own hosts. Product rule 3: the user can download the file and upload it instead (`blocked_source`).
 3. Resolve DNS ourselves and refuse the fetch if any answer is not a public address: loopback, private (RFC 1918), link-local (including the cloud metadata address 169.254.169.254), carrier-grade NAT `100.64.0.0/10`, multicast, reserved, unspecified, IPv6 loopback, unique local and link-local, and IPv4-mapped, 6to4 or NAT64 forms of any of these.
 4. Connect to the validated IP address (pinned), send the original name in SNI and `Host`, and verify the certificate against that name, so DNS cannot change between the check and the connection.
 5. Follow at most 3 redirects and revalidate every hop from rule 1.
-6. Limits: 5 second connect timeout, 15 second total, body at most 2 MB (streamed and cut, also after decompression), and the body must start with `BEGIN:VCALENDAR`. No cookies and no authorization headers. `User-Agent: WayfoldCalendarImport/1.0`.
+6. Limits: 5 second connect timeout, 15 second total, body at most 2 MB (streamed and cut, also after decompression), and the body must start with `BEGIN:VCALENDAR`. No cookies and no authorization headers. `User-Agent: HermiCalendarImport/1.0`.
 7. The fetch job runs on a worker whose outbound traffic goes through a fixed egress proxy with its own deny rules for private ranges, the database and metadata services, as defense in depth ([10-quality-security-launch.md](10-quality-security-launch.md)).
 8. Every attempt writes a `provider_calls` row (provider `feed_fetcher`, host only, status, bytes, blocked reason).
 9. The address is stored encrypted with `FIELD_ENCRYPTION_KEY` in `trip_imports.feed_url_enc` because feed addresses often carry a secret token. It is kept only while "Keep checking this calendar" is on. It is shown back as the host plus a masked path and deleted when polling is turned off, on discard, on expiry of an unconfirmed import and on account deletion. Logs and Sentry redact it.
@@ -382,14 +382,14 @@ Imports bring an existing plan into Wayfold from a calendar file, a calendar fee
 - `poll_import_feeds` (batch lane, leader only, every 30 minutes) selects feeds with `poll_enabled` and `next_poll_at <= now()` (`FOR UPDATE SKIP LOCKED`, limit 500) and enqueues `fetch_import_feed` for each. After a fetch the job sets `next_poll_at` to 6 hours later, so each feed is read every 6 hours. Polling stops 7 days after the trip ends. The platform allows at most 60 fetches an hour to one destination host.
 - A fetch sends a conditional request and compares the content hash with `last_content_hash`. If events are new or changed, the job builds a change preview (only new, changed and removed events, matched by `import_uid`, the same result as `POST /imports/{id}/refresh`), stores it in `pending_changes` and sends one push and in-app notice: "Your calendar changed: 3 updates to review".
 - Polling never applies anything by itself. The person reviews the preview and confirms the changes they want (`POST /imports/{id}/changes/confirm`); removed events are listed, never deleted for them. An unreviewed change preview is deleted after 30 days.
-- Three consecutive failures turn polling off, delete the stored address, and tell the user (`calendar_poll_stopped`). The kill switches `import.polling` and `import.all` stop fetches. Polling is one way: Wayfold never writes to the user's calendar.
+- Three consecutive failures turn polling off, delete the stored address, and tell the user (`calendar_poll_stopped`). The kill switches `import.polling` and `import.all` stop fetches. Polling is one way: Hermi never writes to the user's calendar.
 
 ### 5.5 Calendar feed endpoint
 
 A trip can publish a live calendar subscription that phones and desktop calendars refresh on their own (04 section 5.29). It is available on every tier and does not count as a collaborator or a share link.
 
 - **Token.** 256 random bits, stored only as `trips.calendar_token_hash` (SHA-256, unique index `uq_trips_calendar_token`). The URL is returned once, by `POST /trips/{trip_id}/calendar-token`, which also rotates it. Rotating or `DELETE /trips/{trip_id}/calendar-token` stops the old URL at once.
-- **Endpoint.** `GET /calendar/{token}.ics`, served at `https://api.wayfold.app/v1/calendar/{token}.ics`. The token is the credential: no JWT, no cookie. Unknown, rotated or disabled tokens and deleted trips return an empty `404`, never `403`. Limits: 120 an hour per token and 600 an hour per IP, and unknown tokens count against the IP limit.
+- **Endpoint.** `GET /calendar/{token}.ics`, served at `https://api.hermi.world/v1/calendar/{token}.ics`. The token is the credential: no JWT, no cookie. Unknown, rotated or disabled tokens and deleted trips return an empty `404`, never `403`. Limits: 120 an hour per token and 600 an hour per IP, and unknown tokens count against the IP limit.
 - **Content.** Generated by the `itinerary` module from current rows: timed events in the destination's time zone, all-day events, booked stays from check-in to check-out, and chosen flights, with stable `UID` values, `SEQUENCE` from the row version, `REFRESH-INTERVAL` of one hour and at most 2,000 events. Never included: prices, paid amounts, confirmation numbers, private notes, people, partner links or click ids.
 - **HTTP.** `ETag` over the content with `If-None-Match` answered `304`, `Cache-Control: private, max-age=300`, `Referrer-Policy: no-referrer`. Cloudflare does not cache it, because the URL is a bearer secret.
 - **Logging.** The access log records only the route template `/v1/calendar/{token}.ics`. `last_fetched_at` is updated at most once a minute.
@@ -440,9 +440,9 @@ All configuration is environment variables, read once in `config.py` through `py
 | `RELEASE_SHA` | Git SHA of the image, tagged onto logs, Sentry and metrics | `a1b2c3d` | No |
 | `LOG_LEVEL` | Log verbosity | `INFO` | No |
 | `PORT` | API listen port | `8000` | No |
-| `PUBLIC_API_URL` | Public base URL of the API, used in links and webhooks | `https://api.wayfold.app` | No |
-| `PUBLIC_WEB_URL` | Public web app URL, used in emails and invites | `https://app.wayfold.app` | No |
-| `CORS_ALLOWED_ORIGINS` | Comma list of allowed origins, including Capacitor | `https://app.wayfold.app,capacitor://localhost` | No |
+| `PUBLIC_API_URL` | Public base URL of the API, used in links and webhooks | `https://api.hermi.world` | No |
+| `PUBLIC_WEB_URL` | Public web app URL, used in emails and invites | `https://app.hermi.world` | No |
+| `CORS_ALLOWED_ORIGINS` | Comma list of allowed origins, including Capacitor | `https://app.hermi.world,capacitor://localhost` | No |
 | `TRUSTED_PROXY_CIDRS` | Networks whose `X-Forwarded-For` is trusted | `173.245.48.0/20,...` | No |
 | `API_DOCS_ENABLED` | Serves `/docs` (off in production) | `false` | No |
 | `SCHEDULER_ENABLED` | Whether this process runs the scheduler loop | `true` | No |
@@ -453,12 +453,12 @@ All configuration is environment variables, read once in `config.py` through `py
 
 | Name | Purpose | Example | Secret |
 |---|---|---|---|
-| `DATABASE_URL` | App role connection (DML only, no `BYPASSRLS`) | `postgresql+psycopg://wayfold_api_login:...@host/wayfold` | Yes |
-| `DATABASE_URL_SYSTEM` | System role for jobs that cross tenants | `postgresql+psycopg://wayfold_worker_login:...` | Yes |
-| `MIGRATION_DATABASE_URL` | DDL role, used only by `migrate` | `postgresql+psycopg://wayfold_owner:...` | Yes |
+| `DATABASE_URL` | App role connection (DML only, no `BYPASSRLS`) | `postgresql+psycopg://hermi_api_login:...@host/hermi` | Yes |
+| `DATABASE_URL_SYSTEM` | System role for jobs that cross tenants | `postgresql+psycopg://hermi_worker_login:...` | Yes |
+| `MIGRATION_DATABASE_URL` | DDL role, used only by `migrate` | `postgresql+psycopg://hermi_owner:...` | Yes |
 | `DATABASE_POOL_SIZE` / `DATABASE_MAX_OVERFLOW` | Pool size per process | `10` / `5` | No |
 | `DATABASE_STATEMENT_TIMEOUT_MS` | Per-statement timeout (the migration role overrides) | `15000` | No |
-| `TEST_DATABASE_URL` | Test database; CI and local only | `postgresql+psycopg://wayfold:...@localhost/wayfold_test` | Yes |
+| `TEST_DATABASE_URL` | Test database; CI and local only | `postgresql+psycopg://hermi:...@localhost/hermi_test` | Yes |
 | `REDIS_URL` | Empty until Redis is added (about 10k MAU) | empty | Yes |
 
 **Identity and device trust**
@@ -470,7 +470,7 @@ All configuration is environment variables, read once in `config.py` through `py
 | `SUPABASE_JWT_ISSUER` / `SUPABASE_JWT_AUDIENCE` | Expected `iss` and `aud` | `https://abc.supabase.co/auth/v1` / `authenticated` | No |
 | `SUPABASE_SERVICE_ROLE_KEY` | Delete users on account deletion, admin lookups | `eyJ...` | Yes |
 | `SUPABASE_AUTH_HOOK_SECRET` | Verifies Supabase Auth hook calls | `whsec_...` | Yes |
-| `APPLE_TEAM_ID` / `APPLE_BUNDLE_ID` | App identity for App Attest and Apple APIs | `ABCDE12345` / `app.wayfold.ios` | No |
+| `APPLE_TEAM_ID` / `APPLE_BUNDLE_ID` | App identity for App Attest and Apple APIs | `ABCDE12345` / `world.hermi.ios` | No |
 | `APPLE_SIGNIN_KEY_ID` / `APPLE_SIGNIN_PRIVATE_KEY` | Sign in with Apple key, used to revoke tokens on deletion | `K1234` / PEM | Key id no, key yes |
 | `APPLE_APP_ATTEST_ENV` | `development` or `production` attestation | `production` | No |
 | `GUEST_TOKEN_SECRET` | Signs guest claim tokens for `POST /me/claim` | random 32 bytes | Yes |
@@ -502,11 +502,11 @@ All configuration is environment variables, read once in `config.py` through `py
 | `TRAVELPAYOUTS_TOKEN` | Cached fares API | random | Yes |
 | `TRAVELPAYOUTS_MARKER` | Affiliate marker (appears in partner URLs) | `123456` | No |
 | `VIATOR_API_KEY` | Viator partner API | random | Yes |
-| `STAY22_AID` | Stay22 affiliate id | `wayfold` | No |
+| `STAY22_AID` | Stay22 affiliate id | `hermi` | No |
 | `SERPAPI_API_KEY` | Live fares and rentals, behind flag `serpapi_live_fares` | random | Yes |
 | `SERPAPI_MONTHLY_CAP` | Global search cap | `5000` | No |
 | `GEOAPIFY_API_KEY` | Places and geocoding | random | Yes |
-| `WIKIMEDIA_CONTACT` | Required contact for Wikipedia API | `support@wayfold.app` | No |
+| `WIKIMEDIA_CONTACT` | Required contact for Wikipedia API | `support@hermi.world` | No |
 | `FRANKFURTER_BASE_URL` | FX rates | `https://api.frankfurter.dev` | No |
 
 **Messaging, storage, observability**
@@ -514,12 +514,12 @@ All configuration is environment variables, read once in `config.py` through `py
 | Name | Purpose | Example | Secret |
 |---|---|---|---|
 | `RESEND_API_KEY` / `RESEND_WEBHOOK_SECRET` | Email send and bounce webhooks | `re_...` / `whsec_...` | Yes |
-| `EMAIL_FROM` | From address | `Wayfold <hello@wayfold.app>` | No |
+| `EMAIL_FROM` | From address | `Hermi <hello@hermi.world>` | No |
 | `UNSUBSCRIBE_SECRET` | Signs one-click unsubscribe links | random | Yes |
 | `APNS_KEY_ID` / `APNS_TEAM_ID` / `APNS_PRIVATE_KEY` | Token-based APNs auth | `K5678` / `ABCDE12345` / PEM | Key id and team no, key yes |
-| `APNS_TOPIC` / `APNS_USE_SANDBOX` | Bundle id topic, sandbox switch | `app.wayfold.ios` / `false` | No |
+| `APNS_TOPIC` / `APNS_USE_SANDBOX` | Bundle id topic, sandbox switch | `world.hermi.ios` / `false` | No |
 | `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | R2 S3 credentials | random | Id no, others yes |
-| `R2_BUCKET_UPLOADS` / `R2_BUCKET_EXPORTS` / `R2_BUCKET_BACKUPS` | Buckets | `wayfold-uploads` | No |
+| `R2_BUCKET_UPLOADS` / `R2_BUCKET_EXPORTS` / `R2_BUCKET_BACKUPS` | Buckets | `hermi-uploads` | No |
 | `SENTRY_DSN` / `VITE_SENTRY_DSN` | Error reporting (DSN is not sensitive but is configured per environment) | `https://...@sentry.io/1` | No |
 | `SENTRY_AUTH_TOKEN` | CI only: upload source maps and dSYMs | `sntrys_...` | Yes |
 | `POSTHOG_KEY` / `VITE_POSTHOG_KEY` / `POSTHOG_HOST` | Product analytics | `phc_...` / `https://us.i.posthog.com` | No |
@@ -533,18 +533,18 @@ All configuration is environment variables, read once in `config.py` through `py
 | Name | Purpose | Example | Secret |
 |---|---|---|---|
 | `ADMIN_OIDC_ISSUER` / `ADMIN_OIDC_CLIENT_ID` / `ADMIN_OIDC_CLIENT_SECRET` | Company SSO for the admin console | `https://accounts.google.com` | Secret only for the last |
-| `ADMIN_ALLOWED_DOMAIN` | Only this email domain may sign in to admin | `wayfold.app` | No |
+| `ADMIN_ALLOWED_DOMAIN` | Only this email domain may sign in to admin | `hermi.world` | No |
 | `ADMIN_SESSION_SECRET` | Signs admin session cookies | random | Yes |
 | `ADMIN_IP_ALLOWLIST` | Optional CIDR list for `/admin` | empty | No |
-| `VITE_API_BASE_URL` | API origin used by the web and iOS bundles | `https://api.wayfold.app` | No |
+| `VITE_API_BASE_URL` | API origin used by the web and iOS bundles | `https://api.hermi.world` | No |
 | `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` | Client sign-in | `https://abc.supabase.co` / `eyJ...` | No (anon key is public by design) |
 | `VITE_APP_ENV` | Shown in the settings footer and Sentry | `production` | No |
-| `STATUS_PAGE_URL` / `VITE_STATUS_PAGE_URL` | The hosted public status page, linked from Settings and the `/status` redirect | `https://status.wayfold.app` | No |
+| `STATUS_PAGE_URL` / `VITE_STATUS_PAGE_URL` | The hosted public status page, linked from Settings and the `/status` redirect | `https://status.hermi.world` | No |
 
 ### 7.2 Rules
 
 - Separate values per environment. Never reuse a production key in staging, preview or CI.
-- Production secrets live in Render environment groups (`wayfold-prod-shared`, `wayfold-prod-api`, `wayfold-prod-worker`). GitHub holds only deploy credentials through OIDC and the `SENTRY_AUTH_TOKEN`.
+- Production secrets live in Render environment groups (`hermi-prod-shared`, `hermi-prod-api`, `hermi-prod-worker`). GitHub holds only deploy credentials through OIDC and the `SENTRY_AUTH_TOKEN`.
 - `config.py` exposes `settings.public_dict()` for the `GET /config` route (minimum app version, enabled feature keys), which never includes a secret field. A unit test asserts every field marked secret is excluded.
 - Redaction: the log filter masks any value whose key matches `key|secret|token|password|authorization|cookie|dsn` and any JWT-shaped string.
 
@@ -575,13 +575,13 @@ All configuration is environment variables, read once in `config.py` through `py
 
 ### 8.1 Public status page
 
-`status.wayfold.app` is a Better Stack status page, hosted outside Render and Cloudflare Pages so that it is reachable during an outage of our own services. It shows five components, each fed by an uptime monitor from outside our network: web app (`GET /` on the web origin), API (`GET /health/ready`), AI features (a synthetic `explain` dry run every 5 minutes that the `ai` lane answers without calling Anthropic, plus the `ai.all` and `provider.anthropic` kill switches), fare data (the freshness of the newest `fare_observations` row) and push (APNs send success rate). Incidents are posted by the owner from the Better Stack dashboard or the admin console's link to it, in plain words with times. The page shows 90 days of uptime per component and offers email updates. The in-app banner comes from `GET /public/status` (04 section 5.28), which mirrors the component states; when the API itself is down the app shows the offline banner and links to the page. The page, the five monitors and the first incident template are the launch scope; subscriber SMS, component history export and custom incident styling are polish that can wait.
+`status.hermi.world` is a Better Stack status page, hosted outside Render and Cloudflare Pages so that it is reachable during an outage of our own services. It shows five components, each fed by an uptime monitor from outside our network: web app (`GET /` on the web origin), API (`GET /health/ready`), AI features (a synthetic `explain` dry run every 5 minutes that the `ai` lane answers without calling Anthropic, plus the `ai.all` and `provider.anthropic` kill switches), fare data (the freshness of the newest `fare_observations` row) and push (APNs send success rate). Incidents are posted by the owner from the Better Stack dashboard or the admin console's link to it, in plain words with times. The page shows 90 days of uptime per component and offers email updates. The in-app banner comes from `GET /public/status` (04 section 5.28), which mirrors the component states; when the API itself is down the app shows the offline banner and links to the page. The page, the five monitors and the first incident template are the launch scope; subscriber SMS, component history export and custom incident styling are polish that can wait.
 
 ## 9. Environments
 
 | Environment | Purpose | Hosting | Data | Third parties |
 |---|---|---|---|---|
-| `local` | Development | `docker compose` (Postgres 18, Mailpit, MinIO) or native Postgres; `npm run dev` | Seed data from `apps/api/wayfold/seed` and `infra/scripts/seed-staging.py` | Provider fakes by default (`PROVIDERS_MODE=fake`, including a fake calendar feed host); Anthropic dev key with a $5 limit only when testing AI |
+| `local` | Development | `docker compose` (Postgres 18, Mailpit, MinIO) or native Postgres; `npm run dev` | Seed data from `apps/api/hermi/seed` and `infra/scripts/seed-staging.py` | Provider fakes by default (`PROVIDERS_MODE=fake`, including a fake calendar feed host); Anthropic dev key with a $5 limit only when testing AI |
 | `ci` | Tests | GitHub Actions with a `postgres:18` service | Ephemeral | All mocked; contract tests use recorded fixtures |
 | `preview` | One per pull request | Render preview (API plus worker, small Postgres) | Seed data | Sandbox keys; separate Supabase project; APNs sandbox |
 | `staging` | Release rehearsal, TestFlight backend | Render, same shape as production, smaller sizes | Synthetic, never a copy of production | Separate Anthropic workspace with a $50 monthly limit; App Store sandbox; RevenueCat sandbox |
@@ -612,19 +612,19 @@ One multi-stage `infra/docker/Dockerfile`:
 
 1. `node:22-slim` stage: `npm ci`, build `apps/web` (used only for the optional self-host image and e2e; production web ships from Cloudflare Pages).
 2. `python:3.13-slim` builder stage: install `uv`, `uv sync --frozen --no-dev` for `apps/api` and `apps/worker` into `/app/.venv`.
-3. Final `python:3.13-slim` stage, pinned by digest: copies the venv and source, creates a non-root user `wayfold` (uid 10001), read-only root filesystem compatible (writes only to `/tmp`), no compilers, `HEALTHCHECK` on `/health/live`.
-4. Entry point `wayfold`; the platform sets the command: `api`, `worker --lanes ...`, `scheduler`, `migrate`.
+3. Final `python:3.13-slim` stage, pinned by digest: copies the venv and source, creates a non-root user `hermi` (uid 10001), read-only root filesystem compatible (writes only to `/tmp`), no compilers, `HEALTHCHECK` on `/health/live`.
+4. Entry point `hermi`; the platform sets the command: `api`, `worker --lanes ...`, `scheduler`, `migrate`.
 
 The image contains no secrets and no `.env`. Build arguments are limited to `RELEASE_SHA`. Trivy fails the build on fixable high or critical findings.
 
 ## 12. Migrations as pre-deploy
 
-- Alembic. Migrations run as a Render pre-deploy command (`wayfold migrate`) using `MIGRATION_DATABASE_URL`. New instances take traffic only after it succeeds. The command takes `pg_advisory_lock(0x4d494752)` so two deploys cannot race.
+- Alembic. Migrations run as a Render pre-deploy command (`hermi migrate`) using `MIGRATION_DATABASE_URL`. New instances take traffic only after it succeeds. The command takes `pg_advisory_lock(0x4d494752)` so two deploys cannot race.
 - Expand and contract. Release N adds nullable columns and new tables; release N+1 writes both and backfills in a batched job; release N+2 drops the old column. Old and new code must both work against the schema during a rolling deploy.
 - Safety: `lock_timeout = 5s`, `statement_timeout = 60s` for DDL, `CREATE INDEX CONCURRENTLY` for large tables, no data backfills inside Alembic.
 - Rollback means rolling forward with a fix, or a point-in-time restore. Down migrations exist for development only. A manual Render Postgres snapshot is taken before any release that contains a migration touching more than a trivial table.
 - CI fails on multiple heads, on a migration that has no corresponding model change, and when `alembic upgrade head` followed by `alembic check` reports drift.
-- Seed data (airports, `affiliate_programs`, default `feature_flags`) loads through idempotent `wayfold seed`, run after migrate in the same pre-deploy command.
+- Seed data (airports, `affiliate_programs`, default `feature_flags`) loads through idempotent `hermi seed`, run after migrate in the same pre-deploy command.
 
 ## 13. Feature flags and kill switches
 
@@ -684,13 +684,13 @@ Practice every switch in staging each quarter. Anthropic workspace spend limits 
 
 ## 14. Mapping the existing Trip Planner code
 
-The existing code is the Trip Planner repository, https://github.com/avillalv/trip-planner. Build sessions clone it read-only to `.reference/trip-planner/` (gitignored). Paths are under `backend/tripplanner/` and `frontend/src/` in that repo. Reuse means copy with small changes; adapt means keep the idea and rewrite for multi-tenant and Wayfold names; drop means do not carry over.
+The existing code is the Trip Planner repository, https://github.com/avillalv/trip-planner. Build sessions clone it read-only to `.reference/trip-planner/` (gitignored). Paths are under `backend/tripplanner/` and `frontend/src/` in that repo. Reuse means copy with small changes; adapt means keep the idea and rewrite for multi-tenant and Hermi names; drop means do not carry over.
 
 ### 14.1 Backend
 
 | Existing module | Decision | Where it goes | Reason |
 |---|---|---|---|
-| `config.py` | Adapt | `apps/api/wayfold/config.py` | Keep the typed settings pattern; remove passcode, host list, `CLAUDE_PATH`, backup and Windows paths; add section 7 variables |
+| `config.py` | Adapt | `apps/api/hermi/config.py` | Keep the typed settings pattern; remove passcode, host list, `CLAUDE_PATH`, backup and Windows paths; add section 7 variables |
 | `db.py` | Adapt | `db.py` | Add pool limits, timeouts, TLS, the `app.user_id` session variable and a system session |
 | `main.py` | Adapt | `main.py` | Keep the app factory and router wiring; add CORS, middleware order (section 4), problem+json errors; no SPA serving |
 | `spa.py` | Drop | none | The web app ships from Cloudflare Pages |
@@ -699,7 +699,7 @@ The existing code is the Trip Planner repository, https://github.com/avillalv/tr
 | `migrate.py`, `setup_db.py` | Adapt, Drop | `cli.py migrate`; setup dropped | Keep the Alembic runner with advisory lock; superuser prompt setup is local-only |
 | `paths.py` | Drop | none | `%LOCALAPPDATA%` and repo-relative paths; no writable local state |
 | `cli.py` | Adapt | `cli.py` | Keep the typer or argparse shape; commands become `api`, `worker`, `scheduler`, `migrate`, `seed`, `openapi` |
-| `migrations/` (7 revisions) | Drop history, keep `env.py` | `migrations/` | Start Wayfold with a new baseline from [03-database-schema.md](03-database-schema.md); the 7 existing revisions are replaced by one baseline plus a one-off data import script |
+| `migrations/` (7 revisions) | Drop history, keep `env.py` | `migrations/` | Start Hermi with a new baseline from [03-database-schema.md](03-database-schema.md); the 7 existing revisions are replaced by one baseline plus a one-off data import script |
 | `models/base.py` | Adapt | `modules/*/models.py` base | Keep the declarative base; switch to UUIDv7 public ids and `timestamptz` |
 | `models/trip.py`, `people.py` | Adapt | `trips`, `people`, `trip_people` | Add `deleted_at`, `owner_user_id`, `linked_user_id` (the UUIDv7 `id` is the public id); `trip_travelers` becomes `trip_people` |
 | `models/flights.py` | Adapt | `flight_routes`, `fare_observations`, `trip_fare_links`, `chosen_flights`, `price_alerts` | Logic is sound; add tenant scope, cache keys and alert rows |
@@ -750,8 +750,8 @@ The existing code is the Trip Planner repository, https://github.com/avillalv/tr
 
 | Existing | Decision | Reason |
 |---|---|---|
-| `frontend/src/index.css` passport tokens | Reuse | Becomes `packages/tokens`; Wayfold uses the same passport theme |
-| `components/brand/*` (guilloche, logo, brand mark) | Adapt | Swap the logo for the Wayfold mark from `brand/`; geometry and tests stay |
+| `frontend/src/index.css` tokens (the old passport palette) | Adapt | Becomes `packages/tokens`: reuse the token plumbing and the neutral names (`--tp-paper`, `--tp-ink`, `--tp-brand`), but replace every value with the Hermi tokens in 05 section 2; the old values are not ported |
+| `components/brand/*` (guilloche, logo, brand mark) | Adapt | Swap the logo and brand mark for the Hermi mark from `brand/`, and replace `guilloche.tsx` with `route-pattern.tsx` (05 section 2.9); the seeded, deterministic approach and its tests carry over |
 | `components/ui/*` | Reuse | Radix and shadcn primitives |
 | `components/flights/*`, `itinerary/*`, `lodging/*`, `trips/*`, `people/*` | Adapt | Mostly reusable; add role-aware actions, paywall moments, affiliate cards, attribution |
 | `components/deck/*`, `routes/present-page.tsx` | Adapt | Presentation mode carries over; add portrait mobile mode |

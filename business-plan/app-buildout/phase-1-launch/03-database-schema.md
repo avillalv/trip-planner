@@ -1,8 +1,8 @@
 # 03. Database schema (Phase 1: launch)
 
-Part of the [Phase 1 build specification](README.md) of [Wayfold](../README.md). The shared decisions in the [build README](../README.md) override anything here. This file is the complete, self-contained Phase 1 schema: every table, type, function, index, row-level security policy, grant, retention rule and seed row that the Phase 1 features need, and nothing that only a later phase uses. Section 14 lists what Phase 2 and Phase 3 add on top.
+Part of the [Phase 1 build specification](README.md) of [Hermi](../README.md). The shared decisions in the [build README](../README.md) override anything here. This file is the complete, self-contained Phase 1 schema: every table, type, function, index, row-level security policy, grant, retention rule and seed row that the Phase 1 features need, and nothing that only a later phase uses. Section 14 lists what Phase 2 and Phase 3 add on top.
 
-Target: PostgreSQL 18 (native `uuidv7()`), SQLAlchemy 2 models, Alembic migrations, Render managed Postgres with point-in-time recovery. Every `sql` block below is written to run as-is on a fresh database, top to bottom, in the order given: a table is always created before the tables that reference it. Blocks that show example queries, or statements with `:parameters`, are fenced as `postgresql` so that a runner that loads the `sql` blocks never executes them. The blocks were loaded in order into a throwaway PostgreSQL 16 cluster (with `uuidv7()` shimmed by `gen_random_uuid()`) and a short isolation smoke test ran as `wayfold_app`; the only PostgreSQL 18 dependency is the native `uuidv7()`. The blocks were loaded the same way again after the last integration pass (35 blocks, zero errors), and a short smoke test checked the functions and constraints that pass added: the import reward conditions, `set_import_polling()`, the referral caps (5 per rolling 30 days, 10 per calendar year), `bootstrap_user()` setting `email_verified_at`, and the plan verification evidence check and grants.
+Target: PostgreSQL 18 (native `uuidv7()`), SQLAlchemy 2 models, Alembic migrations, Render managed Postgres with point-in-time recovery. Every `sql` block below is written to run as-is on a fresh database, top to bottom, in the order given: a table is always created before the tables that reference it. Blocks that show example queries, or statements with `:parameters`, are fenced as `postgresql` so that a runner that loads the `sql` blocks never executes them. The blocks were loaded in order into a throwaway PostgreSQL 16 cluster (with `uuidv7()` shimmed by `gen_random_uuid()`) and a short isolation smoke test ran as `hermi_app`; the only PostgreSQL 18 dependency is the native `uuidv7()`. The blocks were loaded the same way again after the last integration pass (35 blocks, zero errors), and a short smoke test checked the functions and constraints that pass added: the import reward conditions, `set_import_polling()`, the referral caps (5 per rolling 30 days, 10 per calendar year), `bootstrap_user()` setting `email_verified_at`, and the plan verification evidence check and grants.
 
 ## 1. Scope and how to read this file
 
@@ -44,7 +44,7 @@ Target: PostgreSQL 18 (native `uuidv7()`), SQLAlchemy 2 models, Alembic migratio
 
 ## 3. Shared setup
 
-Run first (migration `0001`). The `wayfold_owner` role owns all objects and runs migrations; the other roles are described in section 6.
+Run first (migration `0001`). The `hermi_owner` role owns all objects and runs migrations; the other roles are described in section 6.
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS citext;
@@ -613,7 +613,7 @@ CREATE TABLE people (
   owner_user_id    uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   linked_user_id   uuid REFERENCES users (id) ON DELETE SET NULL,
   name             text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 60),
-  color            hex_color NOT NULL DEFAULT '#1F2A44',
+  color            hex_color NOT NULL DEFAULT '#FF5E7E',
   home_airports    iata_code[] NOT NULL DEFAULT '{}',
   is_self          boolean NOT NULL DEFAULT false,          -- the auto-created "Me" person
   created_at       timestamptz NOT NULL DEFAULT now(),
@@ -1632,7 +1632,7 @@ CREATE UNIQUE INDEX uq_revenue_by_partner ON revenue_by_partner (month, program,
 
 `fare_observations` is shared across all users: one row per observed fare, keyed by route, dates and search. A user's route links to observations through `trip_fare_links`, so 1,000 users watching the same route cost one live call per cache window. Observations are display hints with a source and a timestamp ("price seen at 14:05 from Travelpayouts"), never a bookable guarantee.
 
-`chosen_flights` is the flight picked for a route. Phase 1 adds the booked-fare fields to it: when the user marks the flight booked they can enter what they paid (`paid_minor`, `paid_currency`, `booked_at`, `booked_by`). The booked-fare drop alert compares that amount with the latest matching observation for the same route, dates and cabin (view `booked_fare_drops`, below) and tells `booked_by`: "you paid $X, it is now $Y; check the airline's change and credit rules". Wayfold never claims a refund is owed and never books anything.
+`chosen_flights` is the flight picked for a route. Phase 1 adds the booked-fare fields to it: when the user marks the flight booked they can enter what they paid (`paid_minor`, `paid_currency`, `booked_at`, `booked_by`). The booked-fare drop alert compares that amount with the latest matching observation for the same route, dates and cabin (view `booked_fare_drops`, below) and tells `booked_by`: "you paid $X, it is now $Y; check the airline's change and credit rules". Hermi never claims a refund is owed and never books anything.
 
 ```sql
 CREATE TYPE cabin_class     AS ENUM ('economy', 'premium_economy', 'business', 'first');
@@ -2102,7 +2102,7 @@ SELECT add_updated_at_trigger('notes');
 
 ### 5.16 Admin
 
-The admin console (`08-admin-control-center.md`) runs as the `wayfold_admin` database role. `admin_users` and `audit_log` are not readable by the app role (the API may only insert audit rows), `feature_flags` and `kill_switches` are read-only to it, and `support_tickets` and `content_reports` are limited to the caller's own rows by the policies in 6.4. Every admin write also writes `audit_log`.
+The admin console (`08-admin-control-center.md`) runs as the `hermi_admin` database role. `admin_users` and `audit_log` are not readable by the app role (the API may only insert audit rows), `feature_flags` and `kill_switches` are read-only to it, and `support_tickets` and `content_reports` are limited to the caller's own rows by the policies in 6.4. Every admin write also writes `audit_log`.
 
 ```sql
 CREATE TYPE admin_role AS ENUM ('owner', 'support', 'finance', 'engineer', 'content');
@@ -2183,7 +2183,7 @@ CREATE INDEX ix_audit_log_impersonation ON audit_log (impersonation_id) WHERE im
 
 CREATE FUNCTION audit_log_immutable() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  IF TG_OP = 'DELETE' AND current_setting('wayfold.audit_purge', true) = 'on' THEN RETURN OLD; END IF;   -- retention job only
+  IF TG_OP = 'DELETE' AND current_setting('hermi.audit_purge', true) = 'on' THEN RETURN OLD; END IF;   -- retention job only
   RAISE EXCEPTION 'audit_log is append-only';
 END $$;
 CREATE TRIGGER trg_audit_log_immutable BEFORE UPDATE OR DELETE ON audit_log
@@ -2369,7 +2369,7 @@ CREATE INDEX ix_notifications_outbox ON notifications (created_at)
 
 ### 5.19 Public sample trips
 
-Public sample trips and shared-trip pages are search entry points. A sample is an ordinary trip owned by a Wayfold staff account, published through this table with a slug and search copy. The public page is served by a server route that reads through the worker role and applies the same redaction rules as `trip_share_links` (no addresses, prices or traveler names); it is not a share link, never expires and carries no view counter. The app role reads published rows only (policy in 6.4) and cannot write the table. Comparison pages (`/vs/...`) are static web content and need no tables.
+Public sample trips and shared-trip pages are search entry points. A sample is an ordinary trip owned by a Hermi staff account, published through this table with a slug and search copy. The public page is served by a server route that reads through the worker role and applies the same redaction rules as `trip_share_links` (no addresses, prices or traveler names); it is not a share link, never expires and carries no view counter. The app role reads published rows only (policy in 6.4) and cannot write the table. Comparison pages (`/vs/...`) are static web content and need no tables.
 
 ```sql
 CREATE TABLE sample_trips (
@@ -2398,7 +2398,7 @@ SELECT add_updated_at_trigger('sample_trips');
 
 ### 5.20 Plan verification ("Verify this plan")
 
-A person pastes an itinerary written by ChatGPT, Gemini, Layla, Mindtrip or anything else, and Wayfold checks each place, its opening hours and its price against place data and cited pages (06 5.11). Two runs are involved: `verify_extract` reads the text into a list of items (Haiku, 1 credit) and `verify_plan` checks the items the person selected (1 credit per checked item, capped per run). The pasted text is never stored: only the extracted items, the claims in them and the evidence found are kept, for 30 days, so the result can be reopened and imported. One `plan_verifications` row belongs to one trip (the trip the person ran it from; the trip counts toward active trips like any other). Items that are not checked stay `unchecked` with a reason. Every `green` or `amber` item carries the source page and the day it was seen, which is the evidence label; `red` means nothing could be found. Airbnb, Vrbo and Booking.com pages are never opened: a stay on those sites can only be `unchecked` with reason `blocked_source` unless place data recognizes it. Importing the result writes `itinerary_items` with `source = 'verify_plan'`, `check_url` and `checked_at` (so the freshness flag and recheck apply), and stamps `imported_item_id` on the item.
+A person pastes an itinerary written by ChatGPT, Gemini, Layla, Mindtrip or anything else, and Hermi checks each place, its opening hours and its price against place data and cited pages (06 5.11). Two runs are involved: `verify_extract` reads the text into a list of items (Haiku, 1 credit) and `verify_plan` checks the items the person selected (1 credit per checked item, capped per run). The pasted text is never stored: only the extracted items, the claims in them and the evidence found are kept, for 30 days, so the result can be reopened and imported. One `plan_verifications` row belongs to one trip (the trip the person ran it from; the trip counts toward active trips like any other). Items that are not checked stay `unchecked` with a reason. Every `green` or `amber` item carries the source page and the day it was seen, which is the evidence label; `red` means nothing could be found. Airbnb, Vrbo and Booking.com pages are never opened: a stay on those sites can only be `unchecked` with reason `blocked_source` unless place data recognizes it. Importing the result writes `itinerary_items` with `source = 'verify_plan'`, `check_url` and `checked_at` (so the freshness flag and recheck apply), and stamps `imported_item_id` on the item.
 
 ```sql
 CREATE TABLE plan_verifications (
@@ -2487,97 +2487,97 @@ Row-level security (RLS) is the second layer. The first layer is the API depende
 
 ### 6.1 Roles and privileges
 
-All objects are owned by `wayfold_owner`, which runs the migrations. On the managed database it already exists as the migration login; the first statement below only makes a fresh scratch database (CI, a laptop) work the same way.
+All objects are owned by `hermi_owner`, which runs the migrations. On the managed database it already exists as the migration login; the first statement below only makes a fresh scratch database (CI, a laptop) work the same way.
 
 ```sql
 DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'wayfold_owner') THEN CREATE ROLE wayfold_owner NOLOGIN; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'hermi_owner') THEN CREATE ROLE hermi_owner NOLOGIN; END IF;
 END $$;
 
--- wayfold_owner owns every object and runs migrations. It is never used by the API or worker.
-CREATE ROLE wayfold_app    NOLOGIN NOBYPASSRLS;   -- the API: subject to every policy
-CREATE ROLE wayfold_worker NOLOGIN BYPASSRLS;     -- Procrastinate workers, scheduler, webhooks, import jobs
-CREATE ROLE wayfold_admin  NOLOGIN BYPASSRLS;     -- the admin console only (the "admin bypass" role)
+-- hermi_owner owns every object and runs migrations. It is never used by the API or worker.
+CREATE ROLE hermi_app    NOLOGIN NOBYPASSRLS;   -- the API: subject to every policy
+CREATE ROLE hermi_worker NOLOGIN BYPASSRLS;     -- Procrastinate workers, scheduler, webhooks, import jobs
+CREATE ROLE hermi_admin  NOLOGIN BYPASSRLS;     -- the admin console only (the "admin bypass" role)
 -- Login roles carry the secrets from environment variables (never in the repo), for example:
---   CREATE ROLE wayfold_api_login    LOGIN PASSWORD :'api_pw'    IN ROLE wayfold_app;
---   CREATE ROLE wayfold_worker_login LOGIN PASSWORD :'worker_pw' IN ROLE wayfold_worker;
---   CREATE ROLE wayfold_admin_login  LOGIN PASSWORD :'admin_pw'  IN ROLE wayfold_admin;
+--   CREATE ROLE hermi_api_login    LOGIN PASSWORD :'api_pw'    IN ROLE hermi_app;
+--   CREATE ROLE hermi_worker_login LOGIN PASSWORD :'worker_pw' IN ROLE hermi_worker;
+--   CREATE ROLE hermi_admin_login  LOGIN PASSWORD :'admin_pw'  IN ROLE hermi_admin;
 
-GRANT USAGE ON SCHEMA public TO wayfold_app, wayfold_worker, wayfold_admin;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO wayfold_worker, wayfold_admin;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO wayfold_app, wayfold_worker, wayfold_admin;
+GRANT USAGE ON SCHEMA public TO hermi_app, hermi_worker, hermi_admin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO hermi_worker, hermi_admin;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO hermi_app, hermi_worker, hermi_admin;
 
 -- The API gets read and write on tenant tables, then loses what it must never touch.
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO wayfold_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO hermi_app;
 
 -- Global reference and catalog data: read only for the API (workers and the admin console write them).
 REVOKE INSERT, UPDATE, DELETE ON airports, fx_rates, places_cache, plans, store_products, credit_action_prices,
   shared_research_cache, fare_observations, route_price_insights, affiliate_programs, affiliate_link_templates,
-  feature_flags, kill_switches, sample_trips FROM wayfold_app;
+  feature_flags, kill_switches, sample_trips FROM hermi_app;
 -- Money and entitlement state is written only by the billing service (worker role) and the credit functions.
 REVOKE INSERT, UPDATE, DELETE ON subscriptions, entitlements, trip_passes, store_transactions,
-  credit_grants, credit_ledger, credit_debts FROM wayfold_app;
+  credit_grants, credit_ledger, credit_debts FROM hermi_app;
 -- Referral state is written only through the referral functions in 5.9 and by the worker.
-REVOKE INSERT, UPDATE, DELETE ON referral_codes, referral_rewards FROM wayfold_app;
+REVOKE INSERT, UPDATE, DELETE ON referral_codes, referral_rewards FROM hermi_app;
 -- Never visible to the API.
 REVOKE ALL ON admin_users, webhook_events, affiliate_conversions, affiliate_payouts, deletion_requests,
   rate_limit_counters, provider_calls, provider_call_rollups,
-  revenue_by_month, revenue_by_surface, revenue_by_partner, booked_fare_drops FROM wayfold_app;
-GRANT INSERT ON provider_calls TO wayfold_app;                       -- the API logs its own provider calls
-GRANT SELECT, INSERT, UPDATE, DELETE ON rate_limit_counters TO wayfold_app;   -- Postgres-backed rate limits
-GRANT INSERT ON audit_log TO wayfold_app;  REVOKE UPDATE, DELETE, SELECT ON audit_log FROM wayfold_app;
-REVOKE UPDATE, DELETE ON link_clicks FROM wayfold_app;               -- clicks are minted by the API and stamped by /go, never edited by users
-GRANT UPDATE (clicked_at, redirect_status, opened_in) ON link_clicks TO wayfold_app;
+  revenue_by_month, revenue_by_surface, revenue_by_partner, booked_fare_drops FROM hermi_app;
+GRANT INSERT ON provider_calls TO hermi_app;                       -- the API logs its own provider calls
+GRANT SELECT, INSERT, UPDATE, DELETE ON rate_limit_counters TO hermi_app;   -- Postgres-backed rate limits
+GRANT INSERT ON audit_log TO hermi_app;  REVOKE UPDATE, DELETE, SELECT ON audit_log FROM hermi_app;
+REVOKE UPDATE, DELETE ON link_clicks FROM hermi_app;               -- clicks are minted by the API and stamped by /go, never edited by users
+GRANT UPDATE (clicked_at, redirect_status, opened_in) ON link_clicks TO hermi_app;
 
 -- A user may edit only their own profile columns. Status, suspension and the refund-abuse block are written by the worker and admin roles.
-REVOKE UPDATE ON users FROM wayfold_app;
-GRANT UPDATE (display_name, locale, timezone, home_currency, home_airports, country_code, hide_booking_links, prefs, last_seen_at) ON users TO wayfold_app;
+REVOKE UPDATE ON users FROM hermi_app;
+GRANT UPDATE (display_name, locale, timezone, home_currency, home_airports, country_code, hide_booking_links, prefs, last_seen_at) ON users TO hermi_app;
 
 -- Imports: the API creates an import and may discard it (polling is switched through set_import_polling()); the worker does everything else. Nobody but the worker deletes the row,
 -- because the reward flag on it is what makes the free Trip Pass a once-per-user grant.
-REVOKE UPDATE, DELETE ON trip_imports FROM wayfold_app;
-GRANT UPDATE (status) ON trip_imports TO wayfold_app;
+REVOKE UPDATE, DELETE ON trip_imports FROM hermi_app;
+GRANT UPDATE (status) ON trip_imports TO hermi_app;
 
 -- Plan verification: the API starts a verification and lets the person discard it or tick which items to check and import; verdicts, evidence and
 -- counts are written by the worker only, so a member cannot edit what the evidence says.
-REVOKE UPDATE, DELETE ON plan_verifications FROM wayfold_app;
-GRANT UPDATE (status) ON plan_verifications TO wayfold_app;
-REVOKE INSERT, UPDATE, DELETE ON plan_verification_items FROM wayfold_app;
-GRANT UPDATE (selected, include_in_import) ON plan_verification_items TO wayfold_app;
+REVOKE UPDATE, DELETE ON plan_verifications FROM hermi_app;
+GRANT UPDATE (status) ON plan_verifications TO hermi_app;
+REVOKE INSERT, UPDATE, DELETE ON plan_verification_items FROM hermi_app;
+GRANT UPDATE (selected, include_in_import) ON plan_verification_items TO hermi_app;
 
 -- Notifications: the API reads them and marks them read; jobs create them.
-REVOKE INSERT, UPDATE, DELETE ON notifications FROM wayfold_app;
-GRANT UPDATE (read_at) ON notifications TO wayfold_app;
+REVOKE INSERT, UPDATE, DELETE ON notifications FROM hermi_app;
+GRANT UPDATE (read_at) ON notifications TO hermi_app;
 
--- Reports: users file them and read their own; moderators work them as wayfold_admin.
-REVOKE UPDATE, DELETE ON content_reports FROM wayfold_app;
+-- Reports: users file them and read their own; moderators work them as hermi_admin.
+REVOKE UPDATE, DELETE ON content_reports FROM hermi_app;
 
 -- The admin console narrows its own grants (08 section 9): audit_log is insert and select only, and money tables cannot be deleted from.
-REVOKE UPDATE, DELETE, TRUNCATE ON audit_log FROM wayfold_admin;
+REVOKE UPDATE, DELETE, TRUNCATE ON audit_log FROM hermi_admin;
 REVOKE DELETE, TRUNCATE ON credit_ledger, credit_grants, credit_debts, store_transactions, subscriptions, trip_passes,
-  affiliate_conversions, affiliate_payouts, webhook_events, trip_imports, referral_rewards FROM wayfold_admin;
+  affiliate_conversions, affiliate_payouts, webhook_events, trip_imports, referral_rewards FROM hermi_admin;
 
 -- Credit functions run with the owner's rights so the API cannot write credit_grants directly.
 ALTER FUNCTION reserve_credits(uuid, uuid, integer, ai_action, uuid, text) SECURITY DEFINER SET search_path = public;
 ALTER FUNCTION settle_credits(uuid, integer, bigint) SECURITY DEFINER SET search_path = public;
 REVOKE EXECUTE ON FUNCTION reserve_credits(uuid, uuid, integer, ai_action, uuid, text) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION settle_credits(uuid, integer, bigint) FROM PUBLIC;
-GRANT  EXECUTE ON FUNCTION reserve_credits(uuid, uuid, integer, ai_action, uuid, text) TO wayfold_app, wayfold_worker;
-GRANT  EXECUTE ON FUNCTION settle_credits(uuid, integer, bigint) TO wayfold_app, wayfold_worker;
+GRANT  EXECUTE ON FUNCTION reserve_credits(uuid, uuid, integer, ai_action, uuid, text) TO hermi_app, hermi_worker;
+GRANT  EXECUTE ON FUNCTION settle_credits(uuid, integer, bigint) TO hermi_app, hermi_worker;
 -- The API asks for the lazy Free allowance and the taster grant through these two; debt functions are for the billing service (worker role) only.
 ALTER FUNCTION ensure_free_monthly_grant(uuid) SECURITY DEFINER SET search_path = public;
 ALTER FUNCTION ensure_taster_grant(uuid) SECURITY DEFINER SET search_path = public;
 REVOKE EXECUTE ON FUNCTION ensure_free_monthly_grant(uuid), ensure_taster_grant(uuid), record_credit_debt(uuid, integer, text), settle_credit_debt(uuid) FROM PUBLIC;
-GRANT  EXECUTE ON FUNCTION ensure_free_monthly_grant(uuid), ensure_taster_grant(uuid) TO wayfold_app, wayfold_worker;
-GRANT  EXECUTE ON FUNCTION record_credit_debt(uuid, integer, text), settle_credit_debt(uuid) TO wayfold_worker;
+GRANT  EXECUTE ON FUNCTION ensure_free_monthly_grant(uuid), ensure_taster_grant(uuid) TO hermi_app, hermi_worker;
+GRANT  EXECUTE ON FUNCTION record_credit_debt(uuid, integer, text), settle_credit_debt(uuid) TO hermi_worker;
 -- Phase 1 reward functions (5.9). The API may ask for its own referral code and redeem a code; granting is worker only.
 REVOKE EXECUTE ON FUNCTION grant_import_reward(uuid), ensure_referral_code(uuid), grant_referral_reward(uuid),
   my_referral_code(), redeem_referral(text), set_import_polling(uuid, boolean) FROM PUBLIC;
-GRANT  EXECUTE ON FUNCTION grant_import_reward(uuid), ensure_referral_code(uuid), grant_referral_reward(uuid) TO wayfold_worker;
-GRANT  EXECUTE ON FUNCTION my_referral_code(), redeem_referral(text), set_import_polling(uuid, boolean) TO wayfold_app, wayfold_worker;
+GRANT  EXECUTE ON FUNCTION grant_import_reward(uuid), ensure_referral_code(uuid), grant_referral_reward(uuid) TO hermi_worker;
+GRANT  EXECUTE ON FUNCTION my_referral_code(), redeem_referral(text), set_import_polling(uuid, boolean) TO hermi_app, hermi_worker;
 ```
 
-`FORCE ROW LEVEL SECURITY` is deliberately not used: `wayfold_owner` owns the tables and the `SECURITY DEFINER` helpers below read across tenants on its behalf, while `wayfold_app` never owns a table, so it can never bypass a policy. The test suite must therefore connect as `wayfold_app` (section 6.5).
+`FORCE ROW LEVEL SECURITY` is deliberately not used: `hermi_owner` owns the tables and the `SECURITY DEFINER` helpers below read across tenants on its behalf, while `hermi_app` never owns a table, so it can never bypass a policy. The test suite must therefore connect as `hermi_app` (section 6.5).
 
 ### 6.2 The session setting and helper functions
 
@@ -2605,13 +2605,13 @@ CREATE VIEW trip_member_profiles AS
 SELECT tm.trip_id, tm.user_id, tm.role, u.display_name
   FROM trip_members tm JOIN users u ON u.id = tm.user_id
  WHERE tm.trip_id IN (SELECT visible_trip_ids());
-GRANT SELECT ON trip_member_profiles TO wayfold_app;
+GRANT SELECT ON trip_member_profiles TO hermi_app;
 
 -- Editors cannot hand a trip to someone else; ownership moves only through transfer_trip_owner() (not shown: one transaction
--- that swaps trip_members roles and trips.owner_user_id, running as wayfold_owner).
+-- that swaps trip_members roles and trips.owner_user_id, running as hermi_owner).
 CREATE FUNCTION trips_guard_owner() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  IF NEW.owner_user_id <> OLD.owner_user_id AND pg_has_role(current_user, 'wayfold_app', 'member') THEN
+  IF NEW.owner_user_id <> OLD.owner_user_id AND pg_has_role(current_user, 'hermi_app', 'member') THEN
     RAISE EXCEPTION 'owner_change_forbidden' USING ERRCODE = '42501';
   END IF;
   RETURN NEW;
@@ -2786,9 +2786,9 @@ EXCEPTION WHEN unique_violation THEN
   RETURN QUERY SELECT v_user, false;
 END;
 $$;
-ALTER FUNCTION bootstrap_user(text, text, citext, boolean, text) OWNER TO wayfold_owner;
+ALTER FUNCTION bootstrap_user(text, text, citext, boolean, text) OWNER TO hermi_owner;
 REVOKE ALL ON FUNCTION bootstrap_user(text, text, citext, boolean, text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION bootstrap_user(text, text, citext, boolean, text) TO wayfold_app;
+GRANT EXECUTE ON FUNCTION bootstrap_user(text, text, citext, boolean, text) TO hermi_app;
 -- Inserts and status changes (deletion flow) run in the worker role.
 
 ALTER TABLE people ENABLE ROW LEVEL SECURITY;
@@ -2836,7 +2836,7 @@ CREATE POLICY credit_grants_select ON credit_grants FOR SELECT USING (user_id = 
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY subscriptions_select ON subscriptions FOR SELECT USING (user_id = (SELECT app_user_id()));
 
--- Reports: anyone signed in may file one and read their own. Moderators use wayfold_admin, which bypasses the policies.
+-- Reports: anyone signed in may file one and read their own. Moderators use hermi_admin, which bypasses the policies.
 ALTER TABLE content_reports ENABLE ROW LEVEL SECURITY;
 CREATE POLICY content_reports_insert ON content_reports FOR INSERT WITH CHECK (reporter_user_id = (SELECT app_user_id()));
 CREATE POLICY content_reports_select ON content_reports FOR SELECT USING (reporter_user_id = (SELECT app_user_id()));
@@ -2846,9 +2846,9 @@ Affiliate, catalog and admin tables have no policies: they are covered by the gr
 
 ### 6.5 The admin bypass role and tests
 
-- `wayfold_admin` and `wayfold_worker` have `BYPASSRLS`. The admin console connects as `wayfold_admin`, sets `app.admin_user_id` for the session, and writes one `audit_log` row per action (actor, action, before, after, reason). The worker must set `app.user_id` explicitly (or use trip and user ids it was given) when it writes on behalf of a user, so its logs stay attributable.
+- `hermi_admin` and `hermi_worker` have `BYPASSRLS`. The admin console connects as `hermi_admin`, sets `app.admin_user_id` for the session, and writes one `audit_log` row per action (actor, action, before, after, reason). The worker must set `app.user_id` explicitly (or use trip and user ids it was given) when it writes on behalf of a user, so its logs stay attributable.
 - Global tables are readable by the app role and never writable (6.1).
-- **Tests run as the restricted role.** `pytest` connects as `wayfold_api_login` (today's test suite runs as the owner, which silently bypasses RLS). A generated test walks `information_schema` and fails if any table in `public` has a `trip_id` or `user_id` column and `relrowsecurity` is false and the table is not on a short allowlist (`run_events` partitions inherit from the parent; `admin_users`, `deletion_requests` and `affiliate_conversions` are closed to the app role by grants; `provider_calls` is insert-only; `link_clicks` is stamped by the `/go` redirect before any user context exists). A second generated test creates tenants A and B and asserts, for every tenant table, that B sees zero of A's rows and cannot insert, update or delete them. Extra tests cover the Phase 1 functions: `grant_import_reward()` grants once per user and again never (including after the trip is deleted), `redeem_referral()` refuses your own code and a second redemption, and `grant_referral_reward()` is idempotent.
+- **Tests run as the restricted role.** `pytest` connects as `hermi_api_login` (today's test suite runs as the owner, which silently bypasses RLS). A generated test walks `information_schema` and fails if any table in `public` has a `trip_id` or `user_id` column and `relrowsecurity` is false and the table is not on a short allowlist (`run_events` partitions inherit from the parent; `admin_users`, `deletion_requests` and `affiliate_conversions` are closed to the app role by grants; `provider_calls` is insert-only; `link_clicks` is stamped by the `/go` redirect before any user context exists). A second generated test creates tenants A and B and asserts, for every tenant table, that B sees zero of A's rows and cannot insert, update or delete them. Extra tests cover the Phase 1 functions: `grant_import_reward()` grants once per user and again never (including after the trip is deleted), `redeem_referral()` refuses your own code and a second redemption, and `grant_referral_reward()` is idempotent.
 
 ## 7. Key queries
 
@@ -3084,7 +3084,7 @@ The product promises account deletion in the app, data export on every tier, and
 | `affiliate_conversions`, `affiliate_payouts` | 7 years (financial aggregates). `user_id` nulled on account deletion | Deletion job; delete after 7 years |
 | `support_tickets` | 24 months after `resolved_at` | Nightly delete |
 | `content_reports` | Open reports kept; handled reports 24 months after `handled_at` | Nightly delete |
-| `audit_log` | `retention_class = 'standard'`: 13 months. `'extended'` (money, security and control actions, prefixes in 08 4.2): 7 years. The nightly hash-chain digests in R2 are kept 7 years | Nightly delete by class with `SET LOCAL wayfold.audit_purge = 'on'` |
+| `audit_log` | `retention_class = 'standard'`: 13 months. `'extended'` (money, security and control actions, prefixes in 08 4.2): 7 years. The nightly hash-chain digests in R2 are kept 7 years | Nightly delete by class with `SET LOCAL hermi.audit_purge = 'on'` |
 | `data_exports` | The file is deleted at `expires_at` (7 days); the row at 30 days | Nightly job removes the R2 object, then the row |
 | `deletion_requests` | 12 months after completion (so a restored backup can be re-purged) | Nightly delete |
 | `rate_limit_counters` | 1 day | Nightly `DELETE WHERE window_start < now() - interval '1 day'` |
@@ -3174,7 +3174,7 @@ Sizing guide: one month of `provider_calls` is fine without further tuning up to
 
 ## 10. Alembic migration order
 
-The hosted Wayfold database starts empty, so there is no expand-and-contract for the first release: the schema is created in the order below and the owner's data is imported afterwards (section 12). From the first production release on, every migration follows the zero-downtime rules in `../../06-database-and-data-integrations.md` section 3.2 (expand, migrate, contract; `CREATE INDEX CONCURRENTLY` inside `autocommit_block()`; foreign keys and checks added `NOT VALID` then validated; `lock_timeout = '3s'`; migrations run as a single pre-deploy job guarded by `pg_advisory_lock`, never at server start).
+The hosted Hermi database starts empty, so there is no expand-and-contract for the first release: the schema is created in the order below and the owner's data is imported afterwards (section 12). From the first production release on, every migration follows the zero-downtime rules in `../../06-database-and-data-integrations.md` section 3.2 (expand, migrate, contract; `CREATE INDEX CONCURRENTLY` inside `autocommit_block()`; foreign keys and checks added `NOT VALID` then validated; `lock_timeout = '3s'`; migrations run as a single pre-deploy job guarded by `pg_advisory_lock`, never at server start).
 
 Practical rules for the revisions: functions, triggers, partitions, policies and views are written as raw SQL in `op.execute()` (Alembic does not autogenerate them); enums use `postgresql.ENUM(..., create_type=False)` after an explicit `CREATE TYPE`; the `NAMING_CONVENTION` from `backend/tripplanner/models/base.py` stays unchanged so autogenerated diffs for plain tables stay quiet; each revision calls `add_updated_at_trigger` and `add_version_trigger` for its own tables. The revisions follow the order of the sections in 5, so every foreign key target exists first and no `ALTER TABLE ... ADD CONSTRAINT` is needed to close a cycle.
 
@@ -3196,7 +3196,7 @@ Practical rules for the revisions: functions, triggers, partitions, policies and
 | `0014_rls` | Helper functions, `trip_member_profiles`, policies for every table, grants and `SECURITY DEFINER` changes (section 6). Any table added after this revision must include its own `GRANT`, `ENABLE ROW LEVEL SECURITY` and policies in the same migration; the test in 6.5 fails otherwise | all tables exist |
 | `0015_seed` | Seed data (section 11), idempotent `INSERT ... ON CONFLICT DO NOTHING` | 0014 |
 
-Airports and FX are loaded by jobs, not by a migration: `wayfold seed-airports` reads the OurAirports CSV and `wayfold refresh-fx` pulls Frankfurter. CI runs the full chain on an empty database, runs the tenant-isolation tests as `wayfold_api_login`, then runs `alembic downgrade base` and `upgrade head` once to prove the chain is reversible in a scratch database (production never downgrades).
+Airports and FX are loaded by jobs, not by a migration: `hermi seed-airports` reads the OurAirports CSV and `hermi refresh-fx` pulls Frankfurter. CI runs the full chain on an empty database, runs the tenant-isolation tests as `hermi_api_login`, then runs `alembic downgrade base` and `upgrade head` once to prove the chain is reversible in a scratch database (production never downgrades).
 
 ## 11. Seed data
 
@@ -3214,7 +3214,7 @@ Phase 1 seeds six rows: `free`, `plus`, `trip_pass` and the three credit packs. 
 | `price_alerts`, `live_alerts` | Alert routes, and whether alerts may use live fares |
 | `collaborators`, `travelers_per_trip`, `can_invite` | Collaborators who can be invited to a trip (Free 1, Plus and Trip Pass 6), traveler profiles per trip, whether the owner may invite |
 | `saved_lodging_per_trip`, `lodging_compare`, `places_searches_per_day` | Shortlist and search caps |
-| `hide_presentation_footer` | True removes the "Made with Wayfold" footer and PDF watermark (Free false, everything paid true) |
+| `hide_presentation_footer` | True removes the "Made with Hermi" footer and PDF watermark (Free false, everything paid true) |
 | `monthly_ceiling_micros`, `daily_ceiling_micros` | Per-account provider-spend ceilings in micro-dollars |
 | `taster_agent_runs` | One-time free deep agent runs |
 | `verify_items_per_run` | Most items one "Verify this plan" check may include (Free 5, Plus and Trip Pass 12); more items need another run |
@@ -3250,16 +3250,16 @@ Keys that only some rows have (`live_checks_max` on the pass, and the tier-only 
 
 ```sql
 INSERT INTO store_products (product_id, store, plan_code, period, price_minor, currency, trial_days, is_active) VALUES
-('wayfold_plus_monthly',   'apple',  'plus',            'month',  599, 'USD', 0, true),
-('wayfold_plus_annual',    'apple',  'plus',            'year',  3999, 'USD', 7, true),     -- 7-day trial on annual only
-('wayfold_trip_pass',      'apple',  'trip_pass',       'once',   999, 'USD', 0, true),     -- non-renewing subscription, 90 days
-('wayfold_credits_50',     'apple',  'credits_50',      'once',   299, 'USD', 0, true),     -- consumable
-('wayfold_credits_150',    'apple',  'credits_150',     'once',   699, 'USD', 0, true),
-('wayfold_credits_400',    'apple',  'credits_400',     'once',  1499, 'USD', 0, true)
+('hermi_plus_monthly',   'apple',  'plus',            'month',  599, 'USD', 0, true),
+('hermi_plus_annual',    'apple',  'plus',            'year',  3999, 'USD', 7, true),     -- 7-day trial on annual only
+('hermi_trip_pass',      'apple',  'trip_pass',       'once',   999, 'USD', 0, true),     -- non-renewing subscription, 90 days
+('hermi_credits_50',     'apple',  'credits_50',      'once',   299, 'USD', 0, true),     -- consumable
+('hermi_credits_150',    'apple',  'credits_150',     'once',   699, 'USD', 0, true),
+('hermi_credits_400',    'apple',  'credits_400',     'once',  1499, 'USD', 0, true)
 ON CONFLICT (product_id) DO NOTHING;
 ```
 
-Apple product ids are the ids created in App Store Connect; the subscription group is `wayfold_membership` (Plus now; Family and Pro join it in Phase 2). Apple Family Sharing is off. The import-reward Trip Pass has no store product: it is created by `grant_import_reward()`.
+Apple product ids are the ids created in App Store Connect; the subscription group is `hermi_membership` (Plus now; Family and Pro join it in Phase 2). Apple Family Sharing is off. The import-reward Trip Pass has no store product: it is created by `grant_import_reward()`.
 
 ### 11.3 Credit prices
 
@@ -3414,14 +3414,14 @@ Per-account holds (`user:<users.id>`) are created on demand by the admin console
 
 - `airports`: loaded from the OurAirports CSV (scheduled service only), about 4,000 rows.
 - `fx_rates`: first pull from Frankfurter at deploy, then twice a day.
-- The first `admin_users` row is created with a one-off CLI command (`wayfold admin-grant --email ...`), never through a migration, so no email address lives in the repo.
+- The first `admin_users` row is created with a one-off CLI command (`hermi admin-grant --email ...`), never through a migration, so no email address lives in the repo.
 - Credit grants that are not migrations: the Free allowance and the taster are written on demand by `ensure_free_monthly_grant` and `ensure_taster_grant` (5.8). Only the limit `taster_agent_runs = 1` on `free` and the `agent_run` price are seeded. Import-reward and referral credits are written by `grant_import_reward()` and `grant_referral_reward()` (5.9).
 - `sample_trips`: staff create the sample trips and publish them in the admin console; nothing is seeded.
 - `places_cache`, `shared_research_cache` and `fare_observations` start empty.
 
 ## 12. Mapping the existing Trip Planner data
 
-The owner's current data (the two-person household in the existing app) moves into the new database once, before public launch. The existing model is in `backend/tripplanner/models/` (7 Alembic revisions). Wayfold is a new database, so the import is a script (`wayfold import-legacy`), not an Alembic revision, and it is idempotent: every inserted row is recorded in a mapping table and skipped on a re-run. The example statements in this section use the `legacy` schema and `:parameters`, so they are fenced as `postgresql`.
+The owner's current data (the two-person household in the existing app) moves into the new database once, before public launch. The existing model is in `backend/tripplanner/models/` (7 Alembic revisions). Hermi is a new database, so the import is a script (`hermi import-legacy`), not an Alembic revision, and it is idempotent: every inserted row is recorded in a mapping table and skipped on a re-run. The example statements in this section use the `legacy` schema and `:parameters`, so they are fenced as `postgresql`.
 
 ### 12.1 Table mapping
 
@@ -3456,11 +3456,11 @@ The owner's current data (the two-person household in the existing app) moves in
 # 1. Restore the old dump into a scratch database, then move it into a schema of the target database.
 pg_restore --no-owner -d tripplanner_legacy_scratch tripplanner.dump
 psql tripplanner_legacy_scratch -c 'ALTER SCHEMA public RENAME TO legacy'
-pg_dump --schema=legacy tripplanner_legacy_scratch | psql "$WAYFOLD_DATABASE_URL"
+pg_dump --schema=legacy tripplanner_legacy_scratch | psql "$HERMI_DATABASE_URL"
 
 # 2. Run the import as the worker role (it bypasses RLS and writes across tenants).
-uv run wayfold import-legacy --primary-email "$PRIMARY_EMAIL" --partner-email "$PARTNER_EMAIL" --dry-run
-uv run wayfold import-legacy --primary-email "$PRIMARY_EMAIL" --partner-email "$PARTNER_EMAIL"
+uv run hermi import-legacy --primary-email "$PRIMARY_EMAIL" --partner-email "$PARTNER_EMAIL" --dry-run
+uv run hermi import-legacy --primary-email "$PRIMARY_EMAIL" --partner-email "$PARTNER_EMAIL"
 ```
 
 The two users are created as `users` rows with `status = 'active'` and the given emails; no `auth_identities` row exists yet. On first sign-in (email code, Apple or Google) the verified email matches the pre-created row and the identity is attached (the claim step described in `../../04-users-and-accounts.md`). Nothing about the legacy passcode carries over.
@@ -3533,7 +3533,7 @@ The remaining entities follow the same pattern (map ids, cast enums, convert `nu
 
 ### 12.3 Verification
 
-The script prints a report and exits non-zero if any check fails: row counts per entity (old against new, minus documented skips), no `trip_people` row without a matching `people` row, every trip has exactly one owner member, money totals per currency equal before and after conversion (sum of `lodging_options.price_total` against `price_total_minor`), and an RLS smoke test as `wayfold_api_login` (the primary user sees all trips, a third test user sees none). The legacy schema and `legacy_id_map` are dropped after a 30 day soak.
+The script prints a report and exits non-zero if any check fails: row counts per entity (old against new, minus documented skips), no `trip_people` row without a matching `people` row, every trip has exactly one owner member, money totals per currency equal before and after conversion (sum of `lodging_options.price_total` against `price_total_minor`), and an RLS smoke test as `hermi_api_login` (the primary user sees all trips, a third test user sees none). The legacy schema and `legacy_id_map` are dropped after a 30 day soak.
 
 ## 13. Tables added beyond the build README list
 
@@ -3571,13 +3571,13 @@ Names only. Each feature pack defines the exact DDL, policies, grants and seed r
 
 | Feature pack | New tables | New columns, values and objects on Phase 1 tables |
 |---|---|---|
-| Family plan and households | `households`, `household_members` | `credit_grants.household_id`, `subscriptions.household_id`, `entitlements.household_id`; `credit_grant_kind` value `household_monthly`; `entitlements.source` value `household`; `credit_balances.household_id`; `enforce_household_size()`, `in_my_household()`; household pool in `reserve_credits()`; `plans` row `family`; `store_products` rows `wayfold_family_monthly`, `wayfold_family_annual`; limit key `household_members_max` |
-| Group Trip Pass, polls and cost splitting, room-block request | `polls`, `poll_votes`, `expenses`, `expense_shares`, `settlements`, `room_block_requests` | `trip_passes.upgraded_from_id`; `pass_status` value `upgraded`; `trip_passes.plan_code` check widened to `group_trip_pass`; `plans` row `group_trip_pass`; `store_products` row `wayfold_group_trip_pass`; limit keys `polls`, `cost_splitting`, `room_block_request` on every plan row; types `poll_status`, `split_method`; `poll_votes_validate()`, `check_expense_shares_sum()`; flags `group_tools`, `room_block_requests` |
+| Family plan and households | `households`, `household_members` | `credit_grants.household_id`, `subscriptions.household_id`, `entitlements.household_id`; `credit_grant_kind` value `household_monthly`; `entitlements.source` value `household`; `credit_balances.household_id`; `enforce_household_size()`, `in_my_household()`; household pool in `reserve_credits()`; `plans` row `family`; `store_products` rows `hermi_family_monthly`, `hermi_family_annual`; limit key `household_members_max` |
+| Group Trip Pass, polls and cost splitting, room-block request | `polls`, `poll_votes`, `expenses`, `expense_shares`, `settlements`, `room_block_requests` | `trip_passes.upgraded_from_id`; `pass_status` value `upgraded`; `trip_passes.plan_code` check widened to `group_trip_pass`; `plans` row `group_trip_pass`; `store_products` row `hermi_group_trip_pass`; limit keys `polls`, `cost_splitting`, `room_block_request` on every plan row; types `poll_status`, `split_method`; `poll_votes_validate()`, `check_expense_shares_sum()`; flags `group_tools`, `room_block_requests` |
 | Comments on items | `comments` | flag `poll_comments`; `notifications.kind` values for mentions and replies |
-| Email-forward import (`plans@wayfold.app`) | `forwarding_addresses`, `inbound_emails` | `trip_imports.source` value `email_forward`; `trip_imports.inbound_email_id` |
+| Email-forward import (`plans@hermi.world`) | `forwarding_addresses`, `inbound_emails` | `trip_imports.source` value `email_forward`; `trip_imports.inbound_email_id` |
 | Paste your group chat, repair a day | none | `run_kind` values `group_chat_draft`, `repair_day`; `ai_action` values if they get their own price; flags `group_chat_draft`, `repair_day` |
 | Flight status, delay and gate alerts | `flight_status_subscriptions`, `flight_status_events` | `chosen_flights.flight_numbers`; `itinerary_items.flight_number`; `notifications.kind` values `flight_delay`, `gate_change`; kill switch `provider.flight_status` |
-| Pro tier and scheduled agent routines | `routines` | `runs.routine_id`, `runs.priority`; type `routine_kind`; `run_kind` values `price_check`, `batch_scan`; `run_trigger` values `schedule`, `catch_up`; `plans` row `pro`; `store_products` rows `wayfold_pro_monthly`, `wayfold_pro_annual`; limit keys `scheduled_routines`, `priority_queue`, `credit_rollover_cap`, `group_payments`; flags `tier_pro`, `scheduled_agent_routines` |
+| Pro tier and scheduled agent routines | `routines` | `runs.routine_id`, `runs.priority`; type `routine_kind`; `run_kind` values `price_check`, `batch_scan`; `run_trigger` values `schedule`, `catch_up`; `plans` row `pro`; `store_products` rows `hermi_pro_monthly`, `hermi_pro_annual`; limit keys `scheduled_routines`, `priority_queue`, `credit_rollover_cap`, `group_payments`; flags `tier_pro`, `scheduled_agent_routines` |
 | Concierge lane | `concierge_requests` | type `concierge_status`; `room_block_requests.concierge_request_id`; `consents.kind` value `concierge_sharing`; `support_tickets.category` value `concierge`; flag `concierge_requests` |
 | Direct affiliate programs | none | `affiliate_programs.network` values `impact`, `direct`; `webhook_events.provider` value `impact`; seed programs `expedia_group`, `booking_direct`, `skyscanner`, `airalo`, `getyourguide_direct`; their link templates for them; one `affiliate.<code>` kill switch each |
 | Native Android and web billing | none | `store_products.store`, `store_transactions.store`, `subscriptions.store` values `google` and the web billing value (Phase 1 allows `apple` only); a web price column on `store_products`; `webhook_events.provider` web billing value; `devices.push_provider` (FCM token path) |
@@ -3588,7 +3588,7 @@ Names only. Each feature pack defines the exact DDL, policies, grants and seed r
 | Feature pack | New tables | New columns, values and objects on Phase 1 and Phase 2 tables |
 |---|---|---|
 | Stripe group payments | `payment_collections` | `settlements.collection_id`, `settlements.stripe_payment_intent_id`; `users.stripe_connect_account_id`, `users.stripe_connect_ready`; `store_transactions.kind` value `group_payment`; `webhook_events.provider` value `stripe` added; kill switch `provider.stripe`; flag `group_payments` |
-| Wayfold for Advisors | `advisor_orgs`, `advisor_seats`, `advisor_clients` | `plans.kind` value `advisor_seat`; `plans` row `advisor_seat`; `store_products` rows `advisor_seat_monthly`, `advisor_seat_annual`; `entitlements.source` value `advisor`; `store_transactions.kind` value `advisor_seat`; `concierge_requests.advisor_org_id`; `my_advisor_orgs()`; the advisor branch of the entitlement query (7.1); flag `advisor_workspaces` |
+| Hermi for Advisors | `advisor_orgs`, `advisor_seats`, `advisor_clients` | `plans.kind` value `advisor_seat`; `plans` row `advisor_seat`; `store_products` rows `advisor_seat_monthly`, `advisor_seat_annual`; `entitlements.source` value `advisor`; `store_transactions.kind` value `advisor_seat`; `concierge_requests.advisor_org_id`; `my_advisor_orgs()`; the advisor branch of the entitlement query (7.1); flag `advisor_workspaces` |
 | Partner guides | `partner_guides` | `itinerary_items.source` value `guide`; `link_clicks.entity_type` value `guide`; flag `partner_guides` |
 | Printed trip books | `print_orders` | `store_transactions.kind` value `print_order`; flag `print_orders` |
 | In-app hotel booking (LiteAPI) | `hotel_bookings` | `lodging_options.added_via` value `liteapi`; flag `inapp_hotel_booking` |

@@ -12,7 +12,7 @@ Part of [Phase 2: growth](README.md). Written 2026-09-30. Source definitions:
 | Needs from Phase 1 | Trips, `people` and `trip_people`, roles, Trip Pass binding and expiry, entitlement merge, `fx_rates`, notifications, offline queue, activity log |
 | Soft link | Pack 07 (the room-block request is emailed to the concierge desk until the admin queue exists) |
 | Tickets | P2-011 to P2-024 |
-| Tier and products | `group_trip_pass` ($19.99 once, 90 days, `wayfold_group_trip_pass`); polls and manual splitting in every paid plan and both passes |
+| Tier and products | `group_trip_pass` ($19.99 once, 90 days, `hermi_group_trip_pass`); polls and manual splitting in every paid plan and both passes |
 
 ## 1. Goal and why now
 
@@ -28,7 +28,7 @@ splitting, no money moves), and, on the Group Trip Pass, up to 12 travelers and 
   expense splitting), so a collaborative planner without polls or costs looks incomplete to the
   friend-group buyer. Splitwise Pro (the cost-splitting anchor, $39.99 a year, reported) shows people
   will pay for splitting alone. The business plan calls group coordination "still clumsy in TripIt and
-  Google Docs" ([business plan](../context/business-plan/01-business-plan.md)). Wayfold's edge is that polls can vote on
+  Google Docs" ([business plan](../context/business-plan/01-business-plan.md)). Hermi's edge is that polls can vote on
   real objects (a shortlisted stay, a date range) and the winner applies back to the plan.
 - Revenue. The Group Trip Pass is 8 percent of payers in the pricing model at $19.99 with a 78 to 92
   percent margin ([09 revenue expansion](../context/business-plan/09-revenue-expansion.md) section 2.3). It is the clean
@@ -111,7 +111,7 @@ is through Stripe, never Apple In-App Purchase, and never for digital features.
     count, budget and notes.
   - Submission is routed to the concierge team (host agency), who reply by email within 2
     business days; status is visible (submitted, in review, quoted, accepted, declined, expired, cancelled).
-  - The form shows a plain disclosure: "Wayfold may earn a commission from the hotel or our host
+  - The form shows a plain disclosure: "Hermi may earn a commission from the hotel or our host
     agency. It does not change what you pay."
   - Request creates no charge and no obligation.
 - Tier: `group_trip_pass` only (a trip with a Group Trip Pass, including for its invited members).
@@ -371,7 +371,7 @@ ON CONFLICT (code) DO NOTHING;
 -- "group_payments": true only takes effect when the group_payments flag (created off below) is turned on in Phase 3.
 
 INSERT INTO store_products (product_id, store, plan_code, period, price_minor, currency, trial_days, is_active) VALUES
-('wayfold_group_trip_pass', 'apple', 'group_trip_pass', 'once', 1999, 'USD', 0, true)
+('hermi_group_trip_pass', 'apple', 'group_trip_pass', 'once', 1999, 'USD', 0, true)
 ON CONFLICT (product_id) DO NOTHING;
 
 -- Room-block requests share the concierge consent (added here because this pack ships first; pack 07 reuses it).
@@ -392,7 +392,7 @@ adds kinds swaps `ck_notifications_kind` for the current list plus its own value
 `poll_closed`, `poll_reminder`, `expense_added`, `settlement_requested`, `settlement_confirmed`,
 `room_block_update`. Dedupe keys follow the Phase 1 pattern, for example `poll_reminder:<poll_id>:<date>`.
 
-Balance and settle-up algorithm (application code, `apps/api/wayfold/modules/groups/balances.py`):
+Balance and settle-up algorithm (application code, `apps/api/hermi/modules/groups/balances.py`):
 
 1. Net per person = sum of shares owed subtracted from amounts paid, in `amount_trip_minor`, plus
    recorded and succeeded settlements (a payer's settlement moves their net toward zero).
@@ -422,7 +422,7 @@ trip are locked (`409 state_conflict`); description, category, note and receipt 
 ## 4. API additions
 
 All routes below are in [04 sections 5.17 and 5.18](../reference-full-spec/04-api-spec.md). Gate for the group tool routes:
-`group_tools` (the trip's merged limits have `polls` and `cost_splitting`). Wayfold records who owes
+`group_tools` (the trip's merged limits have `polls` and `cost_splitting`). Hermi records who owes
 whom; any real money moves outside the app.
 
 | Endpoint | Auth | Gate and cost | Request and response | Errors and side effects |
@@ -553,7 +553,7 @@ New screens and sheets in this pack:
    loft and Bairro Alto flat. Pick one to apply."
 3. **Room-block request** sheet (Group Trip Pass only). Fields: hotel (pick from the shortlist or type),
    dates, rooms (2 to 50), guests, budget per room, notes. Disclosure block above Submit, in body text:
-   "Wayfold may earn a commission from the hotel or our host agency. It does not change what you pay."
+   "Hermi may earn a commission from the hotel or our host agency. It does not change what you pay."
    and "Sending this creates no charge and no obligation. A person replies by email within 2 business
    days." Status tracker: submitted, in review, quoted, accepted, declined, expired, cancelled.
 4. **Trip settings, Pass** block: pass status and expiry, notice 7 days before expiry, renewal offer,
@@ -577,7 +577,7 @@ affiliate booking, or during presentation playback.
 
 | Product ID | Type | Price (US) | Duration | Group and level | Trial | Entitlement |
 |---|---|---|---|---|---|---|
-| `wayfold_group_trip_pass` | Non-renewing subscription | $19.99 | 90 days | none | none | `group_trip_pass` (one trip) |
+| `hermi_group_trip_pass` | Non-renewing subscription | $19.99 | 90 days | none | none | `group_trip_pass` (one trip) |
 
 - Purchase comes first, binding second. Before purchase the app asks "Which trip is this for?"
   (pre-selected when the purchase started from a trip) and sends the trip with
@@ -586,7 +586,7 @@ affiliate booking, or during presentation playback.
   owner can bind, and the purchaser must be that owner. A trip holds one active pass.
 - One move: an active pass can move to another trip the same owner owns, once.
 - Upgrade from Trip Pass: bind a Group Trip Pass to a trip with an active Trip Pass (see section 2).
-  Nothing is refunded by Wayfold; Apple refund rules apply to each purchase. A Trip Pass cannot be
+  Nothing is refunded by Hermi; Apple refund rules apply to each purchase. A Trip Pass cannot be
   bound to a trip that has a Group Trip Pass (`409 state_conflict`).
 - Group Trip Pass limits from its `plans` row: 12 travelers (owner plus up to 11 collaborators), 80
   credits (the `trip_pass` grant with the trip id), 2 live routes and at most 60 live checks, room-block
@@ -595,7 +595,7 @@ affiliate booking, or during presentation playback.
 - Refund: the pass stops granting capabilities, unspent credits are removed, the trip and data stay.
 - The app never links to a web page to buy the Group Trip Pass. Every purchase is an In-App Purchase;
   nothing here uses Stripe in Phase 2.
-- RevenueCat: add `wayfold_group_trip_pass` as a non-renewing product and to the `default` offering.
+- RevenueCat: add `hermi_group_trip_pass` as a non-renewing product and to the `default` offering.
   Review screenshot and metadata needed; submit with an app version.
 
 ## 7. Admin additions
@@ -680,7 +680,7 @@ Existing events from the full catalogue: `poll_created {option_count, subject}`,
   consent kind and flag seeds above.
 - Accept: empty to head and previous to head pass; shares-sum trigger rejects mismatches; cross-tenant
   suite covers the new tables.
-- Touches: `apps/api/wayfold/migrations/versions/`, `modules/groups/models.py`.
+- Touches: `apps/api/hermi/migrations/versions/`, `modules/groups/models.py`.
 - Tests: migration, trigger and RLS tests.
 
 #### P2-012 Capability flags and gates [M, needs P2-011, Phase 1 entitlement resolver]
@@ -728,7 +728,7 @@ Existing events from the full catalogue: `poll_created {option_count, subject}`,
 - Accept: no duplicates after reconnect; conflicts use the existing 409 sheet.
 
 #### P2-020 Group Trip Pass product, bind and upgrade [M, needs P2-012, Phase 1 Trip Pass binding]
-- Description: sell `wayfold_group_trip_pass`, bind like Trip Pass, upgrade path from Trip Pass,
+- Description: sell `hermi_group_trip_pass`, bind like Trip Pass, upgrade path from Trip Pass,
   12 traveler and 11 collaborator caps, credits grant of 80, expiry handling that closes polls.
 - Accept: a pass supports 12 travelers and not a 13th; upgrade keeps the live-check counter; expiry
   behavior as in section 2.
@@ -759,7 +759,7 @@ Existing events from the full catalogue: `poll_created {option_count, subject}`,
 | Risk | Mitigation |
 |---|---|
 | Rounding bugs make balances not sum to zero | Integer minor units, deterministic leftovers, property tests, DB sum trigger |
-| Users expect Wayfold to move money | Copy says Wayfold records who owes whom; Stripe collection is Phase 3 and never Apple IAP |
+| Users expect Hermi to move money | Copy says Hermi records who owes whom; Stripe collection is Phase 3 and never Apple IAP |
 | Pass confusion (Trip Pass, Group Trip Pass, Plus) | Best-of rule stated in the paywall; upgrade path; pass status in trip settings |
 | 12 travelers and AI cost on one trip | Credits follow the acting user; pass pool 80; ceilings per account |
 | Room-block leads overload the founder or need licensing | Same region gate as concierge; 2 business day reply promise; capacity setting from pack 07 |

@@ -1,10 +1,10 @@
 # Phase 3: scale (year 2 and later)
 
-Part of the [Wayfold build specification](../README.md). Written 2026-09-30.
+Part of the [Hermi build specification](../README.md). Written 2026-09-30.
 
 Phase 1 is the launch app ([phase-1-launch/](../phase-1-launch/README.md)). Phase 2 adds growth features ([phase-2-growth/](../phase-2-growth/README.md)). Phase 3 is seven self-contained feature packs, added one at a time, that aim at the people who plan trips for other people (advisors, group and event organizers, destination boards, agencies) and at higher-value lanes (printed books, hotel booking, card offers). Each pack says exactly what it adds to the Phase 1 database, API, screens, billing and admin, so it can be built without rereading everything.
 
-Scope is final: a feature is in Phase 3 because the "Not in Phase 1" table in the [Phase 1 README](../phase-1-launch/README.md) says so (Stripe group payments, Wayfold for Advisors, partner guides, printed trip books, in-app hotel booking, white-label and API, card and loyalty offers). The revenue numbers come from [09-revenue-expansion.md](../context/business-plan/09-revenue-expansion.md) and the affiliate lanes from [08-affiliate-revenue.md](../context/business-plan/08-affiliate-revenue.md).
+Scope is final: a feature is in Phase 3 because the "Not in Phase 1" table in the [Phase 1 README](../phase-1-launch/README.md) says so (Stripe group payments, Hermi for Advisors, partner guides, printed trip books, in-app hotel booking, white-label and API, card and loyalty offers). The revenue numbers come from [09-revenue-expansion.md](../context/business-plan/09-revenue-expansion.md) and the affiliate lanes from [08-affiliate-revenue.md](../context/business-plan/08-affiliate-revenue.md).
 
 **Naming.** The Phase 1 spec files call this work "year 2 and later" or "Phase 4" (tickets WF-101 to WF-113 in the full [09-build-roadmap.md](../reference-full-spec/09-build-roadmap.md), listed as moved in [Phase 1 section 7](../phase-1-launch/09-build-roadmap.md)). In this folder it is Phase 3, tickets are `P3-001` onward, and the pack files list which WF ticket each one replaces.
 
@@ -15,7 +15,7 @@ Scope is final: a feature is in Phase 3 because the "Not in Phase 1" table in th
 | Pack | What | Base Y5 revenue (09) | Build effort | Needs | Tickets |
 |---|---|---|---|---|---|
 | [01 Stripe group payments](01-stripe-group-payments.md) | Stripe Connect collection for group trips, plus the $79 events workspace | $56.3k ($38.3k events, $18.0k payments) | about 12 weeks | Lawyer first, support contractor | P3-001 to P3-014 |
-| [02 Wayfold for Advisors](02-wayfold-for-advisors.md) | Web SaaS: seats, client workspaces, branded presentations, proposals, commission tracking, Stripe billing | $141.4k (450 seats) | about 16 weeks | 15 interviews, light legal, support contractor at about 100 seats | P3-015 to P3-034 |
+| [02 Hermi for Advisors](02-hermi-for-advisors.md) | Web SaaS: seats, client workspaces, branded presentations, proposals, commission tracking, Stripe billing | $141.4k (450 seats) | about 16 weeks | 15 interviews, light legal, support contractor at about 100 seats | P3-015 to P3-034 |
 | [03 Partner guides](03-partner-guides.md) | Labeled sponsored destination guides, review workflow, sponsor reports | $36.0k (6 deals at $6,000) | about 6 weeks plus sales | Sales time, light legal | P3-035 to P3-044 |
 | [04 Printed trip books](04-printed-trip-books.md) | Print-on-demand book and poster from presentation mode | $31.2k contribution | about 10 weeks | Real vendor quotes, accountant | P3-045 to P3-057 |
 | [05 In-app hotel booking](05-in-app-hotel-booking.md) | LiteAPI with Nuitee as merchant of record | $72.0k, **upside, not in totals** | about 13 weeks | Lawyer first, support hire, contractor engineer | P3-058 to P3-070 |
@@ -103,7 +103,7 @@ This matches the start years in 09 section 1: print, advisor build and the partn
 | 02 Advisors | Support and advisor-success contractor at about 100 seats (about $20.8k a year at an assumed $40 an hour, paid from seat revenue) | Light: terms, data-processing addendum, SaaS tax | No | Accountant for sales tax on SaaS |
 | 03 Partner guides | Part-time sales help becomes useful after about 6 deals a year (90 to 150 pitches) | Light: one-page sponsorship contract and disclosure terms | No | Founder sales time is the real cost |
 | 04 Print | No | No | No | Accountant for sales tax on physical goods; Stripe Tax does the calculation |
-| 05 LiteAPI | Yes: a support person before opening to everyone; contractor engineer advised | Yes, before launch: seller-of-travel and consumer law, supplier terms | No while Nuitee is merchant of record; yes (working capital and licences) if Wayfold ever becomes merchant | Emergency contact path for stays within 24 hours |
+| 05 LiteAPI | Yes: a support person before opening to everyone; contractor engineer advised | Yes, before launch: seller-of-travel and consumer law, supplier terms | No while Nuitee is merchant of record; yes (working capital and licences) if Hermi ever becomes merchant | Emergency contact path for stays within 24 hours |
 | 06 White-label | Onboarding and support person (per-account support is the real cost) | Yes: master agreement, DPA, child-data rules before any school operator | No | External security review before the first customer |
 | 07 Cards | Compliance owner (part of the founder's time at first) | Yes, on retainer; per-offer copy review | No | Specialist publisher network and issuer approvals |
 
@@ -169,7 +169,7 @@ Every pack file has the same sections: goal and revenue case (with the 09 number
 Resolve these before the affected pack starts; each is also marked in the pack.
 
 1. **Payments revenue per MAU** (pack 01): 09 says the stated inputs give $0.09; they multiply to $0.18. The model's $0.08 and $0.12 are below both, so totals stand, but use measured volume before planning on it.
-2. **Destination charges and liability** (pack 01): 07 section 10.2 says Wayfold never holds traveler money and the organizer handles disputes, but under Stripe's documented model destination charges leave refunds and chargebacks with the platform. Counsel and Stripe decide between destination and direct charges.
+2. **Destination charges and liability** (pack 01): 07 section 10.2 says Hermi never holds traveler money and the organizer handles disputes, but under Stripe's documented model destination charges leave refunds and chargebacks with the platform. Counsel and Stripe decide between destination and direct charges.
 3. **Advisor seat allowance** (pack 02): 03 seeds 150 credits and a $3.40 ceiling per seat (86% worst-case margin); 09 assumes 60 credits and $2.25 (91%). The 03 seed is the default and the pilot decides.
 4. **Print margin** (pack 04): 07 targets 35 to 45% after vendor, shipping and Stripe fees; 09's $26.39 contribution is 59% of the book price with shipping passed through at cost. A price guard and real quotes settle it. 09's poster contribution of $16.47 also differs by one cent from its own inputs ($16.46).
 5. **Discover and partner cards** (pack 03): 05 section 6.23 says "No partner cards" while the sitemap lists guides under Discover. Pack 03 keeps Discover free of cards and adds a labeled section on destination pages and a Guides screen.

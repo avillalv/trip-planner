@@ -1,4 +1,4 @@
-# Wayfold product specification
+# Hermi product specification
 
 Part of the [build specification](../README.md). Written 2026-09-30. The shared decisions in the
 folder README (tiers, credit actions, entity names, rules) are final and are used here exactly.
@@ -15,7 +15,7 @@ stable and are reused by the roadmap and test plans. "Owner" means the trip owne
 
 ### 1.1 Vision
 
-Wayfold is where two or more people turn "we should go somewhere" into a booked, scheduled,
+Hermi is where two or more people turn "we should go somewhere" into a booked, scheduled,
 shared plan without a spreadsheet, a group chat full of links, or twelve browser tabs. It keeps
 the decisions in one place (dates, flights, stays, days), lets everyone vote, watches fares for
 you, and shows the whole plan as a clean full-screen presentation. AI does the tedious hunting
@@ -168,7 +168,7 @@ Success: account exists, trip is saved, no data was lost, no paywall was shown.
 
 1. "Present" opens the trip as full-screen slides built from what is saved now. (F-PRS-1)
 2. Keyboard, swipe, grid view, and PDF print work. A `free` trip shows a small "Made with
-   Wayfold" footer and PDF watermark. (F-PRS-2)
+   Hermi" footer and PDF watermark. (F-PRS-2)
 3. Owner can share the presentation as a read-only link. (F-COL-6)
 
 ### 3.9 Before you go
@@ -412,7 +412,7 @@ action code and price, or "none". Acceptance bullets are testable at API or UI l
     12); `trip_pass` up to 6; `group_trip_pass` up to 12 travelers in total.
   - A `free` owner tapping Invite sees the paywall moment; the copy says "They join free".
   - Owner can revoke a pending invite or remove a member at any time.
-  - The invite email uses the inviter's display name and Wayfold's sending domain.
+  - The invite email uses the inviter's display name and Hermi's sending domain.
 - Tier: `plus`, `family`, `pro`, `trip_pass`, `group_trip_pass` to invite; everyone can accept.
 - Edge cases: expired token shows "Ask <name> for a new link"; invite email differing from the
   account email is accepted (the token is the proof); a member already on the trip is told so.
@@ -449,7 +449,7 @@ action code and price, or "none". Acceptance bullets are testable at API or UI l
   - `trip_share_links` creates a public read-only web page of itinerary and map, with redaction
     flags on by default: hide exact lodging address, prices, notes and traveler names.
   - Default expiry 90 days (owner can choose 1 to 365); owner can revoke at any time; views are throttled per IP and token.
-  - Page ends with "Get the app to edit" and shows the "Made with Wayfold" footer on `free`
+  - Page ends with "Get the app to edit" and shows the "Made with Hermi" footer on `free`
     trips.
   - Partner links on the page follow F-AFF rules and can be turned off by the owner.
 - Tier: `plus`, `family`, `pro`, `trip_pass`, `group_trip_pass` create; anyone with the link
@@ -471,7 +471,7 @@ Reuse note: route, fare and choice logic carry over from the existing Trip Plann
 
 #### F-FLT-1 Routes
 
-- Story: As a planner, I want to describe where and when I might fly, so that Wayfold looks at
+- Story: As a planner, I want to describe where and when I might fly, so that Hermi looks at
   the right fares.
 - Acceptance:
   - A route (`flight_routes`) has up to 4 origin and 4 destination airports, a departure window,
@@ -594,7 +594,7 @@ rewritten; no ranking by commission.
 - Story: As a desktop user, I want to save a listing with one click from any site, so that I skip
   copy and paste.
 - Acceptance:
-  - A draggable "Save to Wayfold" bookmarklet opens the app with name, photos, price and rating
+  - A draggable "Save to Hermi" bookmarklet opens the app with name, photos, price and rating
     that the page in front of the user exposes, ready to review and save.
   - The bookmarklet reads only the open page in the user's own browser; the server never visits
     the site.
@@ -615,7 +615,7 @@ rewritten; no ranking by commission.
 #### F-LDG-4 Rental search
 
 - Story: As a planner, I want to search priced rentals for my dates, so that I find options
-  without leaving Wayfold.
+  without leaving Hermi.
 - Acceptance:
   - "Search rentals" takes destination, dates and guests, and lists priced results from licensed
     hotel and rental partners.
@@ -944,7 +944,7 @@ Reuse note: extends the existing `presentation` page.
   - Print or Save as PDF gives one 16:9 page per slide; maps print as a static stop plot;
     partner links stay live in PDF with the disclosure sentence printed, except the checklist,
     which prints without affiliate buttons.
-  - `free` trips show a small "Made with Wayfold" footer and PDF watermark; paid and passed trips
+  - `free` trips show a small "Made with Hermi" footer and PDF watermark; paid and passed trips
     do not.
   - No affiliate card or paywall appears during playback.
 - Tier: all (footer and watermark on `free` only).
@@ -1039,7 +1039,7 @@ Phase 4) is for `group_trip_pass` and `pro` only.
 - Acceptance:
   - A settlement (`settlements`) is "Pay with card or bank through Stripe" (web, funds go to the
     organizer's connected account as a destination charge inside a `payment_collections` row;
-    Wayfold takes no cut in year 1) or "Mark as paid" (manual, both sides confirm).
+    Hermi takes no cut in year 1) or "Mark as paid" (manual, both sides confirm).
   - Status (`settlements.status`): pending (waiting for the payee to confirm, or for Stripe),
     recorded (confirmed manual payment), succeeded (Stripe paid), failed, refunded, disputed.
     Recorded and succeeded settlements reduce balances.
@@ -1060,7 +1060,7 @@ Phase 4) is for `group_trip_pass` and `pro` only.
     count, budget and notes.
   - Submission is routed to the concierge team (host agency), who reply by email within 2
     business days; status is visible (submitted, in review, quoted, accepted, declined, expired, cancelled).
-  - The form shows a plain disclosure: "Wayfold may earn a commission from the hotel or our host
+  - The form shows a plain disclosure: "Hermi may earn a commission from the hotel or our host
     agency. It does not change what you pay."
   - Request creates no charge and no obligation.
 - Tier: `group_trip_pass` only (a trip with a Group Trip Pass, including for its invited members).
@@ -1075,7 +1075,7 @@ Phase 4) is for `group_trip_pass` and `pro` only.
     with 3 or more destinations opens a short form (`concierge_requests`): what to book, dates,
     budget, preferences, contact preference.
   - The screen explains: a licensed advisor under a host travel agency fulfills it, you may get
-    perks such as breakfast or credits, Wayfold earns commission from the supplier, price to you
+    perks such as breakfast or credits, Hermi earns commission from the supplier, price to you
     is not higher.
   - It is never pushed, never pop-up, and appears at most once per screen view.
   - Status timeline: submitted, assigned, quoted, booked, declined; replies arrive by email and
@@ -1242,7 +1242,7 @@ Global rules (each is a testable requirement):
   - `plus` $5.99 a month or $39.99 a year (annual pre-selected, 7-day trial on annual only),
     `family` $8.99 or $59.99, `pro` $11.99 or $99, `trip_pass` $9.99, `group_trip_pass` $19.99,
     `credits_50` $2.99, `credits_150` $6.99, `credits_400` $14.99.
-  - Subscriptions share the `wayfold_membership` group; upgrade, downgrade and cross-grade follow
+  - Subscriptions share the `hermi_membership` group; upgrade, downgrade and cross-grade follow
     StoreKit rules.
   - The trial screen states the price and renewal date; a reminder is sent before conversion.
   - Restore purchases is always present.
@@ -1531,7 +1531,7 @@ Notes:
   trial screens state dates).
 - Consistent help location and no cognitive-test-only steps (email code is paste-friendly,
   autofill works).
-- The design system colors (passport theme) are checked in light and dark themes for contrast.
+- The design system colors (the Hermi theme) are checked in light and dark themes for contrast (the measured pairs are in 05 section 2.3).
 - Accessibility checks are in CI (axe on key screens) and a manual screen reader pass runs
   before each release.
 
