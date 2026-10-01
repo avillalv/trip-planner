@@ -4,7 +4,7 @@ Phase 1 build, step 2 of 28. Follow `app-buildout/prompts/00-orchestrator.md` fo
 
 ## Goal
 
-Bring over the modules the architecture marks as reuse or adapt (providers, fare logic, itinerary and lodging logic, evidence rules, design tokens), adapted to the new layout, with their tests.
+Bring over the modules the architecture marks as reuse or adapt (providers, fare logic, itinerary and lodging logic, evidence rules, design tokens), adapted to the new layout, with their tests. Port the token plumbing and names only; every value comes from 05 section 2 (the Hermi palette), never from the old repo's `index.css`.
 
 ## Tickets, in this order
 
@@ -30,7 +30,7 @@ Each ticket's description, dependencies, acceptance criteria, files and tests ar
 
 Add these to `app-buildout/prompts/HUMAN_TASKS.md` (do not block on them; use fakes, fixtures and flags until they are done):
 
-- If the session cannot clone the Trip Planner repository (it is private), start the build session with both `wayfold` and `trip-planner` selected, or attach `trip-planner` read-only.
+- If the session cannot clone the Trip Planner repository (it is private), start the build session with both `hermi` and `trip-planner` selected, or attach `trip-planner` read-only.
 
 ## Done when
 

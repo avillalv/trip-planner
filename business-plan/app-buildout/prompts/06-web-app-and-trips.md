@@ -26,7 +26,7 @@ Each ticket's description, dependencies, acceptance criteria, files and tests ar
 
 ## Notes
 
-- Use the brand files in `app-buildout/brand/`. Copy rules: sentence case, plain verbs, no em dashes.
+- Use the brand files in `app-buildout/brand/`: `brand/hermi-logo.svg` (light lockup), `brand/hermi-logo-dark.svg` (dark lockup) and `brand/hermi-mark.svg` (favicon and avatars). Port the token plumbing and names only; every value comes from 05 section 2 (the Hermi palette), never from the old repo's `index.css`. Copy rules: sentence case, plain verbs, no em dashes.
 - Add a Playwright smoke test for sign-in (with a test login) and creating a trip.
 
 ## Owner-only steps

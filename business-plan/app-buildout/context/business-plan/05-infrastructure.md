@@ -4,7 +4,7 @@ Part of the [business plan](README.md). The decisions of record in the README ov
 
 Written 2026-09-30.
 
-This file covers what it takes to run Wayfold (today the Trip Planner app) as a hosted, multi-tenant service behind a web beta and then an iOS app, at 1k, 10k and 100k monthly active users (MAU). Costs are infrastructure only (Stripe fees are shown separately in section 8 because they scale with revenue). Claude API spend and flight-data spend (SerpApi, Travelpayouts) are called out where they change the design and are costed in [03-ai-features-and-costs.md](03-ai-features-and-costs.md) and [06-database-and-data-integrations.md](06-database-and-data-integrations.md). Prices are rough list prices as of 2026-09-30 and will drift; re-check before committing.
+This file covers what it takes to run Hermi (today the Trip Planner app) as a hosted, multi-tenant service behind a web beta and then an iOS app, at 1k, 10k and 100k monthly active users (MAU). Costs are infrastructure only (Stripe fees are shown separately in section 8 because they scale with revenue). Claude API spend and flight-data spend (SerpApi, Travelpayouts) are called out where they change the design and are costed in [03-ai-features-and-costs.md](03-ai-features-and-costs.md) and [06-database-and-data-integrations.md](06-database-and-data-integrations.md). Prices are rough list prices as of 2026-09-30 and will drift; re-check before committing.
 
 ## 1. Current runtime and what must change
 
@@ -112,7 +112,7 @@ Redis is not in the diagram on purpose: it joins at roughly 10k MAU (section 2 t
 | CDN and web app | Cloudflare in front of everything; SPA build on Cloudflare Pages | The hosted web beta ships before iOS. The iOS app bundles the same build inside Capacitor, so it does not load from the CDN |
 | Push | Direct APNs with a token-based `.p8` key over HTTP/2 | Free. Handle 410 responses by deleting dead device tokens. Collapse ids so a price drop replaces the previous alert |
 | Email | Resend to start, SES at scale | Transactional only: account deletion confirmation, weekly digest, and Supabase Auth email codes through the same custom SMTP. Set SPF, DKIM, DMARC |
-| Stripe | Stripe Checkout (hosted page) and Stripe Billing, on the web only | Used for real-world money and web SaaS, never for digital features in the app: group trip payments, Wayfold for Advisors seats, print orders. Card data never touches our servers. Details in section 5.6 |
+| Stripe | Stripe Checkout (hosted page) and Stripe Billing, on the web only | Used for real-world money and web SaaS, never for digital features in the app: group trip payments, Hermi for Advisors seats, print orders. Card data never touches our servers. Details in section 5.6 |
 | App Store webhooks | Public route for App Store Server Notifications v2 | Entitlements come from RevenueCat and are stored on our server ([07-local-to-app-store.md](07-local-to-app-store.md)). Infra only needs the route and retries |
 
 ## 3. Hosting options
@@ -314,7 +314,7 @@ Today `supervisor.prepare_database()` backs up, then runs Alembic before startin
 
 ### 5.6 Stripe webhooks and web checkout
 
-Stripe is for the web only. In-app digital products (Plus, Family, Pro, Trip Pass, Group Trip Pass, credit packs) stay on Apple In-App Purchase. Stripe carries money for things consumed outside the app or sold as web software: group trip payments (real-world trip costs), Wayfold for Advisors seats, and printed trip books. Apple's rules for this are in [07-local-to-app-store.md](07-local-to-app-store.md).
+Stripe is for the web only. In-app digital products (Plus, Family, Pro, Trip Pass, Group Trip Pass, credit packs) stay on Apple In-App Purchase. Stripe carries money for things consumed outside the app or sold as web software: group trip payments (real-world trip costs), Hermi for Advisors seats, and printed trip books. Apple's rules for this are in [07-local-to-app-store.md](07-local-to-app-store.md).
 
 **Checkout.** Use Stripe Checkout (Stripe's hosted page) and, for advisors, the Stripe customer portal for cards, invoices and cancellation. We never see or store card numbers, which keeps us at the simplest PCI level. The API creates a Checkout Session with our own `client_reference_id` and metadata (order, trip, org or expense ids) and returns its URL. The app opens the URL in `SFSafariViewController`; the web app redirects. The return page only displays status. **Nothing is granted on the redirect: the webhook grants it.**
 
@@ -328,7 +328,7 @@ Stripe is for the web only. In-app digital products (Plus, Family, Pro, Trip Pas
 
 **Money rules.** Store amounts as integer minor units plus currency. Use an idempotency key on every Stripe create call (derived from our order id) so a retry never charges twice. Refunds are issued from the admin console and recorded by the webhook, not by editing rows. Enable Stripe Tax for print orders and advisor seats if nexus requires it (verify with an accountant); group payments carry no tax line from us.
 
-**Group payments need a legal decision before any build.** Collecting money from several people and passing it to one organizer can make Wayfold a money transmitter. The two options are Stripe Connect (each organizer is a connected account and funds never rest with us) or only generating a payment link for the real supplier. Get counsel's opinion first. Until then the Group Trip Pass ships with expense tracking and settle-up records only, and collection is added in phase 4.
+**Group payments need a legal decision before any build.** Collecting money from several people and passing it to one organizer can make Hermi a money transmitter. The two options are Stripe Connect (each organizer is a connected account and funds never rest with us) or only generating a payment link for the real supplier. Get counsel's opinion first. Until then the Group Trip Pass ships with expense tracking and settle-up records only, and collection is added in phase 4.
 
 **Environments.** Stripe test mode for local, CI, preview and staging; live keys only in production. Use restricted API keys per service. The webhook endpoint is monitored like any other route.
 
@@ -444,7 +444,7 @@ Phases and effort match the roadmap in the [README](README.md); the mobile and s
 | 1: hosted web beta (6 to 8 weeks) | Render staging and production, Render Postgres with PITR, Supabase Auth, tenancy and `trip_members`, credit and spend ledger, `next_run_at` scheduler plus Procrastinate, Sentry, uptime checks, JSON logs, Cloudflare Pages, rate limits | Restore drill passed; spend alerts fire in a drill; 1k users load-tested (synthetic 5k routines); 4-week retention measured |
 | 2: iOS TestFlight (5 to 7 weeks) | APNs, email, App Store Server Notifications route, account deletion (including the Supabase Auth user), Capacitor origins in the CORS list, household and pass expiry sweeps, Stripe account in test mode with the webhook route and event table (no live payments yet) | Purchases and push work end to end in TestFlight |
 | 3: public launch (3 to 4 weeks) | Support and monitoring in place, runbooks written, on-call alert routing tested; concierge queue and admin page if the host agency is signed (otherwise phase 4) | App Review passed |
-| 4: growth (ongoing) | At about 10k MAU: shared search and research caches at full scale, Redis for rate limits, worker autoscaling on queue age, read-only replica or analytics export, more Batch API jobs. Stripe live: group payment collection, Wayfold for Advisors billing, print order fulfillment (section 4.7). At about 50k MAU: Terraform and the AWS move. Pro (scheduled agent routines, priority queue) once its cost gate is met | Cache hit rate above 60 percent, queue wait p95 under 5 minutes; cost forecast signed off before any cloud move |
+| 4: growth (ongoing) | At about 10k MAU: shared search and research caches at full scale, Redis for rate limits, worker autoscaling on queue age, read-only replica or analytics export, more Batch API jobs. Stripe live: group payment collection, Hermi for Advisors billing, print order fulfillment (section 4.7). At about 50k MAU: Terraform and the AWS move. Pro (scheduled agent routines, priority queue) once its cost gate is met | Cache hit rate above 60 percent, queue wait p95 under 5 minutes; cost forecast signed off before any cloud move |
 
 ## Where this plan changed the initial idea
 

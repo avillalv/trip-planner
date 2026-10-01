@@ -1,6 +1,6 @@
 # Phase 1 orchestrator
 
-This file tells the orchestrating Claude Code session how to build all of Wayfold Phase 1 by running
+This file tells the orchestrating Claude Code session how to build all of Hermi Phase 1 by running
 the prompts in this folder in order, one pull request per prompt, until Phase 1 is complete.
 
 ## Where things are
@@ -29,18 +29,18 @@ Precedence when documents disagree: `app-buildout/README.md`, then `phase-1-laun
 
 ## Base code: the Trip Planner repository
 
-Wayfold is built on the existing Trip Planner app, https://github.com/avillalv/trip-planner. It is
+Hermi is built on the existing Trip Planner app, https://github.com/avillalv/trip-planner. It is
 not part of this repository. At the start of every session, before any prompt:
 
 1. If `.reference/trip-planner/` does not exist, clone it there read-only:
    `git clone --depth 50 https://github.com/avillalv/trip-planner .reference/trip-planner`
    (`.reference/` is in `.gitignore`). If the clone is refused because the repository is private,
    the session needs access to it: in Claude Code on the web, start the session with both
-   `wayfold` and `trip-planner` selected; otherwise ask the owner. If it still cannot be cloned,
+   `hermi` and `trip-planner` selected; otherwise ask the owner. If it still cannot be cloned,
    continue from the specs and note it in `PROGRESS.md`.
 2. If it exists, `git -C .reference/trip-planner pull --ff-only` to pick up the latest.
 3. Never commit to, push to, or edit files in `.reference/trip-planner/`. Copy what you port into
-   the Wayfold layout and adapt it there.
+   the Hermi layout and adapt it there.
 
 `knowledge/trip-planner-base.md` says what to reuse, adapt and drop, and
 `phase-1-launch/02-architecture.md` section 14 maps every module.

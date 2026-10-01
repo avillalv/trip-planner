@@ -8,7 +8,7 @@ Method: WebSearch only. WebFetch was blocked by the proxy for apps.apple.com, pl
 |---|---|
 | Is there a large, active planner called Trippy? | No. No app or service named Trippy found that has meaningful scale. |
 | Which app does the owner most likely mean? | TripIt (Concur / SAP). It is large (22M+ travelers, reported, verify), old (2006), and "Trippy" is a plausible voice mishearing of "TripIt". |
-| Does TripIt do "something very similar" to Wayfold? | Partly. It overlaps on itinerary, sharing and flight monitoring, but it is a post-booking organizer, with no collaborative editing, AI research, lodging shortlist, price tracking or presentation mode. |
+| Does TripIt do "something very similar" to Hermi? | Partly. It overlaps on itinerary, sharing and flight monitoring, but it is a post-booking organizer, with no collaborative editing, AI research, lodging shortlist, price tracking or presentation mode. |
 | Closest real equivalent on features | Wanderlog (collaborative itinerary, maps, budgets, offline, about $39.99 a year). Already in the business plan as the closest rival. |
 | Recommendation | Treat TripIt as the "huge app" the owner means and Wanderlog as the feature competitor. Confirm the name with the owner in one line. |
 
@@ -47,7 +47,7 @@ Conclusion: Trippy (2011, the only one that raised money) is shut down. Every cu
 
 ## 4. Which matches "a huge app that already does something very similar"?
 
-| Wayfold feature | Trippy (any) | TripIt | Wanderlog (for reference) |
+| Hermi feature | Trippy (any) | TripIt | Wanderlog (for reference) |
 |---|---|---|---|
 | Huge, already established | No | Yes (22M travelers) | Yes (millions of downloads, 33K+ iOS reviews) |
 | Collaborative trip planning | Tiny apps only | Share only, no co-editing | Yes, real time |
@@ -94,13 +94,13 @@ Action: ask the owner "TripIt or Wanderlog?" and proceed with the TripIt invento
 | App Store subtitle | "Trip Itinerary & Alerts" (reported, verify) |
 | Keywords | Not retrievable; App Store keyword fields are hidden. Indicative terms: trip itinerary, flight alerts, travel organizer, trip planner. |
 
-## 7. Implications for Wayfold
+## 7. Implications for Hermi
 
 | Point | Note |
 |---|---|
 | Message | Do not claim to replace TripIt. Pitch as the planning stage before booking; TripIt picks up after. |
 | Differentiators TripIt lacks | Collaborative planning, price tracking with sources, lodging shortlist, presentation mode |
-| Price anchor | TripIt Pro $49 a year against Wayfold Plus $39.99 a year; consistent with the existing plan |
+| Price anchor | TripIt Pro $49 a year against Hermi Plus $39.99 a year; consistent with the existing plan |
 | Risk | TripIt could add AI and planning under SAP backing; it already has 22M users. |
 
 ## Sources (all via WebSearch snippets, searched 2026-09-30; none opened directly)

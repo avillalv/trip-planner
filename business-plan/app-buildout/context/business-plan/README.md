@@ -1,6 +1,6 @@
-# Wayfold business plan: from a personal trip planner to an App Store product
+# Hermi business plan: from a personal trip planner to an App Store product
 
-The product name is **Wayfold** (see [app-buildout/brand/](../../brand)). The build
+The product name is **Hermi** (see [app-buildout/brand/](../../brand)). The build
 specification for the new app lives in [app-buildout/](../../README.md).
 
 Written 2026-09-30. This folder is a plan, not code: nothing in the app has changed yet.
@@ -41,8 +41,8 @@ so in a closing section, so the reasoning stays visible.
 | [07-local-to-app-store.md](07-local-to-app-store.md) | Mobile approach, frontend changes, in-app purchases, App Review checklist, phased roadmap, launch plan |
 | [08-affiliate-revenue.md](08-affiliate-revenue.md) | Every affiliate program researched (lodging, flights, cars, trains, tours, eSIM, insurance and more), higher-commission lanes (concierge through a host agency, group room blocks, in-app hotel booking), placement, compliance, tracking, revenue estimates |
 | [09-revenue-expansion.md](09-revenue-expansion.md) | Revenue beyond consumer subscriptions and affiliate links: advisor SaaS, group trips, partner guides, printed trip books, white-label; 5-year scenarios and what it takes to reach $500k and $1M a year |
-| [competitive-analysis/](../competitive-analysis/README.md) | TripIt, Trippy, Wanderlog and others: what they do better, what Wayfold does better, the gaps, and a plan to win their users (HTML presentation plus brainstorm) |
-| [app-buildout/](../../README.md) | Self-contained build specification for Wayfold, split into Phase 1 (launch in six months), Phase 2 and Phase 3: product spec, architecture, database, API, UI, AI, monetization, admin control center, roadmap, quality and launch |
+| [competitive-analysis/](../competitive-analysis/README.md) | TripIt, Trippy, Wanderlog and others: what they do better, what Hermi does better, the gaps, and a plan to win their users (HTML presentation plus brainstorm) |
+| [app-buildout/](../../README.md) | Self-contained build specification for Hermi, split into Phase 1 (launch in six months), Phase 2 and Phase 3: product spec, architecture, database, API, UI, AI, monetization, admin control center, roadmap, quality and launch |
 
 Suggested reading order: this page, 01, 02, 07 (the roadmap), then 03 to 06 as each phase starts.
 
@@ -102,7 +102,7 @@ Every file uses these. If a number changes, change it here first.
 | Concierge lane (year 1 to 2) | Optional "Have a human book this" on stays, cruises and complex trips, fulfilled by the founder as an advisor under a host travel agency (for example Fora). Earns the agency commission (hotels about 8 to 15%, cruises 10 to 16%, host split 70 to 90%) and gives users perks (breakfast, credits, upgrades). Disclosed, never pushed. |
 | Group trips (year 1 to 2) | Group Trip Pass, polls, cost splitting, and hotel room-block requests for weddings and events. Payments for real-world costs go through Stripe, outside Apple In-App Purchase. |
 | In-app hotel booking (year 2+) | LiteAPI (Nuitee) as merchant of record, 5 to 15% margin, only after click data shows strong booking intent |
-| Wayfold for Advisors (year 2+) | Web SaaS for independent travel advisors: client trip workspaces, branded presentation mode, proposals, commission tracking. $29 a seat a month or $24 annual, billed by Stripe on the web. The largest single growth stream. |
+| Hermi for Advisors (year 2+) | Web SaaS for independent travel advisors: client trip workspaces, branded presentation mode, proposals, commission tracking. $29 a seat a month or $24 annual, billed by Stripe on the web. The largest single growth stream. |
 | Partner guides (year 2+) | Tourism boards and hotel brands sponsor clearly labeled destination guides. Never mixed into rankings, never paid placement in search results. |
 | Printed trip books (year 2) | Print-on-demand trip books and posters from presentation mode, ordered on the web |
 | White-label and API (year 3+) | Licensed planner for agencies and tour operators |
@@ -132,7 +132,7 @@ Every file uses these. If a number changes, change it here first.
 | 1: hosted web beta | 6 to 8 weeks | Accounts, sharing, entitlements, ledger; 4-week retention measured |
 | 2: iOS TestFlight | 5 to 7 weeks | Capacitor app, purchases, push, account deletion |
 | 3: public launch | 3 to 4 weeks | App Review passed, support and monitoring in place |
-| 4: growth | Ongoing | Android, shareable trip pages for SEO, Pro, Wayfold for Advisors |
+| 4: growth | Ongoing | Android, shareable trip pages for SEO, Pro, Hermi for Advisors |
 
 **Kill rule:** at month 9 after launch, if under 1% of monthly users pay and affiliate income is
 under $0.20 per monthly user per year (annualized), stop investing and keep it as a personal tool.

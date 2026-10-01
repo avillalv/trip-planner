@@ -4,7 +4,7 @@ Phase 1 build, step 11 of 28. Follow `app-buildout/prompts/00-orchestrator.md` f
 
 ## Goal
 
-Build the one-off importer that moves the owner's existing trips from the old Trip Planner database into Wayfold accounts, with a dry run and a report.
+Build the one-off importer that moves the owner's existing trips from the old Trip Planner database into Hermi accounts, with a dry run and a report.
 
 ## Tickets, in this order
 

@@ -3,7 +3,7 @@
 Part of the [business plan](README.md). The decisions of record in the README override anything here.
 
 Written 2026-09-30. Scope: the AI the local Trip Planner uses today, the move from the Claude Code CLI to the Claude API, the AI
-features Wayfold will sell and their credit prices, the free taster run, and cost control. Related files: [02-pricing-tiers.md](02-pricing-tiers.md) (tiers and paywalls),
+features Hermi will sell and their credit prices, the free taster run, and cost control. Related files: [02-pricing-tiers.md](02-pricing-tiers.md) (tiers and paywalls),
 [04-users-and-accounts.md](04-users-and-accounts.md), [05-infrastructure.md](05-infrastructure.md),
 [06-database-and-data-integrations.md](06-database-and-data-integrations.md) (flight and places providers) and
 [07-local-to-app-store.md](07-local-to-app-store.md) (phases).
@@ -125,7 +125,7 @@ Sonnet 5.5 constraints that shape the design:
      search-only source cannot be grounded and stays `indicative`.
    - Keep the fetched document hash and URL in `raw` for disputes.
 4. **User instructions** stay wrapped in `<instructions>` tags, are the only user-controlled text the model sees, and never
-   reach the shared cache (6.5). **Site terms:** Wayfold never fetches Airbnb, Vrbo or Booking pages, the Anthropic-side fetch is
+   reach the shared cache (6.5). **Site terms:** Hermi never fetches Airbnb, Vrbo or Booking pages, the Anthropic-side fetch is
    blocked by the list above, and no scraper libraries are used; this stays in the system prompt and the production terms.
 
 ### 3.4 Rollout, by roadmap phase
@@ -604,7 +604,7 @@ account. The bigger risks are low conversion and a taster that does not lift it.
 10. **Family and Group Trip Pass.** Pooled credits (150) and a pooled ceiling ($3.40) for up to 6 people, and 80 credits and a
     $3.60 ceiling per group pass for up to 12 travelers, are new. Their AI cost is small (8.2) next to the live-check spend under
     the same ceilings.
-11. **Product name and Pro.** The product is Wayfold. Pro is renamed Pro everywhere, with the same price, credits and launch
+11. **Product name and Pro.** The product is Hermi. Pro is renamed Pro everywhere, with the same price, credits and launch
     gate.
 
 ## 10. Open items

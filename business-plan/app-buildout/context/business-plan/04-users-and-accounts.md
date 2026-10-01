@@ -2,7 +2,7 @@
 
 Part of the [business plan](README.md). The decisions of record in the README override anything here.
 
-Written 2026-09-30, updated for Wayfold and the Family, Group Trip Pass, concierge and advisor lanes. This file covers who a user is, what they can see, who they can share with, and what we owe them on privacy. Auth vendor prices are approximate and must be re-checked before commit. Pricing and credit numbers live in [02-pricing-tiers.md](02-pricing-tiers.md); the full schema lives in [06-database-and-data-integrations.md](06-database-and-data-integrations.md). This file keeps the data model at the level of entities and rules.
+Written 2026-09-30, updated for Hermi and the Family, Group Trip Pass, concierge and advisor lanes. This file covers who a user is, what they can see, who they can share with, and what we owe them on privacy. Auth vendor prices are approximate and must be re-checked before commit. Pricing and credit numbers live in [02-pricing-tiers.md](02-pricing-tiers.md); the full schema lives in [06-database-and-data-integrations.md](06-database-and-data-integrations.md). This file keeps the data model at the level of entities and rules.
 
 ## 1. How auth works today and what must change
 
@@ -88,7 +88,7 @@ Two people planning one trip is the core case, and friends share only specific t
 | `households` | A Family plan group: payer user, name, status, subscription link. At most 6 active members. Section 3.6. |
 | `household_members` | Household, user, role (`payer`, `member`), status (`invited`, `active`, `left`, `removed`), joined and left timestamps. One active household per user. |
 | `trip_members` | Trip, user, role (`owner`, `editor`, `viewer`), inviter. Exactly one owner per trip. An advisor is an `editor` whose row carries `advisor_org_id` (section 3.8). |
-| `advisor_orgs`, `advisor_seats`, `advisor_clients` | Wayfold for Advisors: the organization, its paid seats, and the advisor to client relationship. Section 3.8. |
+| `advisor_orgs`, `advisor_seats`, `advisor_clients` | Hermi for Advisors: the organization, its paid seats, and the advisor to client relationship. Section 3.8. |
 | `trip_invites` | Hashed token, role fixed at creation, expiry, use cap, revocation. |
 | `trip_share_links` | Read-only public link with redaction flags. |
 | `people` (existing, kept) | Traveler profiles. Gains `owner_user_id` and `linked_user_id`. Not renamed. |
@@ -145,7 +145,7 @@ A Family subscription ($8.99 a month or $59.99 a year) is bought by one person, 
 
 | Question | Rule |
 |---|---|
-| Who is in a household? | The payer plus up to 5 invited members, 6 active in all. Each member has their own Wayfold account, trips and sign-in. Invites use the same hashed, expiring tokens as trip invites (section 4). |
+| Who is in a household? | The payer plus up to 5 invited members, 6 active in all. Each member has their own Hermi account, trips and sign-in. Invites use the same hashed, expiring tokens as trip invites (section 4). |
 | Who is the payer? | The user whose `subscriptions` row holds the Family product. Stored as `households.payer_user_id`. Only the payer can invite, remove members, or see billing. A payer cannot hand a subscription to someone else (Apple does not allow it); "change payer" means the new payer buys Family and the old household moves onto that subscription with no gap in membership. |
 | What does a member get? | The `family` tier on their own trips (Plus features, 5 live routes shared across the household) and access to the pool. Members' trips stay private to them until they share a trip the normal way. A household member cannot see another member's trips, people, notes or purchases. |
 | How do pooled credits work? | The 150 monthly credits are one `credit_grants` row owned by the household, and the provider-spend ceiling ($3.40 a month) is also one pooled number, so the household as a whole cannot cost more than that. Any active member can spend from the pool. Each spend row records who acted, so the payer sees a per-member usage list. Purchased credit packs stay personal to the buyer and are never pooled. |
@@ -169,12 +169,12 @@ A Group Trip Pass ($19.99) is bought by the trip owner and bound to one trip on 
 
 ### 3.8 Advisor organizations and client access
 
-Wayfold for Advisors is a web product for independent travel advisors, billed by Stripe on the web ($29 a seat a month or $24 annual). It lives alongside the consumer app and shares the same `users` table.
+Hermi for Advisors is a web product for independent travel advisors, billed by Stripe on the web ($29 a seat a month or $24 annual). It lives alongside the consumer app and shares the same `users` table.
 
 | Entity | Rules |
 |---|---|
 | `advisor_orgs` | The business: name, billing owner, Stripe customer reference, branding fields for presentation mode, status. |
-| `advisor_seats` | A user's paid seat in an org: role (`owner`, `advisor`), status (`invited`, `active`, `ended`). An advisor is a normal Wayfold user with an active seat. Seats add web workspace features only; they do not change the person's own consumer tier. |
+| `advisor_seats` | A user's paid seat in an org: role (`owner`, `advisor`), status (`invited`, `active`, `ended`). An advisor is a normal Hermi user with an active seat. Seats add web workspace features only; they do not change the person's own consumer tier. |
 | `advisor_clients` | The relationship record: org, advisor seat, client (an existing user, or an email not yet joined), status, the consent version the client accepted, and an optional private note. A client is never created by an advisor without an invitation the client accepts. |
 
 **What an advisor can see.** Only trips where the advisor has a `trip_members` row: either the advisor created the trip in the org workspace and invited the client, or the client (or any owner) invited the advisor from inside their own trip. Access is per trip, never per client and never per org. An advisor sees nothing of a client's other trips, traveler profiles, settings, purchases, credit balance or AI history. Invite links for advisors are labeled in the client's view ("Sam Lee at Harbor Travel can edit this trip").
@@ -193,7 +193,7 @@ Consumer app rule: the iOS app does not sell advisor seats or link to their purc
 
 "Have a human book this" is optional and never required to use any feature. A request is fulfilled by the founder acting as an advisor under a host travel agency, and commission is earned from the suppliers through that agency. It needs its own consent, because data leaves our service for a third party.
 
-**Who receives it.** Wayfold (acting as the advisor) and the host agency, including its booking platform and the suppliers it books with.
+**Who receives it.** Hermi (acting as the advisor) and the host agency, including its booking platform and the suppliers it books with.
 
 **What is shared.** Only what the request form shows the user before they tap send:
 
@@ -201,12 +201,12 @@ Consumer app rule: the iOS app does not sell advisor seats or link to their purc
 |---|---|
 | Names of the travelers as they appear on the booking, typed or confirmed by the user for this request | Other trips, notes, comments, or AI history |
 | Trip dates, destination, party size, budget, and the stay or options the user selected | Account id, Apple identifiers, sign-in method |
-| The user's contact email (and phone if they add one) so the advisor can reply | Payment details (paid to the supplier or agency, never through Wayfold or the app) |
+| The user's contact email (and phone if they add one) so the advisor can reply | Payment details (paid to the supplier or agency, never through Hermi or the app) |
 | Preferences the user types into the request | Passport numbers and documents (the agency collects those through its own secure channel when needed; we do not store them) |
 | Ages of child travelers, if a booking needs them | Precise device location |
 
 **How consent works.**
-1. The form shows a plain summary of the exact payload and the three parties, and discloses that Wayfold earns a commission and that the user may get perks (breakfast, credits, upgrades). No pre-ticked boxes.
+1. The form shows a plain summary of the exact payload and the three parties, and discloses that Hermi earns a commission and that the user may get perks (breakfast, credits, upgrades). No pre-ticked boxes.
 2. Consent is per request, stored in `consents(kind='concierge_share', version, request_id)` with a hash of the payload snapshot kept on `concierge_requests`. A second request needs a second consent.
 3. The user can withdraw before booking. After a booking is confirmed, the agency must keep booking records under its own legal duties; we say so on the form.
 4. Travelers other than the requester: the requester confirms they have the others' permission to share their names and ages. The form says so.

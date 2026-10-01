@@ -6,7 +6,7 @@ Written 2026-09-30. Tier and price detail is in [02-pricing-tiers.md](02-pricing
 
 ## Executive summary
 
-Wayfold (working name until now: Trip Planner) is today a private app for two people on one Windows PC. It already has the parts of a credible trip product: flight price tracking (cached Travelpayouts fares and live Google Flights fares via SerpApi), a drag-and-drop day calendar, Geoapify places search, a lodging shortlist that never scrapes booking sites, Wikipedia destination summaries, a full-screen presentation mode, and agent routines that use Claude to hunt fares and research events with a source URL for every saved fact.
+Hermi (working name until now: Trip Planner) is today a private app for two people on one Windows PC. It already has the parts of a credible trip product: flight price tracking (cached Travelpayouts fares and live Google Flights fares via SerpApi), a drag-and-drop day calendar, Geoapify places search, a lodging shortlist that never scrapes booking sites, Wikipedia destination summaries, a full-screen presentation mode, and agent routines that use Claude to hunt fares and research events with a source URL for every saved fact.
 
 The plan is to turn it into a multi-user web and iOS product. It launches with Free, Plus, Family, Trip Pass, Group Trip Pass and credit packs. Pro is built behind a flag and launches later. Five beliefs drive the plan:
 
@@ -42,7 +42,7 @@ Planning a trip is spread across a flight tab, a notes app, a spreadsheet, chat 
 | Family planner | Parents, school-holiday limits, higher spend | Itinerary, printable PDF, lodging comparison, Family plan | Medium. Willing to pay, but needs kid-friendly filters not yet built. |
 | Deal hunter | Flexible dates, chases fares | Live fare tracking, date grid, agent fare hunt | Best future Pro payer, but small (perhaps 5 to 10% of users), price sensitive, and the most likely to abuse free tiers. |
 | Casual dreamer | Browses, rarely books | Nothing | Free tier. Feeds affiliate clicks and the shared cache. |
-| Independent travel advisor (year 2 and later) | Books trips for clients, often under a host agency | Client workspaces, branded presentations, proposals, commission tracking | The largest single growth stream. Sold on the web as Wayfold for Advisors; see [09](09-revenue-expansion.md). |
+| Independent travel advisor (year 2 and later) | Books trips for clients, often under a host agency | Client workspaces, branded presentations, proposals, commission tracking | The largest single growth stream. Sold on the web as Hermi for Advisors; see [09](09-revenue-expansion.md). |
 
 Launch target: couples and friend-group organizers who fly internationally at least once a year. Business travelers are out of scope (TripIt owns them).
 
@@ -71,7 +71,7 @@ Prices below come from third-party review sites (checked 2026-09-30). Verify eac
 | Hopper | Free app | No subscription found; earns from booking fees and add-ons | Price-prediction brand. Do not compete head on. |
 | Google Flights | Free | Free | Price tracking and date grid are free. This caps what tracking alone can charge. |
 | ChatGPT | Free and $20 a month plans | $20 a month | Free to ask "plan 5 days in Lisbon". |
-| Tern, Travefy, TravelJoy | Trials | Advisor software from $19 to $49 a seat a month (reported, verify) | Price anchors for Wayfold for Advisors. |
+| Tern, Travefy, TravelJoy | Trials | Advisor software from $19 to $49 a seat a month (reported, verify) | Price anchors for Hermi for Advisors. |
 
 What the prices tell us:
 
@@ -88,7 +88,7 @@ The lead offer is Trip Pass, then annual Plus. Family, Group Trip Pass and credi
 |---|---|---|---|---|
 | Subscriptions, passes and packs (Plus, Family, Trip Pass, Group Trip Pass, Pro, credit packs) | Launch | $59.5k (41%) | $148.8k (26%) | Sold through the App Store at 15% (Small Business Program, under $1M a year in proceeds). Trip Pass and Group Trip Pass are non-renewing subscriptions bound to the trip on the server. |
 | Affiliate links (lodging first, then tours, flights, cars, transfers, eSIM, insurance, post-trip compensation) | Launch | $39.0k (27%) | $120.0k (21%) | Earned on free and paid users alike, in the same places on every tier. Payout is delayed and lumpy. Lodging is about 60% of it. See [08](08-affiliate-revenue.md). |
-| Wayfold for Advisors (web SaaS, $29 a seat a month or $24 billed annually) | Year 2 build, seats in year 3 | $18.9k (13%) | $141.4k (25%) | Largest growth stream. Sold on the web through Stripe. |
+| Hermi for Advisors (web SaaS, $29 a seat a month or $24 billed annually) | Year 2 build, seats in year 3 | $18.9k (13%) | $141.4k (25%) | Largest growth stream. Sold on the web through Stripe. |
 | Group trips: events workspace ($79 an event) and payment collection (1.5% fee) | Pass at launch; events and payments in year 3 | $3.8k (3%) | $56.3k (10%) | Payments need legal review. Stripe, outside In-App Purchase. |
 | Partner guides (labeled tourism-board guides) and white-label | Year 2 pilot, year 3 revenue | $12.0k (8%) | $72.0k (13%) | Sales heavy. Never mixed into rankings. |
 | Printed trip books and creator guides | Year 2 | $10.5k (7%) | $33.9k (6%) | Print on demand, shown at contribution. |
@@ -274,14 +274,14 @@ Arithmetic, year 3 base: 60,000 MAU x 3.5% = 2,100 payers x $28.34 = $59.5k; aff
 | Shareable trip pages (SEO) | Public read-only pages from presentation mode ("5 days in Lisbon for two") with a "Copy this trip" button. Built in phase 4. | Engineering | Primary long-term engine. Needs quality content, not spam. |
 | Creators and travel bloggers | Copy-this-trip attribution and a share of affiliate income, 10 to 20 invited creators | Variable | Test in year 2. |
 | Wedding and event planners | Group Trip Pass and room-block requests for destination weddings and offsites | Low | Year 1 to 2, feeds the events workspace. |
-| Advisor communities and host agencies | Pilot with 10 to 20 advisors, host-agency partnerships, content | Founder time | Year 2, the channel for Wayfold for Advisors. |
+| Advisor communities and host agencies | Pilot with 10 to 20 advisors, host-agency partnerships, content | Founder time | Year 2, the channel for Hermi for Advisors. |
 | Paid ads | Not before organic acquisition cost is known | High | Avoid in year 1. |
 
 Launch sequence (the roadmap is in [07-local-to-app-store.md](07-local-to-app-store.md)):
 
 1. Invite-only hosted web beta with 50 to 100 couples and friend groups from Reddit and personal networks.
 2. iOS TestFlight, then the public iOS launch with the lead offer: Trip Pass first, annual Plus second, monthly Plus lower on the paywall.
-3. Growth: Android, shareable trip pages, then Pro, the concierge lane and group trips, then Wayfold for Advisors.
+3. Growth: Android, shareable trip pages, then Pro, the concierge lane and group trips, then Hermi for Advisors.
 
 Positioning rules:
 
@@ -302,7 +302,7 @@ Effort is part time, solo, with Claude Code: about 5 to 6 months from the start 
 | Phase 3: public launch | 3 to 4 weeks | App Review passed, support and monitoring in place. Group Trip Pass and polls ship with it. |
 | Year 1 to 2: concierge and groups | Founder hours | Advisor sign-up under a host agency and seller-of-travel registrations in the states that need them (months 0 to 6 after launch); the "Have a human book this" button; cost splitting (no money moved); hotel room-block request (months 6 to 12). Exit: measured ask rate and commission per booking. |
 | Phase 4: growth | Ongoing | Android, shareable trip pages for SEO, Pro (once its gate is met). |
-| Year 2: advisors, print, guides | 3 to 4 months of build | Interview 15 advisors first. Wayfold for Advisors pilot (web, Stripe), print-on-demand trip books, first partner-guide pilot. Decide on in-app hotel booking (LiteAPI) only if click data shows booking intent. |
+| Year 2: advisors, print, guides | 3 to 4 months of build | Interview 15 advisors first. Hermi for Advisors pilot (web, Stripe), print-on-demand trip books, first partner-guide pilot. Decide on in-app hotel booking (LiteAPI) only if click data shows booking intent. |
 | Year 3 and later | Team | First paid partner-guide deals, events workspace and payment collection after legal review, white-label accounts, LiteAPI launch if approved. Revisit credit cards at about 100k MAU. |
 
 Scale decision at month 18 to 24: if MAU is above 15,000 and paying users above 500, invest in growth; otherwise run it as a lean side business.
@@ -322,7 +322,7 @@ Scale decision at month 18 to 24: if MAU is above 15,000 and paying users above 
 | Apple review or rule changes | Medium | Medium | Read guidelines 3.1.1 and 3.1.3 early; keep a web checkout path where permitted (a proposed 15% fee on link-outs is reported, verify); label affiliate links. |
 | Privacy (dates, places, who is traveling) | Medium | High | Data minimization, delete account and export, GDPR and CCPA basics, no selling data, encrypted backups. See [04-users-and-accounts.md](04-users-and-accounts.md). |
 | Rewrite from single-user local to multi-tenant slips | High | Medium | Scope tightly: auth, tenancy, quotas first; Pro and agents behind a flag. |
-| Seller-of-travel compliance (concierge lane, in-app booking, group payments) | Medium | High | The app refers and a human advisor books under a host agency's credentials. Register where required (for example California, Florida, Washington, Hawaii; reported, verify), carry E&O insurance, get counsel to confirm whether forwarding a request triggers registration, ask the host agency in writing whether app-routed leads are allowed, and never sign hotel contracts for users. Group payment collection waits for legal review and runs through Stripe Connect so Wayfold holds no funds. |
+| Seller-of-travel compliance (concierge lane, in-app booking, group payments) | Medium | High | The app refers and a human advisor books under a host agency's credentials. Register where required (for example California, Florida, Washington, Hawaii; reported, verify), carry E&O insurance, get counsel to confirm whether forwarding a request triggers registration, ask the host agency in writing whether app-routed leads are allowed, and never sign hotel contracts for users. Group payment collection waits for legal review and runs through Stripe Connect so Hermi holds no funds. |
 | Founder time (concierge bookings, advisor support, partner sales, dual roles) | High | High | Cap concierge at about 300 bookings a year solo and say no beyond that; hire advisors at a 50% split. Add support contractors before 60k MAU or 100 seats; budget 5 to 10 hours a week from 5,000 MAU plus about 10 hours a week per 100 seats. A solo founder tops out around $150k to $250k a year. |
 | Advisor market smaller or bundled away | Medium | Medium | Interview 15 advisors before building; pilot through host agencies; keep the product useful to consumers without it. |
 | Sponsorship erodes trust | Medium | High | Partner guides are labeled, hideable and never mixed into rankings or search; contracts forbid paid placement. |
@@ -366,7 +366,7 @@ Cost and quality:
 
 Each point below records an earlier idea, the concern, and the final decision.
 
-1. **Name.** The working name was Trip Planner. The product is now Wayfold (see [app-buildout/brand/](../../brand)).
+1. **Name.** The working name was Trip Planner. The product is now Hermi (see [app-buildout/brand/](../../brand)).
 2. **Pro runs and price.** The initial idea was 10 to 15 agent runs a month at $11.99 or $79 a year under the name "Premium". At $0.50 to $1.50 per run that costs $5 to $22 a month against $10.19 net (monthly) or $5.60 net (annual). Decision: Pro is $11.99 a month or $99 a year with 240 credits (about 6 deep runs), a $0.80 hard stop per run, a $5.50 monthly ceiling, and it launches later, when measured cost is $0.60 or less per run over 200 runs or over 15% of Plus payers buy run credits.
 3. **Pro price against rivals.** Rivals charge $40 to $50 a year (Wanderlog $39.99, TripIt $49, Layla about $49), and the first draft suggested testing $49.99 to $59.99. The concern stands: $99 is about double, so Pro must clearly offer something they lack. But at $49.99 to $59.99 a year the net is only $3.54 to $4.25 a month, too little for a $5.50 ceiling. Decision: $99 is the launch price because of the ceiling. Pro's price will be tested once measured agent cost drops, and credit packs carry heavy users meanwhile.
 4. **Plus price and allowance.** The earlier plan had Plus at $4.99 a month or $29.99 a year with 40 credits. Rivals sit at $39.99 to $49.99, so $29.99 left money on the table, and the extra $10 of net pays for a bigger allowance. Decision: Plus is $5.99 a month or $39.99 a year with 60 credits and a $2.25 ceiling.
@@ -380,5 +380,5 @@ Each point below records an earlier idea, the concern, and the final decision.
 12. **Where the paywall triggers.** Not on the first trip, since the shared trip is the growth loop. Decision: Free keeps 2 active trips and lets people join others' trips free; the paywall appears on collaboration size, live routes and credits.
 13. **Banner ads.** Agreed to avoid them. Also rejected: selling data, cashback ranked by commission, and lifetime plans.
 14. **Launch lineup and order of work.** The first draft launched all three tiers and a rewrite before proof of demand. Decision: validate first (M0), launch with Free, Plus, Family, Trip Pass, Group Trip Pass and packs, build Pro behind a flag, and keep scheduled agents off until Pro.
-15. **A consumer app alone is a side business.** The earlier base case ($35k profit in year 3) was a side income and a venture-style outcome needed the optimistic case. Decision: add streams that reach people who plan trips for others: a concierge lane through a host agency (year 1 to 2), group trips (year 1 to 2), and Wayfold for Advisors (year 2). With them the base case is about $144k of revenue in year 3 and $572k in year 5, at the cost of seller-of-travel compliance, more support, and a team of 2 to 3 people above about $250k.
+15. **A consumer app alone is a side business.** The earlier base case ($35k profit in year 3) was a side income and a venture-style outcome needed the optimistic case. Decision: add streams that reach people who plan trips for others: a concierge lane through a host agency (year 1 to 2), group trips (year 1 to 2), and Hermi for Advisors (year 2). With them the base case is about $144k of revenue in year 3 and $572k in year 5, at the cost of seller-of-travel compliance, more support, and a team of 2 to 3 people above about $250k.
 16. **Five-year scenarios.** The earlier plan stopped at three years and assumed only subscriptions and affiliate income. Decision: model five years by stream, keep concierge and in-app booking outside the totals as untested upside, and state plainly that a solo founder tops out around $150k to $250k a year.

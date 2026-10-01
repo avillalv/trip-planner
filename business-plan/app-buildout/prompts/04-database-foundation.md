@@ -26,7 +26,7 @@ Each ticket's description, dependencies, acceptance criteria, files and tests ar
 
 ## Notes
 
-- Load the SQL through Alembic migrations, one migration per ticket, in the order of 03 section 10. Tests run against a real Postgres 18 (Docker), connecting as `wayfold_app`, never as the owner role.
+- Load the SQL through Alembic migrations, one migration per ticket, in the order of 03 section 10. Tests run against a real Postgres 18 (Docker), connecting as `hermi_app`, never as the owner role.
 - Never let two migrations share a parent: this prompt creates a linear chain.
 
 ## Owner-only steps

@@ -18,7 +18,7 @@ Conventions. "Reported, verify" marks a fact taken from a third-party page or se
 |---|---|---|---|---|---|
 | Consumer subscriptions, passes, packs | Launch | Built in plan | $148.8k | Yes | Conversion and retention |
 | Affiliate links ([08](08-affiliate-revenue.md)) | Launch | Built in plan | $120.0k | Yes | $0.60 per MAU is unmeasured |
-| Wayfold for Advisors | Year 2 build, seats year 3 | Medium | $141.4k | Yes | Host-agency bundling, churn |
+| Hermi for Advisors | Year 2 build, seats year 3 | Medium | $141.4k | Yes | Host-agency bundling, churn |
 | Group trips: events, payments | Pass at launch, events and payments year 3 | Low to medium | $56.3k | Yes | Payments need legal review |
 | Partner guides (tourism boards) | Year 2 pilot, first deal year 3 | Sales heavy | $36.0k | Yes | Needs proven audience, trust |
 | White-label and API | Year 3 | Medium | $36.0k | Yes | Support and onboarding |
@@ -85,7 +85,7 @@ Reading: monthly plans and passes are healthy even at the ceiling. Annual Plus, 
 
 **How it works.** A "Have a human book this" button on shortlisted stays, cruises and complex trips. The user fills a short brief; the founder, registered as an independent advisor under a host agency (for example Fora), books the trip in the host's supplier portal and earns the agency commission. The user gets perks the public site does not show: daily breakfast, a property credit (for example $100), possible upgrade and late checkout at the same or better rate (reported, verify per property). The app never books by itself. Host-agency contracts are with a named advisor, and supplier portals expect a human, so automated booking under host credentials would probably breach terms (inference).
 
-**Pricing to the user.** Nothing extra. The supplier pays the commission. Wayfold discloses it: "Wayfold is paid by the hotel. Perks are listed before you choose."
+**Pricing to the user.** Nothing extra. The supplier pays the commission. Hermi discloses it: "Hermi is paid by the hotel. Perks are listed before you choose."
 
 **What it earns (reported, verify all splits).**
 
@@ -95,13 +95,13 @@ Reading: monthly plans and passes are healthy even at the ceiling. Annual Plus, 
 | Cruise commission | 10 to 16%, river cruises 15 to 20% |
 | Fora split | 70/30 to start, 80/20 at $300,000 of annual sales, 90/10 at $2M; $299 a year or $99 a quarter |
 | Cheaper hosts | Outside Agents 80 to 90%, about $199 to start and $26 to $46 a month; KHM 80%, 90% after $5,000 paid commission |
-| $600 Virtuoso-type stay at 10%, 70% split | $60 to the agency, $42 to Wayfold |
-| $3,000 cruise at 10 to 16%, 70% split | $210 to $336 to Wayfold |
+| $600 Virtuoso-type stay at 10%, 70% split | $60 to the agency, $42 to Hermi |
+| $3,000 cruise at 10 to 16%, 70% split | $210 to $336 to Hermi |
 | Average used in the model | $90 per completed booking (85% hotels at $55, 10% cruises at $290, 5% packages at $225) |
 
 **Costs.** Host fee about $400 a year, E&O insurance $400 to $1,200 a year for $1M per claim (reported, verify; host cover may apply), seller-of-travel registrations about $640 a year for CA, FL, WA and HI combined (reported: California $100, Florida $50 for independent agents, Washington $50 plus $222, Hawaii $146 to $215 plus a trust account). About $1.4k to $2.2k a year fixed, plus founder time of 30 to 60 minutes per booking. At 45 minutes, $90 per booking is about $120 an hour of founder time. Commissions arrive 30 to 90 days after travel, and cancelled stays pay nothing.
 
-**Effort.** Low build (a request form and a status screen), high founder time. One person serves about 300 bookings a year (150 to 300 hours). Beyond that, contracted advisors are needed, and Wayfold keeps about half of the booking's net ($45).
+**Effort.** Low build (a request form and a status screen), high founder time. One person serves about 300 bookings a year (150 to 300 hours). Beyond that, contracted advisors are needed, and Hermi keeps about half of the booking's net ($45).
 
 **Regulatory.** Seller-of-travel registration in some states, host accreditation (IATA, ARC, CLIA or TRUE) through the host, E&O cover. Counsel confirms whether forwarding a request to a human advisor needs registration in each state (inference: referral only is usually outside, selling is not). Email Fora, Outside Agents and KHM before building to ask whether app-routed leads are allowed.
 
@@ -126,9 +126,9 @@ Year 3 example: 300 x $90 = $27,000. Year 5: 300 x $90 + 600 x $45 = $54,000. Pe
 **How it works.** Four layers, added in order.
 
 1. Group Trip Pass ($19.99 once): up to 12 travelers, 80 credits, polls (dates, stay, activities), a shared budget and a "who owes what" ledger. No money moves. Year 1.
-2. Room-block request: a form that sends the hotel's group sales team the dates and headcount and returns the hotel's own reservation link. Wayfold signs no contract and takes on no attrition risk. Months 6 to 12.
+2. Room-block request: a form that sends the hotel's group sales team the dates and headcount and returns the hotel's own reservation link. Hermi signs no contract and takes on no attrition risk. Months 6 to 12.
 3. Events workspace: $79 per event, up to 40 travelers, for offsites, destination weddings and school trips (school trips later because of child-data rules). Sold on the web. Year 3 in the model.
-4. Payment collection: Stripe Connect with the organizer as the connected account, so Wayfold never holds funds. Fee 1.5% of amounts collected on top of Stripe's card cost, passed through in plain view; below SquadTrip's reported all-in 6% (reported, verify). Needs legal review (money transmission, refunds, disputes, tax, sanctions). Year 3 at the earliest.
+4. Payment collection: Stripe Connect with the organizer as the connected account, so Hermi never holds funds. Fee 1.5% of amounts collected on top of Stripe's card cost, passed through in plain view; below SquadTrip's reported all-in 6% (reported, verify). Needs legal review (money transmission, refunds, disputes, tax, sanctions). Year 3 at the earliest.
 
 **Costs.** The pass has 78% to 92% margin (section 2.3). Events cost about $1.30 of AI and infrastructure. Stripe card cost is about 2.9% plus $0.30 and is shown to the organizer. Support for disputes and refunds is the real cost of layer 4.
 
@@ -145,15 +145,15 @@ Year 3 example: 300 x $90 = $27,000. Year 5: 300 x $90 + 600 x $45 = $54,000. Pe
 
 ### 3.3 In-app hotel booking through LiteAPI
 
-**How it works.** Hotel search and booking inside Wayfold using LiteAPI (Nuitee), a self-serve REST API with 2M+ hotels (reported, verify). Wayfold sets a margin per search, Nuitee acts as merchant of record through its payment SDK, and payouts are weekly for confirmed bookings. Merchant-of-record by Nuitee keeps card data out of Wayfold's scope.
+**How it works.** Hotel search and booking inside Hermi using LiteAPI (Nuitee), a self-serve REST API with 2M+ hotels (reported, verify). Hermi sets a margin per search, Nuitee acts as merchant of record through its payment SDK, and payouts are weekly for confirmed bookings. Merchant-of-record by Nuitee keeps card data out of Hermi's scope.
 
-**Pricing.** The user pays the displayed rate, which Wayfold marks up by 5 to 15% above net. Bedbank rates are often priced to match public rates, so the usable margin is probably the low end (inference).
+**Pricing.** The user pays the displayed rate, which Hermi marks up by 5 to 15% above net. Bedbank rates are often priced to match public rates, so the usable margin is probably the low end (inference).
 
-**Costs.** $600 stay at 8%: $48 gross. After card fees, cancellations, chargebacks and support the net is about $15 to $60; the model uses $30. Wayfold also loses the affiliate commission it would have earned on that stay (about $10 assumed), so incremental revenue is $20 per booking. Build effort is high: search, prebook, cancel, vouchers, currency, tax and resort-fee display, "I arrived and there is no booking" support.
+**Costs.** $600 stay at 8%: $48 gross. After card fees, cancellations, chargebacks and support the net is about $15 to $60; the model uses $30. Hermi also loses the affiliate commission it would have earned on that stay (about $10 assumed), so incremental revenue is $20 per booking. Build effort is high: search, prebook, cancel, vouchers, currency, tax and resort-fee display, "I arrived and there is no booking" support.
 
 **Regulatory.** Consumer law, refunds and probably seller-of-travel registration as a seller rather than a referrer (inference, counsel to confirm). Hotelbeds, WebBeds and Expedia Rapid are not solo options and are skipped.
 
-**User-experience impact.** Mixed. A native checkout converts better than a redirect, but Wayfold then owns every hotel problem, and the "we send you to the real site" trust is lost. It starts only after click data shows strong booking intent and a support process exists.
+**User-experience impact.** Mixed. A native checkout converts better than a redirect, but Hermi then owns every hotel problem, and the "we send you to the real site" trust is lost. It starts only after click data shows strong booking intent and a support process exists.
 
 **Starts.** Decision in year 2, build and launch in year 3 (base), year 2 (ambitious).
 
@@ -166,9 +166,9 @@ Year 3 example: 300 x $90 = $27,000. Year 5: 300 x $90 + 600 x $45 = $54,000. Pe
 | Bookings | 540 | 1,800 | 3,600 |
 | Revenue at $20 | $10.8k | $36.0k | $72.0k |
 
-### 3.4 Wayfold for Advisors
+### 3.4 Hermi for Advisors
 
-**How it works.** A web product for independent travel advisors: a client trip workspace, branded presentation mode (already built), client proposals with price options, a shared client page, the fare and research tools with source links, and a commission tracker. It is sold on the web through Stripe, not the App Store, so Apple's cut does not apply (verify current link-out rules in [07](07-local-to-app-store.md)). Wayfold holds no host credentials and does not book for advisors.
+**How it works.** A web product for independent travel advisors: a client trip workspace, branded presentation mode (already built), client proposals with price options, a shared client page, the fare and research tools with source links, and a commission tracker. It is sold on the web through Stripe, not the App Store, so Apple's cut does not apply (verify current link-out rules in [07](07-local-to-app-store.md)). Hermi holds no host credentials and does not book for advisors.
 
 **Pricing.** $29 a seat a month, or $24 a seat a month billed annually. Incumbents (reported, verify): Tern $49 monthly or $35 annual, Travefy from $39 a month, TravelJoy from $19 a month, Safari Portal $199 to $299 a month per team. Net per seat: blended $27 a month x 12 x 0.97 = $314 a year.
 
@@ -176,7 +176,7 @@ Year 3 example: 300 x $90 = $27,000. Year 5: 300 x $90 + 600 x $45 = $54,000. Pe
 
 **Effort.** Medium: client portal, proposals, teams, billing and a commission tracker on the existing workspace. About 3 to 4 months for one person (assumption). Interview 15 advisors before building.
 
-**Regulatory.** Wayfold is a tool vendor, not a seller of travel. Client personal data (names, dates, sometimes passport details) means data-processing terms and no storage of passport numbers. Sales tax on SaaS varies by state. Advisors disclose their own commissions to clients; the tool records them but does not advise.
+**Regulatory.** Hermi is a tool vendor, not a seller of travel. Client personal data (names, dates, sometimes passport details) means data-processing terms and no storage of passport numbers. Sales tax on SaaS varies by state. Advisors disclose their own commissions to clients; the tool records them but does not advise.
 
 **User-experience impact.** None for consumers. Advisor features sit in a separate web surface, and consumer screens never show advisor branding unless a client opens an advisor's trip.
 
@@ -240,7 +240,7 @@ Example, year 5: 150,000 x 0.8% x $26 = $31,200; 150,000 x 0.008 x $2.29 = $2,74
 
 ### 3.7 White-label and API
 
-**How it works.** The planner, presentation mode and group workspace licensed to agencies and tour operators, with their branding and domain. It is the same code as Wayfold for Advisors packaged for accounts rather than seats.
+**How it works.** The planner, presentation mode and group workspace licensed to agencies and tour operators, with their branding and domain. It is the same code as Hermi for Advisors packaged for accounts rather than seats.
 
 **Pricing.** $500 a month per account ($6,000 a year); ambitious case at the same price.
 

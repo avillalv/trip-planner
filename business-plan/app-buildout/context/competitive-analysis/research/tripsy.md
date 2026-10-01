@@ -1,6 +1,6 @@
 # Competitor profile: Tripsy (Tripsy: Travel Planner)
 
-Prepared 2026-09-30 for Wayfold (specs read: app-buildout/README.md and phase-1-launch/README.md).
+Prepared 2026-09-30 for Hermi (specs read: app-buildout/README.md and phase-1-launch/README.md).
 
 ## Research limits (read first)
 
@@ -33,7 +33,7 @@ WebFetch was blocked by the network egress proxy for every host tried (tripsy.ap
 | Trial | 7 days reported | Verify |
 | Free tier limits | Not found in detail. Reviews say trip sharing, cloud sync and collaboration need Pro; Pro adds unlimited trips, documents, expenses, email forwarding, flight alerts, calendar, weather, unlimited guest invites | Reported, verify |
 
-Working assumption for planning: Pro is roughly $40 to $60 a year and $299 lifetime. Wayfold Plus at $39.99 a year is at or below that low end.
+Working assumption for planning: Pro is roughly $40 to $60 a year and $299 lifetime. Hermi Plus at $39.99 a year is at or below that low end.
 
 ## 3. Feature list (reported, verify)
 
@@ -85,31 +85,31 @@ Sources for this table are aggregator and blog summaries (justuseapp, wandrly, s
 6. Pricing is confusing (weekly, monthly, yearly, lifetime at about $299) and the free tier is thin.
 7. Reliability complaints (sync, email automation, slow saves).
 
-## 7. Feature by feature versus Wayfold
+## 7. Feature by feature versus Hermi
 
-Wayfold Phase 1 scope from phase-1-launch/README.md; later items from app-buildout/README.md tier table and phase lists.
+Hermi Phase 1 scope from phase-1-launch/README.md; later items from app-buildout/README.md tier table and phase lists.
 
-| Capability | Tripsy | Wayfold | Edge |
+| Capability | Tripsy | Hermi | Edge |
 |---|---|---|---|
-| Platforms | iPhone, iPad, Mac, Watch; web view-only | iOS (Capacitor) and full web app P1; native Android P2; no Mac or Watch app | Tripsy on Apple breadth; Wayfold on cross-platform editing |
+| Platforms | iPhone, iPad, Mac, Watch; web view-only | iOS (Capacitor) and full web app P1; native Android P2; no Mac or Watch app | Tripsy on Apple breadth; Hermi on cross-platform editing |
 | Native feel, widgets, Live Activities, Watch | Strong | Not in P1 (Capacitor shell) | Tripsy |
-| Email forwarding import | Yes, 700+ providers, Pro | Pasted-confirmation import (Haiku) and calendar feed import P1; plans@wayfold.app forward P2 | Tripsy until P2 |
-| Switching from TripIt or Wanderlog | Not a focus | TripIt and iCal import, free Trip Pass for first import | Wayfold |
+| Email forwarding import | Yes, 700+ providers, Pro | Pasted-confirmation import (Haiku) and calendar feed import P1; plans@hermi.world forward P2 | Tripsy until P2 |
+| Switching from TripIt or Wanderlog | Not a focus | TripIt and iCal import, free Trip Pass for first import | Hermi |
 | AI import | Smart Import (photos, Maps lists, Instagram, TikTok) | Booking paste import; no screenshot or social import in P1 | Tripsy |
-| AI research and drafting | MCP only (user's own Claude or ChatGPT); on-device insights | explain, draft_day, draft_trip, research, agent fare hunts, every fact cited with source and date (Claude Haiku 4.5, Sonnet 5.5) | Wayfold |
-| Flights: fares, history, alerts | Status alerts only | Cached and live fares, price history, alerts, booked-fare drop alert P1; status alerts P2 | Wayfold on fares; Tripsy on status until P2 |
-| Stays | Reservation storage | Shortlist, paste links, hearts, compare, rental search, partner booking | Wayfold |
-| Collaboration | Pro only, guest edit, read-only web link | Free owners invite 1 collaborator; Plus and pass up to 6; roles; hearts; activity log; polls, cost split, comments P2 | Wayfold, especially free couples |
+| AI research and drafting | MCP only (user's own Claude or ChatGPT); on-device insights | explain, draft_day, draft_trip, research, agent fare hunts, every fact cited with source and date (Claude Haiku 4.5, Sonnet 5.5) | Hermi |
+| Flights: fares, history, alerts | Status alerts only | Cached and live fares, price history, alerts, booked-fare drop alert P1; status alerts P2 | Hermi on fares; Tripsy on status until P2 |
+| Stays | Reservation storage | Shortlist, paste links, hearts, compare, rental search, partner booking | Hermi |
+| Collaboration | Pro only, guest edit, read-only web link | Free owners invite 1 collaborator; Plus and pass up to 6; roles; hearts; activity log; polls, cost split, comments P2 | Hermi, especially free couples |
 | Expenses | Yes (Pro) | Manual cost splitting P2, Stripe group payments P3 | Tripsy until P2 |
 | Documents | Yes (Pro) | Not listed as P1 feature; verify | Tripsy |
 | Maps and itinerary | Apple Maps, day agenda | Day-by-day drag and drop, MapLibre map, places search | Even |
-| Presentation and PDF | Itinerary web link | Full-screen presentation, read-only link, PDF export | Wayfold |
+| Presentation and PDF | Itinerary web link | Full-screen presentation, read-only link, PDF export | Hermi |
 | Offline | Full | Readable offline on every tier, edits queue | Even |
 | Calendar | Calendar sync (Pro) | Live calendar subscription feed per trip | Even |
-| Before you go | Weather | Visa links first, partner items, checklist | Wayfold |
+| Before you go | Weather | Visa links first, partner items, checklist | Hermi |
 | Stats | Unconfirmed | "Year in travel" card P2 | Unknown |
-| Pricing | About $40 to $60 a year, $299 lifetime | Plus $5.99 a month or $39.99 a year; Trip Pass $9.99; no lifetime | Wayfold on entry price and pass option |
-| Free tier | Thin | 2 trips, 12 credits, offline, joins free | Wayfold |
+| Pricing | About $40 to $60 a year, $299 lifetime | Plus $5.99 a month or $39.99 a year; Trip Pass $9.99; no lifetime | Hermi on entry price and pass option |
+| Free tier | Thin | 2 trips, 12 credits, offline, joins free | Hermi |
 
 ## 8. Summary lists
 
@@ -120,7 +120,7 @@ Wayfold Phase 1 scope from phase-1-launch/README.md; later items from app-buildo
 - Brand trust: Editors' Choice, MacStories coverage, about 5.6K ratings at 4.7.
 - MCP and CLI make it the easy target for power users who live in Claude or ChatGPT.
 
-**What Wayfold does better**
+**What Hermi does better**
 - Fare hunting with price history, alerts and booked-fare drop alert; AI research with visible sources.
 - Real group planning: hearts now, polls and cost split later, collaboration free for couples.
 - Cross-platform: full web editing now, Android in P2.
@@ -134,8 +134,8 @@ Wayfold Phase 1 scope from phase-1-launch/README.md; later items from app-buildo
 1. Build a "Switching from Tripsy" import (Tripsy has a CLI and MCP, so a CLI or export script route is plausible; verify export format) and add it to onboarding next to TripIt and Wanderlog, with the free Trip Pass reward. Publish a `/vs/tripsy` page stating facts only.
 2. Pull email-forward import earlier than P2, or at least ship a share-sheet and "paste or drop a screenshot" flow in P1 to close the Smart Import gap.
 3. Pitch the gap Tripsy cannot fill: "Your friends are on Android, plan together anyway." Lead marketing and App Store copy with cross-platform free collaboration.
-4. Publish a Wayfold MCP server (or Claude connector) in Phase 2 so the Claude-native crowd is not exclusive to Tripsy, and because it costs no inference.
-5. Price comparison content: Plus $39.99 a year with fares and AI versus Tripsy Pro at about $40 to $60 without fares; Trip Pass $9.99 beats a year of Pro for one trip. Never offer lifetime (consistent with Wayfold rules), and use that as a trust message against the $299 lifetime.
+4. Publish a Hermi MCP server (or Claude connector) in Phase 2 so the Claude-native crowd is not exclusive to Tripsy, and because it costs no inference.
+5. Price comparison content: Plus $39.99 a year with fares and AI versus Tripsy Pro at about $40 to $60 without fares; Trip Pass $9.99 beats a year of Pro for one trip. Never offer lifetime (consistent with Hermi rules), and use that as a trust message against the $299 lifetime.
 6. Close the native gaps cheaply: Live Activity and widget for flights and next item in Phase 2, then Apple Watch only if retention data asks for it.
 7. Cover reliability as a feature: sync test suite and a public "edits never lost" promise, because sync and slow-save complaints are Tripsy's most repeated pain.
 8. Add documents (attach PDFs and confirmations per item) to Phase 1 or early Phase 2 if not already specified; it is a Pro anchor for Tripsy.

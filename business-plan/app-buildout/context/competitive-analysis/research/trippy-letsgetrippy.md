@@ -68,42 +68,42 @@ No App Store reviews, Google Play reviews, Reddit threads or TikTok comments abo
 | Crowded category: Tripeza, TRIPTI.ai, TripLinq, Triplly, TRYPS, Wanderlog all offer vote plus split plus AI | WebSearch 2026-09-30 |
 | Name collision with the 2011 Trippy and several store apps hurts search and ASO | confirmed by search results |
 
-## 6. Is this the competitor the Wayfold owner means?
+## 6. Is this the competitor the Hermi owner means?
 
-The README describes Wayfold as a collaborative trip planner for couples, families and friend groups with voting (lodging votes, polls), cost splitting, collaborators, and AI. The user's description of Trippy (group voting, expense splitting, chat, AI turning group chat into a plan) matches letsgetrippy.com's own copy. Likely yes, but the README never names a competitor, so ask the owner to confirm.
+The README describes Hermi as a collaborative trip planner for couples, families and friend groups with voting (lodging votes, polls), cost splitting, collaborators, and AI. The user's description of Trippy (group voting, expense splitting, chat, AI turning group chat into a plan) matches letsgetrippy.com's own copy. Likely yes, but the README never names a competitor, so ask the owner to confirm.
 
-## 7. Feature by feature comparison with Wayfold
+## 7. Feature by feature comparison with Hermi
 
-Wayfold source: /home/user/trip-planner/business-plan/app-buildout/01-product-spec.md (sections 4.1 to 4.19, tier matrix section 5) and README tier table. Positioning: "Plan together. Know the fare." Platforms: iOS (Capacitor) and web.
+Hermi source: /home/user/trip-planner/business-plan/app-buildout/01-product-spec.md (sections 4.1 to 4.19, tier matrix section 5) and README tier table. Positioning: "Plan together. Know the fare." Platforms: iOS (Capacitor) and web.
 
-| Capability | Trippy (reported) | Wayfold (spec) | Edge |
+| Capability | Trippy (reported) | Hermi (spec) | Edge |
 |---|---|---|---|
-| Platforms | Android confirmed; iOS and web unknown | iOS and web; no Android | Trippy on Android; Wayfold on web |
+| Platforms | Android confirmed; iOS and web unknown | iOS and web; no Android | Trippy on Android; Hermi on web |
 | Group chat | Yes, core | No chat listed; notes feed (F-NTE-1) and comments only | Trippy |
 | Chat to plan AI | Yes, "Trippy Spark", headline feature | No. AI is drafts (F-AI-2), research, agent runs, booking import (F-AI-10) | Trippy |
-| Polls and voting | Yes | Polls (F-GRP-1), lodging votes (F-LDG-5), compare | Even; Wayfold gates creation to paid or pass for own trip |
-| Expense splitting | Yes | Expenses, cost splitting, settlements (F-GRP-2 to 4); Stripe collection in Phase 4 | Even; Wayfold deeper later |
-| Itinerary and map | Implied | Days, calendar, ideas, place search, MapLibre map (F-ITN) | Wayfold (verified by spec) |
+| Polls and voting | Yes | Polls (F-GRP-1), lodging votes (F-LDG-5), compare | Even; Hermi gates creation to paid or pass for own trip |
+| Expense splitting | Yes | Expenses, cost splitting, settlements (F-GRP-2 to 4); Stripe collection in Phase 4 | Even; Hermi deeper later |
+| Itinerary and map | Implied | Days, calendar, ideas, place search, MapLibre map (F-ITN) | Hermi (verified by spec) |
 | Booking import | Reported auto-import of confirmations | Booking import (F-AI-10, 1 credit), bookmarklet for stays | Even, verify Trippy depth |
-| Flights and fare tracking | Not found | Routes, cached and live fares, alerts, agent fare hunts (F-FLT) | Wayfold |
-| Lodging shortlist and compare | Not found | Shortlist, per-night math, rental search, compare (F-LDG) | Wayfold |
-| Evidence-linked AI facts | Not found | Source URL on every AI fact (F-AI-5, F-NTE-2) | Wayfold |
-| Presentation mode | Not found | Full-screen slides (F-PRS) | Wayfold |
-| Offline | Not found | Offline read (F-TRV-2, 6.2) | Wayfold on paper |
-| Affiliate and booking revenue | Not found | Labeled affiliate links, concierge, room-block, later LiteAPI | Wayfold |
-| Checklist and packing list | Not found | F-CHK, F-AI-9 | Wayfold |
+| Flights and fare tracking | Not found | Routes, cached and live fares, alerts, agent fare hunts (F-FLT) | Hermi |
+| Lodging shortlist and compare | Not found | Shortlist, per-night math, rental search, compare (F-LDG) | Hermi |
+| Evidence-linked AI facts | Not found | Source URL on every AI fact (F-AI-5, F-NTE-2) | Hermi |
+| Presentation mode | Not found | Full-screen slides (F-PRS) | Hermi |
+| Offline | Not found | Offline read (F-TRV-2, 6.2) | Hermi on paper |
+| Affiliate and booking revenue | Not found | Labeled affiliate links, concierge, room-block, later LiteAPI | Hermi |
+| Checklist and packing list | Not found | F-CHK, F-AI-9 | Hermi |
 | Pricing | Free to download; tiers unknown | Free, Plus $5.99 or $39.99, Family $8.99 or $59.99, Pro, passes $9.99 and $19.99, credit packs | Unknown |
-| Invitee friction | Unknown | Invitees join free, guest mode (F-ACC-2), share links | Wayfold documented |
-| Travelers per trip on free | Unknown | Free 2 travelers, invites blocked | Risk for Wayfold (see gaps) |
+| Invitee friction | Unknown | Invitees join free, guest mode (F-ACC-2), share links | Hermi documented |
+| Travelers per trip on free | Unknown | Free 2 travelers, invites blocked | Risk for Hermi (see gaps) |
 
-## 8. What Trippy does that Wayfold lacks
+## 8. What Trippy does that Hermi lacks
 
 1. In-app group chat.
 2. Chat-to-plan AI that ingests the conversation and lists unresolved decisions.
-3. Android app (Wayfold is iOS plus web only).
-4. Group tools ungated on a free product (as reported; verify). Wayfold limits free trips to 2 travelers and hides own-trip polls and expenses behind a preview.
+3. Android app (Hermi is iOS plus web only).
+4. Group tools ungated on a free product (as reported; verify). Hermi limits free trips to 2 travelers and hides own-trip polls and expenses behind a preview.
 
-## 9. What Wayfold does that Trippy lacks (by current evidence)
+## 9. What Hermi does that Trippy lacks (by current evidence)
 
 1. Flight routes, fare history, live tracking, price alerts, agent fare hunts.
 2. Lodging shortlist, per-night math, compare, rental search.
@@ -117,15 +117,15 @@ All "lacks" for Trippy mean "not found in snippets", not confirmed absent.
 
 | # | Move | Why |
 |---|---|---|
-| 1 | Lead with money: "Know the fare". Trippy shows no fare tracking or price intelligence | Wayfold's core differentiator |
+| 1 | Lead with money: "Know the fare". Trippy shows no fare tracking or price intelligence | Hermi's core differentiator |
 | 2 | Source-cited AI versus a chat summarizer | Trust story; summaries can hallucinate dates |
 | 3 | Win the couple and family personas (P1, P3), not only friend groups | Trippy copy targets chat-heavy friend groups |
-| 4 | Web and share-link invitees with no install | Android-first rival; Wayfold's read-only links and guest mode help |
+| 4 | Web and share-link invitees with no install | Android-first rival; Hermi's read-only links and guest mode help |
 | 5 | Planning depth: itinerary, map, presentation, offline | Trippy reads as coordination first, planning second |
 | 6 | Privacy and no-ads promise | Unknown for Trippy; cheap to claim |
-| Risk A | Wayfold has no chat and no chat-to-plan import. Consider a "paste your group chat" AI action (draft_trip from pasted text, 4 credits) as a low-cost answer. Do not build a full messenger | Closes the headline gap |
-| Risk B | Free tier caps travelers at 2 and gates collaborators. A free group app would beat Wayfold on virality. Consider letting free trip owners invite to polls and splitting | Adoption risk in group use case |
-| Risk C | No Android. Friend groups are mixed-device, so one Android member blocks chat-first rivals, but iOS-only hurts Wayfold in mixed groups; the web app mitigates | Platform reach |
+| Risk A | Hermi has no chat and no chat-to-plan import. Consider a "paste your group chat" AI action (draft_trip from pasted text, 4 credits) as a low-cost answer. Do not build a full messenger | Closes the headline gap |
+| Risk B | Free tier caps travelers at 2 and gates collaborators. A free group app would beat Hermi on virality. Consider letting free trip owners invite to polls and splitting | Adoption risk in group use case |
+| Risk C | No Android. Friend groups are mixed-device, so one Android member blocks chat-first rivals, but iOS-only hurts Hermi in mixed groups; the web app mitigates | Platform reach |
 
 ## 11. Verification checklist (do this from a machine with open internet)
 
@@ -144,4 +144,4 @@ All "lacks" for Trippy mean "not found in snippets", not confirmed absent.
 - https://apps.apple.com/us/app/trippy-travel-app/id1535706273, https://apps.apple.com/in/app/trippy-ai-travel-itinerary/id6757307612 (unconfirmed look-alikes)
 - https://tripsil.com/5-best-apps-for-group-travel-in-2026-honest-review-no-sponsored-rankings/ and https://www.weplanify.com/en/alternatives/best-group-trip-planner-apps (category context)
 - https://tripeza.in/, https://tripti.ai/, https://trip-linq.com/use-cases/friends (other group planners)
-- Wayfold: /home/user/trip-planner/business-plan/app-buildout/README.md and 01-product-spec.md
+- Hermi: /home/user/trip-planner/business-plan/app-buildout/README.md and 01-product-spec.md

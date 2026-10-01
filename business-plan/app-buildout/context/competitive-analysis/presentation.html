@@ -3,60 +3,63 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Wayfold vs the field</title>
-<meta name="description" content="Competitive analysis of Wayfold against TripIt, Trippy, Tripsy, Wanderlog, AI planners and big platforms. 2026-09-30.">
+<title>Hermi vs the field</title>
+<meta name="description" content="Competitive analysis of Hermi against TripIt, Trippy, Tripsy, Wanderlog, AI planners and big platforms. 2026-09-30.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --paper: #edf1f5;
-  --sheet: #fafbfd;
-  --sunken: #e3e8ef;
-  --ink: #15203a;
-  --ink-soft: #55607a;
-  --rule: #d3dae4;
-  --brand: #8c1d40;
-  --brand-soft: #f4e4ea;
-  --on-brand: #ffffff;
-  --cover: #16213d;
+  --paper: #F2FAFF;
+  --sheet: #FFFFFF;
+  --sunken: #E3F1FC;
+  --ink: #17324A;
+  --ink-soft: #4A6580;
+  --rule: #D3E4F2;
+  --brand: #0B6BC0;
+  --brand-soft: #DCEFFF;
+  --on-brand: #FFFFFF;
+  --sky: #2AA5FF;
   --success: #1d7a52;
   --warning: #a86a12;
   --danger: #b42318;
-  --font-head: "Archivo", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --route-a: #FF5E7E;
+  --route-b: #FFCB2E;
+  --cream: #FFF8EC;
+  --font-head: "Fredoka", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #0e1424;
-    --sheet: #16203a;
-    --sunken: #1e2a49;
-    --ink: #e6ebf5;
-    --ink-soft: #a3adc4;
-    --rule: #2c3a5c;
-    --brand: #e0799a;
-    --brand-soft: #3a1b2a;
-    --on-brand: #1a0a10;
-    --cover: #0a101f;
+    --paper: #0B1A2A;
+    --sheet: #12263A;
+    --sunken: #1A3149;
+    --ink: #E6F2FF;
+    --ink-soft: #9DB5CC;
+    --rule: #27405A;
+    --brand: #6CC4FF;
+    --brand-soft: #123A5C;
+    --on-brand: #0B1A2A;
+    --sky: #0E3F66;
     --success: #4cc38a;
-    --warning: #e0a04a;
-    --danger: #f27a6e;
+    --warning: #e0a44a;
+    --danger: #f07167;
   }
 }
 :root[data-theme="dark"] {
-  --paper: #0e1424;
-  --sheet: #16203a;
-  --sunken: #1e2a49;
-  --ink: #e6ebf5;
-  --ink-soft: #a3adc4;
-  --rule: #2c3a5c;
-  --brand: #e0799a;
-  --brand-soft: #3a1b2a;
-  --on-brand: #1a0a10;
-  --cover: #0a101f;
+  --paper: #0B1A2A;
+  --sheet: #12263A;
+  --sunken: #1A3149;
+  --ink: #E6F2FF;
+  --ink-soft: #9DB5CC;
+  --rule: #27405A;
+  --brand: #6CC4FF;
+  --brand-soft: #123A5C;
+  --on-brand: #0B1A2A;
+  --sky: #0E3F66;
   --success: #4cc38a;
-  --warning: #e0a04a;
-  --danger: #f27a6e;
+  --warning: #e0a44a;
+  --danger: #f07167;
 }
 
 * { box-sizing: border-box; }
@@ -90,7 +93,7 @@ a:focus-visible, button:focus-visible { outline: 3px solid var(--brand); outline
 }
 .inner { width: 100%; max-width: 1180px; margin: 0 auto; }
 .eyebrow {
-  font-family: var(--font-head);
+  font-family: var(--font-body);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -130,15 +133,15 @@ a:focus-visible, button:focus-visible { outline: 3px solid var(--brand); outline
 .card h3 .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .card.good { border-top: 4px solid var(--success); }
 .card.bad { border-top: 4px solid var(--danger); }
-.card.wf { border-top: 4px solid var(--brand); background: var(--brand-soft); }
+.card.hermi { border-top: 4px solid var(--brand); background: var(--brand-soft); }
 .card.plain { border-top: 4px solid var(--ink-soft); }
 ul.tight { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 ul.tight li { padding-left: 18px; position: relative; font-size: 0.97rem; }
 ul.tight li::before { content: ""; position: absolute; left: 0; top: 0.6em; width: 7px; height: 7px; border-radius: 2px; background: var(--ink-soft); }
 .good ul.tight li::before { background: var(--success); }
 .bad ul.tight li::before { background: var(--danger); }
-.wf ul.tight li::before { background: var(--brand); }
-.stat { font-family: var(--font-head); font-weight: 800; font-size: clamp(1.8rem, 4vw, 3rem); color: var(--brand); line-height: 1; }
+.hermi ul.tight li::before { background: var(--brand); }
+.stat { font-family: var(--font-head); font-weight: 700; font-size: clamp(1.8rem, 4vw, 3rem); color: var(--brand); line-height: 1; }
 .tagline {
   display: inline-block; font-family: var(--font-head); font-weight: 600; font-size: 0.85rem;
   background: var(--brand-soft); color: var(--brand); padding: 3px 12px; border-radius: 999px; margin-bottom: 10px;
@@ -151,30 +154,30 @@ ul.tight li::before { content: ""; position: absolute; left: 0; top: 0.6em; widt
 .meta span { font-size: 0.9rem; color: var(--ink-soft); }
 .meta b { color: var(--ink); }
 
-/* title slide */
-.cover { background: var(--cover); color: #fafbfd; }
-.cover .inner { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: clamp(20px, 5vw, 64px); align-items: center; }
-.cover h1 { font-size: clamp(2.4rem, 7vw, 5.2rem); font-weight: 800; letter-spacing: -0.03em; }
-.cover h1 em { font-style: normal; color: #e9a3b9; }
-.cover .lede { color: #b8c1d6; }
-.cover .eyebrow { color: #e9a3b9; }
-.cover .date { font-family: var(--font-head); font-weight: 600; margin-top: 28px; color: #d3dae4; letter-spacing: 0.04em; }
-.cover .hint { margin-top: 12px; color: #8f9ab3; font-size: 0.9rem; }
-.logo { width: clamp(120px, 22vw, 300px); height: auto; display: block; filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.35)); }
+/* title slide: a sky slide (ink on sky; deep sky with light text in dark mode) */
+.skyslide { background: var(--sky); color: var(--ink); overflow: hidden; }
+.skyslide .inner { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: clamp(20px, 5vw, 64px); align-items: center; position: relative; z-index: 1; }
+.skyslide h1 { font-size: clamp(2.4rem, 7vw, 5.2rem); font-weight: 700; letter-spacing: -0.01em; }
+.skyslide .lede, .skyslide .eyebrow { color: var(--ink); }
+.skyslide .date { font-family: var(--font-head); font-weight: 600; margin-top: 28px; color: var(--ink); letter-spacing: 0.04em; }
+.skyslide .hint { margin-top: 12px; color: var(--ink); font-size: 0.9rem; }
+.logo { width: clamp(120px, 22vw, 300px); height: auto; display: block; }
+.route { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); width: min(94%, 1100px); height: 15vh; pointer-events: none; }
+@media (max-height: 560px) { .route { display: none; } }
 
 /* question slide */
 .qa { display: grid; gap: 16px; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: stretch; }
 .q, .a { border-radius: 14px; padding: 22px 24px; }
 .q { background: var(--sunken); border: 1px solid var(--rule); }
 .a { background: var(--brand); color: var(--on-brand); }
-.q .k, .a .k { font-family: var(--font-head); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.85; margin-bottom: 8px; }
+.q .k, .a .k { font-family: var(--font-body); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.85; margin-bottom: 8px; }
 .q p, .a p { font-family: var(--font-head); font-weight: 700; font-size: clamp(1.25rem, 2.4vw, 1.8rem); line-height: 1.2; }
 .a .sub { font-family: var(--font-body); font-weight: 400; font-size: 1rem; margin-top: 10px; opacity: 0.95; }
 
 /* market map */
 .map-wrap { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: stretch; }
-.ylab { writing-mode: vertical-rl; transform: rotate(180deg); display: flex; justify-content: space-between; font-family: var(--font-head); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); padding: 4px 0; }
-.xlab { display: flex; justify-content: space-between; font-family: var(--font-head); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); margin-top: 8px; }
+.ylab { writing-mode: vertical-rl; transform: rotate(180deg); display: flex; justify-content: space-between; font-family: var(--font-body); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); padding: 4px 0; }
+.xlab { display: flex; justify-content: space-between; font-family: var(--font-body); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); margin-top: 8px; }
 .map {
   position: relative; height: clamp(380px, 56vh, 520px); background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; overflow: hidden;
   background-image: linear-gradient(var(--rule), var(--rule)), linear-gradient(var(--rule), var(--rule));
@@ -186,10 +189,10 @@ ul.tight li::before { content: ""; position: absolute; left: 0; top: 0.6em; widt
 }
 .chip b { font-family: var(--font-head); font-size: 0.95rem; display: block; }
 .chip small { display: block; font-size: 0.74rem; color: var(--ink-soft); }
-.chip.me { background: var(--brand); color: var(--on-brand); border-color: var(--brand); box-shadow: 0 6px 18px rgba(140, 29, 64, 0.35); }
+.chip.me { background: var(--brand); color: var(--on-brand); border-color: var(--brand); box-shadow: 0 6px 18px rgba(11, 107, 192, 0.30); }
 .chip.me small { color: var(--on-brand); opacity: 0.9; }
 .chip.big { background: var(--sheet); border-style: dashed; }
-.quad { position: absolute; font-size: 0.72rem; color: var(--ink-soft); opacity: 0.8; font-family: var(--font-head); letter-spacing: 0.06em; text-transform: uppercase; }
+.quad { position: absolute; font-size: 0.72rem; color: var(--ink-soft); opacity: 0.8; font-family: var(--font-body); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 
 /* matrix and tables */
 .scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 12px; background: var(--sheet); -webkit-overflow-scrolling: touch; max-width: 100%; }
@@ -199,11 +202,11 @@ table { border-collapse: collapse; width: 100%; }
 .matrix thead th { font-family: var(--font-head); font-size: 0.8rem; background: var(--sunken); position: sticky; top: 0; }
 .matrix th[scope="row"] { text-align: left; font-weight: 700; position: sticky; left: 0; background: var(--sheet); white-space: nowrap; z-index: 1; }
 .matrix thead th:first-child { text-align: left; left: 0; z-index: 2; }
-.matrix .wf { background: var(--brand-soft); }
-.matrix thead th.wf { color: var(--brand); }
+.matrix .hermi { background: var(--brand-soft); }
+.matrix thead th.hermi { color: var(--brand); }
 .matrix tr:last-child > * { border-bottom: 0; }
 .matrix td.t { font-size: 0.78rem; color: var(--ink-soft); line-height: 1.25; min-width: 96px; }
-.matrix td.t.wf { color: var(--ink); font-weight: 700; }
+.matrix td.t.hermi { color: var(--ink); font-weight: 700; }
 .mk { width: 20px; height: 20px; display: inline-block; vertical-align: middle; }
 .mk.y { color: var(--success); }
 .mk.p { color: var(--warning); }
@@ -226,7 +229,7 @@ table.plain tr:last-child td { border-bottom: 0; }
 /* weaknesses, numbered lists */
 .grid { display: grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .item { background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; padding: 14px 16px; min-width: 0; }
-.item .n { font-family: var(--font-head); font-weight: 800; color: var(--brand); font-size: 1.05rem; }
+.item .n { font-family: var(--font-head); font-weight: 700; color: var(--brand); font-size: 1.05rem; }
 .item h3 { font-size: 1rem; margin: 2px 0 4px; }
 .item p { font-size: 0.9rem; color: var(--ink-soft); }
 .item p.ans { color: var(--ink); margin-top: 6px; font-size: 0.9rem; }
@@ -242,7 +245,7 @@ table.plain tr:last-child td { border-bottom: 0; }
 .track { flex: 1; min-width: 0; height: 24px; background: var(--sunken); border-radius: 6px; overflow: hidden; }
 .fill { height: 100%; width: var(--w); background: var(--ink-soft); border-radius: 6px; }
 .bar-row.me .fill { background: var(--brand); }
-.val { font-family: var(--font-head); font-weight: 800; width: 74px; flex: none; font-size: 1rem; }
+.val { font-family: var(--font-head); font-weight: 700; width: 74px; flex: none; font-size: 1rem; }
 .bar-row.me .val { color: var(--brand); }
 .axis { font-size: 0.8rem; color: var(--ink-soft); margin-top: 8px; }
 
@@ -251,23 +254,23 @@ table.plain tr:last-child td { border-bottom: 0; }
 
 ol.steps { counter-reset: s; list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 ol.steps li { counter-increment: s; display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 12px; align-items: start; background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; padding: 12px 16px; }
-ol.steps li::before { content: counter(s); font-family: var(--font-head); font-weight: 800; background: var(--brand); color: var(--on-brand); width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; }
+ol.steps li::before { content: counter(s); font-family: var(--font-head); font-weight: 700; background: var(--brand); color: var(--on-brand); width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; }
 ol.steps b { display: block; }
 ol.steps span { color: var(--ink-soft); font-size: 0.92rem; }
 ol.steps.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
 /* metrics */
-.metric .big { font-family: var(--font-head); font-weight: 800; font-size: clamp(1.4rem, 2.6vw, 2rem); color: var(--brand); line-height: 1.1; }
+.metric .big { font-family: var(--font-head); font-weight: 700; font-size: clamp(1.4rem, 2.6vw, 2rem); color: var(--brand); line-height: 1.1; }
 .metric h3 { margin-bottom: 4px; font-size: 0.98rem; }
 .metric p { font-size: 0.88rem; color: var(--ink-soft); }
-.metric .src { margin-top: 6px; font-size: 0.74rem; font-family: var(--font-head); font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.06em; }
+.metric .src { margin-top: 6px; font-size: 0.74rem; font-family: var(--font-body); font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.06em; }
 
 /* navigation */
 .nav {
   position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%);
   display: flex; align-items: center; gap: 6px; padding: 6px; z-index: 20;
   background: color-mix(in srgb, var(--sheet) 92%, transparent); backdrop-filter: blur(8px);
-  border: 1px solid var(--rule); border-radius: 999px; box-shadow: 0 8px 28px rgba(21, 32, 58, 0.18);
+  border: 1px solid var(--rule); border-radius: 999px; box-shadow: 0 8px 28px rgba(23, 50, 74, 0.18);
 }
 .nav button {
   width: 44px; height: 44px; border-radius: 50%; border: 0; cursor: pointer; font: inherit; font-size: 1.2rem; line-height: 1;
@@ -286,8 +289,8 @@ ol.steps.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 640px) {
   body { font-size: 16px; }
   .cols, .cols.two, .cols.four, .grid, ol.steps.two { grid-template-columns: minmax(0, 1fr); }
-  .cover .inner { grid-template-columns: minmax(0, 1fr); }
-  .cover .logo { width: 96px; order: -1; }
+  .skyslide .inner { grid-template-columns: minmax(0, 1fr); }
+  .skyslide .logo { width: 96px; order: -1; }
   .bar-row { grid-template-columns: minmax(0, 1fr); }
   .chip { padding: 4px 8px; }
   .chip small { display: none; }
@@ -300,8 +303,8 @@ ol.steps.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @page { size: 11in 8.5in; margin: 0; }
 @media print {
   :root, :root:not([data-theme="light"]), :root[data-theme="dark"] {
-    --paper: #edf1f5; --sheet: #fafbfd; --sunken: #e3e8ef; --ink: #15203a; --ink-soft: #55607a; --rule: #d3dae4;
-    --brand: #8c1d40; --brand-soft: #f4e4ea; --on-brand: #ffffff; --cover: #16213d; --success: #1d7a52; --warning: #a86a12; --danger: #b42318;
+    --paper: #F2FAFF; --sheet: #FFFFFF; --sunken: #E3F1FC; --ink: #17324A; --ink-soft: #4A6580; --rule: #D3E4F2;
+    --brand: #0B6BC0; --brand-soft: #DCEFFF; --on-brand: #FFFFFF; --sky: #2AA5FF; --success: #1d7a52; --warning: #a86a12; --danger: #b42318;
   }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   html { scroll-behavior: auto; font-size: 12px; }
@@ -315,8 +318,9 @@ ol.steps.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .matrix { min-width: 0; font-size: 10px; }
   .scroll { overflow: visible; }
   .map { height: 4.6in; }
-  .cover .inner { grid-template-columns: minmax(0, 1fr) auto; }
-  .cover .logo { width: 2.4in; }
+  .skyslide .inner { grid-template-columns: minmax(0, 1fr) auto; }
+  .skyslide .logo { width: 2.4in; }
+  .skyslide .route { bottom: 0.45in; height: 1in; display: block; }
   h2 { font-size: 26px; }
 }
 </style>
@@ -334,26 +338,21 @@ ol.steps.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 <main id="deck">
 
 <!-- 1 Title -->
-<section class="slide cover" id="slide-1" aria-label="Slide 1: Title">
+<section class="slide skyslide" id="slide-1" aria-label="Slide 1: Title">
   <div class="inner">
     <div>
       <div class="eyebrow">Competitive analysis</div>
-      <h1>Wayfold vs the&nbsp;field</h1>
-      <p class="lede">Plan together. Know the fare. Where Wayfold wins, where it loses, and what to do about it.</p>
+      <h1>Hermi vs the&nbsp;field</h1>
+      <p class="lede">Plan together. Know the fare. Where Hermi wins, where it loses, and what to do about it.</p>
       <p class="date">2026-09-30</p>
       <p class="hint">Use the arrow keys, space or the buttons below to move through the slides.</p>
     </div>
-    <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Wayfold">
-  <title>Wayfold</title>
-  <rect width="1024" height="1024" rx="228" fill="#15203a"/>
-  <path d="M512 250 Q380 196 238 214 Q214 217 214 242 L214 800 Q214 826 240 822 Q382 800 512 846 Z" fill="#e3e8ef"/>
-  <path d="M512 250 Q644 196 786 214 Q810 217 810 242 L810 800 Q810 826 784 822 Q642 800 512 846 Z" fill="#fafbfd"/>
-  <path d="M512 250 L512 846" stroke="#d3dae4" stroke-width="8" stroke-linecap="round"/>
-  <polyline points="318,370 415,690 512,440 609,690 706,370" fill="none" stroke="#8c1d40" stroke-width="74" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="318" cy="370" r="50" fill="#e3e8ef" stroke="#8c1d40" stroke-width="26"/>
-  <circle cx="706" cy="370" r="58" fill="#8c1d40"/>
+    <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Hermi">
+  <title>Hermi</title>
+  <rect width="1024" height="1024" rx="228" fill="#2AA5FF"/><circle cx="236" cy="192" r="46" fill="#FF5E7E"/><circle cx="236" cy="292" r="46" fill="#FF5E7E"/><circle cx="236" cy="392" r="46" fill="#FF5E7E"/><circle cx="236" cy="492" r="46" fill="#FF5E7E"/><circle cx="236" cy="592" r="46" fill="#FF5E7E"/><circle cx="236" cy="692" r="46" fill="#FF5E7E"/><circle cx="236" cy="809" r="70" fill="#FF5E7E"/><circle cx="788" cy="192" r="46" fill="#FFCB2E"/><circle cx="788" cy="292" r="46" fill="#FFCB2E"/><circle cx="788" cy="392" r="46" fill="#FFCB2E"/><circle cx="788" cy="492" r="46" fill="#FFCB2E"/><circle cx="788" cy="592" r="46" fill="#FFCB2E"/><circle cx="788" cy="692" r="46" fill="#FFCB2E"/><circle cx="788" cy="809" r="70" fill="#FFCB2E"/><circle cx="328" cy="500" r="22" fill="#FFF8EC"/><circle cx="696" cy="500" r="22" fill="#FFF8EC"/><path transform="translate(512 500) rotate(90) scale(3) translate(-50 -50)" d="M50 2C54 2 57 10 57 18L57 36L96 63L96 70L57 58L56 78L75 89L75 95L54 90L52 98L48 98L46 90L25 95L25 89L44 78L43 58L4 70L4 63L43 36L43 18C43 10 46 2 50 2Z" fill="#FFF8EC" stroke="#FFF8EC" stroke-width="3" stroke-linejoin="round"/>
 </svg>
   </div>
+  <svg class="route" viewBox="0 0 1200 150" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><circle cx="46.0" cy="116.0" r="7.5" fill="var(--route-a)"/><circle cx="65.7" cy="106.1" r="5" fill="var(--route-a)"/><circle cx="86.3" cy="98.0" r="5" fill="var(--route-a)"/><circle cx="107.6" cy="91.7" r="5" fill="var(--route-a)"/><circle cx="129.3" cy="87.3" r="5" fill="var(--route-a)"/><circle cx="151.2" cy="84.6" r="5" fill="var(--route-a)"/><circle cx="173.2" cy="83.5" r="5" fill="var(--route-a)"/><circle cx="195.3" cy="83.5" r="5" fill="var(--route-a)"/><circle cx="217.3" cy="84.6" r="5" fill="var(--route-a)"/><circle cx="239.4" cy="86.4" r="5" fill="var(--route-a)"/><circle cx="261.4" cy="88.7" r="5" fill="var(--route-a)"/><circle cx="283.2" cy="91.3" r="5" fill="var(--route-a)"/><circle cx="305.2" cy="93.9" r="5" fill="var(--route-a)"/><circle cx="327.1" cy="96.4" r="5" fill="var(--route-a)"/><circle cx="349.2" cy="98.4" r="5" fill="var(--route-a)"/><circle cx="371.4" cy="99.9" r="5" fill="var(--route-a)"/><circle cx="393.5" cy="100.6" r="5" fill="var(--route-a)"/><circle cx="415.7" cy="100.3" r="5" fill="var(--route-a)"/><circle cx="437.9" cy="98.8" r="5" fill="var(--route-a)"/><circle cx="459.9" cy="96.0" r="5" fill="var(--route-a)"/><circle cx="481.6" cy="91.8" r="5" fill="var(--route-a)"/><circle cx="502.9" cy="86.1" r="5" fill="var(--route-a)"/><circle cx="523.9" cy="78.9" r="5" fill="var(--route-a)"/><circle cx="1154.0" cy="116.0" r="7.5" fill="var(--route-b)"/><circle cx="1134.3" cy="106.1" r="5" fill="var(--route-b)"/><circle cx="1113.7" cy="98.0" r="5" fill="var(--route-b)"/><circle cx="1092.4" cy="91.7" r="5" fill="var(--route-b)"/><circle cx="1070.7" cy="87.3" r="5" fill="var(--route-b)"/><circle cx="1048.8" cy="84.6" r="5" fill="var(--route-b)"/><circle cx="1026.8" cy="83.5" r="5" fill="var(--route-b)"/><circle cx="1004.7" cy="83.5" r="5" fill="var(--route-b)"/><circle cx="982.7" cy="84.6" r="5" fill="var(--route-b)"/><circle cx="960.6" cy="86.4" r="5" fill="var(--route-b)"/><circle cx="938.6" cy="88.7" r="5" fill="var(--route-b)"/><circle cx="916.8" cy="91.3" r="5" fill="var(--route-b)"/><circle cx="894.8" cy="93.9" r="5" fill="var(--route-b)"/><circle cx="872.9" cy="96.4" r="5" fill="var(--route-b)"/><circle cx="850.8" cy="98.4" r="5" fill="var(--route-b)"/><circle cx="828.6" cy="99.9" r="5" fill="var(--route-b)"/><circle cx="806.5" cy="100.6" r="5" fill="var(--route-b)"/><circle cx="784.3" cy="100.3" r="5" fill="var(--route-b)"/><circle cx="762.1" cy="98.8" r="5" fill="var(--route-b)"/><circle cx="740.1" cy="96.0" r="5" fill="var(--route-b)"/><circle cx="718.4" cy="91.8" r="5" fill="var(--route-b)"/><circle cx="697.1" cy="86.1" r="5" fill="var(--route-b)"/><circle cx="676.1" cy="78.9" r="5" fill="var(--route-b)"/><path transform="translate(600 74) rotate(90) scale(0.62) translate(-50 -50)" d="M50 2C54 2 57 10 57 18L57 36L96 63L96 70L57 58L56 78L75 89L75 95L54 90L52 98L48 98L46 90L25 95L25 89L44 78L43 58L4 70L4 63L43 36L43 18C43 10 46 2 50 2Z" fill="var(--cream)" stroke="var(--cream)" stroke-width="3" stroke-linejoin="round"/></svg>
 </section>
 
 <!-- 2 Question -->
@@ -393,7 +392,7 @@ ol.steps.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
           <li>Older "Trippy" apps are defunct or tiny</li>
         </ul>
       </div>
-      <div class="card wf">
+      <div class="card hermi">
         <h3>Wanderlog</h3>
         <div class="stat">Closest</div>
         <ul class="tight" style="margin-top:10px">
@@ -412,17 +411,17 @@ ol.steps.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   <div class="inner">
     <div class="head">
       <div class="eyebrow">Market map</div>
-      <h2>Wayfold sits where planning meets groups</h2>
+      <h2>Hermi sits where planning meets groups</h2>
     </div>
     <div class="map-wrap">
       <div class="ylab"><span>Post-booking organizing</span><span>Pre-booking planning</span></div>
       <div>
-        <div class="map" role="img" aria-label="Two by two map. Vertical axis: pre-booking planning at the top, post-booking organizing at the bottom. Horizontal axis: solo on the left, group on the right. Wayfold is top right. Wanderlog is upper middle right. Trippy is right of center. AI planners are top left. Big platforms are left of center near the middle. Tripsy is lower left of center. TripIt is bottom left.">
+        <div class="map" role="img" aria-label="Two by two map. Vertical axis: pre-booking planning at the top, post-booking organizing at the bottom. Horizontal axis: solo on the left, group on the right. Hermi is top right. Wanderlog is upper middle right. Trippy is right of center. AI planners are top left. Big platforms are left of center near the middle. Tripsy is lower left of center. TripIt is bottom left.">
           <span class="quad" style="left:12px;top:10px">Plan alone</span>
           <span class="quad" style="right:12px;top:10px">Plan together</span>
           <span class="quad" style="left:12px;bottom:10px">Organize alone</span>
           <span class="quad" style="right:12px;bottom:10px">Organize together</span>
-          <div class="chip me" style="left:74%;top:20%"><b>Wayfold</b><small>plan, vote, track fares</small></div>
+          <div class="chip me" style="left:74%;top:20%"><b>Hermi</b><small>plan, vote, track fares</small></div>
           <div class="chip" style="left:56%;top:40%"><b>Wanderlog</b><small>map planner</small></div>
           <div class="chip" style="left:87%;top:45%"><b>Trippy</b><small>group chat, votes</small></div>
           <div class="chip" style="left:19%;top:26%"><b>AI planners</b><small>Layla, Mindtrip, Wanderboat</small></div>
@@ -458,7 +457,7 @@ ol.steps.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         <li>Price tracking only after you book</li>
         <li>Alerts and offline sit behind Pro; UI feels dated</li>
       </ul></div>
-      <div class="card wf"><h3>Wayfold does better</h3><ul class="tight">
+      <div class="card hermi"><h3>Hermi does better</h3><ul class="tight">
         <li>Plan together before booking, free for couples</li>
         <li>Fare tracking tied to the plan, with sources</li>
         <li>Stays shortlist with voting; presentation mode</li>
@@ -490,14 +489,14 @@ ol.steps.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         <li>Maps and offline not seen</li>
         <li>Proof of scale: no ratings, reviews or press found</li>
       </ul></div>
-      <div class="card wf"><h3>Wayfold does better</h3><ul class="tight">
+      <div class="card hermi"><h3>Hermi does better</h3><ul class="tight">
         <li>Know the fare: tracking tied to the plan</li>
         <li>Every AI fact shows its source and date</li>
         <li>Full itinerary, map and presentation mode</li>
         <li>Works on the web, so one Android friend does not block the group</li>
       </ul></div>
     </div>
-    <p class="bottom">Check monthly. Its chat-to-plan AI is the gap Wayfold does not cover yet.</p>
+    <p class="bottom">Check monthly. Its chat-to-plan AI is the gap Hermi does not cover yet.</p>
   </div>
 </section>
 
@@ -522,7 +521,7 @@ ol.steps.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         <li>Voting, fare tracking, stays compare</li>
         <li>Confusing prices; sync complaints</li>
       </ul></div>
-      <div class="card wf"><h3>Wayfold does better</h3><ul class="tight">
+      <div class="card hermi"><h3>Hermi does better</h3><ul class="tight">
         <li>"Your friends are on Android? Plan together anyway."</li>
         <li>Free collaboration for couples</li>
         <li>Fares and cited AI research</li>
@@ -554,14 +553,14 @@ ol.steps.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         <li>No flight price tracking; free AI is capped</li>
         <li>Trial and cancellation complaints</li>
       </ul></div>
-      <div class="card wf"><h3>Wayfold does better</h3><ul class="tight">
+      <div class="card hermi"><h3>Hermi does better</h3><ul class="tight">
         <li>Offline on every tier</li>
         <li>A source and date on every AI fact</li>
         <li>Fare tracking and a stays shortlist with voting</li>
         <li>Passes instead of a forced annual plan; no ads</li>
       </ul></div>
     </div>
-    <p class="bottom">Still ahead of Wayfold on polish and live editing. Beat it on trust, offline and fares.</p>
+    <p class="bottom">Still ahead of Hermi on polish and live editing. Beat it on trust, offline and fares.</p>
   </div>
 </section>
 
@@ -586,7 +585,7 @@ ol.steps.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         <li>Groups: a chat tag or paid sharing</li>
         <li>No price tracking after the plan; paywall before value</li>
       </ul></div>
-      <div class="card wf"><h3>Wayfold does better</h3><ul class="tight">
+      <div class="card hermi"><h3>Hermi does better</h3><ul class="tight">
         <li>"Found on [site], checked [date]" on every AI fact</li>
         <li>A free first draft before any paywall</li>
         <li>Fare watch that follows the plan</li>
@@ -618,7 +617,7 @@ ol.steps.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         <li>Neutrality: they steer toward their own inventory</li>
         <li>Dated per-fact evidence inside a saved plan</li>
       </ul></div>
-      <div class="card wf"><h3>Wayfold does better</h3><ul class="tight">
+      <div class="card hermi"><h3>Hermi does better</h3><ul class="tight">
         <li>No ads, no ranking by commission</li>
         <li>The place to verify and decide on AI drafts</li>
         <li>Fare watch on your plan, over months</li>
@@ -634,9 +633,9 @@ ol.steps.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   <div class="inner">
     <div class="head">
       <div class="eyebrow">Feature matrix</div>
-      <h2>Only Wayfold combines cited AI, fares and group planning</h2>
+      <h2>Only Hermi combines cited AI, fares and group planning</h2>
     </div>
-    <div class="scroll" tabindex="0" role="region" aria-label="Feature matrix, scrolls sideways on small screens"><table class="matrix"><thead><tr><th scope="col">Feature</th><th scope="col" class="wf">Wayfold</th><th scope="col">TripIt</th><th scope="col">Trippy</th><th scope="col">Tripsy</th><th scope="col">Wanderlog</th><th scope="col">AI planners</th><th scope="col">Big platforms</th></tr></thead><tbody><tr><th scope="row">Collaboration</th><td class="c wf"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg><span class="note">free for couples</span></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td></tr><tr><th scope="row">Voting</th><td class="c wf"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg><span class="note">polls in phase 2</span></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td></tr><tr><th scope="row">Fare tracking</th><td class="c wf"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td></tr><tr><th scope="row">Cited AI</th><td class="c wf"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg><span class="note">source and date</span></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td></tr><tr><th scope="row">Lodging compare</th><td class="c wf"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td></tr><tr><th scope="row">Itinerary with map</th><td class="c wf"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td></tr><tr><th scope="row">Offline</th><td class="c wf"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg><span class="note">every tier</span></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td></tr><tr><th scope="row">Email or file import</th><td class="c wf"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg><span class="note">email in phase 2</span></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td></tr><tr><th scope="row">Flight status alerts</th><td class="c wf"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg><span class="note">phase 2</span></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td></tr><tr><th scope="row">Presentation mode</th><td class="c wf"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td></tr><tr><th scope="row">Android</th><td class="c wf"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg><span class="note">app in phase 2</span></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td></tr><tr><th scope="row">Free tier strength</th><td class="c wf"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td></tr><tr class="price"><th scope="row">Price</th><td class="t wf">Free; Plus $39.99 a year; Trip Pass $9.99</td><td class="t">Pro $49 a year</td><td class="t">Free to download</td><td class="t">About $40 to $60 a year; $299 lifetime</td><td class="t">$39.99 to $49.99 a year</td><td class="t">Free to about $49 a year</td><td class="t">Mostly free</td></tr></tbody></table></div>
+    <div class="scroll" tabindex="0" role="region" aria-label="Feature matrix, scrolls sideways on small screens"><table class="matrix"><thead><tr><th scope="col">Feature</th><th scope="col" class="hermi">Hermi</th><th scope="col">TripIt</th><th scope="col">Trippy</th><th scope="col">Tripsy</th><th scope="col">Wanderlog</th><th scope="col">AI planners</th><th scope="col">Big platforms</th></tr></thead><tbody><tr><th scope="row">Collaboration</th><td class="c hermi"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg><span class="note">free for couples</span></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td></tr><tr><th scope="row">Voting</th><td class="c hermi"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg><span class="note">polls in phase 2</span></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td></tr><tr><th scope="row">Fare tracking</th><td class="c hermi"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td></tr><tr><th scope="row">Cited AI</th><td class="c hermi"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg><span class="note">source and date</span></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td></tr><tr><th scope="row">Lodging compare</th><td class="c hermi"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td></tr><tr><th scope="row">Itinerary with map</th><td class="c hermi"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td></tr><tr><th scope="row">Offline</th><td class="c hermi"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg><span class="note">every tier</span></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td></tr><tr><th scope="row">Email or file import</th><td class="c hermi"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg><span class="note">email in phase 2</span></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td></tr><tr><th scope="row">Flight status alerts</th><td class="c hermi"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg><span class="note">phase 2</span></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td></tr><tr><th scope="row">Presentation mode</th><td class="c hermi"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td></tr><tr><th scope="row">Android</th><td class="c hermi"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg><span class="note">app in phase 2</span></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td></tr><tr><th scope="row">Free tier strength</th><td class="c hermi"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td><td class="c"><svg class="mk p" role="img" aria-label="Partial"><use href="#i-part"/></svg></td><td class="c"><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg></td></tr><tr class="price"><th scope="row">Price</th><td class="t hermi">Free; Plus $39.99 a year; Trip Pass $9.99</td><td class="t">Pro $49 a year</td><td class="t">Free to download</td><td class="t">About $40 to $60 a year; $299 lifetime</td><td class="t">$39.99 to $49.99 a year</td><td class="t">Free to about $49 a year</td><td class="t">Mostly free</td></tr></tbody></table></div>
     <div class="foot">
       <div class="legend">
         <span><svg class="mk y" role="img" aria-label="Yes"><use href="#i-yes"/></svg> Yes</span>
@@ -644,7 +643,7 @@ ol.steps.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         <span><svg class="mk n" role="img" aria-label="No or not found"><use href="#i-no"/></svg> No or not found</span>
       </div>
       <span class="rv">Reported, verify</span>
-      <span>Wayfold column is the plan, not shipped product.</span>
+      <span>Hermi column is the plan, not shipped product.</span>
     </div>
   </div>
 </section>
@@ -657,23 +656,23 @@ ol.steps.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       <h2>Seven things AI planners keep getting wrong</h2>
     </div>
     <div class="grid">
-      <div class="item"><span class="n">1</span><h3>Invented or stale places</h3><p>Closed restaurants, hotels that do not exist.</p><p class="ans"><b>Wayfold:</b> ungrounded places are dropped.</p></div>
-      <div class="item"><span class="n">2</span><h3>No per-fact sources</h3><p>Place cards, not "where from, and when".</p><p class="ans"><b>Wayfold:</b> source and date on every fact.</p></div>
-      <div class="item"><span class="n">3</span><h3>One-shot itineraries</h3><p>Plans do not adapt and can reshuffle.</p><p class="ans"><b>Wayfold:</b> drafts are previews; you accept.</p></div>
-      <div class="item"><span class="n">4</span><h3>Weak groups</h3><p>A chat tag or a paid share link.</p><p class="ans"><b>Wayfold:</b> shortlist, hearts, free for couples.</p></div>
-      <div class="item"><span class="n">5</span><h3>No price tracking after the plan</h3><p>A price is shown once, then forgotten.</p><p class="ans"><b>Wayfold:</b> fare history and alerts on the trip.</p></div>
-      <div class="item"><span class="n">6</span><h3>Paywall before value</h3><p>The useful part is locked until you pay.</p><p class="ans"><b>Wayfold:</b> a free first draft and 12 credits a month.</p></div>
-      <div class="item"><span class="n">7</span><h3>Offline gated or missing</h3><p>Pro only, limited, or absent.</p><p class="ans"><b>Wayfold:</b> offline reading on every tier.</p></div>
+      <div class="item"><span class="n">1</span><h3>Invented or stale places</h3><p>Closed restaurants, hotels that do not exist.</p><p class="ans"><b>Hermi:</b> ungrounded places are dropped.</p></div>
+      <div class="item"><span class="n">2</span><h3>No per-fact sources</h3><p>Place cards, not "where from, and when".</p><p class="ans"><b>Hermi:</b> source and date on every fact.</p></div>
+      <div class="item"><span class="n">3</span><h3>One-shot itineraries</h3><p>Plans do not adapt and can reshuffle.</p><p class="ans"><b>Hermi:</b> drafts are previews; you accept.</p></div>
+      <div class="item"><span class="n">4</span><h3>Weak groups</h3><p>A chat tag or a paid share link.</p><p class="ans"><b>Hermi:</b> shortlist, hearts, free for couples.</p></div>
+      <div class="item"><span class="n">5</span><h3>No price tracking after the plan</h3><p>A price is shown once, then forgotten.</p><p class="ans"><b>Hermi:</b> fare history and alerts on the trip.</p></div>
+      <div class="item"><span class="n">6</span><h3>Paywall before value</h3><p>The useful part is locked until you pay.</p><p class="ans"><b>Hermi:</b> a free first draft and 12 credits a month.</p></div>
+      <div class="item"><span class="n">7</span><h3>Offline gated or missing</h3><p>Pro only, limited, or absent.</p><p class="ans"><b>Hermi:</b> offline reading on every tier.</p></div>
     </div>
     <div class="foot"><span class="rv">Reported, verify</span><span>Invented-venue rates in blogs are weak evidence and not quoted here.</span></div>
   </div>
 </section>
 
 <!-- 12 Wins -->
-<section class="slide" id="slide-12" aria-label="Slide 12: Where Wayfold wins">
+<section class="slide" id="slide-12" aria-label="Slide 12: Where Hermi wins">
   <div class="inner">
     <div class="head">
-      <div class="eyebrow">Where Wayfold wins</div>
+      <div class="eyebrow">Where Hermi wins</div>
       <h2>Nine edges rivals will find hard to copy together</h2>
     </div>
     <div class="grid">
@@ -692,10 +691,10 @@ ol.steps.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 </section>
 
 <!-- 13 Loses -->
-<section class="slide" id="slide-13" aria-label="Slide 13: Where Wayfold loses">
+<section class="slide" id="slide-13" aria-label="Slide 13: Where Hermi loses">
   <div class="inner">
     <div class="head">
-      <div class="eyebrow">Where Wayfold loses</div>
+      <div class="eyebrow">Where Hermi loses</div>
       <h2>Be candid about the gaps and skip the wrong fights</h2>
     </div>
     <div class="cols two">
@@ -703,8 +702,8 @@ ol.steps.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         <li><b>Email forwarding and flight status:</b> TripIt and Tripsy lead; both land in phase 2</li>
         <li><b>Group chat and chat-to-plan AI:</b> Trippy</li>
         <li><b>Android app and Apple polish:</b> Tripsy, Wanderlog, TripIt</li>
-        <li><b>Live co-editing:</b> Wanderlog feels live; Wayfold polls every 15 to 30 seconds</li>
-        <li><b>Brand and reach:</b> Wayfold has zero users</li>
+        <li><b>Live co-editing:</b> Wanderlog feels live; Hermi polls every 15 to 30 seconds</li>
+        <li><b>Brand and reach:</b> Hermi has zero users</li>
       </ul></div>
       <div class="card plain"><h3>Fights to avoid</h3><ul class="tight">
         <li><b>Live inventory and booking:</b> Google, Expedia, Booking win</li>
@@ -723,19 +722,19 @@ ol.steps.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   <div class="inner">
     <div class="head">
       <div class="eyebrow">Pricing comparison</div>
-      <h2>Wayfold sits at the low end, with a pass for one trip</h2>
+      <h2>Hermi sits at the low end, with a pass for one trip</h2>
     </div>
     <div class="bars" role="list">
-      <div class="bar-row me" role="listitem"><div class="lbl">Wayfold Trip Pass<small>one trip, 90 days, paid once</small></div><div class="bar"><div class="track"><div class="fill" style="--w:16.7%"></div></div><span class="val">$9.99</span></div></div>
+      <div class="bar-row me" role="listitem"><div class="lbl">Hermi Trip Pass<small>one trip, 90 days, paid once</small></div><div class="bar"><div class="track"><div class="fill" style="--w:16.7%"></div></div><span class="val">$9.99</span></div></div>
       <div class="bar-row" role="listitem"><div class="lbl">Stippl Pro<small>AI planner</small></div><div class="bar"><div class="track"><div class="fill" style="--w:41.7%"></div></div><span class="val">$24.99</span></div></div>
-      <div class="bar-row me" role="listitem"><div class="lbl">Wayfold Plus<small>annual, 7-day trial</small></div><div class="bar"><div class="track"><div class="fill" style="--w:66.7%"></div></div><span class="val">$39.99</span></div></div>
+      <div class="bar-row me" role="listitem"><div class="lbl">Hermi Plus<small>annual, 7-day trial</small></div><div class="bar"><div class="track"><div class="fill" style="--w:66.7%"></div></div><span class="val">$39.99</span></div></div>
       <div class="bar-row" role="listitem"><div class="lbl">Wanderlog Pro<small>one source says $49.99</small></div><div class="bar"><div class="track"><div class="fill" style="--w:66.7%"></div></div><span class="val">$39.99</span></div></div>
       <div class="bar-row" role="listitem"><div class="lbl">TripIt Pro<small>30-day trial</small></div><div class="bar"><div class="track"><div class="fill" style="--w:81.7%"></div></div><span class="val">$49</span></div></div>
       <div class="bar-row" role="listitem"><div class="lbl">Layla premium<small>$49 to $49.99</small></div><div class="bar"><div class="track"><div class="fill" style="--w:81.7%"></div></div><span class="val">$49</span></div></div>
       <div class="bar-row" role="listitem"><div class="lbl">Tripsy Pro<small>sources range $39.99 to $59.99</small></div><div class="bar"><div class="track"><div class="fill" style="--w:100%"></div></div><span class="val">$59.99</span></div></div>
-      <div class="bar-row me" role="listitem"><div class="lbl">Wayfold Family<small>annual, up to 6 people</small></div><div class="bar"><div class="track"><div class="fill" style="--w:100%"></div></div><span class="val">$59.99</span></div></div>
+      <div class="bar-row me" role="listitem"><div class="lbl">Hermi Family<small>annual, up to 6 people</small></div><div class="bar"><div class="track"><div class="fill" style="--w:100%"></div></div><span class="val">$59.99</span></div></div>
     </div>
-    <p class="axis">Annual price in US dollars, scale $0 to $60. The Trip Pass is a one-time price. Tripsy also sells a $299 lifetime plan. Free or no subscription: Wayfold Free, TripIt Free, Trippy, Google, ChatGPT, Kayak, Mindtrip.</p>
+    <p class="axis">Annual price in US dollars, scale $0 to $60. The Trip Pass is a one-time price. Tripsy also sells a $299 lifetime plan. Free or no subscription: Hermi Free, TripIt Free, Trippy, Google, ChatGPT, Kayak, Mindtrip.</p>
     <div class="foot"><span class="rv">Reported, verify</span><span>Prices from third-party reviews, checked 2026-09-30. Verify on vendor pages.</span></div>
   </div>
 </section>
@@ -839,13 +838,13 @@ ol.steps.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         <li>All competitor facts come from search snippets; vendor pages and app stores were blocked</li>
         <li>Verify before any public use, especially prices and user counts</li>
         <li>Conflicts: Wanderlog $39.99 or $49.99; Layla $49 or $49.99; Tripsy $39.99 to $59.99; Wanderboat 2M or 3.5M users</li>
-        <li>Wayfold is a plan, not shipped product</li>
+        <li>Hermi is a plan, not shipped product</li>
         <li>Public comparisons must be dated, factual and reviewed by counsel</li>
       </ul></div>
       <div class="card plain"><h3>Sources, searched 2026-09-30</h3><ul class="tight">
         <li>Research: TripIt and Trippy profile; Trippy (letsgetrippy.com); Tripsy</li>
         <li>Research: AI travel planners; landscape and growth; user reviews and gaps</li>
-        <li>Wayfold business plan README (tiers and prices)</li>
+        <li>Hermi business plan README (tiers and prices)</li>
         <li>Phase 1 launch README (scope)</li>
         <li>Vendor, news and review URLs are listed in each research file</li>
       </ul></div>
@@ -880,7 +879,7 @@ ol.steps.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     prevBtn.disabled = cur === 0;
     nextBtn.disabled = cur === total - 1;
     prog.style.width = ((cur + 1) / total * 100) + '%';
-    document.title = (cur === 0 ? 'Wayfold vs the field' : 'Slide ' + (cur + 1) + ' - Wayfold vs the field');
+    document.title = (cur === 0 ? 'Hermi vs the field' : 'Slide ' + (cur + 1) + ' - Hermi vs the field');
   }
 
   function setHash() {

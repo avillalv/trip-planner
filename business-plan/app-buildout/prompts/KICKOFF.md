@@ -2,12 +2,12 @@
 
 ## Before you paste the prompt
 
-1. Create a new, empty GitHub repository (for example `wayfold`) and copy the whole `app-buildout/`
+1. Create a new, empty GitHub repository (for example `hermi`) and copy the whole `app-buildout/`
    folder into its root, so the path is `app-buildout/prompts/KICKOFF.md`. Commit and push to `main`.
 2. In the repository settings, protect `main` so it requires CI to pass but lets Claude merge its own
    pull requests (do not require a human approval, or the build stops at the first merge).
 3. Give the session access to the base code, https://github.com/avillalv/trip-planner. In Claude
-   Code on the web, select both `wayfold` and `trip-planner` when you start the session. Locally,
+   Code on the web, select both `hermi` and `trip-planner` when you start the session. Locally,
    make sure your GitHub login can clone it. The build clones it read-only to `.reference/`.
 4. The context-kit-v2 plugin is enabled in `.claude/settings.json`. If Claude Code does not install
    it on its own, run `/plugin marketplace add https://github.com/avillalv/context-kit-v2.git` and
@@ -25,7 +25,7 @@
 ## The prompt to paste
 
 ```text
-You are the orchestrator for building Wayfold Phase 1 in this repository.
+You are the orchestrator for building Hermi Phase 1 in this repository.
 
 Read app-buildout/prompts/00-orchestrator.md and follow it exactly, starting with its
 "Base code" section (clone https://github.com/avillalv/trip-planner read-only into

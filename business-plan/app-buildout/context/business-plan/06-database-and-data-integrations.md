@@ -2,7 +2,7 @@
 
 Part of the [business plan](README.md). The decisions of record in the README override anything here.
 
-Written 2026-09-30, updated for Wayfold's revenue lanes (Family, Group Trip Pass, concierge, advisors, print, Stripe). Scope: schema, tenancy, migrations, data providers, caching, affiliate tracking, retention. Related files: [02-pricing-tiers.md](02-pricing-tiers.md) (tiers and credits), [03-ai-features-and-costs.md](03-ai-features-and-costs.md) (AI cost and controls), [04-users-and-accounts.md](04-users-and-accounts.md) (sign-in, sharing, deletion), [05-infrastructure.md](05-infrastructure.md) (hosting and jobs), [07-local-to-app-store.md](07-local-to-app-store.md) (purchases and roadmap).
+Written 2026-09-30, updated for Hermi's revenue lanes (Family, Group Trip Pass, concierge, advisors, print, Stripe). Scope: schema, tenancy, migrations, data providers, caching, affiliate tracking, retention. Related files: [02-pricing-tiers.md](02-pricing-tiers.md) (tiers and credits), [03-ai-features-and-costs.md](03-ai-features-and-costs.md) (AI cost and controls), [04-users-and-accounts.md](04-users-and-accounts.md) (sign-in, sharing, deletion), [05-infrastructure.md](05-infrastructure.md) (hosting and jobs), [07-local-to-app-store.md](07-local-to-app-store.md) (purchases and roadmap).
 
 Several provider sites (serpapi.com, geoapify.com, duffel.com) could not be read directly on 2026-09-30, so their pricing and terms come from search summaries. Anything not read on a primary page is labeled "reported, verify" with the date checked.
 
@@ -45,7 +45,7 @@ Observations that shape the design:
 
 ### 2.1 Tenancy model
 
-The tenant is the **user account**, and **trips are shared through membership**. Two narrow group structures sit beside that, and neither grants access to trips by itself: `households` (a Family plan pool, up to 6 people, section 2.9) and `advisor_orgs` (Wayfold for Advisors, section 2.10). A "household" of two people planning one trip is still just a trip with two members.
+The tenant is the **user account**, and **trips are shared through membership**. Two narrow group structures sit beside that, and neither grants access to trips by itself: `households` (a Family plan pool, up to 6 people, section 2.9) and `advisor_orgs` (Hermi for Advisors, section 2.10). A "household" of two people planning one trip is still just a trip with two members.
 
 The existing `people` table stays. A person is a traveler on a trip even if they never sign in (a child, a friend). It gains two columns, and access control moves to a new `trip_members` table:
 
@@ -559,7 +559,7 @@ Affiliate links (lodging first, then tours, flights, cars, transfers, eSIM, insu
 
 | Integration | Used for | When | Data we keep | Notes |
 |---|---|---|---|---|
-| Stripe (Checkout, Billing, Tax, possibly Connect) | Web payments: group trip payments, Wayfold for Advisors seats, print orders, partner guide invoices | Phase 4 live (test mode from phase 2) | Stripe customer, subscription and payment intent ids, amounts, status. No card data. All of it lands in `store_transactions` and the tables that point to it | Card data stays with Stripe (Checkout is hosted). Fees reported at about 2.9% plus $0.30 per card charge and about 0.7% on Billing invoices (verify). Webhooks, idempotency and reconciliation: [05-infrastructure.md](05-infrastructure.md) section 5.6. Stripe is a processor: add it to the privacy policy and the DPA list. Group payment collection needs counsel first (money transmission) |
+| Stripe (Checkout, Billing, Tax, possibly Connect) | Web payments: group trip payments, Hermi for Advisors seats, print orders, partner guide invoices | Phase 4 live (test mode from phase 2) | Stripe customer, subscription and payment intent ids, amounts, status. No card data. All of it lands in `store_transactions` and the tables that point to it | Card data stays with Stripe (Checkout is hosted). Fees reported at about 2.9% plus $0.30 per card charge and about 0.7% on Billing invoices (verify). Webhooks, idempotency and reconciliation: [05-infrastructure.md](05-infrastructure.md) section 5.6. Stripe is a processor: add it to the privacy policy and the DPA list. Group payment collection needs counsel first (money transmission) |
 | LiteAPI (Nuitee) | In-app hotel search and booking as merchant of record, 5 to 15% margin (reported, verify) | Year 2 or later, only after click data shows strong booking intent | A later migration adds a `hotel_bookings` table and LiteAPI ids; nothing is created now | Put it behind the same provider interface as flights and lodging. Read its terms on content caching, photos and who handles refunds and support before building. It would sit beside the affiliate links, never replace them, and never rank by margin |
 | Print-on-demand vendor | Trip books and posters | Phase 4 | Vendor order id, tracking, the address (purged at 90 days) | Candidates: Printful, Prodigi, Gelato (verify current terms, quality and shipping regions). Send only the rendered PDF and the address |
 | Host travel agency (for example Fora) | Fulfills concierge and room-block requests | Phase 3 or 4 | The request payload and commission statement rows | A recipient of consented data, not a data provider. The host agreement must cover data protection, retention, seller-of-travel registration and commission reporting |

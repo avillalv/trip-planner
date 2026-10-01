@@ -2,7 +2,7 @@
 
 Part of the [business plan](README.md). The decisions of record in the README override anything here.
 
-Written 2026-09-30, updated for the product name Wayfold and the new tiers and revenue lanes. The app is called Wayfold from here on; the repository and the personal install keep the working name Trip Planner. Apple policy and US court rulings move fast, so every rule marked "verify" must be re-read on the day of submission.
+Written 2026-09-30, updated for the product name Hermi and the new tiers and revenue lanes. The app is called Hermi from here on; the repository and the personal install keep the working name Trip Planner. Apple policy and US court rulings move fast, so every rule marked "verify" must be re-read on the day of submission.
 
 This file is the master transition checklist: every change needed to go from the local Windows app to a public App Store launch, phase by phase, with a pointer to the file that holds the detail. It also covers the mobile approach, frontend changes, in-app purchases, the App Review checklist and the launch plan. Business case: [01-business-plan.md](01-business-plan.md). Tiers and credits: [02-pricing-tiers.md](02-pricing-tiers.md). AI: [03-ai-features-and-costs.md](03-ai-features-and-costs.md). Accounts: [04-users-and-accounts.md](04-users-and-accounts.md). Hosting: [05-infrastructure.md](05-infrastructure.md). Data and providers: [06-database-and-data-integrations.md](06-database-and-data-integrations.md). Affiliate revenue: [08-affiliate-revenue.md](08-affiliate-revenue.md).
 
@@ -34,7 +34,7 @@ Effort assumes one developer with Claude Code, about 25 to 35 focused hours a we
 | 1: hosted web beta | 6 to 8 weeks | Weeks 5 to 12 | Accounts, sharing, entitlements, ledger; 4-week retention measured |
 | 2: iOS TestFlight | 5 to 7 weeks | Weeks 13 to 19 | Capacitor app, purchases, push, account deletion |
 | 3: public launch | 3 to 4 weeks (includes review cycles) | Weeks 20 to 23 | App Review passed, support and monitoring in place |
-| 4: growth | Ongoing | Week 24 on | Android, shareable trip pages for SEO, Pro, group payments, concierge (if not live earlier), Wayfold for Advisors |
+| 4: growth | Ongoing | Week 24 on | Android, shareable trip pages for SEO, Pro, group payments, concierge (if not live earlier), Hermi for Advisors |
 
 Total to public launch: about 5 to 6 months part time, about 3 to 4 months full time. The biggest schedule risk is Phase 1 (multi-tenancy and entitlements), not the mobile work. Do not start a phase until the previous gate is met.
 
@@ -44,7 +44,7 @@ Goal: find out whether anyone wants this before rewriting anything. No app code 
 
 | Change | Detail in |
 |---|---|
-| Confirm the name Wayfold (trademark search, App Store name and subtitle availability) and buy the domain | [01-business-plan.md](01-business-plan.md) |
+| Confirm the name Hermi (trademark search including the Hermio and Hermès risks in brand/BRAND.md, App Store name "Hermi: Group Trip Planner" and subtitle availability) and buy hermi.world | [01-business-plan.md](01-business-plan.md) |
 | Landing page with waitlist capture and email set up (support, no-reply; SPF, DKIM, DMARC) | [01-business-plan.md](01-business-plan.md), [05-infrastructure.md](05-infrastructure.md) |
 | 10 user interviews with couples and small groups; write down the signal that counts as "yes" before starting | [01-business-plan.md](01-business-plan.md) |
 | Paywall and price test copy shown to interviewees (Trip Pass $9.99, Group Trip Pass $19.99, Plus $5.99 a month or $39.99 a year, Family $8.99 a month or $59.99 a year) | [02-pricing-tiers.md](02-pricing-tiers.md) |
@@ -145,7 +145,7 @@ Gate: App Review passed; support and monitoring in place. Also require crash-fre
 | Shareable public trip pages and SEO guides (server-rendered, separate from the SPA) | [01-business-plan.md](01-business-plan.md) |
 | Group payments through Stripe: pay your share of real-world trip costs, reminders, settle-up records. Needs counsel's opinion on money transmission first (Stripe Connect or supplier payment links) | 5.8, [05-infrastructure.md](05-infrastructure.md) section 5.6 |
 | Concierge and room blocks, if not live at launch; first commission statements reconciled | [04-users-and-accounts.md](04-users-and-accounts.md) section 3.9, [08-affiliate-revenue.md](08-affiliate-revenue.md) |
-| Wayfold for Advisors (year 2, web only): org and seat tables, client trip workspaces, Stripe Billing at $29 a seat a month or $24 annual, no advisor purchase or sign-up inside the iOS app | 5.8, [04-users-and-accounts.md](04-users-and-accounts.md) section 3.8 |
+| Hermi for Advisors (year 2, web only): org and seat tables, client trip workspaces, Stripe Billing at $29 a seat a month or $24 annual, no advisor purchase or sign-up inside the iOS app | 5.8, [04-users-and-accounts.md](04-users-and-accounts.md) section 3.8 |
 | Printed trip books and posters (year 2, ordered on the web, physical goods through Stripe) and labeled partner guides | 5.8, [06-database-and-data-integrations.md](06-database-and-data-integrations.md) section 2.10 |
 | LiteAPI in-app hotel booking (year 2 or later, only after click data shows strong booking intent): needs its own review of Apple rules for booking physical services and of merchant-of-record terms | [06-database-and-data-integrations.md](06-database-and-data-integrations.md) section 4.5 |
 | Android: Capacitor Android, Play Billing through RevenueCat, FCM, App Links; 4 to 6 weeks | 3, 5.1 |
@@ -189,7 +189,7 @@ Apple rejects apps that feel like a website in a frame, not apps that use a WebV
 **Capacitor around the existing React app, bundled, with a small set of native plugins.** The hosted web beta ships first from the same code (it is the web app, not the mobile strategy).
 
 - A solo developer cannot maintain a React Native rewrite plus a web app plus SEO pages. Reusing the tested 90 percent is the economic argument.
-- The passport theme, tokens (`frontend/src/index.css`) and `.claude/rules/frontend.md` carry over unchanged.
+- The token plumbing (`frontend/src/index.css`) and `.claude/rules/frontend.md` carry over; the values are replaced by the Hermi palette (app-buildout 05 section 2).
 - Revisit React Native only if App Review pushes back twice on 4.2, or analytics show WebView scroll or map jank driving retention loss. Keep `lib/` free of DOM assumptions so a later native client can reuse it.
 - PWA-only is rejected: no App Store IAP, no store search, weak iOS push and storage.
 
@@ -248,7 +248,7 @@ Travelers are often on airplane mode or roaming. Offline access is the most valu
 
 - Keep lazy route chunks; lazy-load MapLibre and Recharts. Budget: interactive under 2 s on an iPhone 12 in airplane mode with a cached trip; main JS chunk under 500 kB gzip.
 - Virtualize long lists (`@tanstack/react-virtual`); request sized thumbnails and serve WebP or AVIF from Cloudflare ([05-infrastructure.md](05-infrastructure.md)).
-- Turn heavy passport-theme effects off under `prefers-reduced-motion` and on older devices. Subset the three bundled `@fontsource` families to Latin.
+- Turn heavy route pattern effects off under `prefers-reduced-motion` and on older devices. Subset the three bundled `@fontsource` families to Latin.
 - Measure with Lighthouse (web) and Xcode Instruments plus Sentry performance (native).
 
 ### 4.6 Accessibility
@@ -278,7 +278,7 @@ Travelers are often on airplane mode or roaming. Offline access is the most valu
 | Cost | Free under $2.5k monthly tracked revenue, then about 1 percent (verify) | Our time |
 | Risk | Vendor dependency; mirrored entitlements soften it | Full control |
 
-Client: `@revenuecat/purchases-capacitor`. Backend: an `entitlements` table filled by RevenueCat webhooks plus a periodic reconcile job against RevenueCat's REST API, so a later move to direct StoreKit stays possible. Paywalls are our own React screens in the passport theme.
+Client: `@revenuecat/purchases-capacitor`. Backend: an `entitlements` table filled by RevenueCat webhooks plus a periodic reconcile job against RevenueCat's REST API, so a later move to direct StoreKit stays possible. Paywalls are our own React screens in the Hermi theme.
 
 The server is the source of truth: the client only displays entitlement, and every API route checks the entitlement row. Link the RevenueCat `app_user_id` to our account UUID (not email); call `logIn` on sign-in and `logOut` on sign-out. Apple's commission is 15 percent under the Small Business Program (under $1M a year in proceeds).
 
@@ -288,7 +288,7 @@ Launch products:
 
 | Product | Type | Price | Notes |
 |---|---|---|---|
-| `plus_monthly` | Auto-renewable subscription, group `wayfold_membership` | $5.99 | |
+| `plus_monthly` | Auto-renewable subscription, group `hermi_membership` | $5.99 | |
 | `plus_annual` | Auto-renewable subscription, same group | $39.99 | 7-day free trial (annual only) |
 | `family_monthly` | Auto-renewable subscription, same group | $8.99 | Up to 6 people in one household, 150 pooled credits (5.3a) |
 | `family_annual` | Auto-renewable subscription, same group | $59.99 | No trial at launch |
@@ -298,10 +298,10 @@ Launch products:
 | `credits_150` | Consumable | $6.99 | 150 credits |
 | `credits_400` | Consumable | $14.99 | 400 credits |
 
-Later (Phase 4, behind a flag until then): `pro_monthly` ($11.99) and `pro_annual` ($99), formerly named premium, added to the same `wayfold_membership` group. Set the levels in the group as Pro, then Family, then Plus, with each tier's monthly and annual on one level. Moving up a level applies immediately with a prorated refund; moving down applies at the next renewal; moving between monthly and annual of the same tier is a crossgrade.
+Later (Phase 4, behind a flag until then): `pro_monthly` ($11.99) and `pro_annual` ($99), formerly named premium, added to the same `hermi_membership` group. Set the levels in the group as Pro, then Family, then Plus, with each tier's monthly and annual on one level. Moving up a level applies immediately with a prorated refund; moving down applies at the next renewal; moving between monthly and annual of the same tier is a crossgrade.
 
 - One subscription group, so nobody holds Plus, Family or Pro at once. Apple allows one introductory offer per group per user; trial Plus annual only, never Family or Pro at launch. Win-back and promotional offers wait for Phase 4.
-- Every product needs localized names and descriptions and a paywall review screenshot. Use Apple's automatic regional pricing first, then tune India, Brazil, Mexico and Turkey by hand. Leave Apple Family Sharing off for every product; it cannot be turned off again once enabled, and Family plan members are invited inside Wayfold instead (5.3a).
+- Every product needs localized names and descriptions and a paywall review screenshot. Use Apple's automatic regional pricing first, then tune India, Brazil, Mexico and Turkey by hand. Leave Apple Family Sharing off for every product; it cannot be turned off again once enabled, and Family plan members are invited inside Hermi instead (5.3a).
 - Paywall shows at most three visible choices: Trip Pass (lead offer), Plus annual (highlighted, with the trial), and Plus monthly and Family under "More options". Group Trip Pass appears on a trip when its owner adds a poll, splits a cost or has more than 6 people. Credit packs appear when a user runs out of credits. Pro is not shown until it launches.
 
 ### 5.3 Trip Pass
@@ -350,15 +350,15 @@ Uncertain and moving; date-stamped 2026-09-30.
 
 ### 5.8 Payments outside In-App Purchase: Stripe for real-world services
 
-Rule of thumb: if the buyer gets a digital feature inside Wayfold, it is In-App Purchase. If the money pays for something in the real world, or for software bought and used on the web, it goes through Stripe.
+Rule of thumb: if the buyer gets a digital feature inside Hermi, it is In-App Purchase. If the money pays for something in the real world, or for software bought and used on the web, it goes through Stripe.
 
 | Money | Route | Why, and the Apple rule |
 |---|---|---|
 | Plus, Family, Pro, Trip Pass, Group Trip Pass, credit packs | In-App Purchase | Digital features and content consumed in the app (Guideline 3.1.1) |
 | Group trip payments: a traveler paying their share of a hotel deposit or dinner | Stripe Checkout, opened in `SFSafariViewController` | A real-world cost that is consumed outside the app, so Guideline 3.1.3(e) (goods and services outside of the app) applies. The payment must never unlock app features or buy credits |
-| Concierge bookings | Paid to the supplier or the host agency, never through Wayfold or the app | A physical travel service consumed outside the app (3.1.3(e)). The app only collects the request |
+| Concierge bookings | Paid to the supplier or the host agency, never through Hermi or the app | A physical travel service consumed outside the app (3.1.3(e)). The app only collects the request |
 | Printed trip books and posters | Stripe Checkout | Physical goods shipped to the buyer (3.1.3(e)) |
-| Wayfold for Advisors seats | Stripe Billing on the web only | Web software sold to a business. The iOS app does not sell it, link to it, or unlock advisor features; advisors sign up on the web. This avoids Guideline 3.1.3(b), which would otherwise require the same items to be offered through In-App Purchase |
+| Hermi for Advisors seats | Stripe Billing on the web only | Web software sold to a business. The iOS app does not sell it, link to it, or unlock advisor features; advisors sign up on the web. This avoids Guideline 3.1.3(b), which would otherwise require the same items to be offered through In-App Purchase |
 | Partner guide sponsorship | Invoiced on the web | Business to business, never in the app |
 | LiteAPI hotel booking (later) | Its own checkout | A physical service consumed outside the app; decide the flow with Apple's rules in hand when the time comes |
 
@@ -422,7 +422,7 @@ Answer the 2025 age rating questionnaire honestly. Expect 4+ or 9+ without open 
 
 ### 6.8 Store listing assets
 
-- App name "Wayfold" (30 characters max), subtitle "Plan together. Know the fare." (29 characters; check that the name and subtitle are available), promotional text (170), promotional text (170), description, keywords (100, no spaces after commas), category Travel (secondary Lifestyle or Productivity), copyright.
+- App name "Hermi: Group Trip Planner" (25 characters; 30 max), subtitle "Plan together. Know the fare." (29 characters; check that the name and subtitle are available), promotional text (170), promotional text (170), description, keywords (100, no spaces after commas), category Travel (secondary Lifestyle or Productivity), copyright.
 - Screenshots: 6.9 inch iPhone (1320 by 2868), up to 10: trip overview, itinerary on map, price-drop alert, AI plan, offline mode, shared trip. Icon 1024 by 1024, no alpha. App preview video and custom product pages in Phase 4.
 
 ### 6.9 Review notes and demo account
@@ -445,7 +445,7 @@ iOS builds need macOS and Xcode. Buy a Mac mini (about $600) for development plu
 | Area | Item | Notes |
 |---|---|---|
 | Onboarding | 3-screen intro, sign in, "Create your first trip" wizard (destination, dates, who is going) | Sample trip to explore first. Ask for notifications after the first price alert, not at launch. |
-| Empty states | Trips, day, flights, lodging, places, agents | Passport-style illustration, one action, an example. Reuse the `setup-checklist.tsx` pattern per trip. |
+| Empty states | Trips, day, flights, lodging, places, agents | A dotted route and plane (never people), one action, an example. Reuse the `setup-checklist.tsx` pattern per trip. |
 | Error states | Offline, API failure, 401, out of credits, 429, maintenance, forced update | Extend `routes/errors.tsx`; plain copy per `.claude/rules/frontend.md`. |
 | Loading | Skeletons, optimistic updates | Consistent across routes. |
 | Analytics | PostHog: signup, trip_created, first_itinerary_item, ai_used, paywall_viewed, purchase_started, purchase_completed, restore_tapped, push_opt_in, invite_sent, invite_accepted | Session replay off or masked; respect opt-out; no cross-app tracking. |
@@ -471,7 +471,7 @@ iOS builds need macOS and Xcode. Buy a Mac mini (about $600) for development plu
 | T plus 1 to 4 weeks | Daily review and crash triage; reply to every review; hotfixes twice weekly if needed; public roadmap |
 | T plus 4 to 8 weeks | Seasonal push (January to March for summer trips); small Apple Search Ads test (about $10 a day); nominate the app for featuring |
 
-Positioning: "the trip planner that follows your trip offline", price alerts, AI that plans within your constraints, the passport design. Two-person planning is the wedge (couples and small groups), inherited from the original use case. Use Apple's 7-day phased release for automatic updates and release manually for new installs at launch.
+Positioning: "the trip planner that follows your trip offline", price alerts, AI that plans within your constraints, the Hermi design (two routes, one trip). Two-person planning is the wedge (couples and small groups), inherited from the original use case. Use Apple's 7-day phased release for automatic updates and release manually for new installs at launch.
 
 ### 8.2 Post-launch operations
 

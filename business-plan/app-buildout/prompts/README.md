@@ -1,6 +1,6 @@
 # Phase 1 build prompts
 
-These prompts build all of Wayfold Phase 1 in 28 steps. One orchestrating Claude Code session runs
+These prompts build all of Hermi Phase 1 in 28 steps. One orchestrating Claude Code session runs
 them in order, one pull request each. Start it with the prompt in [KICKOFF.md](KICKOFF.md).
 
 | File | Purpose |

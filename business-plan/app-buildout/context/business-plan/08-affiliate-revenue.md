@@ -2,13 +2,13 @@
 
 Part of the [business plan](README.md). The decisions of record in the README override anything here.
 
-Written 2026-09-30. This file covers how Wayfold earns commissions. Related files: [09-revenue-expansion.md](09-revenue-expansion.md) (every other revenue stream and the five-year scenarios), [06-database-and-data-integrations.md](06-database-and-data-integrations.md) (schema, providers, section 6 affiliate integration), [07-local-to-app-store.md](07-local-to-app-store.md) (App Review, roadmap, feature flags), [02-pricing-tiers.md](02-pricing-tiers.md) (tiers), [01-business-plan.md](01-business-plan.md) (revenue scenarios).
+Written 2026-09-30. This file covers how Hermi earns commissions. Related files: [09-revenue-expansion.md](09-revenue-expansion.md) (every other revenue stream and the five-year scenarios), [06-database-and-data-integrations.md](06-database-and-data-integrations.md) (schema, providers, section 6 affiliate integration), [07-local-to-app-store.md](07-local-to-app-store.md) (App Review, roadmap, feature flags), [02-pricing-tiers.md](02-pricing-tiers.md) (tiers), [01-business-plan.md](01-business-plan.md) (revenue scenarios).
 
 Evidence caveat: the official partner sites (Airbnb, Awin, Stay22, Travelpayouts, AirHelp, Viator, GetYourGuide, Airalo, ftc.gov and others) were blocked from the research environment. Every rate, cookie window and eligibility rule below came from third-party reports and search summaries. Every rate is "reported, verify" until it is read on the network's own terms page after sign-up. Attach rates and order values are estimates, not data. Month 3 click data replaces them.
 
 ## 1. Summary
 
-Affiliate commissions are the income of Wayfold's Free tier (no banner ads, see the README). Free users cost up to $0.25 a month in provider spend, so the commission has to cover that cost and, over time, pay for infrastructure. It is a floor, not the growth plan.
+Affiliate commissions are the income of Hermi's Free tier (no banner ads, see the README). Free users cost up to $0.25 a month in provider spend, so the commission has to cover that cost and, over time, pay for infrastructure. It is a floor, not the growth plan.
 
 Every tier sees the same links in the same places. Paid tiers never lose them and free results are never degraded.
 
@@ -624,7 +624,7 @@ Affiliate links pay $8 to $25 per completed booking. The lanes below pay 5 to 20
 | Lane | Net per booking | Attach (share of trips) | Per real trip | Effort | Regulatory burden | Hurts UX? |
 |---|---|---|---|---|---|---|
 | Concierge via host agency | Hotel $600 stay: $40 to $70. Cruise $3,000: $200 to $380. Package $2,500: $150 to $300 | 2 to 4% opt in | $2 to $6 | Low build, 30 to 60 minutes of founder time per booking | Medium: seller-of-travel registration in some states, host cover, E&O | No, if optional and perks are real |
-| Group room blocks and organizer tools | 30-room, 2-night block at $200: about $1,200 at 10%; $1 to $3 per traveler for collection | 0.3 to 1% of trips | $1.50 to $8 | Medium | Medium to high if Wayfold holds money; low if the hotel collects | No, free blocks help organizers |
+| Group room blocks and organizer tools | 30-room, 2-night block at $200: about $1,200 at 10%; $1 to $3 per traveler for collection | 0.3 to 1% of trips | $1.50 to $8 | Medium | Medium to high if Hermi holds money; low if the hotel collects | No, free blocks help organizers |
 | In-app hotel booking (LiteAPI) | Margin 5 to 15% of $600 = $30 to $90 gross; $15 to $60 after card fees, refunds, support | 3 to 5% | $0.50 to $3 | High | Medium to high: merchant duties, consumer law, probably seller-of-travel | Mixed: smoother checkout, more support, less "we send you to the real site" |
 | Expedia TAAP under host credentials | Up to 13% hotels, 11.5% flights and activities, 7.5% cars, 6% packages | Part of the concierge lane | Inside the concierge figure | None beyond the concierge lane | Needs IATA, ARC, CLIA or TRUE, so only through a host | No |
 
@@ -634,7 +634,7 @@ Per trip the top three lanes stack to about $4 to $17 against $1.04 today. Skipp
 
 ### 13.2 Concierge via a host agency
 
-How it works (reported): suppliers pay travel agencies 7 to 20% per booking, typically 30 to 90 days after travel, and a host agency passes on a split. The advisor is an independent contractor under the host's IATA, ARC, CLIA or TRUE credentials and E&O cover. The founder joins a host as an advisor; Wayfold gets an optional "Have a human book this" button on shortlisted stays, cruises and complex trips. The user fills a brief and the founder books in the host's portal.
+How it works (reported): suppliers pay travel agencies 7 to 20% per booking, typically 30 to 90 days after travel, and a host agency passes on a split. The advisor is an independent contractor under the host's IATA, ARC, CLIA or TRUE credentials and E&O cover. The founder joins a host as an advisor; Hermi gets an optional "Have a human book this" button on shortlisted stays, cruises and complex trips. The user fills a brief and the founder books in the host's portal.
 
 | Host | Reported split and fees | Notes |
 |---|---|---|
@@ -645,7 +645,7 @@ How it works (reported): suppliers pay travel agencies 7 to 20% per booking, typ
 | Gifted Travel Network, Nexion | 80/20 to 90/10 and 70 to 100%; $0 to $50 and $0 to $200+ a month | Not researched in detail |
 | Cruise.com host program | Up to 100% split from $75 a month | Cruise-only option |
 
-Economics under Fora's 70/30: a $600 Virtuoso stay at 10% pays the agency $60 and Wayfold $42; a $3,000 cruise at 10 to 16% pays the agency $300 to $480 and Wayfold $210 to $340 at 70%. Cruise lines pay 10 to 16% (Royal Caribbean 10% at 0 to 24 passengers up to 16% at 250+), river cruises 15 to 20%, shore excursions 8 to 12%; the affiliate route (CruiseDirect, 3%, $60 to $100) pays less.
+Economics under Fora's 70/30: a $600 Virtuoso stay at 10% pays the agency $60 and Hermi $42; a $3,000 cruise at 10 to 16% pays the agency $300 to $480 and Hermi $210 to $340 at 70%. Cruise lines pay 10 to 16% (Royal Caribbean 10% at 0 to 24 passengers up to 16% at 250+), river cruises 15 to 20%, shore excursions 8 to 12%; the affiliate route (CruiseDirect, 3%, $60 to $100) pays less.
 
 Perks (reported): Virtuoso properties give daily breakfast, a property credit (for example $100 at Fairmont), possible upgrade and early check-in or late checkout, at the same or better rate than the hotel's flexible rate, with the hotel paying the advisor. Virtuoso is bookable only through a Virtuoso-affiliated advisor. This is why the lane does not hurt the UX: the user gets more and pays the same.
 
@@ -655,28 +655,28 @@ Seller-of-travel registration (reported, verify): California $100 per location, 
 
 Two hard limits (inference). Host contracts are between the agency and a named advisor, and supplier portals expect a human, so automated or mass booking by the app under host credentials would probably breach terms. The workable model is human in the loop: the app collects a brief and the founder, or a hired advisor, books. Capacity is about 300 bookings a year solo.
 
-Rules that keep it from degrading the planner: it is an opt-in button, never reorders results, discloses that the hotel pays Wayfold, shows the perk list beside the price, and is not gated behind a paid tier.
+Rules that keep it from degrading the planner: it is an opt-in button, never reorders results, discloses that the hotel pays Hermi, shows the perk list beside the price, and is not gated behind a paid tier.
 
 ### 13.3 Group room blocks
 
 - Groups360 says it is free to planners, lets planners request commissionable rates on RFP bookings, offers instant booking for 10 to 25 rooms, and connects 200,000+ properties (reported). Group hotel commission is typically up to 10% (reported generally; the Groups360 figure was not confirmed, verify). A 30-room, 2-night wedding block at $200 is $12,000 of room revenue and $600 to $1,200 of commission.
 - Whether an app can be the payee is unknown (often only registered planners or agencies are paid). Verify with Groups360 and Hotel Planner before counting it. The concierge host agency may be the route.
-- Attrition risk: unsold block rooms can be charged. Wayfold never signs a contract for users. Use the hotel's own reservation-link blocks, which carry no liability for the organizer.
-- Organizer payment collection: Tern uses per-traveler sub-trips, Lambus has expense splitting, Troupe charges the organizer $3.99 a month or $29.99 once (reported, verify). Wayfold uses Stripe Connect with the organizer as the connected account so it never holds funds; a fee of 1.5% of amounts collected (about $1 to $3 a traveler on a typical trip), shown before charging. Interchange income is nil unless Wayfold issues cards, which is out of scope. Legal review first.
+- Attrition risk: unsold block rooms can be charged. Hermi never signs a contract for users. Use the hotel's own reservation-link blocks, which carry no liability for the organizer.
+- Organizer payment collection: Tern uses per-traveler sub-trips, Lambus has expense splitting, Troupe charges the organizer $3.99 a month or $29.99 once (reported, verify). Hermi uses Stripe Connect with the organizer as the connected account so it never holds funds; a fee of 1.5% of amounts collected (about $1 to $3 a traveler on a typical trip), shown before charging. Interchange income is nil unless Hermi issues cards, which is out of scope. Legal review first.
 
 ### 13.4 In-app hotel booking through LiteAPI (year 2 and later)
 
-LiteAPI (Nuitee) is the only bedbank a solo builder can realistically integrate: public REST API, 2M+ hotels, self-serve, no stated minimum, margin set per search, weekly payouts for confirmed bookings, and a choice between Nuitee as merchant of record through its payment SDK or Wayfold as merchant of record on net rates (reported, verify). Wayfold would use Nuitee as merchant of record to stay out of card-data scope. Margins are constrained by rate parity (inference: bedbank rates are often priced to match public prices), so the usable margin is probably the low end, and net after card fees, chargebacks, cancellations and support is about half of gross. Other providers: RateHawk (business approval needed), Hotelbeds (adds 15 to 22% to hotel net, commercial approval, Wayfold as merchant) and WebBeds (no public API) are not solo options. Build only after click data shows strong booking intent, a support process for "I arrived and there is no booking" exists, and counsel has confirmed the registration position.
+LiteAPI (Nuitee) is the only bedbank a solo builder can realistically integrate: public REST API, 2M+ hotels, self-serve, no stated minimum, margin set per search, weekly payouts for confirmed bookings, and a choice between Nuitee as merchant of record through its payment SDK or Hermi as merchant of record on net rates (reported, verify). Hermi would use Nuitee as merchant of record to stay out of card-data scope. Margins are constrained by rate parity (inference: bedbank rates are often priced to match public prices), so the usable margin is probably the low end, and net after card fees, chargebacks, cancellations and support is about half of gross. Other providers: RateHawk (business approval needed), Hotelbeds (adds 15 to 22% to hotel net, commercial approval, Hermi as merchant) and WebBeds (no public API) are not solo options. Build only after click data shows strong booking intent, a support process for "I arrived and there is no booking" exists, and counsel has confirmed the registration position.
 
 ### 13.5 Expedia TAAP with host credentials
 
-The Expedia Travel Agent Affiliate Program pays up to 13% on hotels, 11.5% on flights and activities, 7.5% on cars and 6% on packages, in tiers by gross bookings (Platinum at $500,000+). It is free with no minimum sales but requires IATA, ARC, CLIA or TRUE credentials (reported, verify). Wayfold has none of its own, so the only fit is the founder booking manually as a host-agency advisor, which is part of the concierge lane. It does not replace the Expedia Group affiliate application of section 4.2 and it is not a way to link users straight to a TAAP link. Expedia Rapid stays skipped (section 4.3).
+The Expedia Travel Agent Affiliate Program pays up to 13% on hotels, 11.5% on flights and activities, 7.5% on cars and 6% on packages, in tiers by gross bookings (Platinum at $500,000+). It is free with no minimum sales but requires IATA, ARC, CLIA or TRUE credentials (reported, verify). Hermi has none of its own, so the only fit is the founder booking manually as a host-agency advisor, which is part of the concierge lane. It does not replace the Expedia Group affiliate application of section 4.2 and it is not a way to link users straight to a TAAP link. Expedia Rapid stays skipped (section 4.3).
 
-### 13.6 Cashback rules and why Wayfold does not share commission as cash
+### 13.6 Cashback rules and why Hermi does not share commission as cash
 
 What programs say (reported, verify in each agreement): Booking.com requires its approval before promoting cashback to users; Expedia Group allows loyalty and cashback case by case with rules against unapproved voucher codes; other programs either prohibit cashback partners, allow them at a reduced tier or treat them as a separate segment. Viator, Travelpayouts and Stay22 terms were not found.
 
-Wayfold does not pay users a share of commission as cash or cash-like credit, for these reasons:
+Hermi does not pay users a share of commission as cash or cash-like credit, for these reasons:
 
 1. A credit that varies by partner creates a payout-based ranking incentive, which breaks the rule in section 7.7. One flat rate would fix that but not the rest.
 2. Stored credit has gift-card, breakage and unclaimed-property rules, and insurance rebating is restricted in many states.
@@ -708,7 +708,7 @@ The range depends on:
 2. Attach rates that are assumptions: 2 to 4% of trips opt into concierge, 0.3 to 1% are group events with a block, 3 to 5% book in app.
 3. Payee and licence rules that are unverified: whether host agencies allow app-routed leads, whether an app can be paid a room-block commission, and whether forwarding a request needs seller-of-travel registration.
 4. LiteAPI margin after rate parity. Each in-app booking also replaces an affiliate commission of about $10 on the same stay, so the incremental figure in 09 is $20 a booking, not $30.
-5. A support process. Lanes 1 and 3 move blame for hotel problems onto Wayfold.
+5. A support process. Lanes 1 and 3 move blame for hotel problems onto Hermi.
 
 Treat the range as a set of tests, not a forecast. The measure that matters first is the concierge ask rate and commission per booking in months 1 to 12.
 

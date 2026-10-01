@@ -1,6 +1,6 @@
-# AI trip planners: competitive survey for Wayfold
+# AI trip planners: competitive survey for Hermi
 
-As of 2026-09-30. Prepared for the Wayfold build spec (`business-plan/app-buildout/`).
+As of 2026-09-30. Prepared for the Hermi build spec (`business-plan/app-buildout/`).
 
 ## Method and confidence (read first)
 
@@ -8,7 +8,7 @@ As of 2026-09-30. Prepared for the Wayfold build spec (`business-plan/app-buildo
 - Tag **[RV]** = reported, verify. Because nothing was fetched, treat every number as [RV] unless a primary source (company newsroom, app store page) is checked before it is quoted externally.
 - "n/f" = not found in snippets. "?" = unknown.
 - Conflicts seen in snippets are listed in Section 7. Do not cite the conflicting figures until resolved.
-- Wayfold facts come from `app-buildout/README.md` and `phase-1-launch/README.md` (written 2026-09-30). Wayfold is unbuilt, so its column shows the plan, not shipped product.
+- Hermi facts come from `app-buildout/README.md` and `phase-1-launch/README.md` (written 2026-09-30). Hermi is unbuilt, so its column shows the plan, not shipped product.
 - Vendor "best AI planner" blog rankings (monkeytravel.app, stardrift.ai, travelanywhere.blog, etc.) are marketing from competing products. They were used only for qualitative complaint themes.
 
 ---
@@ -157,7 +157,7 @@ Legend: Y yes, P partial, N no, ? unknown or not found. All competitor cells [RV
 | Stardrift | Stardrift | ~2025 | Web | n/f | Free | ? | Bookings |
 | Wanderlog | Wanderlog | ~2020 | Web, iOS, Android | 1M+ users | Good | $39.99 a year | Subscription, affiliate |
 | Trip.com TripGenie | Trip.com Group | 2023 | App, web | ~1M inquiries (snippet) | Free | None | Commission |
-| **Wayfold (plan)** | Wayfold | Target ~6 months after build start | Web, iOS (Android Phase 2) | 0 | Generous (2 trips, couples free) | $5.99 a month, $39.99 a year, $9.99 Trip Pass, credits | Subscription, passes, credits, affiliate, concierge |
+| **Hermi (plan)** | Hermi | Target ~6 months after build start | Web, iOS (Android Phase 2) | 0 | Generous (2 trips, couples free) | $5.99 a month, $39.99 a year, $9.99 Trip Pass, credits | Subscription, passes, credits, affiliate, concierge |
 
 ### 2b. Capabilities
 
@@ -186,7 +186,7 @@ Legend: Y yes, P partial, N no, ? unknown or not found. All competitor cells [RV
 | Stardrift | Y | Y | Y | Y | P | ? | N | P | ? | ? |
 | Wanderlog | Y (AI assistant) | P | N | P (Pro deals) | N | Y (live) | N | P | P (place data) | Y (Pro) |
 | Trip.com TripGenie | Y | Y | Y | Y | P | Y (invite tripmates) | P | Y | ? | P |
-| **Wayfold (plan)** | Y (draft_day, draft_trip) | Y (explain) | P (affiliate hand-off; LiteAPI Phase 3) | Y (cached plus live fares, SerpApi behind a flag) | Y (manual fare hunt and research runs; scheduled Pro, Phase 2) | Y (roles, hearts, activity log; polls and cost splitting Phase 2) | Y for fares (price history, alerts, booked-fare drop alert); flight status Phase 2 | Y (shortlist, hearts, compare) | **Y (every fact carries "Found on [site], checked [date]")** | **Y (all tiers)** |
+| **Hermi (plan)** | Y (draft_day, draft_trip) | Y (explain) | P (affiliate hand-off; LiteAPI Phase 3) | Y (cached plus live fares, SerpApi behind a flag) | Y (manual fare hunt and research runs; scheduled Pro, Phase 2) | Y (roles, hearts, activity log; polls and cost splitting Phase 2) | Y for fares (price history, alerts, booked-fare drop alert); flight status Phase 2 | Y (shortlist, hearts, compare) | **Y (every fact carries "Found on [site], checked [date]")** | **Y (all tiers)** |
 
 ---
 
@@ -211,7 +211,7 @@ Each is backed by the complaint themes above. Strength is how widely it appears 
 
 ---
 
-## 4. Where Wayfold can be clearly best-in-class
+## 4. Where Hermi can be clearly best-in-class
 
 Only claims tied to spec rules that are hard for big players to copy.
 
@@ -229,12 +229,12 @@ Caveat: items 1, 3, 4 are design intent until built. Execution quality and laten
 
 ---
 
-## 5. Where big players will out-muscle Wayfold, and how to avoid the fight
+## 5. Where big players will out-muscle Hermi, and how to avoid the fight
 
-| Arena | Who wins | Why | Wayfold posture |
+| Arena | Who wins | Why | Hermi posture |
 |---|---|---|---|
 | Live inventory and instant booking | Google (agentic hotels), Expedia, Booking, Trip.com | Direct supply, payments, merchant of record | Do not try to be the booking engine. Hand off via affiliate; LiteAPI stays Phase 3 and optional |
-| Generic "plan me a trip" chat | ChatGPT, Gemini, Google AI Mode, Perplexity | Default app, free, billions of users, apps inside chat | Do not compete on one-shot generation. Let users bring AI drafts in (paste, import) and make Wayfold the place to verify and decide |
+| Generic "plan me a trip" chat | ChatGPT, Gemini, Google AI Mode, Perplexity | Default app, free, billions of users, apps inside chat | Do not compete on one-shot generation. Let users bring AI drafts in (paste, import) and make Hermi the place to verify and decide |
 | Discovery on search and maps | Google Search, Maps, Tripadvisor | Reviews, photos, query volume | Use Geoapify, Wikipedia and web fetch for facts; do not build a place database or review corpus |
 | Price forecasting and metasearch depth | Kayak, Google Flights | Years of data, all-airline coverage | Track the user's specific fare; partner feeds only; never claim predictions as guarantees |
 | Paid acquisition and brand | Expedia and Booking marketing | Budgets | Avoid paid search on "AI trip planner". Use SEO pages (`/vs/...`), shared-trip pages, referral credits |
@@ -252,7 +252,7 @@ Ordered by expected impact per cost, tied to the Phase 1 scope.
 1. **Ship the evidence label as the hero.** Make "Found on [site], checked [date]" visible on every AI item, tappable to the source, with a "stale after N days" flag. Demo it in the first 30 seconds of onboarding and on the store listing.
 2. **Free collaboration for two on day one.** Couple invites with no paywall, and show the partner's heart and vote live. Lead marketing with "plan together free".
 3. **Import competitors' trips.** Polish TripIt and iCal import, and add a Wanderlog and Layla export-paste path (public pages are user-provided text, not scraped). Free Trip Pass for the first import.
-4. **"Verify this plan" on AI drafts pasted from ChatGPT or Gemini.** Users already plan in chatbots; let them paste an itinerary and have Wayfold check each place exists, hours, and travel time, with sources. Converts the biggest competitor into a funnel.
+4. **"Verify this plan" on AI drafts pasted from ChatGPT or Gemini.** Users already plan in chatbots; let them paste an itinerary and have Hermi check each place exists, hours, and travel time, with sources. Converts the biggest competitor into a funnel.
 5. **Fare watch on the plan, not a separate tool.** Attach routes to trips, show price history, and push the booked-fare drop alert. Message it as "know the fare".
 6. **No paywall before value.** Give a full first draft_trip free (the taster) with evidence and let the paywall hit only at save limits or live checks. Answer the Layla and Trip Planner AI complaint directly in copy.
 7. **Adaptive plans.** When a place is closed, a flight changes, or a vote flips, offer a one-tap "repair day" with the reason shown. Counter "one-shot itinerary".
@@ -263,7 +263,7 @@ Ordered by expected impact per cost, tied to the Phase 1 scope.
 12. **Creator and link import.** Paste TikTok, Reels or blog links and turn places into saved candidates with sources (Airial's hook), but keep the fact-check step. Only use links the user provides; respect site terms.
 13. **Referral credits and Trip Pass gifting.** Invitees join free and get a credit on signup; inviter gets credits when the invitee creates a trip. Organic growth through group trips, since every trip brings 2 to 6 people.
 14. **Reliability bar.** Crash-free above 99.5% at TestFlight, latency budgets on AI actions, clear credit cost before a run. Mindtrip and iplan.ai reviews show small apps lose on bugs and billing surprises.
-15. **Distribution beyond the app store.** Public sample trips and shared-trip pages for SEO, plus an MCP or assistant-side integration later so Wayfold can be invoked from ChatGPT or Claude as a channel, without depending on it.
+15. **Distribution beyond the app store.** Public sample trips and shared-trip pages for SEO, plus an MCP or assistant-side integration later so Hermi can be invoked from ChatGPT or Claude as a channel, without depending on it.
 
 ---
 
@@ -325,4 +325,4 @@ Suggested first verification pass (needs a network that permits fetches): Skift 
 - OpenAI ChatGPT Group Chats global rollout, 2025-11-20 (TechCrunch, PYMNTS). https://www.techcrunch.com/2025/11/20/chatgpt-launches-group-chats-globally/
 - Perplexity, Selfbook and Tripadvisor hotel booking, PhocusWire, 2025-03. https://www.phocuswire.com/perplexity-selfbook-agentic-ai-travel-booking-tripadvisor
 - Hallucination coverage: DEV Community, monkeytravel.app "Can you trust an AI travel itinerary", Euronews 2025-03-22, Fox News, AOL "Tourists duped by AI into visiting fake hot springs". https://www.euronews.com/travel/2025/03/22/how-good-is-chatgpt-at-planning-holidays-i-put-it-to-the-test-on-a-weekend-trip-to-tallinn
-- Wayfold spec: `/home/user/trip-planner/business-plan/app-buildout/README.md`, `.../phase-1-launch/README.md`, 2026-09-30.
+- Hermi spec: `/home/user/trip-planner/business-plan/app-buildout/README.md`, `.../phase-1-launch/README.md`, 2026-09-30.

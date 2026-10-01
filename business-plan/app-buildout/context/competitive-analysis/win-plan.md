@@ -1,6 +1,6 @@
-# How Wayfold beats every app researched and wins their users
+# How Hermi beats every app researched and wins their users
 
-Written 2026-09-30. This is a brainstorm and plan, not a spec. It builds on the six files in [research/](research) and on the Phase 1 scope in [../app-buildout/phase-1-launch/README.md](../../phase-1-launch/README.md). Wayfold is unbuilt, so every Wayfold "win" below is a promise until it ships.
+Written 2026-09-30. This is a brainstorm and plan, not a spec. It builds on the six files in [research/](research) and on the Phase 1 scope in [../app-buildout/phase-1-launch/README.md](../../phase-1-launch/README.md). Hermi is unbuilt, so every Hermi "win" below is a promise until it ships.
 
 ## How to read this file
 
@@ -17,19 +17,19 @@ Written 2026-09-30. This is a brainstorm and plan, not a spec. It builds on the 
 ### The market in plain terms
 
 1. **There is no big app called Trippy.** The huge app is TripIt (reported: about 22M travelers, Pro $49 a year). It is a post-booking organizer, not a planner. "Trippy" at letsgetrippy.com (reported) is a small, new group-trip app with chat, voting, expense splitting and a chat-to-plan AI called Trippy Spark. Its scale is unknown.
-2. **The closest planner is Wanderlog.** Reported: map-first, free live collaboration, Pro at $39.99 a year (one source says $49.99), 4.9 stars, organic search as its main channel. It has the habits Wayfold's users already have.
+2. **The closest planner is Wanderlog.** Reported: map-first, free live collaboration, Pro at $39.99 a year (one source says $49.99), 4.9 stars, organic search as its main channel. It has the habits Hermi's users already have.
 3. **Tripsy is the polish benchmark.** Reported: Apple-only, 4.7 stars from about 5.6K ratings, Editors' Choice, email import, flight alerts, Live Activities, widgets, Watch. It charges for sharing and has no Android editing. In May 2026 it shipped an MCP server, so "bring your own AI" is no longer a unique idea.
 4. **AI planners are crowded and alike.** Layla (now Expedia-owned, reported deal closed 2026-07-31), Mindtrip, Wanderboat, Stippl, Airial and a dozen smaller ones all generate a plan in chat. They share the same weaknesses: invented or stale places, no per-fact source, one-shot itineraries, weak group decisions, no price tracking after the plan, paywall before value, offline gated.
 5. **The platforms are closing in on the basics.** Google AI Mode (reported: Canvas itinerary, flight price tracking across 300+ airlines, agentic hotel booking, August 2026) and ChatGPT (reported: Expedia and Booking apps, group chats up to 20 people) give away chat planning and booking for free. OTA-owned tools (Expedia, Booking, Kayak, Trip.com) steer toward their own inventory.
 
-### Where Wayfold can win
+### Where Hermi can win
 
-Wayfold wins where trust, group decisions and follow-through matter more than inventory or reach.
+Hermi wins where trust, group decisions and follow-through matter more than inventory or reach.
 
-| Lane | Why Wayfold can own it | Who it beats |
+| Lane | Why Hermi can own it | Who it beats |
 |---|---|---|
 | Proof, not vibes | Every AI fact says "Found on [site], checked [date]" and links to the page. Fares must be seen on a page during the run. No competitor found does this per fact inside a saved plan. | Layla, Mindtrip, Wanderboat, ChatGPT, Google AI Mode, all small AI planners |
-| Check the AI you already use | "Verify this plan": paste a ChatGPT, Layla or Mindtrip itinerary and Wayfold checks each place, hours and price. It turns the biggest competitor into a funnel. | ChatGPT, Layla, Mindtrip, Gemini |
+| Check the AI you already use | "Verify this plan": paste a ChatGPT, Layla or Mindtrip itinerary and Hermi checks each place, hours and price. It turns the biggest competitor into a funnel. | ChatGPT, Layla, Mindtrip, Gemini |
 | Two people plan free | Free owners invite 1 collaborator per trip. Invitees always join free. | Tripsy, Layla, TripIt (view only), Mindtrip (group caps) |
 | The plan watches the price | Fare watch attached to the trip, plus the booked-fare drop alert. | Wanderlog, Tripsy, Layla, Mindtrip, TripIt (partial) |
 | Honest commerce | No ranking by commission, labeled links, no ads, no fake urgency, one-tap cancel. | Every OTA-owned planner, Wanderlog (billing complaints) |
@@ -38,10 +38,10 @@ Wayfold wins where trust, group decisions and follow-through matter more than in
 
 ### Fights to avoid
 
-| Fight | Who wins it | Wayfold posture |
+| Fight | Who wins it | Hermi posture |
 |---|---|---|
-| Live inventory and instant booking | Google, Expedia, Booking, Trip.com, Mindtrip (Sabre) | Hand off through labeled affiliate links. LiteAPI stays Phase 3 and optional. Never call Wayfold a booking engine. |
-| Generic "plan me a trip" chat | ChatGPT, Gemini, Google AI Mode, Perplexity | Do not compete on one-shot generation. Let people bring drafts in and make Wayfold the place to verify and decide. |
+| Live inventory and instant booking | Google, Expedia, Booking, Trip.com, Mindtrip (Sabre) | Hand off through labeled affiliate links. LiteAPI stays Phase 3 and optional. Never call Hermi a booking engine. |
+| Generic "plan me a trip" chat | ChatGPT, Gemini, Google AI Mode, Perplexity | Do not compete on one-shot generation. Let people bring drafts in and make Hermi the place to verify and decide. |
 | Place database and reviews | Google Maps, Tripadvisor | Use Geoapify, Wikipedia and cited web pages. Do not build a review corpus. |
 | Fare prediction and metasearch depth | Google Flights, Kayak, Hopper | Watch the user's specific fare with sources. Never promise predictions. |
 | Paid search on "AI trip planner" | Expedia and Booking budgets | Use sample trips, /vs pages, shared-trip pages and referrals. Test competitor keywords only with a hard cap. |
@@ -52,12 +52,12 @@ Wayfold wins where trust, group decisions and follow-through matter more than in
 
 These are where competitors are ahead today, and the plan must not hide them.
 
-1. **Email import.** TripIt forwards and syncs inboxes; Tripsy claims 700+ providers (reported). Wayfold has paste-and-parse at launch, forwarding in Phase 2. This is the biggest switching blocker.
-2. **Flight status alerts.** TripIt Pro and Tripsy have them. Wayfold is Phase 2.
-3. **Native polish.** Tripsy has widgets, Live Activities and Watch. Wayfold is a Capacitor shell at launch.
+1. **Email import.** TripIt forwards and syncs inboxes; Tripsy claims 700+ providers (reported). Hermi has paste-and-parse at launch, forwarding in Phase 2. This is the biggest switching blocker.
+2. **Flight status alerts.** TripIt Pro and Tripsy have them. Hermi is Phase 2.
+3. **Native polish.** Tripsy has widgets, Live Activities and Watch. Hermi is a Capacitor shell at launch.
 4. **Android.** Web only until Phase 2.
-5. **Group chat and chat-to-plan.** Trippy has it. Wayfold answers with "paste your group chat" (section 3).
-6. **Brand and reviews.** Wayfold has zero users and zero ratings. Wanderlog and TripIt have hundreds of thousands.
+5. **Group chat and chat-to-plan.** Trippy has it. Hermi answers with "paste your group chat" (section 3).
+6. **Brand and reviews.** Hermi has zero users and zero ratings. Wanderlog and TripIt have hundreds of thousands.
 7. **Live fare source risk.** SerpApi terms and cost are unverified. Do not run comparative fare ads until a licensed source is in place.
 
 ### The one-paragraph strategy
@@ -68,7 +68,7 @@ Win the people who are already let down. Offer the couple who is tired of paywal
 
 ## 2. Per competitor
 
-Each block has five parts: what they excel at, what Wayfold does better, what they lack, the switching hook, and the features Wayfold should add to beat them. All competitor facts are reported.
+Each block has five parts: what they excel at, what Hermi does better, what they lack, the switching hook, and the features Hermi should add to beat them. All competitor facts are reported.
 
 ### 2.1 TripIt (SAP Concur)
 
@@ -78,9 +78,9 @@ Each block has five parts: what they excel at, what Wayfold does better, what th
 - Pro alerts: flight status often before the airline, seat tracker, fare-drop refund alerts (users report real money back), check-in reminders.
 - Corporate bundle: many users get Pro free through their employer.
 
-**What Wayfold does better**
+**What Hermi does better**
 - Planning before booking: day-by-day plan, map, stay shortlist with hearts and compare.
-- Group work: TripIt sharing is view only (reported). Wayfold has roles, hearts, activity log and later polls and cost splitting.
+- Group work: TripIt sharing is view only (reported). Hermi has roles, hearts, activity log and later polls and cost splitting.
 - Fares before you book, not only after.
 - Sourced AI research; TripIt has no AI planner (reported).
 - A modern interface. Complaints call TripIt dated.
@@ -109,7 +109,7 @@ Each block has five parts: what they excel at, what Wayfold does better, what th
 - Chat, voting and expense splitting in one free app (reported free to download; pricing not found).
 - Android available now.
 
-**What Wayfold does better**
+**What Hermi does better**
 - Planning depth: itinerary, map, presentation mode, checklist.
 - Fares: history, alerts, booked-fare drop alert. Not found in Trippy.
 - Sources on every AI fact. A chat summarizer can invent dates.
@@ -137,7 +137,7 @@ Each block has five parts: what they excel at, what Wayfold does better, what th
 - Flight status alerts, documents, expenses, offline.
 - MCP server and CLI (May 2026): users connect Claude or ChatGPT to build trips.
 
-**What Wayfold does better**
+**What Hermi does better**
 - Cross-platform editing: Tripsy has no Android editing and a view-only web (reported).
 - Free collaboration. Tripsy puts sharing, sync and collaboration behind Pro (reported).
 - Fares, price history and the booked-fare drop alert. Tripsy shows flight status only.
@@ -157,7 +157,7 @@ Each block has five parts: what they excel at, what Wayfold does better, what th
 - Screenshot and pasted-text booking import (extend existing paste import; Phase 1 late or Phase 2).
 - Email-forward import (Phase 2).
 - Live Activities and widgets for the next flight and next item (Phase 2). Watch only if retention data asks.
-- A Wayfold MCP server so Claude and ChatGPT users can send plans in (Phase 2). Wayfold pays no inference for this path.
+- A Hermi MCP server so Claude and ChatGPT users can send plans in (Phase 2). Hermi pays no inference for this path.
 - Documents attached to items (Phase 2).
 - Publish an "edits are never lost" sync promise backed by tests.
 
@@ -169,7 +169,7 @@ Each block has five parts: what they excel at, what Wayfold does better, what th
 - Gmail and forward import, budget with splitting, route optimization (Pro).
 - Distribution: reported organic search is the top channel, millions of visits a month, 4.9 stars. Their "Year in Travel" campaign reportedly lifted new users (verify).
 
-**What Wayfold does better**
+**What Hermi does better**
 - Evidence and sources on AI facts. Wanderlog's AI is an assistant with no citation model reported, and free AI is capped near 5 messages per trip.
 - Fare watch tied to the plan; Wanderlog has no flight tracking (reported; Pro price-drop alerts may exist, verify).
 - Offline on every tier. Reported as the number one Wanderlog complaint because it is Pro only.
@@ -199,11 +199,11 @@ Each block has five parts: what they excel at, what Wayfold does better, what th
 - Conversational planning, live-priced flights and stays, partner bookings. Reported about 2.1M trips planned. Now backed by Expedia inventory.
 - Mainstream destinations (reported).
 
-**What Wayfold does better**
+**What Hermi does better**
 - Sources on every fact. Reviews report invented restaurant names, hours and prices, and AI that ignored overnight arrivals.
-- No paywall before value: Layla's day-by-day and PDF sit behind about $49 a year (reported). Wayfold gives a full first draft free.
+- No paywall before value: Layla's day-by-day and PDF sit behind about $49 a year (reported). Hermi gives a full first draft free.
 - Free sharing. Layla shares are premium.
-- Honest commerce. An Expedia-owned planner has a reason to steer to Expedia. Wayfold never ranks by commission.
+- Honest commerce. An Expedia-owned planner has a reason to steer to Expedia. Hermi never ranks by commission.
 - Offline and credit transparency: Layla is reported to have unexpected charges after trial.
 
 **What they lack**
@@ -211,7 +211,7 @@ Each block has five parts: what they excel at, what Wayfold does better, what th
 - Stable roadmap. Acquisition raises a risk it is folded into Expedia products (reported: no date given).
 
 **Switching hook**
-"Got a Layla itinerary? Paste it. We check every place, hour and price, with sources, and keep watching the fare." Layla users who hit the day-by-day paywall get the whole plan free on Wayfold.
+"Got a Layla itinerary? Paste it. We check every place, hour and price, with sources, and keep watching the fare." Layla users who hit the day-by-day paywall get the whole plan free on Hermi.
 
 **Features to add to beat them**
 - "Verify this plan" for pasted Layla itineraries (recommend Phase 1).
@@ -225,10 +225,10 @@ Each block has five parts: what they excel at, what Wayfold does better, what th
 - Smooth chat, map, collaborative sharing with real-time group chat (reported free up to 5 people), receipts and email import, in-chat flight booking via Sabre (reported May 2026), Stays (July 2026).
 - Funding and partners (reported: United, Capital One, Amex ventures).
 
-**What Wayfold does better**
+**What Hermi does better**
 - Accuracy: reviews report hotels that do not exist and budget filters not honored.
 - Group deciding: reported as solo and couple oriented, not a way for a group to decide.
-- Stable plans: reported complaints of itineraries reordering after hours of work. Wayfold drafts are preview only; nothing saves until accepted.
+- Stable plans: reported complaints of itineraries reordering after hours of work. Hermi drafts are preview only; nothing saves until accepted.
 - Offline (reported none) and fare watching.
 
 **What they lack**
@@ -250,7 +250,7 @@ Each block has five parts: what they excel at, what Wayfold does better, what th
 **What they excel at**
 - Free, reported 2M to 3.5M users (conflicting figures), iOS, Android and web, broad discovery from community posts, ran a large San Francisco ad campaign.
 
-**What Wayfold does better**
+**What Hermi does better**
 - Sources per fact, group planning, fare watch, offline, honest commerce.
 
 **What they lack (not found)**
@@ -269,7 +269,7 @@ Each block has five parts: what they excel at, what Wayfold does better, what th
 **What they excel at**
 - Distribution: billions of users, free. Canvas itinerary from Search and Maps data. Reported flight price tracking across 300+ airlines and agentic hotel booking with cancellation terms and Google Pay (August 2026). Gmail reservations feed Maps.
 
-**What Wayfold does better**
+**What Hermi does better**
 - Neutral trip workspace: Google is not a place where a couple decides, compares and presents.
 - Evidence labels that stay on the saved plan and show the date checked.
 - Commerce without ads: Google earns from ads and partner fees.
@@ -281,7 +281,7 @@ Each block has five parts: what they excel at, what Wayfold does better, what th
 - Trust on neutrality.
 
 **Switching hook**
-"Start anywhere. Decide here." Do not attack Google. Offer a way to bring a Canvas or AI Mode result into Wayfold and verify it. Accept pasted text or a pasted shared link text the user copies (never fetch).
+"Start anywhere. Decide here." Do not attack Google. Offer a way to bring a Canvas or AI Mode result into Hermi and verify it. Accept pasted text or a pasted shared link text the user copies (never fetch).
 
 **Features to add to beat them**
 - "Verify this plan" accepts any pasted itinerary text (Phase 1, recommend).
@@ -294,7 +294,7 @@ Each block has five parts: what they excel at, what Wayfold does better, what th
 **What they excel at**
 - Default app for planning: free tier, group chats up to 20 (reported), Expedia and Booking apps with live results, Agent Mode that drives bookings with approval. Flexible: it can answer anything.
 
-**What Wayfold does better**
+**What Hermi does better**
 - Structure that survives a chat: a trip with days, stays, votes, a map, offline and a link to share.
 - Facts that can be checked: reported invented venues in general chatbots, closed restaurants, a fake hot springs story.
 - Follow-through: watching fares, alerting on drops.
@@ -305,11 +305,11 @@ Each block has five parts: what they excel at, what Wayfold does better, what th
 - Travel apps are merchant-led and steer to Expedia or Booking inventory.
 
 **Switching hook**
-"Keep using ChatGPT to brainstorm. Bring the plan to Wayfold to check it, share it and watch the price." This is a funnel, not a fight.
+"Keep using ChatGPT to brainstorm. Bring the plan to Hermi to check it, share it and watch the price." This is a funnel, not a fight.
 
 **Features to add to beat them**
 - "Verify this plan" (hero, Phase 1).
-- Wayfold MCP server so ChatGPT and Claude users can send a plan into Wayfold in one step (Phase 2; consider a thin read-write version earlier if effort is S).
+- Hermi MCP server so ChatGPT and Claude users can send a plan into Hermi in one step (Phase 2; consider a thin read-write version earlier if effort is S).
 - "Export to ChatGPT" style prompt: a copy button that gives the assistant a trip summary for follow-up questions (S, Phase 2).
 - Do not compete on in-chat booking.
 
@@ -318,7 +318,7 @@ Each block has five parts: what they excel at, what Wayfold does better, what th
 **What they excel at**
 - Metasearch depth, price forecast (buy or wait, 30 days, since 2013), Ask AI, package search, presence inside ChatGPT (reported).
 
-**What Wayfold does better**
+**What Hermi does better**
 - Plan context: the fare sits inside a trip with dates, stays and travelers.
 - Sources per fare and "Indicative" labels, and a booked-fare drop alert.
 - No ad or referral ranking; Kayak earns from referral and ad fees.
@@ -327,7 +327,7 @@ Each block has five parts: what they excel at, what Wayfold does better, what th
 - Collaboration, itinerary, group decisions, persistent plan.
 
 **Switching hook**
-"Kayak finds a fare. Wayfold watches it for the whole trip, with your partner." Do not bid on Kayak keywords at launch; it is a tool people use alongside Wayfold.
+"Kayak finds a fare. Hermi watches it for the whole trip, with your partner." Do not bid on Kayak keywords at launch; it is a tool people use alongside Hermi.
 
 **Features to add to beat them**
 - Fare watch with price history (adopted).
@@ -359,7 +359,7 @@ Includes Stippl, Airial, iplan.ai, Roam Around, Trip Planner AI, Wonderplan, Cur
 
 ## 3. Master list of features to implement
 
-Each entry: what beats whom, the user problem, how it works in Wayfold, effort, phase, and how it makes money or drives growth. "Adopted" means in the Phase 1 scope already.
+Each entry: what beats whom, the user problem, how it works in Hermi, effort, phase, and how it makes money or drives growth. "Adopted" means in the Phase 1 scope already.
 
 ### 3.1 Trust and proof
 
@@ -449,7 +449,7 @@ Each entry: what beats whom, the user problem, how it works in Wayfold, effort, 
 **F14. Booked-fare drop alert**
 - Beats: TripIt Pro (closest), Tripsy, Kayak, Google.
 - Problem: you booked, the price fell, and you did not know you could ask for a credit or refund.
-- How: enter what you paid; Wayfold watches the route; on a drop it says "you paid $X, it is now $Y; check the airline's change and credit rules" with a link to the rules. No claim of a refund.
+- How: enter what you paid; Hermi watches the route; on a drop it says "you paid $X, it is now $Y; check the airline's change and credit rules" with a link to the rules. No claim of a refund.
 - Effort: M. Phase: 1 (adopted). Money: a main reason for Plus.
 
 **F15. One-tap cancel and no paywall before value**
@@ -466,7 +466,7 @@ Each entry: what beats whom, the user problem, how it works in Wayfold, effort, 
 - Effort: M. Phase: 1 (ICS and paste adopted; Maps list and named Tripsy and Wanderlog entries recommended).
 - Money or growth: first import earns a free Trip Pass (adopted), about $0.58 to $0.84 of provider spend (from the plan). Track switch imports per week.
 
-**F17. Email-forward import (plans@wayfold.app)**
+**F17. Email-forward import (plans@hermi.world)**
 - Beats: TripIt, Tripsy, Wanderlog (Pro).
 - Problem: pasting is slower than forwarding.
 - How: a personal forwarding address per user; a deterministic parser for top airlines and hotels with a Haiku fallback; results land in a review inbox, never auto-merged.
@@ -501,9 +501,9 @@ Each entry: what beats whom, the user problem, how it works in Wayfold, effort, 
 
 ### 3.6 Growth features
 
-**F23. Wayfold MCP server**
+**F23. Hermi MCP server**
 - Beats: ChatGPT and Claude users who build plans in chat; narrows Tripsy's edge.
-- How: a hosted MCP connector that lets an assistant create a trip, add days and places, and ask Wayfold to verify. The user's own assistant pays for inference; Wayfold adds evidence labels and storage. Scoped token, read and write per trip, revocable.
+- How: a hosted MCP connector that lets an assistant create a trip, add days and places, and ask Hermi to verify. The user's own assistant pays for inference; Hermi adds evidence labels and storage. Scoped token, read and write per trip, revocable.
 - Effort: M. Phase: 2. Growth: a channel inside AI assistants. Keep the product useful without any one assistant.
 
 **F24. "Year in travel" share card**
@@ -555,7 +555,7 @@ Each entry: what beats whom, the user problem, how it works in Wayfold, effort, 
 | F20 | Offline everywhere | M to L | 1 read and queue, 2 maps | Adopted; maps Phase 2 |
 | F21 | Android via web, then native | S then L | 1 web, 2 native | Web is adopted |
 | F22 | Live Activities and widgets | L | 2 | Phase 2 |
-| F23 | Wayfold MCP server | M | 2 | Phase 2 |
+| F23 | Hermi MCP server | M | 2 | Phase 2 |
 | F24 | Year in travel card | S to M | 2 | Phase 2 |
 | F25 | Referral credits | S to M | 1 | Adopted |
 | F26 | Sample trips, /vs pages, calendar feed | M | 1 | Adopted |
@@ -572,7 +572,7 @@ Each entry: what beats whom, the user problem, how it works in Wayfold, effort, 
 
 | Measure | Target | Why |
 |---|---|---|
-| App launch to trip visible (warm) | under 1.0 s on a mid-range phone | Tripsy feels native; Wayfold is a Capacitor shell and must not feel like a website |
+| App launch to trip visible (warm) | under 1.0 s on a mid-range phone | Tripsy feels native; Hermi is a Capacitor shell and must not feel like a website |
 | Open a trip offline | under 1.0 s, no spinner | Offline is a headline claim |
 | Tap to screen change | under 100 ms response, under 300 ms content | Feels instant |
 | Explain (Haiku) | first words in under 2 s | Chat feels alive |
@@ -588,16 +588,16 @@ Each entry: what beats whom, the user problem, how it works in Wayfold, effort, 
 1. No AI-found place, hour, price or fare appears without a source URL and a checked date (spec rule 4).
 2. Places that cannot be grounded by place search are dropped from drafts, never shown as real.
 3. Fares must be seen on a page during the run and show "Indicative" plus age.
-4. When Wayfold does not know, it says "could not confirm" and shows what it tried. A blank is better than a guess.
+4. When Hermi does not know, it says "could not confirm" and shows what it tried. A blank is better than a guess.
 5. AI never gives visa, insurance or legal advice; it links to official sources.
 6. Date and time zone logic is tested (overnight arrivals, date line, daylight saving).
-7. A monthly eval set reports: place exists, hours match, travel time within tolerance, date logic correct. Target: 98% or better on place existence and 95% or better on hours, measured on Wayfold's own test set. Publish the method and result (F4). Do not claim "zero errors"; claim "every fact has a source you can check".
+7. A monthly eval set reports: place exists, hours match, travel time within tolerance, date logic correct. Target: 98% or better on place existence and 95% or better on hours, measured on Hermi's own test set. Publish the method and result (F4). Do not claim "zero errors"; claim "every fact has a source you can check".
 8. Strict filters: price ceilings and dates are never exceeded in results (test in CI).
 9. AI changes never save without an accept tap. Undo is one tap.
 
 ### 4.3 Accessibility
 
-- WCAG 2.2 AA on all Phase 1 screens, including contrast of the burgundy and navy palette.
+- WCAG 2.2 AA on all Phase 1 screens, including contrast of the Hermi palette (sky, ink, pink and yellow; app-buildout 05 section 2.3).
 - Dynamic Type and text zoom to 200% with no clipped controls.
 - VoiceOver and TalkBack labels for every control; evidence chips read as "Found on [site], checked [date]".
 - Reduce Motion respected; no information carried by color alone (green, amber, red in Verify also use icons and words).
@@ -608,7 +608,7 @@ Each entry: what beats whom, the user problem, how it works in Wayfold, effort, 
 
 - Native share sheet, Sign in with Apple, haptics on accept and undo, swipe back, pull to refresh where expected.
 - Safe areas, keyboard handling and scroll position done right on every screen; no rubber-banding of fixed headers.
-- Dark mode that matches the passport palette (verify the brand file supports it).
+- Dark mode that matches the Hermi palette (verify the brand file supports it).
 - Skeleton screens instead of spinners; no layout jump on load.
 - Widgets and Live Activities in Phase 2 to close the gap with Tripsy.
 
@@ -638,7 +638,7 @@ Each entry: what beats whom, the user problem, how it works in Wayfold, effort, 
 
 ## 5. Customer acquisition plan to take their users
 
-Principle: honest, useful, and specific. Every channel should show a real moment where a competitor user hit a problem Wayfold solves.
+Principle: honest, useful, and specific. Every channel should show a real moment where a competitor user hit a problem Hermi solves.
 
 ### 5.1 Positioning lines per competitor
 
@@ -653,14 +653,14 @@ Principle: honest, useful, and specific. Every channel should show a real moment
 | Wanderboat | discovery without deciding | "From a list of places to a plan you both agree on." | Hearts and polls |
 | Google AI Mode | neutral and free but no workspace | "Start anywhere. Decide here." | Verify this plan |
 | ChatGPT | invented venues, long threads | "Check your ChatGPT itinerary in 30 seconds." | Verify demo, sourced result |
-| Kayak, Google Flights | one price at a time | "Wayfold watches the fare for your whole trip." | Fare history inside a trip |
+| Kayak, Google Flights | one price at a time | "Hermi watches the fare for your whole trip." | Fare history inside a trip |
 
 Tone rules: plain sentence case, no fake urgency, no em dashes, never disparage. Say "reported" internally; publicly say only what has been checked and dated.
 
 ### 5.2 App Store optimization
 
 - Metadata holds no competitor names (Apple Review Guideline 2.3.7, reported). No "TripIt alternative" in the name, subtitle, keywords or screenshots.
-- Name: "Wayfold: Group Trip Planner". Subtitle idea: "Plan together. Know the fare." Keyword field: trip planner, group travel, itinerary, flight tracker, split costs, vote, fare alert, offline.
+- Name: "Hermi: Group Trip Planner". Subtitle idea: "Plan together. Know the fare." Keyword field: trip planner, group travel, itinerary, flight tracker, split costs, vote, fare alert, offline.
 - Screenshots in order: (1) evidence label on a place, (2) plan together free, (3) fare watch and drop alert, (4) offline ready, (5) presentation mode, (6) Verify this plan.
 - Custom product pages per audience (couples, groups, switchers). Custom pages must also follow 2.3.7.
 - Ratings prompt after a positive moment (accepted plan, fare drop alert), never after an error. Reply to every review in 48 hours.
@@ -669,13 +669,13 @@ Tone rules: plain sentence case, no fake urgency, no em dashes, never disparage.
 
 ### 5.3 The /vs pages (honest, with evidence)
 
-Pages at wayfold.app/vs/tripit, /vs/tripsy, /vs/wanderlog, /vs/layla, /vs/mindtrip, /vs/chatgpt, /vs/trippy. Use the same template for each.
+Pages at hermi.world/vs/tripit, /vs/tripsy, /vs/wanderlog, /vs/layla, /vs/mindtrip, /vs/chatgpt, /vs/trippy. Use the same template for each.
 
 Template:
 1. One-line summary and "as of [date]".
 2. Table of facts with a source link and a checked date per row.
 3. **Where they win** (required section; for example, TripIt for flight alerts and email sync today, Tripsy for Apple polish, Wanderlog for map feel, ChatGPT for open-ended brainstorming).
-4. **Where Wayfold wins**, each with a screenshot.
+4. **Where Hermi wins**, each with a screenshot.
 5. Price comparison with the plan names used by the vendor.
 6. "Switch" steps with the import path.
 7. Correction email and last review date.
@@ -685,7 +685,7 @@ Rules (not legal advice; have counsel review before launch):
 - Use competitor names in plain text only. No logos, no trade dress, no implied affiliation.
 - Word claims exactly: "TripIt shares trips view-only per its help pages (checked [date])", not "TripIt cannot collaborate".
 - No claims drawn from Reddit anecdotes.
-- No domains containing a competitor mark; use paths on wayfold.app.
+- No domains containing a competitor mark; use paths on hermi.world.
 - Recheck prices weekly during launch month (Wanderlog reportedly changed Pro price in 2026).
 - UK and EU: comparative advertising rules require objective, verifiable, like-for-like claims; recheck before launching there.
 
@@ -720,7 +720,7 @@ Rules: disclose paid partnerships, no competitor logos or UI in a way that impli
 
 ### 5.7 Creator program
 
-- 10 to 20 travel creators at launch, mixed sizes. Each builds a public sample trip in Wayfold showing evidence labels and real costs.
+- 10 to 20 travel creators at launch, mixed sizes. Each builds a public sample trip in Hermi showing evidence labels and real costs.
 - Offer: Trip Pass credits, an affiliate share on links in their public trip (only where compliant), early access, and a say in the roadmap.
 - Require FTC-style disclosure. Give a short brief, never a script.
 - Measure by installs and trips created per creator, not views.
@@ -765,14 +765,14 @@ Rules: disclose paid partnerships, no competitor logos or UI in a way that impli
 
 The plan's floor is Plus at $39.99 a year. The plan shows a 13% loss at $29.99, so do not cut below it. Compete on shape (Trip Pass, free collaboration, no lifetime, no tokens) and on value (fares, sources, offline), not on a lower annual price.
 
-| Competitor | Reported price | Wayfold position | Message |
+| Competitor | Reported price | Hermi position | Message |
 |---|---|---|---|
 | TripIt Pro | $49 a year, 30-day trial | Plus $39.99 a year is $9 lower and includes fare watch and planning | "Less than TripIt Pro, and you can plan with it." |
 | Tripsy Pro | about $39.99 to $59.99 a year, monthly $4.99 to $9.99, weekly $3.99, lifetime about $299 (sources conflict) | Plus at or below the low end; Trip Pass $9.99 for one trip; no lifetime | "One trip? $9.99. No weekly or lifetime traps." |
-| Wanderlog Pro | $39.99 a year (one source $49.99), $5.99 a month | Same annual price; Wayfold gives offline and couple invites on Free | "Same price. Offline is free." |
+| Wanderlog Pro | $39.99 a year (one source $49.99), $5.99 a month | Same annual price; Hermi gives offline and couple invites on Free | "Same price. Offline is free." |
 | Layla Premium | about $49 to $49.99 a year, $9.99 a month | $10 lower, whole plan visible free | "No paywall before you see the plan." |
-| Mindtrip | free consumer app, revenue from bookings | Free tier comparable; Wayfold adds watching and sources | "Free to plan, honest about how we earn." |
-| Stippl Pro | $24.99 a year, $3.99 a month | Not matched on price; Wayfold Free includes offline and couple sharing | "The features behind Stippl's Pro are free here." |
+| Mindtrip | free consumer app, revenue from bookings | Free tier comparable; Hermi adds watching and sources | "Free to plan, honest about how we earn." |
+| Stippl Pro | $24.99 a year, $3.99 a month | Not matched on price; Hermi Free includes offline and couple sharing | "The features behind Stippl's Pro are free here." |
 | Trippy (letsgetrippy) | free to download; tiers not found | Free tier for groups via invitees joining free; Group Trip Pass in Phase 2 | Verify their pricing first |
 | Google, ChatGPT, Kayak | free | Do not match free; sell follow-through and trust | "Free to start; pay when you want fare watching or more AI." |
 
@@ -792,7 +792,7 @@ Pricing rules:
 | Risk | Likelihood | Effect | Response |
 |---|---|---|---|
 | Google adds source links and groups to Canvas | High | Narrows the evidence and group story | Keep depth: dated labels, stale flags, recheck, fare history over months. Emphasize neutrality and export |
-| OpenAI or Google ships travel planning with better verification | Medium | Verify this plan becomes less unique | Make Wayfold the place where the verified plan lives, with group and price watching. Keep the MCP server as a channel |
+| OpenAI or Google ships travel planning with better verification | Medium | Verify this plan becomes less unique | Make Hermi the place where the verified plan lives, with group and price watching. Keep the MCP server as a channel |
 | Expedia folds Layla into its app and bundles it free | Medium | Layla's paywall complaint disappears | Lean on neutrality and "How we earn". Run a switching message if Layla changes |
 | TripIt adds collaboration or AI with SAP backing | Low to medium | Their 22M base is large | Do not claim to replace TripIt; speed on planning and fares. Keep import so TripIt users can use both |
 | Tripsy ships free sharing or Android editing | Medium | Removes a hook | Keep fares, stays, polls and group decisions; Tripsy is an organizer |
@@ -833,13 +833,13 @@ Assumes launch at the end of month 6. All targets are starting hypotheses to tun
 ### Days 61 to 90: compound
 
 - Start Phase 2 packs in priority order: email-forward, flight status, polls, Android.
-- Publish a Wayfold MCP server preview to a small group of Claude and ChatGPT users.
+- Publish a Hermi MCP server preview to a small group of Claude and ChatGPT users.
 - Run the referral credit test (double credits weekend) if invite conversion is weak.
 - Prepare the "Year in travel" card for December.
 - Review the kill rule inputs early: paying share and affiliate income per monthly user.
 - Write a retro: what competitor users said, which hook worked, which did not.
 
-### Metrics that prove Wayfold is winning
+### Metrics that prove Hermi is winning
 
 | Metric | Why it matters | Day 90 hypothesis |
 |---|---|---|

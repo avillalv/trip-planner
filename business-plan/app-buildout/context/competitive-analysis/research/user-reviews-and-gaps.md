@@ -1,4 +1,4 @@
-# Wayfold competitor review mining
+# Hermi competitor review mining
 
 Date of research: 2026-09-30. Spec checked: business-plan/app-buildout/01-product-spec.md (all 1614 lines read).
 
@@ -134,11 +134,11 @@ Reported, verify: 2.0 stars from 4 ratings; "None of the features previewed are 
 7. Dated UI: TripIt.
 8. Flight price tracking exists only as post-booking refund alerts (TripIt Pro), not pre-booking watching tied to a plan.
 
-## 7. Gap list against the Wayfold spec
+## 7. Gap list against the Hermi spec
 
 Coverage key: Yes (specified), Partial, No (missing or out of scope).
 
-| # | Recurring complaint or request | Seen in | Wayfold spec coverage | Idea to beat the competitor |
+| # | Recurring complaint or request | Seen in | Hermi spec coverage | Idea to beat the competitor |
 |---|---|---|---|---|
 | 1 | Offline is paywalled | Wanderlog, TripIt | Yes: F-TRV-2 and 6.2 offline read on every tier, per-trip download | Market it: "Offline is free." Put a guarantee in onboarding. Ship offline write (spec defers to phase 2) earlier as a differentiator. |
 | 2 | Flight alerts paywalled or flight status unreliable | TripIt | Partial: F-FLT-6 fare alerts (1 free, cached). Flight status, gate and delay alerts are not specified | Add free delay and gate-change push for chosen flights, fed by a status API; state the data source and time in the alert. |
@@ -152,7 +152,7 @@ Coverage key: Yes (specified), Partial, No (missing or out of scope).
 | 10 | No comments or version history; editing chaos | Wanderlog | Partial: activity feed and 409 conflict UI (F-COL-5); comments on ideas (F-ITN-3); general comments Phase 4 | Pull comments earlier; "Keep mine or use theirs" merge is already better than silent overwrite, so advertise it. |
 | 11 | Real-time collaboration sync bugs and outages | Wanderlog, TripIt | Partial: 15 to 30 s polling, versions, offline queue; no real-time by design | Fine for 2 to 12 people. Show a visible "Synced 12 s ago" indicator and a safe offline queue; publish a status page. |
 | 12 | Email or Gmail import fails or needs Pro | TripIt, Wanderlog | Partial: F-AI-10 paste-a-booking (1 credit); email and calendar inbox parsing is explicitly out of scope | Add a forwarding address later (zero-credit, deterministic parser for top airlines plus Haiku fallback). At minimum keep paste free or cheap; do not make it a paid-only feature. |
-| 13 | Dated UI | TripIt | Yes: passport design system, presentation mode | Screenshot-led marketing; accessibility as a quality signal (WCAG AA is specified). |
+| 13 | Dated UI | TripIt | Yes: Hermi design system, presentation mode | Screenshot-led marketing; accessibility as a quality signal (WCAG AA is specified). |
 | 14 | Planner versus organizer: no one does both | TripIt (organizer), Wanderlog (planner) | Yes: itinerary, map, stays, flights, checklist in one | Position "Plan together. Know the fare." as planning plus fare intelligence in one. |
 | 15 | Invite gating: collaboration behind paywall | TripIt (view only), Wanderlog (free collab) | **Conflict**: F-COL-3 a free owner cannot invite; Wanderlog collaboration is free | Real risk. Wanderlog's free collaboration sets expectation. Mitigate with Trip Pass framing ("They join free") or allow one free invitee (partner) on free trips, since the target persona is a couple. |
 | 16 | Free tier too thin (2 travelers, 2 trips, 8 stays) | Wanderlog comparison | Partial: limits are explicit | Test a couples-friendly free tier (2 travelers already included); keep the paywall moments non-blocking. |
